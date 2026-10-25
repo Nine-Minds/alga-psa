@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "checkedAt": "2026-10-25T11:29:04Z",
-  "publicationRevision": "2f02f03c4b58722b25216a07a43e723ccac83088",
+  "publicationRevision": "1e806a6815be25d46e49b209540b88abc0c27072",
   "runtimeSourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
   "sourceFingerprint": "da39a3ee5e6b",
   "revisionStamp": "c04a67fff5b553d2c2a1f55a14194f829343adae+da39a3ee5e6b",
@@ -37,5 +37,6 @@
     "The production runtime proof does not establish long-term memory stability.",
     "The development-only React Flight patch did not alter production bundles."
   ],
-  "sourceDiffFingerprintFullSha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+  "sourceDiffFingerprintFullSha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+  "publicationIdentityNote": "Preparation anchor before this evidence publication; running source remains c04. The git commit containing this receipt is the publication identity."
 }

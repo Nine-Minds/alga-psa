@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "candidate": "c04a67fff5b553d2c2a1f55a14194f829343adae",
-  "generatedAt": "2026-10-25T11:30:27.412Z",
+  "candidate": "1e806a6815be25d46e49b209540b88abc0c27072",
+  "generatedAt": "2026-10-25T12:06:44.302Z",
   "plans": {
     "foundation": "docs/plans/2026-09-06-co-managed-it-plan.md",
     "clientIntegration": "docs/plans/2026-09-11-co-managed-client-integration",
@@ -38,7 +38,7 @@
   "evidence": {
     "current-source-census": {
       "type": "analysis",
-      "sha": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "sha": "1e806a6815be25d46e49b209540b88abc0c27072",
       "command": "node scripts/build-co-managed-inventory.mjs --current-source-census",
       "result": "260 requirement rows mapped to current source and regression paths; no acceptance statuses promoted to verified.",
       "artifact": "source-census.json",
@@ -8582,7 +8582,7 @@
       "sourceReferences": [
         {
           "path": "docs/evidence/co-managed-completion/README.md",
-          "sha256": "a63aeacbafb604c4aa83dcff57bcf73f0151634b73525a672a4cc9ea624e8ef6"
+          "sha256": "af8d08091bc9506c266af717b77f3c25cbbbca9e309da8e822f879e2be6eb4b8"
         },
         {
           "path": "scripts/verify-co-managed-completion.mjs",
@@ -8635,7 +8635,7 @@
       "sourceReferences": [
         {
           "path": "docs/evidence/co-managed-completion/README.md",
-          "sha256": "a63aeacbafb604c4aa83dcff57bcf73f0151634b73525a672a4cc9ea624e8ef6"
+          "sha256": "af8d08091bc9506c266af717b77f3c25cbbbca9e309da8e822f879e2be6eb4b8"
         },
         {
           "path": "scripts/verify-co-managed-completion.mjs",

@@ -1,0 +1,259 @@
+{
+  "checkedAt": "2026-10-25T12:07:44.557Z",
+  "artifactCount": 42,
+  "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "artifacts": [
+    {
+      "path": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.webm",
+      "sizeBytes": 12141749,
+      "sha256": "eff6c76bb10a9adc12e2865edf64c939623894781967861c41659bdd707c0dc3",
+      "httpStatus": 200
+    },
+    {
+      "path": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt",
+      "sizeBytes": 1264,
+      "sha256": "fb9397ecdd56cfd2ab4d043bd56537e4c02e45e938c5580f1651c001b023837e",
+      "httpStatus": 200
+    },
+    {
+      "path": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json",
+      "sizeBytes": 24841,
+      "sha256": "0e491e412e46f02640384544b2ddfadf23dbf280abcb11210aa8409fde2a7fb4",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm",
+      "sizeBytes": 2473245,
+      "sha256": "0e550af11e627785c9cb6428d60f1d528857fced70892d1640d97141d79b6c2b",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt",
+      "sizeBytes": 387,
+      "sha256": "67813aa569c6b7b532aa9f75e5fc8d09c01b128f39a047ce18763d6d4495bf61",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json",
+      "sizeBytes": 9909,
+      "sha256": "b641c02820ab3d72a262df9954dd70a987e58ef1d723bafdbd9375e529b609a6",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.webm",
+      "sizeBytes": 10140178,
+      "sha256": "2f62309daba98d8b9ae6564d850226706fd0b71be93d07190d8b120756fdbb75",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.vtt",
+      "sizeBytes": 555,
+      "sha256": "cbaea7df2907edf4f7e3180cd3034f6d97054265a47db6f4e0f7b9ba1d394711",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.json",
+      "sizeBytes": 12434,
+      "sha256": "8da223965acdf2aa057f89040ff33278ab4c3d8bc2a99be4a5de3c01bd09d574",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.webm",
+      "sizeBytes": 1915580,
+      "sha256": "63be487a495c0f856c12567f7862f0787d9da5c1b15b817d024e72e772cc74ba",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.vtt",
+      "sizeBytes": 299,
+      "sha256": "82e938ec99290880c45264ee2568a5938d88d5765a036328558a578c58b7689d",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.json",
+      "sizeBytes": 7166,
+      "sha256": "15a05f4eda4a786316c43c37ef9add9df69a9a0457da837e8e84a7a778dac49d",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.webm",
+      "sizeBytes": 2875435,
+      "sha256": "2a5701e423a4c11e6ca5e0a5fcb8aff41459fc2a267576ddebf5d1a9e18cc707",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.vtt",
+      "sizeBytes": 549,
+      "sha256": "6829a2d53c79d0dc077060f4cf8138ed03f1c96cde7c8a37ace9f7d024fdb008",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.json",
+      "sizeBytes": 10663,
+      "sha256": "aa99b8b4a8b38539dcf93d91fdc63d26d8e7aacfbef0a1f19af17624081b7f3b",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm",
+      "sizeBytes": 1806476,
+      "sha256": "d639bfa0e6b82934d384806930f9cd488ac4afc33796a80533dfc57bdb767c10",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt",
+      "sizeBytes": 201,
+      "sha256": "59621656d698ff4cc6afe0dc008403aa679d5685317c3e657a6e4ba516c47e8b",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json",
+      "sizeBytes": 4847,
+      "sha256": "a0d81bcd6135e424d379af7714de6a884c3c6708835733c3482f3b6deb37432b",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.webm",
+      "sizeBytes": 3071562,
+      "sha256": "e1c4798e7fe1276ac2a002ca7deaebe16c40c85fc0bcf0cf69a9b76604c9b869",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.vtt",
+      "sizeBytes": 529,
+      "sha256": "0e1a096d9bc61cf89db193c5384caa0e5f5665ff4e09d2c945ef8c0c4eef9dbb",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.json",
+      "sizeBytes": 9970,
+      "sha256": "6699ac5b96cf6b1ad51c4113192f28809c775a05136c83446f220b357b0ef170",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.webm",
+      "sizeBytes": 4912690,
+      "sha256": "51053fa1409283a427ca195917fe07061c30e3fe3dc35e0da44c941867701335",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt",
+      "sizeBytes": 499,
+      "sha256": "3adfa1a29ed35eddfae9b568b996a42e719617ca6a891e31b7e9c3d6dd898e3e",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.json",
+      "sizeBytes": 9941,
+      "sha256": "0b60f436212fa603f561895e5886b06d64744d89fb3e16904cac82f61aeeb919",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.webm",
+      "sizeBytes": 9002514,
+      "sha256": "b3012f33e3ee43e4afbac2be3171ba488595c9dd0f87d7eaf6d5a958d34dccea",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.vtt",
+      "sizeBytes": 1192,
+      "sha256": "44b4129df41b98943e0d2e01b520aa777eac47764b7b65b96e3314ac1f6db368",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.json",
+      "sizeBytes": 24706,
+      "sha256": "c7805900bfa82ae0c41bc12bd3b91eaf68b057148ecb2eb7e53d374c1b8a6a8a",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm",
+      "sizeBytes": 2779097,
+      "sha256": "9ad2b5c8c0207302e4f43dce6c027d28adfcbb34d02a0b550d1f35e84c5c7873",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt",
+      "sizeBytes": 250,
+      "sha256": "cc7a202a71b64d0f4e06be9caea4a186d19355f88b59cbfc8854e6873426a286",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json",
+      "sizeBytes": 12031,
+      "sha256": "0baf98efb61dfe1ea415d530b554aad3e6af23aedea5f7a0979a05639db009d9",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.webm",
+      "sizeBytes": 1915241,
+      "sha256": "19f4e0158677aa7322af99aaef71e3313252b17e64a2c6672a10d6189777a059",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt",
+      "sizeBytes": 373,
+      "sha256": "5328584990359da4316f0a5b73115729fc87b233b509025bba6cdeaa6e5ff2d1",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.json",
+      "sizeBytes": 16830,
+      "sha256": "5753b6d0c5a524536b30d31cb91e68c0a5968aa621e969cbb1841c10699ab3c5",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm",
+      "sizeBytes": 1245794,
+      "sha256": "13053ddf3ca88773c8b257700482138da227210da65d3c55d77aa37f2c4fa988",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt",
+      "sizeBytes": 133,
+      "sha256": "7f8f239d77823c127cf22db8d0f03a7bc2f109f6020e500cbb4ec6faffab7202",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json",
+      "sizeBytes": 5113,
+      "sha256": "27b28792f819e172b935b4a2535accc688051917642fbcfe0402e4be458ffe39",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.webm",
+      "sizeBytes": 970128,
+      "sha256": "ca9d42e55fe9946918e735a07d7f0867ace3dc8bcd3c445e427db7a8ea1e831c",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.vtt",
+      "sizeBytes": 203,
+      "sha256": "0ef06c524a74c229eec66ffdd54290e1a1a487b2c9ab0e9a97626e0593a2ac85",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.json",
+      "sizeBytes": 5403,
+      "sha256": "c338335cff5bb74a19cd37b6d9a74bc692fad53efab06aacebd2c27c65a5bbd5",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.webm",
+      "sizeBytes": 2268322,
+      "sha256": "8142e81bde7730b878690fe70f70e952e818fc0cdca409dfe8e11b7504d76a1b",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.vtt",
+      "sizeBytes": 266,
+      "sha256": "b4bcc4c2113aa98d895b5e42f309bcdc5eab28c642ac677628cafd154804b17c",
+      "httpStatus": 200
+    },
+    {
+      "path": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.json",
+      "sizeBytes": 10189,
+      "sha256": "fb5cdb1ec26880d2b2629d8f060d964e35abb0bd1a6b8cd6e47bf4fb1215b8ae",
+      "httpStatus": 200
+    }
+  ]
+}

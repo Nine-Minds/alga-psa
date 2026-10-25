@@ -1,0 +1,523 @@
+{
+  "guide": "index.html",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "status": "complete",
+  "recordedAt": "2026-10-25T11:42:44.721Z",
+  "durationSeconds": 155.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:42:49.914Z",
+      "seconds": 5.193,
+      "title": "/msp/account",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:42:49.920Z",
+      "seconds": 5.199,
+      "title": "Customer denied /msp/account",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:42:54.735Z",
+      "seconds": 10.014,
+      "title": "/msp/account/billing",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:42:54.738Z",
+      "seconds": 10.017,
+      "title": "Customer denied /msp/account/billing",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:42:59.598Z",
+      "seconds": 14.877,
+      "title": "/msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:42:59.602Z",
+      "seconds": 14.881,
+      "title": "Customer denied /msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:43:04.893Z",
+      "seconds": 20.172,
+      "title": "/msp/account",
+      "actor": "qa",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:43:04.896Z",
+      "seconds": 20.175,
+      "title": "Authorized PSA account",
+      "actor": "qa",
+      "result": "Account Management rendered",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T11:44:50.874Z",
+      "seconds": 21.195,
+      "title": "Genuine legacy production and another port cookie coexist",
+      "actor": "qa",
+      "result": {
+        "names": [
+          "authjs-port-23374.session-token",
+          "authjs.session-token",
+          "authjs-port-3374.session-token"
+        ]
+      },
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:44:56.413Z",
+      "seconds": 26.733,
+      "title": "/msp/tickets",
+      "actor": "qa",
+      "result": "s check\nTIC001016\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE 6c08 root comments 202619\nTIC001015\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 19 items\n\n1\n2\n10 items/page",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:44:58.837Z",
+      "seconds": 29.157,
+      "title": "QA session retained after reload",
+      "actor": "qa",
+      "result": "/msp/tickets",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:45:03.638Z",
+      "seconds": 33.958,
+      "title": "/msp/tickets/customer",
+      "actor": "qa",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:45:05.955Z",
+      "seconds": 36.275,
+      "title": "QA session retained after reload",
+      "actor": "qa",
+      "result": "/msp/tickets/customer",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:45:19.351Z",
+      "seconds": 49.671,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:45:34.086Z",
+      "seconds": 64.406,
+      "title": "QA session retained after reload",
+      "actor": "qa",
+      "result": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "sourceClip": "production-cookie-coexistence"
+    },
+    {
+      "at": "2026-10-25T11:51:54.962Z",
+      "seconds": 71.859,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "e CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\nabout 4 hours ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T11:51:56.295Z",
+      "seconds": 73.192,
+      "title": "Temporarily resume existing published smoke workflow",
+      "actor": "qa",
+      "result": "Only silent+cc flow enabled",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T11:52:01.731Z",
+      "seconds": 78.628,
+      "title": "/msp/tickets",
+      "actor": "qa",
+      "result": "s check\nTIC001016\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE 6c08 root comments 202619\nTIC001015\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 19 items\n\n1\n2\n10 items/page",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T11:52:49.830Z",
+      "seconds": 126.727,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nActive\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T11:52:50.864Z",
+      "seconds": 127.761,
+      "title": "Restored workflow paused state",
+      "actor": "qa",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T11:54:11.480Z",
+      "seconds": 134.34099999999998,
+      "title": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+      "actor": "qa",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T11:54:12.221Z",
+      "seconds": 135.081,
+      "title": "Native ticket trigger and Temporal business effects after reload",
+      "actor": "qa",
+      "result": {
+        "ticketId": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+        "runId": "6720195a-a621-44b1-bb1e-858c02cb6401",
+        "comments": 2,
+        "workflowStateRestored": "paused"
+      },
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T11:54:17.145Z",
+      "seconds": 140.005,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T11:54:17.145Z",
+      "seconds": 140.005,
+      "title": "Workflow paused state restored",
+      "actor": "qa",
+      "result": "Smoke workflow shows Paused",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T11:54:12.980Z",
+      "seconds": 146.698,
+      "title": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+      "actor": "qa",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "main-native-comment-file"
+    },
+    {
+      "at": "2026-10-25T11:54:15.485Z",
+      "seconds": 149.202,
+      "title": "Native comment and uploaded file persisted after reload",
+      "actor": "qa",
+      "result": "CM-C04 native comment file 1792929241417",
+      "sourceClip": "main-native-comment-file"
+    },
+    {
+      "at": "2026-10-25T11:54:16.081Z",
+      "seconds": 149.798,
+      "title": "Both native byte routes return exact original bytes",
+      "actor": "qa",
+      "result": "Authenticated owner authority",
+      "sourceClip": "main-native-comment-file"
+    },
+    {
+      "at": "2026-10-25T11:54:20.917Z",
+      "seconds": 154.63400000000001,
+      "title": "/msp/tickets",
+      "actor": "alice",
+      "result": "Actions\n\n\n\t\nSMOKE callout count change 142333\n000002\n\u00b7\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n\n\t\nPrinter offline in accounts\n000001\n\u00b7\nNo Category\n\t\nIn Progress\n\t\nCritical\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n2 items total\n\n10 items/page",
+      "sourceClip": "main-native-comment-file"
+    },
+    {
+      "at": "2026-10-25T11:54:20.945Z",
+      "seconds": 154.662,
+      "title": "Both foreign-tenant byte routes denied",
+      "actor": "alice",
+      "result": "No file bytes disclosed",
+      "sourceClip": "main-native-comment-file"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/account",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account/billing",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account/billing",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/settings/integrations?category=accounting",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/settings/integrations?category=accounting",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription"
+    },
+    {
+      "action": "Authorized PSA account",
+      "result": "Account Management rendered"
+    },
+    {
+      "action": "Genuine legacy production and another port cookie coexist",
+      "result": {
+        "names": [
+          "authjs-port-23374.session-token",
+          "authjs.session-token",
+          "authjs-port-3374.session-token"
+        ]
+      }
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "s check\nTIC001016\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE 6c08 root comments 202619\nTIC001015\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 19 items\n\n1\n2\n10 items/page"
+    },
+    {
+      "action": "QA session retained after reload",
+      "result": "/msp/tickets"
+    },
+    {
+      "action": "/msp/tickets/customer",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+    },
+    {
+      "action": "QA session retained after reload",
+      "result": "/msp/tickets/customer"
+    },
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+    },
+    {
+      "action": "QA session retained after reload",
+      "result": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "e CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\nabout 4 hours ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t"
+    },
+    {
+      "action": "Temporarily resume existing published smoke workflow",
+      "result": "Only silent+cc flow enabled"
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "s check\nTIC001016\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE 6c08 root comments 202619\nTIC001015\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 19 items\n\n1\n2\n10 items/page"
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nActive\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t"
+    },
+    {
+      "action": "Restored workflow paused state",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n"
+    },
+    {
+      "action": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Native ticket trigger and Temporal business effects after reload",
+      "result": {
+        "ticketId": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+        "runId": "6720195a-a621-44b1-bb1e-858c02cb6401",
+        "comments": 2,
+        "workflowStateRestored": "paused"
+      }
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n12 days ago\n\t"
+    },
+    {
+      "action": "Workflow paused state restored",
+      "result": "Smoke workflow shows Paused"
+    },
+    {
+      "action": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Native comment and uploaded file persisted after reload",
+      "result": "CM-C04 native comment file 1792929241417"
+    },
+    {
+      "action": "Both native byte routes return exact original bytes",
+      "result": "Authenticated owner authority"
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "Actions\n\n\n\t\nSMOKE callout count change 142333\n000002\n\u00b7\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n\n\t\nPrinter offline in accounts\n000001\n\u00b7\nNo Category\n\t\nIn Progress\n\t\nCritical\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n2 items total\n\n10 items/page"
+    },
+    {
+      "action": "Both foreign-tenant byte routes denied",
+      "result": "No file bytes disclosed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.199,
+      "title": "account boundary"
+    },
+    {
+      "start": 5.199,
+      "end": 10.017,
+      "title": "Customer denied /msp/account"
+    },
+    {
+      "start": 10.017,
+      "end": 14.881,
+      "title": "Customer denied /msp/account/billing"
+    },
+    {
+      "start": 14.881,
+      "end": 20.175,
+      "title": "Customer denied /msp/settings/integrations?category=accounting"
+    },
+    {
+      "start": 20.175,
+      "end": 21.16,
+      "title": "Authorized PSA account"
+    },
+    {
+      "start": 21.16,
+      "end": 29.157,
+      "title": "production cookie coexistence"
+    },
+    {
+      "start": 29.157,
+      "end": 36.275,
+      "title": "QA session retained after reload"
+    },
+    {
+      "start": 36.275,
+      "end": 64.406,
+      "title": "QA session retained after reload"
+    },
+    {
+      "start": 64.406,
+      "end": 66.8,
+      "title": "QA session retained after reload"
+    },
+    {
+      "start": 66.8,
+      "end": 73.192,
+      "title": "main native effect final"
+    },
+    {
+      "start": 73.192,
+      "end": 127.761,
+      "title": "Temporarily resume existing published smoke workflow"
+    },
+    {
+      "start": 127.761,
+      "end": 128.759,
+      "title": "Restored workflow paused state"
+    },
+    {
+      "start": 128.759,
+      "end": 135.081,
+      "title": "main worker business confirmed"
+    },
+    {
+      "start": 135.081,
+      "end": 140.005,
+      "title": "Native ticket trigger and Temporal business effects after reload"
+    },
+    {
+      "start": 140.005,
+      "end": 141,
+      "title": "Workflow paused state restored"
+    },
+    {
+      "start": 141,
+      "end": 149.202,
+      "title": "main native comment file"
+    },
+    {
+      "start": 149.202,
+      "end": 154.662,
+      "title": "Native comment and uploaded file persisted after reload"
+    },
+    {
+      "start": 154.662,
+      "end": 155.6,
+      "title": "Both foreign-tenant byte routes denied"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/account-boundary/recording.json",
+      "evidence/takeover-c04-production/production-cookie-coexistence/recording.json",
+      "evidence/takeover-c04-production/main-native-effect-final/recording.json",
+      "evidence/takeover-c04-production/main-worker-business-confirmed/recording.json",
+      "evidence/takeover-c04-production/main-native-comment-file/recording.json"
+    ]
+  },
+  "limitations": [
+    "Production explicit-port origin exercised; public HTTPS with internal PORT3000 and public8443 remain automated unit controls. Other-port value is own QA token under a distinct cookie name, not a fresh login on that port.",
+    "locator.waitFor: Timeout 40000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('SMOKE-SILENT workflow comment').first() to be visible\u001b[22m\n",
+    "Native UI event, succeeded Temporal execution and two persisted root comments verified after fresh worker start. This is not customer workflow entitlement or email-delivery acceptance.",
+    "Native UI comment/file publication, reload, exact byte integrity and foreign tenant denials verified; portable restoration and public-share-link semantics are separate.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+  ],
+  "recordingPaths": {
+    "webm": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.webm",
+    "chapterVtt": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt",
+    "recordingJson": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "main/walkthrough.webm",
+    "chapterVtt": "main/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

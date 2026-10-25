@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-25T12:05:21.723Z",
+  "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "buildId": "build-1792926045353",
+  "reviewReady": false,
+  "completeMatrices": 0,
+  "matrices": [
+    {
+      "area": "account-boundary",
+      "status": "partial",
+      "verified": "Customer account root, billing child and accounting denial with QA Account Management control.",
+      "remaining": "Backend capability catalogue, direct APIs and every settings child remain separate.",
+      "evidence": [
+        {
+          "clip": "account-boundary",
+          "recordedAt": "2026-10-25T11:42:44.721Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/account-boundary/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "session-cookie-boundaries",
+      "status": "partial",
+      "verified": "Fresh QA port cookie coexists with an old legacy cookie and other-port cookie through navigation and reload. Fresh Alice still selects original tenant after another suspended restore.",
+      "remaining": "Public HTTPS/8443 and all SSO token boundary cases are source-tested, not runtime-certified.",
+      "evidence": [
+        {
+          "clip": "production-cookie-coexistence",
+          "recordedAt": "2026-10-25T11:44:50.840Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/production-cookie-coexistence/recording.json"
+        },
+        {
+          "clip": "03-viewer-source-boundaries",
+          "recordedAt": "2026-10-25T12:02:16.100Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/03-viewer-source-boundaries/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "onboarding",
+      "status": "partial",
+      "verified": "Cancellation cleaned the unclaimed tenant and released allocation. Second original SMTP invitation claimed; multipart createBoard denied before acceptance with zero sentinel boards. Acceptance and setup persisted.",
+      "remaining": "First clip stopped at obsolete selector after automatic claim login; continuation completes it. Stale scope, expiry, lost-response and all cleanup races remain unverified.",
+      "evidence": [
+        {
+          "clip": "01-onboarding-full-attempt",
+          "recordedAt": "2026-10-25T11:47:11.655Z",
+          "rawScenarioStatus": "failed",
+          "rawEvidence": "evidence/takeover-c04-production/01-onboarding-full-attempt/recording.json"
+        },
+        {
+          "clip": "01-onboarding-claim-continuation",
+          "recordedAt": "2026-10-25T11:50:10.141Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/01-onboarding-claim-continuation/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "seats",
+      "status": "partial",
+      "verified": "Allocation increase/reload and restoration/reload through product controls.",
+      "remaining": "Purchase, insufficient pool, license lapse/grace and self-host entitlement matrices incomplete.",
+      "evidence": [
+        {
+          "clip": "02-current-allocation-verified",
+          "recordedAt": "2026-10-25T11:43:43.424Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/02-current-allocation-verified/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "policy",
+      "status": "partial",
+      "verified": "Board View saved/reloaded then Collaborate restored; existing scoped viewer metadata read without writable composer.",
+      "remaining": "Teams, forged writes, individual grants, stale UI and complete field-mask matrix incomplete.",
+      "evidence": [
+        {
+          "clip": "03-access-policies-final",
+          "recordedAt": "2026-10-25T11:44:06.546Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/03-access-policies-final/recording.json"
+        },
+        {
+          "clip": "03-viewer-source-boundaries",
+          "recordedAt": "2026-10-25T12:02:16.100Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/03-viewer-source-boundaries/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "delegation",
+      "status": "partial",
+      "verified": "Existing customer-approved board description changed, reloaded and restored by delegated MSP.",
+      "remaining": "New grant approval/revocation and all exact target user/board grants incomplete.",
+      "evidence": [
+        {
+          "clip": "04-delegated-administration",
+          "recordedAt": "2026-10-25T11:44:45.784Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/04-delegated-administration/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "queue",
+      "status": "partial",
+      "verified": "Qualified ticket returned to customer and re-escalated; authorized filtered CSV includes000002 and excludes000001.",
+      "remaining": "Mixed bulk outcomes, multiple selected identities, concurrent retries and every saved-view state incomplete.",
+      "evidence": [
+        {
+          "clip": "05-ticket-queue",
+          "recordedAt": "2026-10-25T11:45:31.787Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/05-ticket-queue/recording.json"
+        },
+        {
+          "clip": "05-filtered-queue-export",
+          "recordedAt": "2026-10-25T11:58:38.507Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/05-filtered-queue-export/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "projects",
+      "status": "partial",
+      "verified": "Qualified task edit/history and restoration; Alice revoked project and QA fresh read denied. Collaborate restored/reloaded in separate continuation.",
+      "remaining": "Initial restore selector was obsolete. Task assignment/team/responsibility, project-field and full history/effort matrices incomplete.",
+      "evidence": [
+        {
+          "clip": "06-task-edit-revocation",
+          "recordedAt": "2026-10-25T11:46:02.371Z",
+          "rawScenarioStatus": "failed",
+          "rawEvidence": "evidence/takeover-c04-production/06-task-edit-revocation/recording.json"
+        },
+        {
+          "clip": "06-project-grant-recovery",
+          "recordedAt": "2026-10-25T11:47:57.761Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/06-project-grant-recovery/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "conversation",
+      "status": "partial",
+      "verified": "Distinct Alice sees new QA Shared IT note without navigation; organization-private lanes remain separated.",
+      "remaining": "Requester/portal, mentions, reverse ownership, stale hidden ancestors and exhaustive reply authorization incomplete.",
+      "evidence": [
+        {
+          "clip": "07-conversations-final",
+          "recordedAt": "2026-10-25T11:46:57.042Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/07-conversations-final/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "task-files",
+      "status": "partial",
+      "verified": "Inherited Alice reply; QA root edit and tombstone retain child. Private URL404; confirmed disclosure creates customer-owned copy returning exact28B. Confirmed removal makes captured URL404.",
+      "remaining": "Early removal polling switched actor before operation finished; exact-file continuation waits for confirmation. Requester files, drafts, all content races and reverse disclosure incomplete.",
+      "evidence": [
+        {
+          "clip": "07-task-thread-files-disclosure",
+          "recordedAt": "2026-10-25T11:51:28.004Z",
+          "rawScenarioStatus": "failed",
+          "rawEvidence": "evidence/takeover-c04-production/07-task-thread-files-disclosure/recording.json"
+        },
+        {
+          "clip": "07-disclosed-file-removal-continuation",
+          "recordedAt": "2026-10-25T11:53:38.736Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/07-disclosed-file-removal-continuation/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "sla",
+      "status": "partial",
+      "verified": "Separate customer/MSP clocks and handback/re-escalation responsibility observed.",
+      "remaining": "Warning/breach fanout, settings, priority mapping edits and reply/close/reopen pause combinations incomplete.",
+      "evidence": [
+        {
+          "clip": "05-customer-ticket-loop",
+          "recordedAt": "2026-10-25T11:47:37.910Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/05-customer-ticket-loop/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "time",
+      "status": "partial",
+      "verified": "Existing exact15-minute shared commercial row visible in native Grid/List; Alice added5-minute operational project effort with no service or contract and zero billable duration.",
+      "remaining": "New MSP commercial save, timer stop/cancel, review/approval, invoice generation, paid hours and retained financial records incomplete. No old sheet approval or invoice was changed.",
+      "evidence": [
+        {
+          "clip": "09-timesheet-production",
+          "recordedAt": "2026-10-25T11:48:23.011Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/09-timesheet-production/recording.json"
+        },
+        {
+          "clip": "09-current-operational-time",
+          "recordedAt": "2026-10-25T11:48:46.417Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/09-current-operational-time/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "departure",
+      "status": "partial",
+      "verified": "Fresh disposable customer ended relationship; terminated row, released allocation, sealed manifest and retained read-only workspace. White Rabbit remains active.",
+      "remaining": "Disposable had no shared participation. Retained shared/private bytes, archive authorization and invoicing after customer deletion incomplete.",
+      "evidence": [
+        {
+          "clip": "10-c04-departure",
+          "recordedAt": "2026-10-25T11:58:02.818Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/10-c04-departure/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "export-restore",
+      "status": "partial",
+      "verified": "Encrypted package bd33d5cf restored into isolated aff0c0b1; suspended PSA, one inactive user, zero live trust,2tickets/1project/1task/28comments/4files. Retry returns original receipt; wrong passphrase/tampering rejected.",
+      "remaining": "Destination-owned paid entitlement and native recovered login unavailable; no paid activation claim. All blob remapping and vault/provider restart matrices incomplete.",
+      "evidence": [
+        {
+          "clip": "11-export-restore-and-upgrade",
+          "recordedAt": "2026-10-25T11:52:17.209Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/11-export-restore-and-upgrade/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "native-and-workers",
+      "status": "partial",
+      "verified": "Native UI ticket68a51c93 triggered Temporal run6720195a SUCCEEDED after fresh worker start. Two comments persist after reload; workflow restored Paused. Both native file routes exactbytes to QA,404 to Alice.",
+      "remaining": "Initial live comment wait timed out; reload continuation proves actual effects. Native mail delivery, complete attachment/edit and scheduled workflow matrix incomplete.",
+      "evidence": [
+        {
+          "clip": "main-native-effect-final",
+          "recordedAt": "2026-10-25T11:51:49.903Z",
+          "rawScenarioStatus": "failed",
+          "rawEvidence": "evidence/takeover-c04-production/main-native-effect-final/recording.json"
+        },
+        {
+          "clip": "main-worker-business-confirmed",
+          "recordedAt": "2026-10-25T11:54:05.900Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/main-worker-business-confirmed/recording.json"
+        },
+        {
+          "clip": "main-native-comment-file",
+          "recordedAt": "2026-10-25T11:54:07.283Z",
+          "rawScenarioStatus": "passed",
+          "rawEvidence": "evidence/takeover-c04-production/main-native-comment-file/recording.json"
+        }
+      ]
+    },
+    {
+      "area": "integrations",
+      "status": "partial",
+      "verified": "Customer email/provider workbench and distinct MSP surfaces reachable.",
+      "remaining": "No isolated provider binding, real Microsoft authority, inbound/reply/revoke or directory acceptance performed. Real provider keys and destination entitlement must come from their owner; controls alone are not provider proof.",
+      "evidence": [
+        {
+          "clip": "12-customer-integrations",
+          "recordedAt": "2026-10-25T11:49:10.040Z",
+          "rawScenarioStatus": "partial",
+          "rawEvidence": "evidence/takeover-c04-production/12-customer-integrations/recording.json"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Rows describe actual bounded assertions, not approval of the complete requirement IDs. Instrumentation failures and corrected continuations are retained separately. Historical media remain at their recorded revision."
+  ]
+}

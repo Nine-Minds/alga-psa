@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "recordedAt": "2026-10-25T11:47:11.655Z",
+  "durationSeconds": 119.92,
+  "guide": "guides/01-onboarding.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "invited customer admin",
+      "email": "c04.accept.1792928883467@cmreview.test",
+      "tenant": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:47:16.979Z",
+      "seconds": 5.324,
+      "title": "/msp/clients",
+      "actor": "qa",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-D\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-G\nClient Actions\n\nNo contact details\n\n1 - 9 of 16 clients\n\n1\n2\n9 cards/page",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:47:23.731Z",
+      "seconds": 12.076,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:47:34.902Z",
+      "seconds": 23.247,
+      "title": "/msp/clients/3a3bbb9f-5d8e-4b88-9dbd-32bd9ff582b5?tab=co-managed",
+      "actor": "qa",
+      "result": "tation\nCancel setup\nCapacity\nChange seat allocation\nShared tickets\nFilters\nView\n\n0 tickets · 0 open · 0 closed\n\nNo customer tickets to show yet.\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:47:34.902Z",
+      "seconds": 23.247,
+      "title": "Fresh setup delivered and retained once",
+      "actor": "qa",
+      "result": {
+        "operationId": "3f58ba73-3488-4867-b861-8d422a3f8ea0",
+        "state": "pending_acceptance",
+        "customerTenant": "abd42dee-c32b-4833-8320-37c2513684da"
+      },
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:47:51.935Z",
+      "seconds": 40.28,
+      "title": "Unclaimed setup cleaned up once",
+      "actor": "qa",
+      "result": {
+        "operation_id": "3f58ba73-3488-4867-b861-8d422a3f8ea0",
+        "customer_tenant": "abd42dee-c32b-4833-8320-37c2513684da",
+        "relationship_id": "ee726d6d-de83-4bde-87c8-2748fdf8ac8e",
+        "state": "cancelled",
+        "invitation_sent_at": "2026-10-25T11:47:27.452047+00:00",
+        "invitation_delivery_error": null
+      },
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:47:57.087Z",
+      "seconds": 45.432,
+      "title": "/msp/clients",
+      "actor": "qa",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-C\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-D\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\n1 - 9 of 17 clients\n\n1\n2\n9 cards/page",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:48:02.395Z",
+      "seconds": 50.74,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:48:26.345Z",
+      "seconds": 74.69,
+      "title": "/msp/clients/534785b2-92a5-4a2d-ad48-df1777902a72?tab=co-managed",
+      "actor": "qa",
+      "result": "tation\nCancel setup\nCapacity\nChange seat allocation\nShared tickets\nFilters\nView\n\n0 tickets · 0 open · 0 closed\n\nNo customer tickets to show yet.\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues",
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:48:26.345Z",
+      "seconds": 74.69,
+      "title": "Fresh setup delivered and retained once",
+      "actor": "qa",
+      "result": {
+        "operationId": "04c0bc58-3903-4196-af5a-acb188735c9d",
+        "state": "pending_acceptance",
+        "customerTenant": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532"
+      },
+      "sourceClip": "01-onboarding-full-attempt"
+    },
+    {
+      "at": "2026-10-25T11:50:12.557Z",
+      "seconds": 110.377,
+      "title": "Fresh normal new-admin login confirms original invite was claimed",
+      "result": {
+        "tenant": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532",
+        "waitingForAcceptance": true
+      },
+      "sourceClip": "01-onboarding-claim-continuation"
+    },
+    {
+      "at": "2026-10-25T11:50:12.836Z",
+      "seconds": 110.65499999999999,
+      "title": "Ordinary multipart mutation denied before acceptance",
+      "result": {
+        "status": 500,
+        "forbiddenBoards": 0
+      },
+      "sourceClip": "01-onboarding-claim-continuation"
+    },
+    {
+      "at": "2026-10-25T11:50:21.113Z",
+      "seconds": 118.93199999999999,
+      "title": "Accepted and completed normal customer setup; reload retained native workspace",
+      "result": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532",
+      "sourceClip": "01-onboarding-claim-continuation"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/clients",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-D\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-G\nClient Actions\n\nNo contact details\n\n1 - 9 of 16 clients\n\n1\n2\n9 cards/page"
+    },
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "/msp/clients/3a3bbb9f-5d8e-4b88-9dbd-32bd9ff582b5?tab=co-managed",
+      "result": "tation\nCancel setup\nCapacity\nChange seat allocation\nShared tickets\nFilters\nView\n\n0 tickets · 0 open · 0 closed\n\nNo customer tickets to show yet.\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues"
+    },
+    {
+      "action": "Fresh setup delivered and retained once",
+      "result": {
+        "operationId": "3f58ba73-3488-4867-b861-8d422a3f8ea0",
+        "state": "pending_acceptance",
+        "customerTenant": "abd42dee-c32b-4833-8320-37c2513684da"
+      }
+    },
+    {
+      "action": "Unclaimed setup cleaned up once",
+      "result": {
+        "operation_id": "3f58ba73-3488-4867-b861-8d422a3f8ea0",
+        "customer_tenant": "abd42dee-c32b-4833-8320-37c2513684da",
+        "relationship_id": "ee726d6d-de83-4bde-87c8-2748fdf8ac8e",
+        "state": "cancelled",
+        "invitation_sent_at": "2026-10-25T11:47:27.452047+00:00",
+        "invitation_delivery_error": null
+      }
+    },
+    {
+      "action": "/msp/clients",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-C\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-D\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\n1 - 9 of 17 clients\n\n1\n2\n9 cards/page"
+    },
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "/msp/clients/534785b2-92a5-4a2d-ad48-df1777902a72?tab=co-managed",
+      "result": "tation\nCancel setup\nCapacity\nChange seat allocation\nShared tickets\nFilters\nView\n\n0 tickets · 0 open · 0 closed\n\nNo customer tickets to show yet.\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues"
+    },
+    {
+      "action": "Fresh setup delivered and retained once",
+      "result": {
+        "operationId": "04c0bc58-3903-4196-af5a-acb188735c9d",
+        "state": "pending_acceptance",
+        "customerTenant": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532"
+      }
+    },
+    {
+      "action": "Fresh normal new-admin login confirms original invite was claimed",
+      "result": {
+        "tenant": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532",
+        "waitingForAcceptance": true
+      }
+    },
+    {
+      "action": "Ordinary multipart mutation denied before acceptance",
+      "result": {
+        "status": 500,
+        "forbiddenBoards": 0
+      }
+    },
+    {
+      "action": "Accepted and completed normal customer setup; reload retained native workspace",
+      "result": "3d2d0d15-f1b6-4989-a7db-160e3fd5c532"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 23.247,
+      "title": "01 onboarding full attempt"
+    },
+    {
+      "start": 23.247,
+      "end": 40.28,
+      "title": "Fresh setup delivered and retained once"
+    },
+    {
+      "start": 40.28,
+      "end": 74.69,
+      "title": "Unclaimed setup cleaned up once"
+    },
+    {
+      "start": 74.69,
+      "end": 107.96,
+      "title": "Fresh setup delivered and retained once"
+    },
+    {
+      "start": 107.96,
+      "end": 110.377,
+      "title": "01 onboarding claim continuation"
+    },
+    {
+      "start": 110.377,
+      "end": 118.931,
+      "title": "Fresh normal new-admin login confirms original invite was claimed"
+    },
+    {
+      "start": 118.931,
+      "end": 119.92,
+      "title": "Accepted and completed normal customer setup; reload retained native workspace"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/01-onboarding-full-attempt/recording.json",
+      "evidence/takeover-c04-production/01-onboarding-claim-continuation/recording.json"
+    ]
+  },
+  "limitations": [
+    "New workspace cancel/verified cleanup, original SMTP invitation claim, multipart denial with zero boards, acceptance and setup reload verified. First clip ends on obsolete sign-in selector after automatic claim login; continuation completes the actual acceptance. Stale scope, invitation expiry and lost-response races remain unverified."
+  ]
+}

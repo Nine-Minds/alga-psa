@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "recordedAt": "2026-10-25T11:44:45.784Z",
+  "durationSeconds": 16.84,
+  "guide": "guides/04-delegated-administration.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:44:50.738Z",
+      "seconds": 4.954,
+      "title": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "actor": "qa",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "04-delegated-administration"
+    },
+    {
+      "at": "2026-10-25T11:44:53.744Z",
+      "seconds": 7.96,
+      "title": "Bounded board change persisted",
+      "actor": "qa",
+      "result": "Customer-approved QA grant",
+      "sourceClip": "04-delegated-administration"
+    },
+    {
+      "at": "2026-10-25T11:44:56.539Z",
+      "seconds": 10.755,
+      "title": "Restored original board description",
+      "actor": "qa",
+      "result": "Verified after reload",
+      "sourceClip": "04-delegated-administration"
+    },
+    {
+      "at": "2026-10-25T11:45:01.646Z",
+      "seconds": 15.862,
+      "title": "/msp/co-management/administration",
+      "actor": "alice",
+      "result": "rant general administration access.\n\nOperation\nEdit board display settings\nAssigned MSP technician or team\nAssigned MSP technician or team\nSelect...\nPrevious\nNext\nCustomer record\nCustomer record\nSelect...\nPrevious\nNext\nApprove task\nService Desk\n\nEdit board display settings · QA Tester\n\nRevoke access",
+      "sourceClip": "04-delegated-administration"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    },
+    {
+      "action": "Bounded board change persisted",
+      "result": "Customer-approved QA grant"
+    },
+    {
+      "action": "Restored original board description",
+      "result": "Verified after reload"
+    },
+    {
+      "action": "/msp/co-management/administration",
+      "result": "rant general administration access.\n\nOperation\nEdit board display settings\nAssigned MSP technician or team\nAssigned MSP technician or team\nSelect...\nPrevious\nNext\nCustomer record\nCustomer record\nSelect...\nPrevious\nNext\nApprove task\nService Desk\n\nEdit board display settings · QA Tester\n\nRevoke access"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 7.96,
+      "title": "04 delegated administration"
+    },
+    {
+      "start": 7.96,
+      "end": 10.755,
+      "title": "Bounded board change persisted"
+    },
+    {
+      "start": 10.755,
+      "end": 16.84,
+      "title": "Restored original board description"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/04-delegated-administration/recording.json"
+    ]
+  },
+  "limitations": [
+    "Existing customer-approved board grant used; no existing approval was revoked. New-grant revocation/user/invitation operations remain unexecuted.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+  ]
+}

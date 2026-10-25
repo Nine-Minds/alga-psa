@@ -2,8 +2,9 @@
 
 Status: **Partial production acceptance; review remains incomplete.**
 Source revision under review: `c04a67fff5b553d2c2a1f55a14194f829343adae`.
-Guide publication SHA: `2f02f03c4b58722b25216a07a43e723ccac83088`; this publication
-identity does not imply that its recordings were made on the current runtime.
+Guide publication is the evidence commit containing this plan; the current
+recordings identify runtime source c04 separately from publication. Historical
+publication `2f02f03c4b` retains its original 704f recordings.
 The isolated repaired production distribution is `.next-review-c04a67-production`,
 `BUILD_ID build-1792926045353`, with revision stamp
 `c04a67fff5b553d2c2a1f55a14194f829343adae+da39a3ee5e6b`. It is served by
@@ -74,21 +75,27 @@ by the runtime acceptance artifact; it contains no credentials or cookie values.
 The server-configured canonical `coManagedBootstrap.integration.test.ts` also
 passed 1,461 tests on this source revision (see [validation receipt](../../evidence/co-managed-deploy/c04a67fff5/validation.json)). This integration suite supplements source/runtime checks but does not substitute for deployed product acceptance in the remaining rows.
 
-This establishes the repaired login/deployment gate only. The multipart,
-Microsoft OIDC, provider/inbound mail, product-boundary, collaboration/privacy,
-file disclosure/removal, requester, assignment/SLA, operational/commercial
-time, approvals/invoicing, departure/archive, export/restore/paid-activation,
-and native regression matrices are not complete on this build. Simulator or
-source-only outcomes remain labeled as such; externally controlled authorities
-remain blocked. The regenerated 260-ID census and manifest are fail-closed and
-promote no requirement from this bounded runtime proof.
+The subsequent lead takeover executed bounded checks across sixteen areas.
+See [the runtime matrix](../../evidence/co-managed-deploy/c04a67fff5/runtime-matrix.json)
+for actual actions, results, corrected instrumentation and unfinished cases. New
+provisioning cancellation, original invitation claim, multipart denial before
+acceptance, activation, account restrictions, scoped editing, ticket handoffs,
+private conversations, task-file disclosure/removal, operational effort, shared
+timesheet visibility, native file authority, matched Temporal business effects,
+disposable departure and isolated restore now have current-production evidence.
 
-Fourteen historical guide recordings remain separate, partial artifacts from
-their original source revisions. No full guide walkthrough has yet been
-recorded on c04. Main, collection and twelve section guides each still require a
-separate complete current-build WebM, chapter VTT, recording JSON, embedded
-playback, browser-verified chapter seeking, HTTP Range verification and hashes.
-Do not relabel or alias the 704f, cd28, or e88 artifacts.
+Fourteen separate main/collection/section recordings now exist on c04, each with
+WebM, VTT, JSON and browser-verified playback/seeking/HTTP Range. All fourteen
+**full scenarios remain partial**, with explicit per-guide limitations. See
+[coverage](../../evidence/co-managed-deploy/c04a67fff5/walkthroughs/video-coverage.json).
+Do not confuse media completeness with acceptance. Historical 704f, cd28 and e88
+media were preserved and were not relabeled or used as current-build recordings.
+
+The remaining provider/OIDC/inbound/directory, requester/team/privacy, concurrent
+retry/lapse, SLA configuration/notification, financial approval/invoicing,
+participated departure/archive and paid activation/native recovery checks remain
+unverified or explicitly externally blocked. The 260-ID census remains
+fail-closed; bounded checks do not establish every obligation of a requirement.
 
 The historical 704f takeover evidence remains at
 [takeover evidence](../../evidence/co-managed-deploy/704f-takeover/README.md).

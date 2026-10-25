@@ -1,6 +1,6 @@
 {
-  "candidate": "c04a67fff5b553d2c2a1f55a14194f829343adae",
-  "generatedAt": "2026-10-25T11:30:27.405Z",
+  "candidate": "1e806a6815be25d46e49b209540b88abc0c27072",
+  "generatedAt": "2026-10-25T12:06:44.292Z",
   "claim": "Required IDs and referenced source files are present; this census does not prove full implementation or runtime acceptance.",
   "rows": [
     {
@@ -8539,7 +8539,7 @@
       "sourceReferences": [
         {
           "path": "docs/evidence/co-managed-completion/README.md",
-          "sha256": "a63aeacbafb604c4aa83dcff57bcf73f0151634b73525a672a4cc9ea624e8ef6"
+          "sha256": "af8d08091bc9506c266af717b77f3c25cbbbca9e309da8e822f879e2be6eb4b8"
         },
         {
           "path": "scripts/verify-co-managed-completion.mjs",
@@ -8592,7 +8592,7 @@
       "sourceReferences": [
         {
           "path": "docs/evidence/co-managed-completion/README.md",
-          "sha256": "a63aeacbafb604c4aa83dcff57bcf73f0151634b73525a672a4cc9ea624e8ef6"
+          "sha256": "af8d08091bc9506c266af717b77f3c25cbbbca9e309da8e822f879e2be6eb4b8"
         },
         {
           "path": "scripts/verify-co-managed-completion.mjs",

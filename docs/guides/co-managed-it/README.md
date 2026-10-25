@@ -55,7 +55,7 @@ acceptance evidence.
 | [3. Access policies](03-access-policies.md) | Boards, projects, staff, teams and individual-ticket grants | Customer administrator and MSP access administrator; disposable scoped work |
 | [4. Delegated administration](04-delegated-administration.md) | Customer approval, bounded MSP changes and revocation | An approved technician/team and disposable customer records |
 | [5. Ticket queue operations](05-ticket-queue.md) | Filtering, CSV export, bulk return and recovery | Two disposable, MSP-responsible customer tickets for bulk tests |
-| [6. Projects and tasks](06-projects-and-tasks.md) | Shared tasks, edits, assignment, history and effort | A new customer project and tasks; none existed in the last fixture catalog |
+| [6. Projects and tasks](06-projects-and-tasks.md) | Shared tasks, edits, assignment, history and effort | A disposable customer project and tasks; verify the current fixture before editing |
 | [7. Conversations and files](07-conversations-and-files.md) | Audiences, replies, files, thread disclosure and requester access | Small test files; requester account and task access for portal tests |
 | [8. SLA configuration](08-sla.md) | Policies, priority mapping and independent responsibility clocks | MSP SLA administrator; disposable ticket for new escalation |
 | [9. Time approval and billing](09-time-and-billing.md) | Stopwatch, effort ownership, timesheets and commercial billing | Current time period, service/contract setup, approver and billing operator |
@@ -65,14 +65,14 @@ acceptance evidence.
 
 ## Fixtures
 
-The review app is [feature-co-managed-it.localhost:23374](http://feature-co-managed-it.localhost:23374/auth/msp/signin). Port 3374 is the development app. The last recorded fixture catalog is from October 17; check the displayed organization and current state before using a record.
+The review app is [feature-co-managed-it.localhost:23374](http://feature-co-managed-it.localhost:23374/auth/msp/signin). Port 3374 is the development app. The October 25 repaired production recordings use source `c04a67fff5` and build `build-1792926045353`. See [the current matrix](../../evidence/co-managed-deploy/c04a67fff5/runtime-matrix.json) and [media coverage](../../evidence/co-managed-deploy/c04a67fff5/walkthroughs/video-coverage.json). All full scenarios remain partial. Check the displayed organization and current state before using a record.
 
 | Identity or record | Use |
 | --- | --- |
 | `qa@emeraldcity.oz` | QA Tester, Oz workspace administrator with a co-managed technician assignment. Confirm the current session and offered controls; do not add grants to bypass a denial. |
 | `alice@whiterabbit.test` | White Rabbit IT customer administrator; customer-owned tickets and relationship controls. |
 | `noassign@emeraldcity.oz` | MSP viewer. Despite the name, this account has a viewer assignment. |
-| [White Rabbit client](http://feature-co-managed-it.localhost:23374/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed) | Existing client relationship and Co-managed IT view. Last recorded allocation: two seats. |
+| [White Rabbit client](http://feature-co-managed-it.localhost:23374/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed) | Existing client relationship and Co-managed IT view. October 25 allocation: one seat; the reversible +1 test restored this value. |
 | [Ticket 000002, MSP](http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500) | Shared detail; last recorded MSP-responsible and unassigned. |
 | [Ticket 000002, customer](http://feature-co-managed-it.localhost:23374/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500) | Same authoritative ticket, viewed as Alice. |
 | [Native Oz ticket TIC001011](http://feature-co-managed-it.localhost:23374/msp/tickets/5a9fda39-4057-4e0f-81f0-e5e9d5cd23ce) | Control for ordinary MSP ticket behavior. |
@@ -83,7 +83,7 @@ Open Review must enter directly as `qa@emeraldcity.oz`; confirm the avatar and O
 
 For a full review, follow guides 1–9, then integrations, export and restore, and finally upgrade or departure on **separate disposable relationships**. Upgrade and departure end live trust; the active White Rabbit relationship supports the existing ticket review and should remain available.
 
-Use a unique suffix such as `CM-REVIEW-20261018-A` for new records and messages. Record the account, organization, record link, initial state, action, result after reload, and any retained effect. Preserve sent messages, recorded time and financial evidence. Restore reversible settings to their original values. Do not use old September fixture IDs or reset scripts against the rebuilt database.
+Use a unique suffix such as `CM-REVIEW-20261025-A` for new records and messages. Record the account, organization, record link, initial state, action, result after reload, and any retained effect. Preserve sent messages, recorded time and financial evidence. Restore reversible settings to their original values. Do not use old September fixture IDs or reset scripts against the rebuilt database.
 
 ## Record results
 

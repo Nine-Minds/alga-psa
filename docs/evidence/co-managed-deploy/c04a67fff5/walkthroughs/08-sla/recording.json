@@ -1,0 +1,149 @@
+{
+  "guide": "guides/08-sla.html",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "status": "complete",
+  "recordedAt": "2026-10-25T11:47:37.910Z",
+  "durationSeconds": 38.76,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:47:43.021Z",
+      "seconds": 5.111,
+      "title": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "actor": "qa",
+      "result": "Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nQuick Create\n\nLoading customer seat capacity\u2026",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T11:47:43.023Z",
+      "seconds": 5.113,
+      "title": "Sponsor priority mapping",
+      "actor": "qa",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nQuick Create\n\nLoading customer seat capacity\u2026",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T11:47:58.604Z",
+      "seconds": 20.694,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T11:48:04.840Z",
+      "seconds": 26.93,
+      "title": "MSP handback and separate clocks",
+      "actor": "qa",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (11 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (19)\nReplies (19)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nOCT 24\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 11:24 PM\n\nCM-LEAD LIVE HINT REPAIR 1792898627713\n\nTODAY\nQT\n\nQA Tester\n",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T11:48:10.447Z",
+      "seconds": 32.537,
+      "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "alice",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T11:48:15.123Z",
+      "seconds": 37.213,
+      "title": "Customer escalation restored",
+      "actor": "alice",
+      "result": "Persisted reload",
+      "sourceClip": "05-customer-ticket-loop"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "result": "Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nQuick Create\n\nLoading customer seat capacity\u2026"
+    },
+    {
+      "action": "Sponsor priority mapping",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nQuick Create\n\nLoading customer seat capacity\u2026"
+    },
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+    },
+    {
+      "action": "MSP handback and separate clocks",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (11 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (19)\nReplies (19)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nOCT 24\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 11:24 PM\n\nCM-LEAD LIVE HINT REPAIR 1792898627713\n\nTODAY\nQT\n\nQA Tester\n"
+    },
+    {
+      "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Customer escalation restored",
+      "result": "Persisted reload"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.113,
+      "title": "05 customer ticket loop"
+    },
+    {
+      "start": 5.113,
+      "end": 26.93,
+      "title": "Sponsor priority mapping"
+    },
+    {
+      "start": 26.93,
+      "end": 37.213,
+      "title": "MSP handback and separate clocks"
+    },
+    {
+      "start": 37.213,
+      "end": 38.76,
+      "title": "Customer escalation restored"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/05-customer-ticket-loop/recording.json"
+    ]
+  },
+  "limitations": [
+    "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.",
+    "Observed separate responsibility clocks and paused state; the route labelled priority mapping resolved client composition, so configuration editing was not verified."
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "08-sla/walkthrough.webm",
+    "chapterVtt": "08-sla/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

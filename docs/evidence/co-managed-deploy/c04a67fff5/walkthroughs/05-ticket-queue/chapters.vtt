@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.603
+05 ticket queue
+
+2
+00:00:05.603 --> 00:00:10.731
+Native ticket list
+
+3
+00:00:10.731 --> 00:00:15.909
+Return selected shared ticket
+
+4
+00:00:15.909 --> 00:00:17.741
+Customer sees authoritative returned ticket
+
+5
+00:00:17.741 --> 00:00:22.908
+Customer re-escalates
+
+6
+00:00:22.908 --> 00:00:23.880
+Restored MSP working queue
+
+7
+00:00:23.880 --> 00:00:33.233
+05 filtered queue export
+
+8
+00:00:33.233 --> 00:00:35.240
+Filtered CSV contains selected authorized ticket and excludes other ticket

@@ -1,0 +1,206 @@
+{
+  "guide": "guides/index.html",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "status": "complete",
+  "recordedAt": "2026-10-25T11:49:39.359Z",
+  "durationSeconds": 26.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:49:44.580Z",
+      "seconds": 5.221,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:49:44.584Z",
+      "seconds": 5.225,
+      "title": "Licensed customer workspace overview",
+      "actor": "qa",
+      "result": "Shared capacity and customer directory",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:49:50.064Z",
+      "seconds": 10.705,
+      "title": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+      "actor": "qa",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:49:50.066Z",
+      "seconds": 10.707,
+      "title": "Client-linked co-managed workspace",
+      "actor": "qa",
+      "result": "his relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:49:54.938Z",
+      "seconds": 15.579,
+      "title": "/msp/tickets/customer",
+      "actor": "qa",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:49:54.942Z",
+      "seconds": 15.583,
+      "title": "Separate Customer Tickets surface",
+      "actor": "qa",
+      "result": "Native All Tickets remains separate",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:50:00.014Z",
+      "seconds": 20.655,
+      "title": "/msp/co-management",
+      "actor": "alice",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:50:00.016Z",
+      "seconds": 20.657,
+      "title": "Customer controls own sharing",
+      "actor": "alice",
+      "result": "Explicit project and board grants",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:50:04.753Z",
+      "seconds": 25.394,
+      "title": "/msp/co-management/export",
+      "actor": "alice",
+      "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup",
+      "sourceClip": "collection-final"
+    },
+    {
+      "at": "2026-10-25T11:50:04.756Z",
+      "seconds": 25.397,
+      "title": "Customer portability surface",
+      "actor": "alice",
+      "result": "Passphrase export uses customer authority",
+      "sourceClip": "collection-final"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Licensed customer workspace overview",
+      "result": "Shared capacity and customer directory"
+    },
+    {
+      "action": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    },
+    {
+      "action": "Client-linked co-managed workspace",
+      "result": "his relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    },
+    {
+      "action": "/msp/tickets/customer",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+    },
+    {
+      "action": "Separate Customer Tickets surface",
+      "result": "Native All Tickets remains separate"
+    },
+    {
+      "action": "/msp/co-management",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+    },
+    {
+      "action": "Customer controls own sharing",
+      "result": "Explicit project and board grants"
+    },
+    {
+      "action": "/msp/co-management/export",
+      "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup"
+    },
+    {
+      "action": "Customer portability surface",
+      "result": "Passphrase export uses customer authority"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.225,
+      "title": "collection final"
+    },
+    {
+      "start": 5.225,
+      "end": 10.707,
+      "title": "Licensed customer workspace overview"
+    },
+    {
+      "start": 10.707,
+      "end": 15.583,
+      "title": "Client-linked co-managed workspace"
+    },
+    {
+      "start": 15.583,
+      "end": 20.657,
+      "title": "Separate Customer Tickets surface"
+    },
+    {
+      "start": 20.657,
+      "end": 25.397,
+      "title": "Customer controls own sharing"
+    },
+    {
+      "start": 25.397,
+      "end": 26.32,
+      "title": "Customer portability surface"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/collection-final/recording.json"
+    ]
+  },
+  "limitations": [
+    "This is the collection navigation walkthrough with live fixtures; each section has separate outcome limits. It does not establish all section acceptance or real provider/paid activation readiness.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "collection/walkthrough.webm",
+    "chapterVtt": "collection/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

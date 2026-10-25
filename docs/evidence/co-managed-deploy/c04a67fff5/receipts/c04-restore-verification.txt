@@ -1,0 +1,33 @@
+                tenant                | product_code |        suspended_at        |          suspended_reason
+--------------------------------------+--------------+----------------------------+-------------------------------------
+ aff0c0b1-6ce6-49f8-ba8b-4df73f20c5ce | psa          | 2026-10-25 11:57:47.631+00 | portable_restore_pending_activation
+(1 row)
+
+ users | active_users
+-------+--------------
+     1 |            0
+(1 row)
+
+ workflows | unpaused_workflows
+-----------+--------------------
+         0 |                  0
+(1 row)
+
+  source  | count
+----------+-------
+ tickets  |     2
+ projects |     1
+ tasks    |     1
+ comments |    28
+ files    |     4
+(5 rows)
+
+ live_relationships
+--------------------
+                  0
+(1 row)
+
+                tenant                |              package_id              |                          archive_sha256                          |        administrator_user_id         |          restored_at
+--------------------------------------+--------------------------------------+------------------------------------------------------------------+--------------------------------------+-------------------------------
+ aff0c0b1-6ce6-49f8-ba8b-4df73f20c5ce | bd33d5cf-9463-469c-9a71-0cbf54e97c49 | 56d33679c97aa0c8034178935fb678702b0253dd34a4f874ad5889cf6f908fd5 | ecdf4f80-4855-4a64-be3a-583dcd5bcf5c | 2026-10-25 11:57:47.596534+00
+(1 row)

@@ -1,0 +1,29 @@
+                tenant                |           relationship_id            | state  | ended_at
+--------------------------------------+--------------------------------------+--------+----------
+ 1f98df77-cd15-44c2-8f4d-42ff52d01e84 | c7de2b20-f1d9-4374-b7bb-c223f681955e | active |
+(1 row)
+
+ state  | seats
+--------+-------
+ active |     1
+(1 row)
+
+              project_id              | can_collaborate
+--------------------------------------+-----------------
+ 943acf31-95f4-47b0-8818-9de8977e5abd | t
+(1 row)
+
+               task_id                |      task_name
+--------------------------------------+---------------------
+ 32bde60e-9e8b-4584-8926-8e7fb627d710 | CM Lead shared task
+(1 row)
+
+ status
+--------
+ ready
+(1 row)
+
+ is_paused
+-----------
+ t
+(1 row)

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "recordedAt": "2026-10-25T11:58:02.818Z",
+  "durationSeconds": 20,
+  "guide": "guides/10-departure-and-archives.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:58:07.773Z",
+      "seconds": 4.955,
+      "title": "/msp/co-management/departure",
+      "result": "main available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceReview departureRefresh status",
+      "sourceClip": "10-c04-departure"
+    },
+    {
+      "at": "2026-10-25T11:58:11.537Z",
+      "seconds": 8.719,
+      "title": "Disposable relationship ended after reload",
+      "result": "Customer retains read-only workspace; existing White Rabbit remains active",
+      "sourceClip": "10-c04-departure"
+    },
+    {
+      "at": "2026-10-25T11:58:16.734Z",
+      "seconds": 13.916,
+      "title": "/msp/tickets",
+      "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\n3d2d0d15-f1b6-4989-a7db-160e3fd5c532\nQuick Create\nCR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions",
+      "sourceClip": "10-c04-departure"
+    },
+    {
+      "at": "2026-10-25T11:58:21.835Z",
+      "seconds": 19.017,
+      "title": "/msp/co-managed/archive",
+      "actor": "qa",
+      "result": "red work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files.",
+      "sourceClip": "10-c04-departure"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/departure",
+      "result": "main available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceReview departureRefresh status"
+    },
+    {
+      "action": "Disposable relationship ended after reload",
+      "result": "Customer retains read-only workspace; existing White Rabbit remains active"
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\n3d2d0d15-f1b6-4989-a7db-160e3fd5c532\nQuick Create\nCR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions"
+    },
+    {
+      "action": "/msp/co-managed/archive",
+      "result": "red work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files."
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 8.719,
+      "title": "10 c04 departure"
+    },
+    {
+      "start": 8.719,
+      "end": 20,
+      "title": "Disposable relationship ended after reload"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/10-c04-departure/recording.json"
+    ]
+  },
+  "limitations": [
+    "Fresh disposable relationship closed through product with seat release and sealed archive, then customer read-only workspace and MSP archive read. It had no shared participation; retained bodies/files and invoices after closure are not verified here."
+  ]
+}

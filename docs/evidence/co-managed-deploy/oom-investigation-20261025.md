@@ -412,3 +412,16 @@ explicitly evidenced checks. The remaining PLAN matrices and fourteen full
 current-build walkthroughs remain incomplete. Historical 704f, cd28 and e88
 recordings retain their original provenance and partial status. No changes were
 made to accounts, passwords, hashes, tenant state, roles or grants.
+
+## Subsequent production matrix evidence
+
+The lead takeover recorded fourteen separate current-c04 production walkthroughs
+and checked playback, chapters and HTTP Range delivery. Their full guide
+scenarios remain partial. The [runtime matrix](c04a67fff5/runtime-matrix.json)
+records actual bounded outcomes, including private-file disclosure/removal,
+matched Temporal effects and isolated export/restore, separately from deployment
+readiness. Acceptance created disposable customer workspaces and normal content,
+ended only the disposable relationship, and restored reversible scope/allocation
+and workflow-setting changes. It did not replace QA/Alice credentials or grants
+to repair login. This later product testing does not change the bounded dev
+heap evidence above or establish long-term memory stability.

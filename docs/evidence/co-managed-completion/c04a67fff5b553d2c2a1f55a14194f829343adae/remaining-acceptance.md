@@ -1,6 +1,6 @@
 # Remaining acceptance obligations
 
-Candidate: `c04a67fff5b553d2c2a1f55a14194f829343adae`.
+Candidate: `1e806a6815be25d46e49b209540b88abc0c27072`.
 
 Every approved ID is retained below. Source locations are a census, not proof that the complete requirement passed.
 No source-only record is promoted to verified. External portions retain their release owner.

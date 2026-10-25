@@ -1,0 +1,160 @@
+{
+  "guide": "guides/12-customer-integrations.html",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "status": "complete",
+  "recordedAt": "2026-10-25T11:49:10.040Z",
+  "durationSeconds": 22.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:49:15.023Z",
+      "seconds": 4.984,
+      "title": "/msp/settings/email",
+      "actor": "alice",
+      "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:15.030Z",
+      "seconds": 4.99,
+      "title": "Customer email binding",
+      "actor": "alice",
+      "result": "Existing Nine Minds Managed binding retained; no secret replacement",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:20.003Z",
+      "seconds": 9.963,
+      "title": "/msp/co-management/providers",
+      "actor": "alice",
+      "result": "AM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:22.006Z",
+      "seconds": 11.966,
+      "title": "Customer provider ownership controls",
+      "actor": "alice",
+      "result": "ur company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nNeeds setup\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nGoogle\n\nEnter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.\n\nGoogle Cloud Console\nSetup guide\nGoogle OAuth app values\nGoogle Cloud project ID\n\nRequired for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.\n\nOAuth app\n\nGoogle Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.\n\nUse the Google OAuth client for Calendar too\nStaff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.\nGoogle OAuth Client ID for staff sign-in and Gmail\nGoogle OAuth Client Secret for staff sign-in and Gmail\nCalendar OAuth Client ID\nCalendar OAuth Client Secret\nGmail notification service account\n\nRequired for inbound Gmail notifications. Not used for staff sign-in.\n\nGoogle Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:26.831Z",
+      "seconds": 16.791,
+      "title": "/auth/msp/signin",
+      "actor": "alice",
+      "result": "isits and remote sessions with bi-directional sync.\n\nHide\nDownload AlgaPSA Mobile app\n\nScan a QR code with your phone to download the AlgaPSA mobile app.\n\nApp Store (iOS)\nGoogle Play (Android)\nNeed a deeper dive?\n\nExplore deployment runbooks and best practices in the knowledge base.\n\nVisit resources",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:26.831Z",
+      "seconds": 16.791,
+      "title": "Staff sign-in entry with existing session",
+      "actor": "alice",
+      "result": "No production Microsoft binding prepared; cannot assert OIDC round trip",
+      "sourceClip": "12-customer-integrations"
+    },
+    {
+      "at": "2026-10-25T11:49:31.913Z",
+      "seconds": 21.873,
+      "title": "/msp/settings/email",
+      "actor": "qa",
+      "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics",
+      "sourceClip": "12-customer-integrations"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/settings/email",
+      "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics"
+    },
+    {
+      "action": "Customer email binding",
+      "result": "Existing Nine Minds Managed binding retained; no secret replacement"
+    },
+    {
+      "action": "/msp/co-management/providers",
+      "result": "AM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret."
+    },
+    {
+      "action": "Customer provider ownership controls",
+      "result": "ur company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nNeeds setup\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nGoogle\n\nEnter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.\n\nGoogle Cloud Console\nSetup guide\nGoogle OAuth app values\nGoogle Cloud project ID\n\nRequired for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.\n\nOAuth app\n\nGoogle Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.\n\nUse the Google OAuth client for Calendar too\nStaff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.\nGoogle OAuth Client ID for staff sign-in and Gmail\nGoogle OAuth Client Secret for staff sign-in and Gmail\nCalendar OAuth Client ID\nCalendar OAuth Client Secret\nGmail notification service account\n\nRequired for inbound Gmail notifications. Not used for staff sign-in.\n\nGoogle Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret."
+    },
+    {
+      "action": "/auth/msp/signin",
+      "result": "isits and remote sessions with bi-directional sync.\n\nHide\nDownload AlgaPSA Mobile app\n\nScan a QR code with your phone to download the AlgaPSA mobile app.\n\nApp Store (iOS)\nGoogle Play (Android)\nNeed a deeper dive?\n\nExplore deployment runbooks and best practices in the knowledge base.\n\nVisit resources"
+    },
+    {
+      "action": "Staff sign-in entry with existing session",
+      "result": "No production Microsoft binding prepared; cannot assert OIDC round trip"
+    },
+    {
+      "action": "/msp/settings/email",
+      "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 4.99,
+      "title": "12 customer integrations"
+    },
+    {
+      "start": 4.99,
+      "end": 11.966,
+      "title": "Customer email binding"
+    },
+    {
+      "start": 11.966,
+      "end": 16.791,
+      "title": "Customer provider ownership controls"
+    },
+    {
+      "start": 16.791,
+      "end": 22.84,
+      "title": "Staff sign-in entry with existing session"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/12-customer-integrations/recording.json"
+    ]
+  },
+  "limitations": [
+    "Customer and sponsor email settings and customer provider workbench inspected separately. Customer provider save, real Microsoft callback, directory sync, requester inbound/replay/revocation are blocked by missing isolated test binding. System invitation SMTP delivery was verified separately and does not establish customer-provider acceptance.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "12-customer-integrations/walkthrough.webm",
+    "chapterVtt": "12-customer-integrations/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

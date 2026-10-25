@@ -1,0 +1,484 @@
+{
+  "guide": "guides/07-conversations-and-files.html",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "status": "complete",
+  "recordedAt": "2026-10-25T11:46:57.042Z",
+  "durationSeconds": 106.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:47:11.665Z",
+      "seconds": 14.623,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:12.934Z",
+      "seconds": 15.892,
+      "title": "MSP shared IT contribution",
+      "actor": "qa",
+      "result": "Committed through native composer",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:12.973Z",
+      "seconds": 15.931,
+      "title": "Distinct customer live display",
+      "actor": "qa",
+      "result": "Visible without recipient reload",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:19.227Z",
+      "seconds": 22.185,
+      "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "alice",
+      "result": " (Oz) \u00b7 internal note added\n\n7:47 AM\nShow all activity\nSLA clocks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity\u2026\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\nExternal links",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:19.246Z",
+      "seconds": 22.204,
+      "title": "Customer refreshed shared note and private denial",
+      "actor": "alice",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:22.192Z",
+      "seconds": 25.15,
+      "title": "Customer private write after fresh reload",
+      "actor": "alice",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:28.325Z",
+      "seconds": 31.283,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "928810673 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 7:47 AM\n\nCM-C04-TAKEOVER-LIVE-1792928810673 MSP PRIVATE\n\nShow all activity\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity\u2026\n\n00:00:00\nWork description\nAdd time entry\nLoading time entries\u2026",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:47:28.335Z",
+      "seconds": 31.293,
+      "title": "MSP refreshed own note and customer-private denial",
+      "actor": "qa",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T11:51:32.949Z",
+      "seconds": 38.185,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:35.072Z",
+      "seconds": 40.308,
+      "title": "Shared task root and file published",
+      "actor": "qa",
+      "result": {
+        "http": 200,
+        "bytes": 22,
+        "sha256": "6a1f2e4d543ca6148e6e867e26c58bfdce9d0d3b032471b16a24c14144df358c"
+      },
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:39.851Z",
+      "seconds": 45.087,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:40.493Z",
+      "seconds": 45.729,
+      "title": "Customer reply inherits shared IT audience; MSP author cannot be edited",
+      "actor": "alice",
+      "result": "Passed",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:45.213Z",
+      "seconds": 50.449,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:47.968Z",
+      "seconds": 53.204,
+      "title": "Own-author edit persists with opposite-organization reply",
+      "actor": "qa",
+      "result": "Passed",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:50.453Z",
+      "seconds": 55.68900000000001,
+      "title": "Root tombstone retains reply and withdraws file",
+      "actor": "qa",
+      "result": {
+        "replyRetained": true,
+        "fileHttp": 404
+      },
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:57.143Z",
+      "seconds": 62.379000000000005,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:51:57.170Z",
+      "seconds": 62.406000000000006,
+      "title": "MSP private note and captured file URL denied to Alice",
+      "actor": "alice",
+      "result": {
+        "http": 404
+      },
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:52:01.950Z",
+      "seconds": 67.186,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:52:10.833Z",
+      "seconds": 76.069,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:52:15.270Z",
+      "seconds": 80.506,
+      "title": "Confirmed whole-thread disclosure transfers file with integrity",
+      "actor": "alice",
+      "result": {
+        "customerNew": {
+          "http": 200,
+          "bytes": 28,
+          "sha256": "981695feae7d84ccd42ec0dc4cf86f28f23be30065e31138fcb969286f91aca3"
+        },
+        "oldPrivateHttp": 404
+      },
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:52:21.972Z",
+      "seconds": 87.208,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:52:28.271Z",
+      "seconds": 93.507,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-task-thread-files-disclosure"
+    },
+    {
+      "at": "2026-10-25T11:53:43.692Z",
+      "seconds": 99.47600000000001,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-disclosed-file-removal-continuation"
+    },
+    {
+      "at": "2026-10-25T11:53:45.198Z",
+      "seconds": 100.98200000000001,
+      "title": "Disclosed customer-owned copy removal acknowledged",
+      "actor": "qa",
+      "result": "Dialog closed and page reloaded",
+      "sourceClip": "07-disclosed-file-removal-continuation"
+    },
+    {
+      "at": "2026-10-25T11:53:49.907Z",
+      "seconds": 105.691,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-disclosed-file-removal-continuation"
+    },
+    {
+      "at": "2026-10-25T11:53:49.942Z",
+      "seconds": 105.727,
+      "title": "Captured disclosed-file URL revoked",
+      "actor": "alice",
+      "result": {
+        "http": 404
+      },
+      "sourceClip": "07-disclosed-file-removal-continuation"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+    },
+    {
+      "action": "MSP shared IT contribution",
+      "result": "Committed through native composer"
+    },
+    {
+      "action": "Distinct customer live display",
+      "result": "Visible without recipient reload"
+    },
+    {
+      "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": " (Oz) \u00b7 internal note added\n\n7:47 AM\nShow all activity\nSLA clocks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity\u2026\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\nExternal links"
+    },
+    {
+      "action": "Customer refreshed shared note and private denial",
+      "result": "Passed"
+    },
+    {
+      "action": "Customer private write after fresh reload",
+      "result": "Passed"
+    },
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "928810673 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 7:47 AM\n\nCM-C04-TAKEOVER-LIVE-1792928810673 MSP PRIVATE\n\nShow all activity\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity\u2026\n\n00:00:00\nWork description\nAdd time entry\nLoading time entries\u2026"
+    },
+    {
+      "action": "MSP refreshed own note and customer-private denial",
+      "result": "Passed"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Shared task root and file published",
+      "result": {
+        "http": 200,
+        "bytes": 22,
+        "sha256": "6a1f2e4d543ca6148e6e867e26c58bfdce9d0d3b032471b16a24c14144df358c"
+      }
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Customer reply inherits shared IT audience; MSP author cannot be edited",
+      "result": "Passed"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Own-author edit persists with opposite-organization reply",
+      "result": "Passed"
+    },
+    {
+      "action": "Root tombstone retains reply and withdraws file",
+      "result": {
+        "replyRetained": true,
+        "fileHttp": 404
+      }
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "MSP private note and captured file URL denied to Alice",
+      "result": {
+        "http": 404
+      }
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Confirmed whole-thread disclosure transfers file with integrity",
+      "result": {
+        "customerNew": {
+          "http": 200,
+          "bytes": 28,
+          "sha256": "981695feae7d84ccd42ec0dc4cf86f28f23be30065e31138fcb969286f91aca3"
+        },
+        "oldPrivateHttp": 404
+      }
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Disclosed customer-owned copy removal acknowledged",
+      "result": "Dialog closed and page reloaded"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Captured disclosed-file URL revoked",
+      "result": {
+        "http": 404
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 15.892,
+      "title": "07 conversations final"
+    },
+    {
+      "start": 15.892,
+      "end": 22.204,
+      "title": "MSP shared IT contribution"
+    },
+    {
+      "start": 22.204,
+      "end": 25.15,
+      "title": "Customer refreshed shared note and private denial"
+    },
+    {
+      "start": 25.15,
+      "end": 31.293,
+      "title": "Customer private write after fresh reload"
+    },
+    {
+      "start": 31.293,
+      "end": 33.24,
+      "title": "MSP refreshed own note and customer-private denial"
+    },
+    {
+      "start": 33.24,
+      "end": 40.308,
+      "title": "07 task thread files disclosure"
+    },
+    {
+      "start": 40.308,
+      "end": 45.729,
+      "title": "Shared task root and file published"
+    },
+    {
+      "start": 45.729,
+      "end": 53.204,
+      "title": "Customer reply inherits shared IT audience; MSP author cannot be edited"
+    },
+    {
+      "start": 53.204,
+      "end": 55.689,
+      "title": "Own-author edit persists with opposite-organization reply"
+    },
+    {
+      "start": 55.689,
+      "end": 62.406,
+      "title": "Root tombstone retains reply and withdraws file"
+    },
+    {
+      "start": 62.406,
+      "end": 80.506,
+      "title": "MSP private note and captured file URL denied to Alice"
+    },
+    {
+      "start": 80.506,
+      "end": 94.52,
+      "title": "Confirmed whole-thread disclosure transfers file with integrity"
+    },
+    {
+      "start": 94.52,
+      "end": 100.982,
+      "title": "07 disclosed file removal continuation"
+    },
+    {
+      "start": 100.982,
+      "end": 105.727,
+      "title": "Disclosed customer-owned copy removal acknowledged"
+    },
+    {
+      "start": 105.727,
+      "end": 106.68,
+      "title": "Captured disclosed-file URL revoked"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/07-conversations-final/recording.json",
+      "evidence/takeover-c04-production/07-task-thread-files-disclosure/recording.json",
+      "evidence/takeover-c04-production/07-disclosed-file-removal-continuation/recording.json"
+    ]
+  },
+  "limitations": [
+    "Three-audience staff text checks passed; requester, attachments, edit/delete and whole-thread disclosure remain outside this recording.",
+    "Unauthorized file read HTTP200",
+    "Exact customer-owned disclosed copy tested; original private source retention is separate and not confused with the disclosed copy.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.",
+    "Initial file-removal polling switched actors before completion; the exact-attachment continuation waited for confirmed removal and verified captured URL404. Historical failed attempts remain separate."
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "07-conversations-and-files/walkthrough.webm",
+    "chapterVtt": "07-conversations-and-files/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "recordedAt": "2026-10-25T11:43:43.424Z",
+  "durationSeconds": 17.04,
+  "guide": "guides/02-licensing-and-seats.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T11:43:48.569Z",
+      "seconds": 5.145,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "02-current-allocation-verified"
+    },
+    {
+      "at": "2026-10-25T11:43:48.577Z",
+      "seconds": 5.153,
+      "title": "Sponsor purchased pool and allocations",
+      "actor": "qa",
+      "result": "Co-managed IT\n\nManage the technician seats available to your customer workspaces.\n\nCustomer technician seats\nReview purchase\n\nAllocate seats from this shared pool. Requesters are free, and your MSP technicians do not use customer seats.\n\n14\nPurchased seats\n13\nAllocated to customers\n1\nAvailable seats\nTotal seats in your pool\nShared work\nCo-managed ticket queues\nProject task queues\nShared work archive\nCo-managed clients\n17\nAll clients\nSearch clients\nClient\tWorkspace\tStatus\tSeats\tActions\nCM 704F Takeover 20261025\tCM 704F Takeover IT\tActive\t1 of 1 technician seat\tManage access\nCM Lead Acceptance 20261025\tCM Lead Acceptance IT 20261025\tRelationshi",
+      "sourceClip": "02-current-allocation-verified"
+    },
+    {
+      "at": "2026-10-25T11:43:54.021Z",
+      "seconds": 10.597,
+      "title": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+      "actor": "qa",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "02-current-allocation-verified"
+    },
+    {
+      "at": "2026-10-25T11:43:56.639Z",
+      "seconds": 13.215,
+      "title": "Allocation increase persisted after reload",
+      "actor": "qa",
+      "result": {
+        "before": "1",
+        "after": "2"
+      },
+      "sourceClip": "02-current-allocation-verified"
+    },
+    {
+      "at": "2026-10-25T11:43:59.222Z",
+      "seconds": 15.798,
+      "title": "Original seat allocation restored after reload",
+      "actor": "qa",
+      "result": "1",
+      "sourceClip": "02-current-allocation-verified"
+    },
+    {
+      "at": "2026-10-25T11:43:59.310Z",
+      "seconds": 15.886,
+      "title": "Client allocation authority",
+      "actor": "qa",
+      "result": "White Rabbit allocation growth and restoration verified; no pool purchase",
+      "sourceClip": "02-current-allocation-verified"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Sponsor purchased pool and allocations",
+      "result": "Co-managed IT\n\nManage the technician seats available to your customer workspaces.\n\nCustomer technician seats\nReview purchase\n\nAllocate seats from this shared pool. Requesters are free, and your MSP technicians do not use customer seats.\n\n14\nPurchased seats\n13\nAllocated to customers\n1\nAvailable seats\nTotal seats in your pool\nShared work\nCo-managed ticket queues\nProject task queues\nShared work archive\nCo-managed clients\n17\nAll clients\nSearch clients\nClient\tWorkspace\tStatus\tSeats\tActions\nCM 704F Takeover 20261025\tCM 704F Takeover IT\tActive\t1 of 1 technician seat\tManage access\nCM Lead Acceptance 20261025\tCM Lead Acceptance IT 20261025\tRelationshi"
+    },
+    {
+      "action": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    },
+    {
+      "action": "Allocation increase persisted after reload",
+      "result": {
+        "before": "1",
+        "after": "2"
+      }
+    },
+    {
+      "action": "Original seat allocation restored after reload",
+      "result": "1"
+    },
+    {
+      "action": "Client allocation authority",
+      "result": "White Rabbit allocation growth and restoration verified; no pool purchase"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.153,
+      "title": "02 current allocation verified"
+    },
+    {
+      "start": 5.153,
+      "end": 13.215,
+      "title": "Sponsor purchased pool and allocations"
+    },
+    {
+      "start": 13.215,
+      "end": 15.798,
+      "title": "Allocation increase persisted after reload"
+    },
+    {
+      "start": 15.798,
+      "end": 17.04,
+      "title": "Original seat allocation restored after reload"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.webm",
+    "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.vtt",
+    "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+    "buildId": "build-1792926045353"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-c04-production/02-current-allocation-verified/recording.json"
+    ]
+  },
+  "limitations": [
+    "Current sponsor pool and reversible allocation growth/restoration verified. Live Stripe purchase and self-host license issuance remain externally owned; allocation-boundary writes follow separately.",
+    "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+  ]
+}

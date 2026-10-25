@@ -1,0 +1,73 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.199
+account boundary
+
+2
+00:00:05.199 --> 00:00:10.017
+Customer denied /msp/account
+
+3
+00:00:10.017 --> 00:00:14.881
+Customer denied /msp/account/billing
+
+4
+00:00:14.881 --> 00:00:20.175
+Customer denied /msp/settings/integrations?category=accounting
+
+5
+00:00:20.175 --> 00:00:21.160
+Authorized PSA account
+
+6
+00:00:21.160 --> 00:00:29.157
+production cookie coexistence
+
+7
+00:00:29.157 --> 00:00:36.275
+QA session retained after reload
+
+8
+00:00:36.275 --> 00:01:04.406
+QA session retained after reload
+
+9
+00:01:04.406 --> 00:01:06.800
+QA session retained after reload
+
+10
+00:01:06.800 --> 00:01:13.192
+main native effect final
+
+11
+00:01:13.192 --> 00:02:07.761
+Temporarily resume existing published smoke workflow
+
+12
+00:02:07.761 --> 00:02:08.758
+Restored workflow paused state
+
+13
+00:02:08.758 --> 00:02:15.081
+main worker business confirmed
+
+14
+00:02:15.081 --> 00:02:20.005
+Native ticket trigger and Temporal business effects after reload
+
+15
+00:02:20.005 --> 00:02:21.000
+Workflow paused state restored
+
+16
+00:02:21.000 --> 00:02:29.202
+main native comment file
+
+17
+00:02:29.202 --> 00:02:34.662
+Native comment and uploaded file persisted after reload
+
+18
+00:02:34.662 --> 00:02:35.600
+Both foreign-tenant byte routes denied

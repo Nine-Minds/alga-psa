@@ -1,0 +1,26 @@
+[
+  {
+    "route": "/api/files/88326dcf-a655-4cba-9645-2633e2561cc0/download",
+    "actor": "qa",
+    "http": 200,
+    "bytes": 41,
+    "sha256": "95908c07c1fec20eba0472a15a732e626db3b146e73dea1145040ae8b8a61d98"
+  },
+  {
+    "route": "/api/documents/download/88326dcf-a655-4cba-9645-2633e2561cc0",
+    "actor": "qa",
+    "http": 200,
+    "bytes": 41,
+    "sha256": "95908c07c1fec20eba0472a15a732e626db3b146e73dea1145040ae8b8a61d98"
+  },
+  {
+    "route": "/api/files/88326dcf-a655-4cba-9645-2633e2561cc0/download",
+    "actor": "alice",
+    "http": 404
+  },
+  {
+    "route": "/api/documents/download/88326dcf-a655-4cba-9645-2633e2561cc0",
+    "actor": "alice",
+    "http": 404
+  }
+]

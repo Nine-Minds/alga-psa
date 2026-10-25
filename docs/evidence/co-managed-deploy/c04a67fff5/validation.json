@@ -60,6 +60,22 @@
       "humanReviewReady": false,
       "productionReady": false,
       "command": "node scripts/verify-co-managed-completion.mjs --candidate c04a67fff5b553d2c2a1f55a14194f829343adae --json"
+    },
+    {
+      "name": "lead publication renderer and fail-closed completion tooling",
+      "command": "node --test docs/guides/co-managed-it/render.test.cjs scripts/tests/co-managed-completion.test.mjs scripts/tests/co-managed-plan-ids.test.mjs",
+      "result": "passed",
+      "testsPassed": 74,
+      "testsFailed": 0,
+      "runtimeAcceptanceSubstitute": false
+    },
+    {
+      "name": "published current-build media",
+      "result": "passed",
+      "recordings": 14,
+      "servedArtifacts": 42,
+      "scenarioAcceptance": false,
+      "evidence": "walkthroughs/published-media-integrity.json"
     }
   ],
   "notRun": [

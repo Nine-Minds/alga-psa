@@ -1,0 +1,184 @@
+[
+  {
+    "guide": "index.html",
+    "checkedAt": "2026-10-25T12:03:03.649Z",
+    "played": {
+      "time": 0.558138,
+      "duration": 155.6,
+      "width": 1440,
+      "cues": 18
+    },
+    "seekTarget": 5.199,
+    "seekActual": 5.199,
+    "passed": true
+  },
+  {
+    "guide": "guides/index.html",
+    "checkedAt": "2026-10-25T12:03:04.319Z",
+    "played": {
+      "time": 0.54864,
+      "duration": 26.32,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 5.225,
+    "seekActual": 5.225,
+    "passed": true
+  },
+  {
+    "guide": "guides/01-onboarding.html",
+    "checkedAt": "2026-10-25T12:03:04.955Z",
+    "played": {
+      "time": 0.546533,
+      "duration": 119.92,
+      "width": 1440,
+      "cues": 7
+    },
+    "seekTarget": 23.247,
+    "seekActual": 23.247,
+    "passed": true
+  },
+  {
+    "guide": "guides/02-licensing-and-seats.html",
+    "checkedAt": "2026-10-25T12:03:06.183Z",
+    "played": {
+      "time": 0.548358,
+      "duration": 17.04,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 5.153,
+    "seekActual": 5.153,
+    "passed": true
+  },
+  {
+    "guide": "guides/03-access-policies.html",
+    "checkedAt": "2026-10-25T12:03:06.991Z",
+    "played": {
+      "time": 0.546553,
+      "duration": 28.56,
+      "width": 1440,
+      "cues": 7
+    },
+    "seekTarget": 7.768,
+    "seekActual": 7.768,
+    "passed": true
+  },
+  {
+    "guide": "guides/04-delegated-administration.html",
+    "checkedAt": "2026-10-25T12:03:07.629Z",
+    "played": {
+      "time": 0.549242,
+      "duration": 16.84,
+      "width": 1440,
+      "cues": 3
+    },
+    "seekTarget": 7.96,
+    "seekActual": 7.96,
+    "passed": true
+  },
+  {
+    "guide": "guides/05-ticket-queue.html",
+    "checkedAt": "2026-10-25T12:03:08.254Z",
+    "played": {
+      "time": 0.555011,
+      "duration": 35.24,
+      "width": 1440,
+      "cues": 8
+    },
+    "seekTarget": 5.603,
+    "seekActual": 5.603,
+    "passed": true
+  },
+  {
+    "guide": "guides/06-projects-and-tasks.html",
+    "checkedAt": "2026-10-25T12:03:08.896Z",
+    "played": {
+      "time": 0.545839,
+      "duration": 56.44,
+      "width": 1440,
+      "cues": 7
+    },
+    "seekTarget": 7.365,
+    "seekActual": 7.365,
+    "passed": true
+  },
+  {
+    "guide": "guides/07-conversations-and-files.html",
+    "checkedAt": "2026-10-25T12:03:09.518Z",
+    "played": {
+      "time": 0.54549,
+      "duration": 106.68,
+      "width": 1440,
+      "cues": 15
+    },
+    "seekTarget": 15.892,
+    "seekActual": 15.892,
+    "passed": true
+  },
+  {
+    "guide": "guides/08-sla.html",
+    "checkedAt": "2026-10-25T12:03:10.156Z",
+    "played": {
+      "time": 0.547942,
+      "duration": 38.76,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 5.113,
+    "seekActual": 5.113,
+    "passed": true
+  },
+  {
+    "guide": "guides/09-time-and-billing.html",
+    "checkedAt": "2026-10-25T12:03:10.784Z",
+    "played": {
+      "time": 0.552661,
+      "duration": 26.68,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 8.882,
+    "seekActual": 8.882,
+    "passed": true
+  },
+  {
+    "guide": "guides/10-departure-and-archives.html",
+    "checkedAt": "2026-10-25T12:03:11.431Z",
+    "played": {
+      "time": 0.54716,
+      "duration": 20,
+      "width": 1440,
+      "cues": 2
+    },
+    "seekTarget": 8.719,
+    "seekActual": 8.719,
+    "passed": true
+  },
+  {
+    "guide": "guides/11-export-restore-and-upgrade.html",
+    "checkedAt": "2026-10-25T12:03:12.054Z",
+    "played": {
+      "time": 0.547643,
+      "duration": 14.44,
+      "width": 1440,
+      "cues": 3
+    },
+    "seekTarget": 8.478,
+    "seekActual": 8.478,
+    "passed": true
+  },
+  {
+    "guide": "guides/12-customer-integrations.html",
+    "checkedAt": "2026-10-25T12:03:12.702Z",
+    "played": {
+      "time": 0.550439,
+      "duration": 22.84,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 4.99,
+    "seekActual": 4.99,
+    "passed": true
+  }
+]

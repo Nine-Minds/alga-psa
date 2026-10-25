@@ -42,6 +42,8 @@
       "status": "passed"
     }
   ],
-  "remainingAcceptance": "The multipart, OIDC, provider/inbound, product-boundary, collaboration/privacy/file, assignment/SLA, time, financial, departure, export/restore/activation and native regression matrices remain incomplete or externally blocked. No guide scenario is fully accepted on this build. Port-scoped cookie coexistence boundary cases were not separately exercised on the repaired production runtime; source-level cookie/session tests passed.",
-  "guideScenariosAccepted": 0
+  "remainingAcceptance": "See runtime-matrix.json: bounded assertions executed for16areas; full matrices remain partial. Fourteen current-build media files play and seek; zero full scenarios accepted. Provider/OIDC/inbound, paid activation and full privacy/financial/retention matrices remain unaccepted.",
+  "guideScenariosAccepted": 0,
+  "extendedAcceptanceAt": "2026-10-25T12:05:21.723Z",
+  "extendedAcceptance": "runtime-matrix.json"
 }
