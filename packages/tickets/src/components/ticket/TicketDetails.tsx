@@ -644,13 +644,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     useEffect(() => {
       const partyKey = `${contactInfo?.contact_name_id ?? ''}|${client?.client_id ?? ''}`;
       if (partyKey === displayTagsPartyRef.current) return;
+      const partyTicketId = ticket.ticket_id;
+      if (!partyTicketId) return;
       displayTagsPartyRef.current = partyKey;
       let cancelled = false;
-      void getTicketPartyDisplayTags(contactInfo?.contact_name_id ?? null, client?.client_id ?? null).then((result) => {
+      void getTicketPartyDisplayTags(partyTicketId, contactInfo?.contact_name_id ?? null, client?.client_id ?? null).then((result) => {
         if (!cancelled && result && 'contact' in result && 'client' in result) setDisplayTags(result);
       });
       return () => { cancelled = true; };
-    }, [contactInfo?.contact_name_id, client?.client_id]);
+    }, [ticket.ticket_id, contactInfo?.contact_name_id, client?.client_id]);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 

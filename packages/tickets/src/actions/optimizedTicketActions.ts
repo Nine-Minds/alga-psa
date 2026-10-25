@@ -1196,10 +1196,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 /**
  * Chip tags for a ticket's requester and client, for the caller's audience. The ticket page calls
  * this when the requester or client is changed in place, so the header badges follow the new party.
+ *
+ * The chips are scoped to the caller's own ticket: the ticket must be readable by the caller
+ * (same row-level rules as the detail page), and the requested contact/client must be null or the
+ * ones the ticket row carries. Anything else is refused, never answered with empty arrays.
  */
 export const getTicketPartyDisplayTags = withAuth(async (
   user,
   { tenant },
+  ticketId: string,
   contactId: string | null,
   clientId: string | null
 ): Promise<{ contact: IDisplayTag[]; client: IDisplayTag[] } | TicketActionError> => {
@@ -1209,6 +1214,43 @@ export const getTicketPartyDisplayTags = withAuth(async (
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket');
       }
+
+      const ticket = await tenantScopedTable(trx, 'tickets as t', tenant)
+        .where({ 't.ticket_id': ticketId })
+        .select(
+          't.ticket_id',
+          't.entered_by',
+          't.assigned_to',
+          't.client_id',
+          't.board_id',
+          't.contact_name_id',
+          't.billing_profile_id',
+          't.attributes',
+          't.assigned_team_id'
+        )
+        .first();
+
+      // Same message for "missing" and "not authorized" so existence is not revealed.
+      if (!ticket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+      const [authorizedTicket] = await filterAuthorizedTickets(trx, authorizationContext, [ticket]);
+      if (!authorizedTicket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      if (
+        (contactId !== null && contactId !== ticket.contact_name_id) ||
+        (clientId !== null && clientId !== ticket.client_id)
+      ) {
+        throw new Error('Permission denied: Cannot view tags for a party not on this ticket');
+      }
+
       const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
         { taggedType: 'contact', ids: [contactId] },
         { taggedType: 'client', ids: [clientId] },
