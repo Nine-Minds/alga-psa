@@ -27,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import knex, { type Knex } from 'knex';
 import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoManagedOperationalTransaction,
-  reconcileHostedCoManagedEntitlement } from '@alga-psa/licensing';
+  reconcileHostedCoManagedEntitlement, CoManagedLifecycleError } from '@alga-psa/licensing';
 import { tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
 import { getSecret } from '../../../../../server/src/lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../../packages/co-managed/src/provisioning';
@@ -2829,6 +2829,86 @@ describe('co-managed tag lifecycle admission', () => {
     expect((await customer.table('tag_mappings').where('tagged_id', ticketId)).map(row => row.tag_id)).toHaveLength(1);
     expect(await customer.table('tag_definitions').whereIn('tag_text', ['Updated tag', 'Bulk tag'])).toEqual([]);
   }));
+
+  const restTagService = async (tenant: string) => {
+    const { TagService } = await import('../../../../../server/src/lib/api/services/TagService');
+    const service = new TagService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
+    const publish = vi.fn().mockResolvedValue(undefined);
+    for (const name of ['publishTagDefinitionCreated', 'publishTagDefinitionUpdated', 'publishTagDefinitionDeleted']) {
+      vi.spyOn(service as any, name).mockImplementation(publish);
+    }
+    return { service, publish };
+  };
+  const restClientService = async (tenant: string) => {
+    const { ClientService } = await import('../../../../../server/src/lib/api/services/ClientService');
+    const service = new ClientService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
+    return service;
+  };
+
+  it('refuses every REST TagService and ClientService tag write of a departed customer without changing a row', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { ticketId, rows } = await tagFixture(customer, operation, actor);
+    const { service, publish } = await restTagService(actor.tenant);
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const kept = await service.createTag({ tag_text: 'API before departure', tagged_id: ticketId, tagged_type: 'ticket' }, context);
+    expect(kept).toMatchObject({ tag_text: 'API before departure', tagged_id: ticketId });
+
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    const before = await rows();
+    publish.mockClear();
+    const clients = await restClientService(actor.tenant);
+    const refusals = [
+      () => service.createTag({ tag_text: 'API after departure', tagged_id: ticketId, tagged_type: 'ticket' }, context),
+      () => service.updateTag(kept.tag_id, { background_color: '#FF0000' }, context),
+      () => service.deleteTag(kept.tag_id, context),
+      () => service.tagEntity(ticketId, 'ticket', ['API tagged after departure'], {}, context),
+      () => service.untagEntity(ticketId, 'ticket', [kept.tag_id], context),
+      () => service.replaceEntityTags(ticketId, 'ticket', ['API replaced after departure'], {}, context),
+      () => service.bulkDeleteTags([kept.tag_id], context),
+      () => service.bulkMergeTags([kept.tag_id], 'API merged after departure', {}, context),
+      () => service.bulkUntagEntities([ticketId], 'ticket', [kept.tag_id], context),
+      () => service.updateTagColors('API before departure', 'ticket', '#FF0000', '#FFFFFF', context),
+      () => service.updateTagText(kept.tag_id, 'API renamed after departure', context),
+      () => service.deleteTagsByText('API before departure', 'ticket', context),
+      () => service.create({ tag_id: kept.tag_id, tagged_id: randomUUID(), tagged_type: 'ticket' } as any, context),
+      () => service.delete(kept.tag_id, context),
+      () => clients.update(operation.customer_client_id, { tags: ['Client tag after departure'] } as any, context),
+      () => clients.create({ client_name: 'Client after departure', tags: ['Client tag after departure'] } as any, context),
+    ];
+    for (const write of refusals) await expect(write()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await rows()).toEqual(before);
+    expect(publish).not.toHaveBeenCalled();
+    // REST reads survive departure.
+    expect(await service.getTagsByEntity(ticketId, 'ticket', context)).toEqual([expect.objectContaining({ tag_text: 'API before departure' })]);
+  }));
+
+  it.each(['active co-managed', 'native PSA'] as const)('keeps REST TagService create, update and delete working for an %s tenant', async kind => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    if (kind === 'native PSA') await customer.table('tenants').update({ product_code: 'psa' });
+    const { ticketId } = await tagFixture(customer, operation, actor);
+    const { service } = await restTagService(actor.tenant);
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const created = await service.createTag({ tag_text: 'API working tag', tagged_id: ticketId, tagged_type: 'ticket' }, context);
+    expect(await service.updateTag(created.tag_id, { background_color: '#112233' }, context)).toMatchObject({ background_color: '#112233' });
+    expect(await service.updateTagText(created.tag_id, 'API renamed tag', context)).toMatchObject({ new_tag_text: 'API renamed tag' });
+    // The REST entity-tagging path normalises tag text to lower case.
+    expect((await service.tagEntity(ticketId, 'ticket', ['API second tag'], {}, context)).map((tag: any) => tag.tag_text)).toContain('api second tag');
+    // Replace runs remove and re-add in one admitted transaction (a nested one would wait on its own locks).
+    expect((await service.replaceEntityTags(ticketId, 'ticket', ['API second tag', 'API third tag'], {}, context)).map((tag: any) => tag.tag_text).sort())
+      .toEqual(['api second tag', 'api third tag']);
+    const renamed = (await service.getTagsByEntity(ticketId, 'ticket', context) as any[]).find((tag) => tag.tag_text === 'api second tag');
+    expect(renamed).toBeTruthy();
+    expect(await customer.table('tag_mappings').where('mapping_id', created.tag_id)).toEqual([]);
+    const third = (await service.getTagsByEntity(ticketId, 'ticket', context) as any[]).find((tag) => tag.tag_text === 'api third tag');
+    await service.deleteTag(third.tag_id, context);
+    expect(await service.deleteTagsByText('api second tag', 'ticket', context)).toMatchObject({ deleted_count: 1 });
+    expect(await customer.table('tag_mappings').where('tagged_id', ticketId)).toEqual([]);
+    const clients = await restClientService(actor.tenant);
+    await clients.update(operation.customer_client_id, { tags: ['API client tag'] } as any, context);
+    expect(await customer.table('tag_mappings').where({ tagged_id: operation.customer_client_id, tagged_type: 'client' })).toHaveLength(1);
+  }));
 });
 
 describe('co-managed KB import staging', () => {
@@ -4023,6 +4103,14 @@ async function withTicketUpdateFixture(work: (fixture: Awaited<ReturnType<typeof
   });
 }
 
+/** The refusal a ticket action returns for a lifecycle denial (56e708a31b maps it to an
+ * expected action error so the user sees the real reason); the transaction core still throws. */
+const lifecycleActionError = (code: 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_READ_ONLY') => ({
+  actionError: new CoManagedLifecycleError(code === 'CO_MANAGED_NOT_ACTIVE'
+    ? { state: 'pending_acceptance', canWrite: false, graceEndsAt: null }
+    : { state: 'read_only', canWrite: false, graceEndsAt: null }).message,
+});
+
 it('admits both ticket update actions and the shared transaction core only during operational write eligibility', async () => withTicketUpdateFixture(async ({
   actor, input, customer, operation, user, ticketId, legacy, optimized, publish, workflow, live,
 }) => {
@@ -4030,7 +4118,13 @@ it('admits both ticket update actions and the shared transaction core only durin
   const edits = [() => legacy.updateTicket(ticketId, { title: 'Legacy edit' }),
     () => optimized.updateTicketWithCache(ticketId, { title: 'Cached edit' }),
     () => withTransaction(db, trx => optimized.updateTicketInTransaction(trx, user, actor.tenant, ticketId, { title: 'Core edit' }))];
-  for (const edit of edits) await expect(edit()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+  // The two server actions return the lifecycle refusal; the core they share throws it.
+  const expectRefused = async (code: 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_READ_ONLY') => {
+    expect(await edits[0]()).toEqual(lifecycleActionError(code));
+    expect(await edits[1]()).toEqual(lifecycleActionError(code));
+    await expect(edits[2]()).rejects.toMatchObject({ code });
+  };
+  await expectRefused('CO_MANAGED_NOT_ACTIVE');
   expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ title: 'Original issue' });
   expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
   await acceptCoManagedRelationship(db, actor, input);
@@ -4039,7 +4133,7 @@ it('admits both ticket update actions and the shared transaction core only durin
   expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toHaveLength(2);
   const eventCounts = [publish.mock.calls.length, workflow.mock.calls.length, live.mock.calls.length];
   await expireCoManagedEntitlement(operation.tenant);
-  for (const edit of edits) await expect(edit()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  await expectRefused('CO_MANAGED_READ_ONLY');
   expect(await legacy.getTicketById(ticketId)).toMatchObject({ ticket_id: ticketId, title: 'Core edit' });
   expect([publish.mock.calls.length, workflow.mock.calls.length, live.mock.calls.length]).toEqual(eventCounts);
   const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
@@ -4102,7 +4196,8 @@ it.each(['legacy', 'optimized'] as const)('rejects the %s ticket edit if its gra
     await Promise.race([waiting, attempt.then(result => { throw new Error(`Edit ended before ticket lock: ${result?.code ?? result}`); })]);
     await db.raw('SELECT pg_sleep(1.1)');
     await blocker.commit();
-    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    // Admission rechecked after the lock wait refuses the edit; the action returns that refusal.
+    expect(await attempt).toEqual(lifecycleActionError('CO_MANAGED_READ_ONLY'));
     expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ title: 'Original issue' });
     expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toEqual([]);
     expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
@@ -4806,7 +4901,11 @@ describe('co-managed shared ticket details for the native screen', () => {
       attributes: { description: seeded.description }, category_id: seeded.categoryId, contact_name: 'Casey Requester', board_id: expect.any(String) });
     expect(result.ticketData).toMatchObject({ comments: [], documents: [], contacts: [], userMap: {}, contactMap: {}, clients: [], locations: [], agentSchedules: [],
       categories: [{ category_id: seeded.categoryId, category_name: 'Hardware' }], contactInfo: { full_name: 'Casey Requester' } });
-    expect(result.customerAssignee).toEqual({ name: 'Ada Owner' });
+    // 33ae41dcae moved the disclosed customer assignee onto the ticket the screen renders,
+    // by display name only: no side property, and never the customer's user identity.
+    expect(result.ticketData.ticket.assigned_to_name).toBe('Ada Owner');
+    expect(result.ticketData.ticket).not.toHaveProperty('assigned_to');
+    expect(result).not.toHaveProperty('customerAssignee');
     expect(result.screen).toMatchObject({ side: 'sponsor', canWrite: true, canHandBack: true, canEscalate: false, work_revision: 1, responsibility: 'msp' });
     expect(result.editor.baselines).toEqual(editor.values);
     expect(result.ticketData.options.status.map(option => option.value)).toContain(editor.values.status_id);

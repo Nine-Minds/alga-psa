@@ -90,6 +90,23 @@ export abstract class BaseService<T = any> {
   }
 
   /**
+   * Run a custom mutation in one transaction whose first step is this
+   * service's mutationGuard, so admission and the write share the transaction.
+   * Overrides and service-specific writers use this instead of opening their
+   * own transaction, which would skip the guard.
+   */
+  protected async mutationTransaction<R>(
+    context: ServiceContext,
+    work: (trx: Knex.Transaction, tenant: string) => Promise<R>,
+  ): Promise<R> {
+    const { knex, tenant } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
+      return work(trx, tenant);
+    });
+  }
+
+  /**
    * Get database connection with tenant context
    */
     protected async getKnex(): Promise<{ knex: Knex; tenant: string }> {

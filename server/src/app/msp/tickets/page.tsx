@@ -28,6 +28,8 @@ import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { redirect } from 'next/navigation';
 import { resolveLegacyQueueRedirect } from '@alga-psa/tickets/lib';
 import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
+import { createTenantKnex } from '@alga-psa/db';
+import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -349,7 +351,15 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       getCurrentUserPermissions().catch(() => [] as string[])
     ]);
 
-    const canUpdateTickets = userPermissions.includes('ticket:update');
+    // A co-managed workspace that is pending acceptance or has ended can be read
+    // but not changed, so the list offers no ticket or tag edits there.
+    // LEVERAGE: pattern co-managed-workspace-read-only-probe — the ticket detail page computes the same lifecycle read-only flag; a shared page-level helper would keep the two screens from drifting.
+    const workspaceReadOnly = productCode === 'co_managed' && user
+      ? await createTenantKnex(user.tenant)
+        .then(({ knex }) => getCoManagedOperationalState(knex, user.tenant))
+        .then((state) => !state.canWrite)
+      : false;
+    const canUpdateTickets = userPermissions.includes('ticket:update') && !workspaceReadOnly;
     const initialTeams = isTeamActionError(teams) ? [] : teams;
 
     if (isReturnedActionError(consolidatedData)) {

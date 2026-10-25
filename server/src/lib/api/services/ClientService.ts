@@ -28,6 +28,7 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -246,6 +247,7 @@ function defaultLocationContactColumns(trx: Knex): Array<string | Knex.Raw> {
 export class ClientService extends BaseService<IClient> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'clients',
       primaryKey: 'client_id',
       tenantColumn: 'tenant',
@@ -365,6 +367,8 @@ export class ClientService extends BaseService<IClient> {
     const properties = normalized.properties;
     const { knex } = await this.getKnex();
     const client = await withTransaction(knex, async (trx) => {
+      // Lifecycle admission before any row: this write may also tag the client.
+      await this.mutationGuard?.(trx, context);
       // Prepare client data
       const clientData = {
         client_id: knex.raw('gen_random_uuid()'),
@@ -650,6 +654,8 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      // Lifecycle admission before any row: this write may also retag the client.
+      await this.mutationGuard?.(trx, context);
       const db = tenantDb(trx, context.tenant);
       const before = await db.table('clients')
         .where('client_id', id)

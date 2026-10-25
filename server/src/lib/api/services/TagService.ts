@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildTagDefinitionCreatedPayload, buildTagDefinitionUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -73,6 +74,9 @@ export class TagService extends BaseService {
 
   constructor() {
     super({
+      // Lifecycle admission for the inherited mutations; the custom writers
+      // below admit through mutationTransaction with the same guard.
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'tag_mappings',
       primaryKey: 'mapping_id',
       tenantColumn: 'tenant',
@@ -172,9 +176,8 @@ export class TagService extends BaseService {
         data: CreateTagData,
         context: ServiceContext
       ): Promise<TagResponse> {
-        const { knex, tenant } = await this.getKnex();
 
-        const { created, definitionToPublish } = await withTransaction(knex, async (trx) => {
+        const { created, definitionToPublish } = await this.mutationTransaction(context, async (trx, tenant) => {
           // New definitions created without explicit colors get the same
           // deterministic palette the web UI assigns, so tags created via the
           // API render in color everywhere instead of falling back to grey.
@@ -248,9 +251,8 @@ export class TagService extends BaseService {
     data: UpdateTagData,
     context: ServiceContext
   ): Promise<TagResponse> {
-    const { knex, tenant } = await this.getKnex();
 
-    const { updated, tagUpdate } = await withTransaction(knex, async (trx) => {
+    const { updated, tagUpdate } = await this.mutationTransaction(context, async (trx, tenant) => {
       const updateData = { ...data };
       if (updateData.tag_text) {
         updateData.tag_text = updateData.tag_text.toLowerCase().trim();
@@ -322,9 +324,8 @@ export class TagService extends BaseService {
    * Delete tag
    */
   async deleteTag(id: string, context: ServiceContext): Promise<void> {
-    const { knex, tenant } = await this.getKnex();
-    // id is actually mapping_id - just delete the mapping
-    await TagMapping.delete(knex, tenant, id);
+    // id is actually mapping_id - just delete the mapping, in an admitted transaction
+    await this.mutationTransaction(context, (trx, tenant) => TagMapping.delete(trx, tenant, id));
   }
 
   /**
@@ -414,9 +415,26 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex, tenant } = await this.getKnex();
+    return this.mutationTransaction(context, (trx, tenant) =>
+      this.tagEntityInTransaction(trx, tenant, entityId, entityType, tagTexts, options, context));
+  }
 
-    return withTransaction(knex, async (trx) => {
+  /** tagEntity's body, on a caller's already-admitted transaction. */
+  private async tagEntityInTransaction(
+    trx: Knex.Transaction,
+    tenant: string,
+    entityId: string,
+    entityType: TaggedEntityType,
+    tagTexts: string[],
+    options: {
+      board_id?: string;
+      default_colors?: {
+        background_color?: string;
+        text_color?: string;
+      };
+    },
+    context: ServiceContext
+  ): Promise<TagResponse[]> {
       const createdTags: TagResponse[] = [];
 
       for (const tagText of tagTexts) {
@@ -474,7 +492,6 @@ export class TagService extends BaseService {
       }
 
       return createdTags;
-    });
   }
 
   /**
@@ -486,9 +503,8 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<void> {
-    const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return this.mutationTransaction(context, async (trx, tenant) => {
       for (const tagId of tagIds) {
         await TagMapping.delete(trx, tenant, tagId);
       }
@@ -511,9 +527,8 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return this.mutationTransaction(context, async (trx, tenant) => {
       // Get existing tags
       const existingTags = await TagMapping.getByEntity(trx, tenant, entityId, entityType);
       // Remove existing tags
@@ -521,8 +536,9 @@ export class TagService extends BaseService {
         await TagMapping.delete(trx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id
       }
 
-      // Add new tags
-      return await this.tagEntity(entityId, entityType, tagTexts, options, context);
+      // Add new tags in this same transaction: a second one would wait on the
+      // admission locks and the mapping rows this one already holds.
+      return await this.tagEntityInTransaction(trx, tenant, entityId, entityType, tagTexts, options, context);
     });
   }
 
@@ -537,9 +553,8 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<{ deleted: number }> {
-    const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return this.mutationTransaction(context, async (trx, tenant) => {
       let deleted = 0;
       for (const tagId of tagIds) {
         await TagMapping.delete(trx, tenant, tagId);
@@ -561,9 +576,8 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<{ merged: number; created: number }> {
-    const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return this.mutationTransaction(context, async (trx, tenant) => {
       const sourceTags: any[] = [];
       for (const tagId of sourceTagIds) {
         const tag = await tenantDb(trx, tenant).table('tag_mappings as tm')
@@ -654,9 +668,8 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<{ removed: number }> {
-    const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return this.mutationTransaction(context, async (trx, tenant) => {
       let removed = 0;
       for (const tagId of tagIds) {
         await TagMapping.delete(trx, tenant, tagId);
@@ -680,9 +693,8 @@ export class TagService extends BaseService {
     textColor: string | null,
     context: ServiceContext
   ): Promise<{ updated: number }> {
-    const { knex, tenant } = await this.getKnex();
 
-    const result = await withTransaction(knex, async (trx) => {
+    const result = await this.mutationTransaction(context, async (trx, tenant) => {
       // Validate hex color codes if provided
       const hexColorRegex = /^#[0-9A-F]{6}$/i;
       if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
@@ -735,9 +747,8 @@ export class TagService extends BaseService {
     newTagText: string,
     context: ServiceContext
   ): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> {
-    const { knex, tenant } = await this.getKnex();
 
-    const { result, publish } = await withTransaction(knex, async (trx) => {
+    const { result, publish } = await this.mutationTransaction(context, async (trx, tenant) => {
       // Validate tag text
       if (!newTagText || !newTagText.trim()) {
         throw new ValidationError('Tag text cannot be empty');
@@ -845,9 +856,8 @@ export class TagService extends BaseService {
     taggedType: TaggedEntityType,
     context: ServiceContext
   ): Promise<{ deleted_count: number }> {
-    const { knex, tenant } = await this.getKnex();
 
-    const { deletedCount, deletedTagId } = await withTransaction(knex, async (trx) => {
+    const { deletedCount, deletedTagId } = await this.mutationTransaction(context, async (trx, tenant) => {
       // Validate tag text
       if (!tagText || !tagText.trim()) {
         throw new ValidationError('Tag text cannot be empty');
