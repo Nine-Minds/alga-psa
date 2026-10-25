@@ -11,11 +11,13 @@
  * tag_references row, so packages/tags never needs to know which referrer types exist. It is a table,
  * not an in-process registry, because cleanup also runs in workflow-worker and tenant jobs.
  *
- * Citus: no migration distributes tag_definitions, so it is coordinator-local. tag_references is kept
- * coordinator-local too (no ensureTenantDistribution), which lets the composite FK to tag_definitions
- * actually hold (ensureCompositeFk requires both sides distributed or both local). If tag_definitions
- * is ever distributed, distribute this table on `tenant` colocated with it in that same change.
- * Application code still deletes a tag's references explicitly in TagDefinition.delete.
+ * Citus: tag_references matches tag_definitions' distribution, decided at migration time. If
+ * tag_definitions is distributed, tag_references is distributed on `tenant` co-located with it;
+ * otherwise (plain Postgres, or tag_definitions coordinator-local, which is the case for every
+ * migration in this repo) it stays local. Either way both sides share a distribution state, so
+ * ensureCompositeFk adds the FK. (ensureTenantDistribution is not used: it co-locates with `tenants`.)
+ * Distribution happens before the FK and the backfill. Application code still deletes a tag's
+ * references explicitly in TagDefinition.delete.
  *
  * Backfill: one row per existing tag_display_rules row. No now() inside CASE/COALESCE.
  */
@@ -40,7 +42,20 @@ exports.up = async function up(knex) {
     ON ${TABLE} (tenant, referrer_type, referrer_id)
   `);
 
-  const { ensureCompositeFk } = require('./utils/citusDistribution.cjs');
+  const {
+    ensureCompositeFk, hasCitus, isDistributed, canCreateDistributedTable,
+  } = require('./utils/citusDistribution.cjs');
+
+  // Match tag_definitions' distribution so the composite FK is legal in both cases.
+  if (
+    (await hasCitus(knex)) &&
+    (await canCreateDistributedTable(knex)) &&
+    (await isDistributed(knex, 'tag_definitions')) &&
+    !(await isDistributed(knex, TABLE))
+  ) {
+    await knex.raw(`SELECT create_distributed_table('${TABLE}', 'tenant', colocate_with => 'tag_definitions')`);
+  }
+
   await ensureCompositeFk(knex, {
     table: TABLE,
     constraint: `${TABLE}_tag_definition_foreign`,
@@ -63,3 +78,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists(TABLE);
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };
