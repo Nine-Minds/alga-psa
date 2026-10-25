@@ -17943,8 +17943,8 @@
         "enum": [
           "ticket.created",
           "ticket.updated",
-          "ticket.status_changed",
           "ticket.assigned",
+          "ticket.status_changed",
           "ticket.closed",
           "ticket.comment.added",
           "ticket.response_state_changed"
@@ -17956,8 +17956,8 @@
         "enum": [
           "ticket.created",
           "ticket.updated",
-          "ticket.status_changed",
           "ticket.assigned",
+          "ticket.status_changed",
           "ticket.closed",
           "ticket.comment.added",
           "ticket.response_state_changed",
@@ -17974,28 +17974,18 @@
           "project.task.completed",
           "client.created",
           "client.updated",
+          "client.deactivated",
+          "client.deleted",
           "contact.created",
           "contact.updated",
-          "time.entry.created",
-          "time.entry.updated",
-          "time.entry.approved",
-          "invoice.created",
-          "invoice.finalized",
-          "invoice.sent",
-          "invoice.paid",
-          "asset.created",
-          "asset.updated",
-          "asset.maintenance.scheduled",
-          "asset.maintenance.completed",
-          "system.backup.completed",
-          "system.backup.failed",
-          "system.maintenance.started",
-          "system.maintenance.completed",
-          "workflow.execution.started",
-          "workflow.execution.completed",
-          "workflow.execution.failed",
-          "custom.event"
-        ]
+          "contact.deactivated",
+          "contact.deleted",
+          "client_location.created",
+          "client_location.updated",
+          "client_location.deactivated",
+          "client_location.deleted"
+        ],
+        "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added."
       },
       "CreateWebhookBodyV1": {
         "type": "object",
@@ -18146,9 +18136,47 @@
                     "tags"
                   ]
                 }
+              },
+              "client": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "changed_fields"
+                  ]
+                }
+              },
+              "contact": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "client_id",
+                    "changed_fields"
+                  ]
+                }
+              },
+              "client_location": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "client_id",
+                    "changed_fields"
+                  ]
+                }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
           },
           "payload_transformation": {
             "type": "object",
@@ -18391,8 +18419,9 @@
           "event_types": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/WebhookEventTypeV1"
-            }
+              "type": "string"
+            },
+            "description": "Event names as stored; may include retired legacy names (inert)."
           },
           "security": {
             "type": [
@@ -18521,9 +18550,47 @@
                     "tags"
                   ]
                 }
+              },
+              "client": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "changed_fields"
+                  ]
+                }
+              },
+              "contact": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "client_id",
+                    "changed_fields"
+                  ]
+                }
+              },
+              "client_location": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "client_id",
+                    "changed_fields"
+                  ]
+                }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
           },
           "payload_transformation": {
             "type": [
@@ -18951,8 +19018,9 @@
           "event_types": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/WebhookEventTypeV1"
-            }
+              "type": "string"
+            },
+            "description": "Event names as stored; may include retired legacy names (inert)."
           }
         },
         "required": [
@@ -57543,6 +57611,105 @@
         }
       }
     },
+    "/api/v1/invoices/{id}/history": {
+      "get": {
+        "summary": "Get invoice lifecycle history",
+        "description": "Returns the audit trail (invoice_finalized, invoice_unfinalized, invoice_deleted) for one invoice id, oldest first. Each entry has the acting user, timestamp and before/after status and finalized_at.",
+        "tags": [
+          "Invoices"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
+          "x-rbac-resource": "invoice",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
+            },
+            "required": true,
+            "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice history returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid invoice id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "invoice:read permission denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected history failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invoices/{id}/pdf": {
       "post": {
         "summary": "Generate and download invoice PDF",
@@ -81033,7 +81200,7 @@
     "/api/v1/webhooks/events": {
       "get": {
         "summary": "List available webhook events",
-        "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).",
+        "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*).",
         "tags": [
           "Webhooks"
         ],
@@ -138531,6 +138698,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -138624,6 +138792,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -138717,6 +138886,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -138810,6 +138980,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -138903,6 +139074,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -138996,6 +139168,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },
@@ -139089,6 +139262,7 @@
               "$ref": "#/components/schemas/WebhookEventTypeV1"
             },
             "required": true,
+            "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added.",
             "name": "x-alga-event-type",
             "in": "header"
           },

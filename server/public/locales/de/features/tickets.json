@@ -248,7 +248,8 @@
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
     "createTemplate": "Vorlage aus Ticket erstellen",
-    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
+    "printWorkTag": "Arbeitsetikett drucken"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -667,7 +668,7 @@
     "bundleMasterLabel": "Hauptticket auswählen",
     "bundleMasterPlaceholder": "Hauptticket auswählen...",
     "bundleSyncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-    "bundleSyncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+    "bundleSyncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
     "bundleSelectAtLeastTwo": "Wählen Sie mindestens zwei Tickets zum Bündeln aus.",
     "bundleSelectMaster": "Wählen Sie ein Hauptticket aus.",
     "bundleSuccess": "Tickets gebündelt",
@@ -740,8 +741,8 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
-      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
+      "syncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten ihren aktuellen Status. Workflow-Felder sind nur im Modus Sync Updates gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten schreibgeschützt angezeigt.",
       "checkingMasters": "Vorhandene Bündel werden geprüft...",
       "existingMasterSuffix": "(vorhandenes Hauptticket)",
       "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
@@ -792,7 +793,9 @@
       "more": "Mehr",
       "bundleNeedsOne": "Wählen Sie mindestens 1 Ticket zum Bündeln aus",
       "selectedCount_few": "{{count}} ausgewählt",
-      "selectedCount_many": "{{count}} ausgewählt"
+      "selectedCount_many": "{{count}} ausgewählt",
+      "printLabels": "Etiketten drucken",
+      "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
     },
     "assign": {
       "dialogTitle": "Ausgewählte Tickets zuweisen",
@@ -1707,9 +1710,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Im Modus Sync Updates schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Im Modus Link Only verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
       "title": "Bündel",
       "masterBanner": "Dieses Ticket ist das Hauptticket eines Bündels ({{count}} Untertickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflow-Felder sind gesperrt; arbeiten Sie am Master-Ticket.",
+      "childLinkedNotice": "Es ist mit dem Master verknüpft und wird eigenständig verwaltet.",
       "multipleClients": "Mehrere Kunden",
       "mode": "Modus: {{mode}}",
       "unbundle": "Bündel auflösen",
@@ -1745,7 +1750,15 @@
       "applyResolutionHelpNoComment": "Schließt das Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
       "reopenMasterLabel": "Hinzufügen und Haupt-Ticket wieder öffnen",
       "reopenMasterHelp": "Öffnet nur das Haupt-Ticket wieder. Bereits geschlossene Untertickets in diesem Bündel bleiben geschlossen; Benachrichtigungen zur Wiedereröffnung und SLA gelten für das Haupt-Ticket.",
-      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
+      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen.",
+      "modeSwitchDialogIntro": "Das Haupt-Ticket ist geschlossen. Wählen Sie, was mit den offenen Untertickets geschehen soll, wenn das Bündel auf Sync Updates umgestellt wird.",
+      "modeSwitchConfirm": "Auf Sync Updates umstellen",
+      "keepClosedSwitchLabel": "Umstellen und Haupt-Ticket geschlossen lassen",
+      "keepClosedSwitchHelp": "Offene Untertickets bleiben mit eigener SLA-Uhr offen. Das Bündel wird als inkonsistent angezeigt, bis sie gelöst sind.",
+      "applyResolutionSwitchLabel": "Umstellen und die Lösung des Haupt-Tickets auf offene Untertickets anwenden",
+      "applyResolutionSwitchHelp": "Schließt jedes offene Unterticket mit dem Status {{status}} und veröffentlicht die Lösung des Haupt-Tickets als öffentlichen Kommentar darin.",
+      "applyResolutionSwitchHelpNoComment": "Schließt jedes offene Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
+      "reopenMasterSwitchLabel": "Umstellen und Haupt-Ticket wieder öffnen"
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
     "autoCloseWarned": "Der Kunde wurde benachrichtigt.",

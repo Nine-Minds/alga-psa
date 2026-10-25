@@ -89,7 +89,6 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
-import { resolveAssetAuthorizationRecords } from '../lib/assetRecordAuthorization';
 import {
   EXTENSION_TABLE_BY_ASSET_TYPE,
   attributeValidationError,
@@ -97,6 +96,11 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import {
+    resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
+    resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    type AssetAuthUser as SharedAssetAuthUser,
+} from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
@@ -486,60 +490,25 @@ async function applyPurchaseCostCurrency(
     candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
 }
 
-type AssetAuthUser = {
-    user_id: string;
-    user_type: 'internal' | 'client';
-    clientId?: string | null;
-    roles?: Array<{ role_id?: string } | string>;
-};
-
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
-    }
-
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
-}
+// Subject and record resolution live in ../lib/assetReadAuthorization (shared with the label code
+// paths). The thin wrappers and the kernel/decision text below stay here because
+// assetAuthorization.contract.test.ts pins them in this file's source.
+type AssetAuthUser = SharedAssetAuthUser;
 
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser
 ): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
+    return resolveSharedAuthorizationSubject(trx, tenant, user);
+}
 
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
+async function resolveAssetAuthorizationRecords(
+    trx: Knex.Transaction,
+    tenant: string,
+    assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
+): Promise<Map<string, AuthorizationRecord>> {
+    return resolveSharedAssetAuthorizationRecords(trx, tenant, assets);
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;

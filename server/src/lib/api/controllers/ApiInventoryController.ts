@@ -4,7 +4,7 @@ import { ApiBaseController } from './ApiBaseController';
 import { InventoryService } from '../services/InventoryService';
 import { runWithTenant } from '../../db';
 import { hasPermission } from '../../auth/rbac';
-import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetRecordAuthorization';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { authorizeApiResourceRead } from './authorizationKernel';
 import type { InventoryLookupAssetAuthorizer } from '../services/InventoryService';
 import {

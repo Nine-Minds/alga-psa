@@ -454,4 +454,69 @@ describe('label PDF end to end', () => {
       }
     }
   });
+
+  describe('a real tenant logo (data URL) on every standard template', () => {
+    // A wide 600x200 logo, the shape that stresses the header most; inlined exactly as labelPdfService does.
+    const logoPng = (() => {
+      const { PNG: Writer } = createRequire(import.meta.url)('pngjs') as {
+        PNG: new (o: { width: number; height: number }) => { data: Buffer };
+      } & { sync: { write(p: unknown): Buffer } };
+      const img = new Writer({ width: 600, height: 200 });
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i] = 20;
+        img.data[i + 1] = 90;
+        img.data[i + 2] = 200;
+        img.data[i + 3] = 255;
+      }
+      return (Writer as unknown as { sync: { write(p: unknown): Buffer } }).sync.write(img);
+    })();
+    const logoUrl = `data:image/png;base64,${logoPng.toString('base64')}`;
+    const withLogo = { tenantClient: { name: 'Example MSP', logoUrl } };
+
+    const cases: Array<[string, LabelPrintItem]> = [
+      ['ticket work tag', worstCase(STANDARD_LABEL_TICKET_WORK_TAG_CODE, { labelClass: 'ticket-work-tag', entityType: 'ticket', identifier: 'TICKET-2026-0000123456789' })],
+      ['QR-only asset label', worstCase(STANDARD_LABEL_ASSET_CODE, { labelClass: 'asset-identity', entityType: 'asset' })],
+      [
+        'Code 128 asset label',
+        worstCase(STANDARD_LABEL_ASSET_CODE128_CODE, {
+          labelClass: 'asset-identity',
+          entityType: 'asset',
+          identifier: CODE128_LIMIT_TAG,
+          code128Value: CODE128_LIMIT_TAG,
+        }),
+      ],
+      ['stock unit label', worstCase(STANDARD_LABEL_STOCK_UNIT_CODE, { labelClass: 'stock-unit-identity', entityType: 'stock_unit' })],
+    ];
+
+    for (const [name, item] of cases) {
+      for (const [layoutName, layout] of [
+        ['4x2in', ONE_PER_PAGE],
+        ['Letter 2x5', LETTER_2X5],
+      ] as const) {
+        it(`${name} with logo (${layoutName})`, async () => {
+          const { html } = await renderLabelBatchHtml([item, item], layout, withLogo);
+          // The logo is really in the page for templates that show it (and never replaces a code).
+          if (item.viewModel.entityType !== 'stock_unit') expect(html).toContain('data:image/png;base64,');
+          for (const report of await measureContainment(html)) {
+            expect(report.outside).toEqual([]);
+            expect(report.overBarcode).toEqual([]);
+            expect(report.identifierText).toEqual([item.viewModel.identifier]);
+            expect(report.identifierClipped).toEqual([false]);
+          }
+          const { html: printedHtml, geometry, pdf } = await (async () => {
+            const r = await renderLabelBatchHtml([item], layout, withLogo);
+            return { ...r, pdf: await renderHtmlToPdf(r.html, r.printOptions) };
+          })();
+          if (item.viewModel.entityType !== 'stock_unit') expect(printedHtml).toContain('<img');
+          const pdfPath = writePdf(pdf, `logo-${layoutName}-${item.templateCode}`);
+          const rasters = rasterize(pdfPath, `logo-${layoutName}-${item.templateCode}`);
+          const p = geometry.placements[0];
+          const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+          expect(edgeBandIsWhite(cell)).toBe(true);
+          expect(decodeQr(cell)).toBe(item.viewModel.url);
+          if (item.viewModel.code128Value) expect(decodeCode128(cell)).toBe(item.viewModel.code128Value);
+        }, 120_000);
+      }
+    }
+  });
 });

@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
@@ -719,30 +720,29 @@ export const addContact = withAuth(async (
     });
 
     const clientId = (created as any)?.client_id;
-    if (typeof clientId === 'string' && clientId) {
-      const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
-      const actor = maybeUserActor(user);
-      await publishWorkflowEvent({
-        eventType: 'CONTACT_CREATED',
-        payload: buildContactCreatedPayload({
-          contactId: created.contact_name_id,
-          clientId,
-          fullName: created.full_name,
-          email: created.email || undefined,
-          primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-          primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-          primaryEmailType: created.primary_email_type ?? null,
-          additionalEmailAddresses: created.additional_email_addresses ?? [],
-          phoneNumbers: created.phone_numbers,
-          defaultPhoneNumber: created.default_phone_number || undefined,
-          defaultPhoneType: created.default_phone_type || undefined,
-          createdByUserId: user?.user_id,
-          createdAt: occurredAt,
-        }),
-        ctx: { tenantId: tenant, occurredAt, actor },
-        idempotencyKey: `contact_created:${created.contact_name_id}`,
-      });
-    }
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
+    const actor = maybeUserActor(user);
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload({
+        contactId: created.contact_name_id,
+        clientId,
+        fullName: created.full_name,
+        email: created.email || undefined,
+        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+        primaryEmailType: created.primary_email_type ?? null,
+        additionalEmailAddresses: created.additional_email_addresses ?? [],
+        phoneNumbers: created.phone_numbers,
+        defaultPhoneNumber: created.default_phone_number || undefined,
+        defaultPhoneType: created.default_phone_type || undefined,
+        createdByUserId: user?.user_id,
+        createdAt: occurredAt,
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor },
+      idempotencyKey: `contact_created:${created.contact_name_id}`,
+    });
 
     return { success: true, contact: created };
   } catch (err) {
@@ -961,43 +961,42 @@ export const updateContact = withAuth(async (
     const actor = maybeUserActor(user);
     const clientId = (updatedContact as any)?.client_id ?? (updateResult.before as any)?.client_id;
 
-    if (typeof clientId === 'string' && clientId) {
-      const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
-      const isInactive = Boolean((updatedContact as any)?.is_inactive);
-      if (!wasInactive && isInactive) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_ARCHIVED',
-          payload: buildContactArchivedPayload({
-            contactId: updatedContact.contact_name_id,
-            clientId,
-            archivedByUserId: user?.user_id,
-            archivedAt: occurredAt,
-          }),
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
-
-      const updatedPayload = buildContactUpdatedPayload({
-        contactId: updatedContact.contact_name_id,
-        clientId,
-        before: updateResult.before as any,
-        after: updatedContact as any,
-        updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
-        updatedByUserId: user?.user_id,
-        updatedAt: occurredAt,
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
+    const isInactive = Boolean((updatedContact as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId: updatedContact.contact_name_id,
+          clientId,
+          archivedByUserId: user?.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
       });
+    }
 
-      const updatedFields = (updatedPayload as any).updatedFields;
-      const changes = (updatedPayload as any).changes;
-      if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_UPDATED',
-          payload: updatedPayload,
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
+    const updatedPayload = buildContactUpdatedPayload({
+      contactId: updatedContact.contact_name_id,
+      clientId,
+      before: updateResult.before as any,
+      after: updatedContact as any,
+      updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
+      updatedByUserId: user?.user_id,
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
+      });
     }
 
     return updatedContact;
@@ -1088,6 +1087,10 @@ export const updateContactsForClient = withAuth(async (
     }, {});
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const beforeRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
+        .select('*');
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ client_id: clientId })
         .update({
@@ -1097,6 +1100,19 @@ export const updateContactsForClient = withAuth(async (
 
       if (!updated) {
         throw new Error(await contactText('errors.contact.bulkUpdateFailed'));
+      }
+
+      // One contact.updated (and contact.deactivated on an active -> inactive flip) per affected contact.
+      // A client_id change (bulk move) shows up as `client_id` in changed_fields.
+      const afterRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .whereIn('contact_name_id', beforeRows.map((row: any) => row.contact_name_id))
+        .select('*');
+      const afterById = new Map<string, any>(afterRows.map((row: any) => [row.contact_name_id, row]));
+      for (const beforeRow of beforeRows as any[]) {
+        const afterRow = afterById.get(beforeRow.contact_name_id);
+        if (afterRow) {
+          queueContactUpdated(trx, tenant, beforeRow, afterRow, Object.keys(sanitizedData), { actorUserId: user?.user_id });
+        }
       }
     });
   } catch (err) {
@@ -1417,6 +1433,7 @@ export const importContactsFromCSV = withAuth(async (
             }
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
+            queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
             if (contactData.tags !== undefined) {
               try {
@@ -1464,6 +1481,7 @@ export const importContactsFromCSV = withAuth(async (
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
             if (contactData.tags) {
               try {
@@ -1679,7 +1697,7 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return ContactModel.createContact({
+      const created = await ContactModel.createContact({
         full_name: structural.data.full_name,
         email: normalizedEmail,
         primary_email_canonical_type: primaryEmailCanonicalType,
@@ -1689,6 +1707,8 @@ export const createClientContact = withAuth(async (
         client_id: clientId,
         role: jobTitle,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, created as any, { actorUserId: user?.user_id });
+      return created;
     });
 
     return contact;

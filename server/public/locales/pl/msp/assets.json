@@ -246,7 +246,9 @@
         "setLocation": "Ustaw lokalizację",
         "setStatus": "Ustaw status",
         "assignContact": "Przypisz do kontaktu",
-        "addToGroup": "Dodaj do grupy"
+        "addToGroup": "Dodaj do grupy",
+        "printLabels": "Drukuj etykiety",
+        "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
       },
       "actions": {
         "apply": "Zastosuj",
@@ -446,7 +448,9 @@
       "rebootDevice": "Uruchom ponownie urządzenie",
       "rebooting": "Ponowne uruchamianie...",
       "editAsset": "Edytuj zasób",
-      "deleteAsset": "Usuń zasób"
+      "deleteAsset": "Usuń zasób",
+      "printLabel": "Drukuj etykietę zasobu",
+      "printPage": "Drukuj stronę"
     },
     "values": {
       "unknownClient": "Nieznany klient"

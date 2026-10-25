@@ -8,12 +8,7 @@ describe('asset authorization kernel contracts', () => {
   const source = readActionSource();
 
   it('T021: keeps selected asset surfaces on shared kernel with baseline + bundle narrowing composition', () => {
-    // The record builder moved to a shared lib module (alga-2026-0002683 B2) so
-    // the inventory scan lookup evaluates identical asset authorization records.
-    expect(source).toContain("import { resolveAssetAuthorizationRecords } from '../lib/assetRecordAuthorization'");
-    expect(source).not.toContain('async function resolveAssetAuthorizationRecords(');
-    expect(readFileSync(path.resolve(__dirname, '../lib/assetRecordAuthorization.ts'), 'utf8'))
-      .toContain('export async function resolveAssetAuthorizationRecords(');
+    expect(source).toContain('async function resolveAssetAuthorizationRecords(');
     expect(source).toContain('async function createAssetReadAuthorizationContext(');
     expect(source).toContain('async function authorizeAssetReadDecision(');
     expect(source).toContain('async function assertAssetReadAllowed(');
