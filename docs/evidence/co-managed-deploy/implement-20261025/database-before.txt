@@ -1,0 +1,1513 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+[co-managed onboarding permissions] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+[co-managed onboarding permissions] 1/1 tenant 5e730119-55dd-4528-ba2e-7da6881001f2 (co_managed): +145 permissions, ~0 descriptions, +276 grants, 0 unknown permissions and 0 extra grants preserved
+[co-managed onboarding permissions] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+[co-managed onboarding role grants] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+[co-managed onboarding role grants] 1/1 tenant 5e730119-55dd-4528-ba2e-7da6881001f2 (co_managed): +0 default-role grants
+[co-managed onboarding role grants] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+Created default project task statuses in statuses table for tenant 5e730119-55dd-4528-ba2e-7da6881001f2
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+Created AD to M365 project template for tenant 5e730119-55dd-4528-ba2e-7da6881001f2
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+Seeded built-in asset types for tenant 5e730119-55dd-4528-ba2e-7da6881001f2
+
+ ❯ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1461 tests | 1 failed) 427047ms 556 MB heap used
+   ✓ co-managed bootstrap against the complete installed schema > creates only customer-owned operational defaults and an invitation, without an MSP login or subscription copy 80ms
+   ✓ co-managed bootstrap against the complete installed schema > recovers repeated worker delivery with exactly one workspace, self-client, board, and administrator invitation 95ms
+   ✓ co-managed bootstrap against the complete installed schema > resumes a setup that failed in its final step, renewing an invitation that expired meanwhile 86ms
+   ✓ co-managed bootstrap against the complete installed schema > reports a pending co-managed administrator as claiming their email everywhere else 86ms
+   ✓ co-managed bootstrap against the complete installed schema > refuses an unreserved co-managed bootstrap through the ordinary tenant factory 3ms
+   ✓ co-managed bootstrap against the complete installed schema > delivers only to the customer admin, retries an undelivered invitation, and never returns its token 102ms
+   ✓ co-managed bootstrap against the complete installed schema > does not send an invitation for a cancelled relationship 84ms
+   ✓ customer-owned co-management acceptance > atomically activates seats and records the approved scope, including concurrent retries 82ms
+   ✓ customer-owned co-management acceptance > accepts escalation-only access without silently granting board oversight 59ms
+   ✓ customer-owned co-management acceptance > denies the sponsor, sibling customers, and a guessed relationship identity 156ms
+   ✓ customer-owned co-management acceptance > rechecks permissions and active internal identity instead of trusting an earlier review 75ms
+   ✓ customer-owned co-management acceptance > rejects stale revisions and edited scopes even without a revision advance 101ms
+   ✓ customer-owned co-management acceptance > leaves seats reserved when activation is denied during a capacity lapse 64ms
+   ✓ customer-owned co-management acceptance > refuses acceptance while the sponsor is suspended for deletion, and accepts once it is restored 84ms
+   ✓ customer-owned co-management acceptance > ends every sponsorship before the sponsor is deleted, leaving no customer pointing at it  491ms
+   ✓ customer-owned co-management acceptance > serializes acceptance against cancellation so only one may win 73ms
+   ✓ co-managed board deletion dependency > blocks deleting a board shared with the MSP until the relationship ends  434ms
+   ✓ co-managed board deletion dependency > counts the MSP escalation queue as in use and keeps a pending review readable without it 108ms
+   ✓ customer technician allocation admission > serializes concurrent last-seat creates without using MSP licensed_user_count 75ms
+   ✓ customer technician allocation admission > reserves invitation capacity against direct creates and concurrent other invitations 84ms
+   ✓ customer technician allocation admission > lets another connection reference the customer tenant while an invitation holds the admission lock 89ms
+   ✓ customer technician allocation admission > does not charge requesters or expired invitations as technician seats 83ms
+   ✓ customer technician allocation admission > requires the original administrator invitation before activation 67ms
+   ✓ customer technician allocation admission > blocks growth immediately on lapse, including consuming an already-issued invitation 71ms
+   ✓ customer technician allocation admission > serializes reactivation with a new last-seat account and tolerates repeated activation of the winner 68ms
+   ✓ customer technician allocation admission > never shrinks below committed seats or evicts users; a concurrent shrink/create cannot oversubscribe 83ms
+   ✓ real user service with co-managed allocation admission > creates the initial administrator from its token exactly once, with role and token consumption in the same transaction 266ms
+   ✓ real user service with co-managed allocation admission > rolls back the account and keeps the invitation usable if a required account write fails 88ms
+   ✓ real user service with co-managed allocation admission > prevents API creation from taking a seat already reserved by another invitation 83ms
+   ✓ co-managed directory reactivation > keeps a directory-deactivated user inactive when another technician has taken the available seat 126ms
+   ✓ grows an allocation only from available verified capacity and rejects stale resize attempts 89ms
+   ✓ transactional operational lifecycle admission > requires acceptance even for an administrator with capacity, then permits operational writes 90ms
+   ✓ transactional operational lifecycle admission > allows existing operations during the fixed grace interval but blocks growth immediately 79ms
+   ✓ transactional operational lifecycle admission > enforces expiration without a webhook or scheduled job, and permits reads 78ms
+   ✓ transactional operational lifecycle admission > renews the original relationship without repeating activation or provisioning 74ms
+   ✓ transactional operational lifecycle admission > starts a durable grace on loss of sponsor Pro eligibility with a current seat subscription 87ms
+   ✓ transactional operational lifecycle admission > denies ended trust and never treats a missing active allocation as an independent workspace 178ms
+   ✓ transactional operational lifecycle admission > rechecks committed license state after waiting for the sponsor lock 85ms
+   ✓ transactional operational lifecycle admission > keeps a nested caller transaction intact and rolls back its operational changes 69ms
+   ✓ transactional operational lifecycle admission > leaves ordinary PSA operations available and fails closed for nonexistent tenants 12ms
+   ✓ ticket API lifecycle admission against PostgreSQL > reports a workspace as awaiting acceptance from bootstrap until the customer accepts 89ms
+   ✓ ticket API lifecycle admission against PostgreSQL > refuses a mailbox before acceptance, since a cancelled setup cannot clean one up 130ms
+   ✓ ticket API lifecycle admission against PostgreSQL > denies direct ticket, assignment, comment, and bundle mutations before acceptance and after grace  2622ms
+   ✓ ticket API lifecycle admission against PostgreSQL > creates and edits a canonical ticket during active/grace states, preserves reads after expiry, and returns actionable API errors 108ms
+   ✓ durable co-managed email intake pauses > retains pending and expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements 134ms
+   ✓ durable co-managed email intake pauses > refunds the claim when grace expires during source fetch and resumes the same inbox exactly once after renewal 123ms
+   ✓ durable co-managed email intake pauses > does not release another worker lease or refund a reclaimed attempt, and preserves prior error provenance 87ms
+   ✓ co-managed durable intake selection > requires durable intake across installation modes and retains the choice after independent upgrade 82ms
+   ✓ co-managed durable intake selection > persists Microsoft, Google, and IMAP pointers while rollout is off even when Redis handoff fails 103ms
+   ✓ co-managed durable intake selection > hands an old V1 delivery to durable ingress without running legacy effects or needing a license renewal first 233ms
+   ✓ co-managed durable intake selection > dispatches co-managed inboxes to lifecycle deferral while the installation default is off 91ms
+   ✓ co-managed durable intake selection > stages already-fetched IMAP source and schedules core processing when rollout is off 86ms
+   ✓ co-managed durable intake selection > sweeps retained co-managed inboxes in off and shadow installations 93ms
+   ✓ deduplicates co-managed outbox consumers even with installation rollout off 100ms
+   ✓ durable co-managed attachments > parks attachments without spending attempts or overwriting failure history and fences reclaimed pause releases  484ms
+   ✓ durable co-managed attachments > rolls back documents when expiry wins during upload, refunds the attempt, and resumes exactly once after renewal 165ms
+   ✓ preserves ticket assets and documents after lapse and permits their removal and ticket deletion after renewal 131ms
+   ✓ canonical material lifecycle admission > guards direct ticket/project material mutations and the ticket API before any material or stock access 126ms
+   ✓ canonical material lifecycle admission > retains consumed stock after lapse and reverses it atomically after renewal 127ms
+   ✓ co-managed storage lifecycle admission > guards file metadata entry points while preserving read access after expiry 169ms
+   ✓ co-managed storage lifecycle admission > cleans rejected buffer/stream uploads and retains no file records or workflow events when expiry wins during transport 160ms
+   ✓ co-managed storage lifecycle admission > holds admission through physical deletion, rolls back metadata on provider failure, and publishes only after commit 142ms
+   ✓ commits ticket upload records together and publishes only after the attachment is available 122ms
+   ✓ inherited operational API mutations > enforces admission on every inherited single and bulk mutation for boards, statuses, and priorities 146ms
+   ✓ inherited operational API mutations > supports real configuration edits and bulk operations after renewal without writing missing audit columns 122ms
+   ✓ co-managed project API lifecycle admission > denies project, phase, task, checklist, link, and bulk mutations before acceptance and after expiry 217ms
+   ✓ co-managed project API lifecycle admission > uses one bulk transaction, rolls back a failed member without events, and resumes after renewal 122ms
+   ✓ co-managed project API lifecycle admission > creates a project, phase, and task in a caller transaction and discards events and records on rollback 131ms
+   ✓ co-managed canonical project model lifecycle admission > denies every project-model mutation before acceptance and after expiry 124ms
+   ✓ co-managed canonical project model lifecycle admission > retains reads during expiry and renews real model writes, status cloning, and cascading deletion 122ms
+   ✓ co-managed project action lifecycle admission > denies direct action mutations without changing project rows or publishing events  354ms
+   ✓ co-managed project action lifecycle admission > defers creation events through caller rollback and keeps tree reads and CSV exports available after expiry 198ms
+   ✓ co-managed task model lifecycle admission > denies every task, checklist, resource, ticket-link, type, and dependency mutation before acceptance and after expiry 136ms
+   ✓ co-managed task model lifecycle admission > preserves related records and reads during lapse, rolls back a caller transaction, and resumes mutations after renewal 149ms
+   ✓ preserves task configuration and dependencies through lapse and caller rollback, then permits renewal edits 158ms
+   ✓ co-managed project ordering recovery > denies all standalone repair and regeneration services before acceptance and after expiry 104ms
+   ✓ co-managed project ordering recovery > repairs invalid task and phase keys inside the admitted action transaction without recursive actions 201ms
+   ✓ co-managed task action lifecycle and publication > denies task action mutations before acceptance and after expiry without emitting events 154ms
+   ✓ co-managed task action lifecycle and publication > publishes only committed tasks and checklists, preserves reads during lapse, and resumes edits after renewal 175ms
+   ✓ co-managed project status action lifecycle > denies all status library and mapping mutations before acceptance and after expiry 169ms
+   ✓ co-managed project status action lifecycle > preserves mapping reads during expiry and resumes status swaps, phase remapping, and deletion after renewal 212ms
+   ✓ co-managed task comments and reactions > denies comment and reaction mutations before acceptance and after expiry 128ms
+   ✓ co-managed task comments and reactions > keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal  308ms
+   ✓ co-managed project templates and import > denies every template mutation, the application service, and CSV import while inactive 294ms
+   ✓ co-managed project templates and import > creates and applies wizard templates atomically, preserves lapse reads, and resumes imports after renewal 203ms
+   ✓ keeps client portal task uploads atomic when expiry wins during transport and preserves document reads 150ms
+   ✓ admits project status email at send time while retaining previews during pending acceptance and lapse 175ms
+   ✓ co-managed KB article API lifecycle > denies every article mutation during pending acceptance and lapse while preserving article and content reads 169ms
+   ✓ co-managed KB article API lifecycle > rolls back failed article/document changes, preserves caller transactions, and synchronizes publication visibility after renewal 170ms
+   ✓ co-managed shared KB creation and worker admission > keeps direct and UI article creation atomic and defers UI events through caller rollback 141ms
+   ✓ co-managed shared KB creation and worker admission > retains pending import content during license pauses and imports the same staged file once after renewal 92ms
+   ✓ co-managed KB UI mutation lifecycle > denies edits, publication, deletion, review and feedback while view recording becomes a read-only no-op 94ms
+   ✓ co-managed KB UI mutation lifecycle > keeps visibility, review cycles, and publication atomic across rollback and renewal 164ms
+   ✓ co-managed KB import staging > admits staging atomically, retains paused source, and only schedules committed batches with stable polling identities 127ms
+   ✓ co-managed KB import recovery > exposes pauses without file failures and resumes the retained identities once after renewal 151ms
+   ✓ co-managed KB import recovery > keeps discovery and recovery tenant-qualified and paginates without exposing file content 172ms
+   ✓ co-managed collaboration policy administration > keeps customer scope customer-owned, validates local resources, and records idempotent revisioned changes 170ms
+   ✓ co-managed collaboration policy administration > keeps staff assignments in the MSP, rejects foreign and inactive principals, and permits reductions during a pause 145ms
+   ✓ co-managed collaboration policy administration > serializes competing policy revisions and rejects other tenants without leaking the policy 162ms
+   ✓ co-managed shared-work authorization boundary > isolates sibling customers and MSP data when all three tickets have the same local identity 206ms
+   ✓ co-managed shared-work authorization boundary > intersects live home RBAC, explicit staff assignment, customer scope, and lifecycle without switching identity 156ms
+   ✓ co-managed shared-work authorization boundary > rejects revoked, expired, inactive, mismatched, foreign, and unsupported principals before executing a command 95ms
+   ✓ co-managed shared-work authorization boundary > requires explicit project grants and current team membership for both projects and their actual tasks 128ms
+   ✓ co-managed shared-work authorization boundary > rechecks customer revocation after waiting for the relationship policy lock 93ms
+   ✓ co-managed shared-work authorization boundary > applies home bundle restrictions using home IDs and propagates redactions and fail-closed field constraints 189ms
+   ✓ co-managed admins cannot configure Teams or telephony through direct actions or EE availability 274ms
+   ✓ co-managed admins cannot invoke excluded RMM actions or background engines despite settings permission  320ms
+   ✓ authenticated co-managed policy actions > derives targets and principals from home context and exposes only authorized resource options 226ms
+   ✓ authenticated co-managed policy actions > paginates home options, excludes inactive staff, and preserves revision retries and read-only revocation 149ms
+   ✓ co-managed shared metadata reads > returns an allowlisted canonical ticket with qualified context, stays readable during lapse, and denies revoked scope 221ms
+   ✓ co-managed shared metadata reads > redacts canonical source fields and their derived references before returning the response 124ms
+   ✓ co-managed shared metadata reads > reads granted project/task metadata with the actual parent and canonical custom status while omitting private and effort fields 197ms
+   ✓ co-managed ticket escalation and handback > atomically escalates one canonical ticket, keeps access on handback, and reuses the original work identity on re-escalation 251ms
+   ✓ co-managed ticket escalation and handback > rejects changed requests and concurrent stale revisions and rolls all stores back with the caller 285ms
+   ✓ co-managed ticket escalation and handback > fails closed on foreign identity, malformed notes, inactive destinations, lifecycle pauses, and revoked sessions 192ms
+   ✓ co-managed ticket escalation and handback > respects customer ticket narrowing and uses only a qualified MSP reference for local queue narrowing 240ms
+   ✓ co-managed ticket escalation and handback > rechecks session expiry after waiting for the approved destination lock without leaving a grant or work reference  1229ms
+   ✓ co-managed ticket escalation and handback > rechecks license expiry after waiting for the approved destination lock without leaving a grant or work reference  1247ms
+   ✓ keeps explicit ticket grant revocation customer-controlled during license pauses and requires a deliberate new escalation to restore it 258ms
+   ✓ derives ticket screen capabilities from each live actor and preserves customer revocation during lapse  522ms
+   ✓ paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles  631ms
+   ✓ discloses the sponsor identity and escalation destination while the relationship is live 133ms
+   ✓ withholds current former-sponsor state from retained customer reads after departure 158ms
+   ✓ inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused 193ms
+   ✓ paginates explicit grants by stable customer ticket identity without counting another customer or revoked grants  600ms
+   ✓ admits both ticket update actions and the shared transaction core only during operational write eligibility 130ms
+   ✓ publishes ticket transitions only after the owning commit and rolls back close state and audit history together 278ms
+   ✓ rejects the legacy ticket edit if its grace deadline passes while waiting for the ticket lock  1184ms
+   ✓ rejects the optimized ticket edit if its grace deadline passes while waiting for the ticket lock  2049ms
+   ✓ admits the auto-close transaction before creating its resolution comment and retains system closure behavior 120ms
+   ✓ stores foreign ticket activity through an owner-local actor reference with immutable name and organization snapshots 193ms
+   ✓ keeps foreign actor references transactional, rejects mixed/local impersonation and other-owner references, and preserves legacy audit rows 217ms
+   ✓ distinguishes equal user UUIDs across organizations and retains foreign attribution after source-user deletion 151ms
+   ✓ uses the canonical close and reopen paths with qualified audit, event and live attribution for MSP actors 200ms
+   ✓ retains close gates and rolls back foreign ticket edits, references, audit and queued publication together  363ms
+   ✓ attributes automatically applied checklist templates to the same MSP reference 130ms
+   ✓ rejects unsupported foreign routing and bundle propagation without modifying sibling tickets 213ms
+   ✓ does not let an actor reference substitute another source user or a missing collaboration context 288ms
+   ✓ rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation  1250ms
+   ✓ keeps historical MSP notification actors separate from a customer user with the same UUID 122ms
+   ✓ renders qualified ticket edit/close attribution in immediate email, accumulated email and in-app notifications  2138ms
+   ✓ carries foreign due-date and response-state changes to notification events without actor bookkeeping fields 153ms
+   ✓ edits the canonical shared ticket and returns the same receipt for exact and concurrent retries 225ms
+   ✓ rejects conflicting shared field baselines while preserving independent customer edits and snapshotting request inputs 174ms
+   ✓ admits only one of two conflicting shared edits based on the same field baseline 182ms
+   ✓ rolls back the shared edit receipt and canonical effects with its owning transaction 153ms
+   ✓ rejects foreign status/priority choices, incomplete baselines and unsupported edit fields 183ms
+   ✓ keeps viewer and lapsed editor reads available while denying edits and choice expansion 190ms
+   ✓ paginates customer-valid ticket choices and treats search wildcards literally 170ms
+   ✓ loads shared ticket panels and editor capability hints concurrently without lock upgrades 231ms
+   ✓ requires both read and update field authority for shared edits and their picklists 275ms
+   ✓ denies stale editor reads, choices and receipt replay after the customer revokes its explicit grant 177ms
+   ✓ binds edit receipts to the qualified ticket and disables workflow editing for bundle masters 215ms
+   ✓ co-managed shared ticket details for the native screen > T004 returns description, requester, client, category, due date and customer assignee to an admitted sponsor 249ms
+   ✓ co-managed shared ticket details for the native screen > T004 omits each disclosed field when the sponsor home policy redacts it, never padding it 180ms
+   ✓ co-managed shared ticket details for the native screen > T004 denies the details read without a current staff assignment and for non-sponsor tickets 131ms
+   ✓ co-managed shared ticket details for the native screen > T005 applies a description edit through the native path with a receipt, preserving customer-owned attributes 246ms
+   ✓ co-managed shared ticket details for the native screen > T005 rejects a stale description or category baseline as a conflict without writing 192ms
+   ✓ co-managed shared ticket details for the native screen > T005 edits the category within the ticket board, clears the stale subcategory and rejects foreign categories  306ms
+   ✓ co-managed shared ticket details for the native screen > T005 hides description and category from editing and options when the home policy redacts them 176ms
+   ✓ co-managed shared ticket details for the native screen > T005 refuses attribute rewrites beyond the description on the shared native path 144ms
+   ✓ builds working from shared tickets only, never the home tenant native tickets, before queue search, sorting, pagination and counts 183ms
+   ✓ filters shared work by the sponsor client before search, counts and pagination 134ms
+   ✓ removes handed-back tickets from working while retaining oversight, and removes revoked explicit access from all queue results 171ms
+   ✓ excludes unshared tickets and another MSP customer from queue searches and totals 244ms
+   ✓ keeps permitted queue reads during license lapse and rejects stale sessions and removed staff assignments 126ms
+   ✓ applies MSP client and queue policy projections before counts and never compares customer board UUIDs as local boards 152ms
+   ✓ redacts queue fields before search, sorting, state filters and dashboard counts 127ms
+   ✓ keeps same-number same-UUID tickets from two customers separate in global ordering and workspace options 259ms
+   ✓ rechecks revoked queue scope and session expiry after waiting for lifecycle locks  1256ms
+   ✓ retains legacy private notes and requires a disclosure command to change co-managed thread visibility 151ms
+   ✓ makes native comment model writes atomic and denies them after the co-managed grace period 134ms
+   ✓ retains qualified comment snapshots and denies native repairs or forged foreign authorship 256ms
+   ✓ stores MSP-private threads under MSP ownership with qualified soft resources and same-thread parent constraints 145ms
+   ✓ combines only published customer and home-private conversation content under the three audience rules 189ms
+   ✓ paginates one conversation across both stores without losing microsecond timestamps or colliding IDs 187ms
+   ✓ uses the stricter root/reply audience, hides private parent IDs and removes deleted bodies from conversation output 128ms
+   ✓ retains saved conversation attribution without resolving an MSP user in the customer directory 210ms
+   ✓ rechecks conversation grants on every page and retains reads during license lapse without exposing home-private notes after revocation 248ms
+   ✓ applies conversation body and author redactions before returning content or pagination cursors 171ms
+   ✓ keeps private note commands and retry receipts in the MSP store without changing customer history 209ms
+   ✓ makes private edits and tombstones revision-safe while exact retries retain their original receipts  392ms
+   ✓ rejects private note source/store/parent forgery and edits of another author without widening visibility 209ms
+   ✓ serializes concurrent private note edits and rolls back comments together with their private receipts 260ms
+   ✓ denies private commands after license lapse or live grant revocation, including receipt replay 217ms
+   ✓ requires both read and write content scope for private notes and denies viewer contributions 186ms
+   ✓ rechecks the actual session after waiting for a private thread lock before applying content  1252ms
+   ✓ creates canonical customer-owned public/shared IT comments with qualified MSP actors and inherited reply audiences 264ms
+   ✓ keeps customer-private and legacy notes private and rejects unpublished, deleted or inconsistent reply branches  314ms
+   ✓ binds shared comment receipts to immutable requests and rolls back content, thread counts and attribution together  384ms
+   ✓ rejects forged shared comment targets, implicit audience changes and mixed attribution before canonical insertion 155ms
+   ✓ denies shared comment creation and replay after read/write scope loss, license lapse or grant revocation 229ms
+   ✓ rechecks shared comment session authority after waiting on its root thread without leaving a reply or receipt  1275ms
+   ✓ revalidates published collaboration comment events against current audience, body and saved attribution before delivery 210ms
+   ✓ delivers qualified comment names to customer recipients without colliding author IDs or internal portal mentions  314ms
+   ✓ signals customer live comment refresh after commit with qualified identity and no content, but never on rollback or receipt replay 262ms
+   ✓ commits shared comment response state, qualified activity and receipts before publishing production events exactly once 166ms
+   ✓ rolls back all production comment state and effects with the owning transaction and respects disabled response tracking 264ms
+   ✓ publishes distinct shared IT and customer-private workflow audiences without changing response state or fabricating local MSP IDs 257ms
+   ✓ does not use public comment side effects to mutate a restricted response-state field 212ms
+   ✓ filters portal bodies and author enumeration by the published root audience, including inconsistent legacy replies 182ms
+   ✓ redacts retained portal tombstone bodies and hidden parent IDs while preserving ticket and board authorization 174ms
+   ✓ admits background recipients under their own home authority without a browser session or mutation capability 145ms
+   ✓ applies recipient-specific home bundle scope and redactions while retaining reads during lapse and rechecking revoked grants 151ms
+   ✓ retains recipient identity, membership and resource grant locks through the delivery callback  351ms
+   ✓ loads current shared comment content for independent MSP recipients with qualified author self-suppression 136ms
+   ✓ excludes private, unpublished and deleted notification content and respects the recipient content and author redactions 197ms
+   ✓ holds comment audience and body locks through delivery and reads current content again on retry  323ms
+   ✓ fans out only to authorized MSP routing users with qualified per-channel retry identities  303ms
+   ✓ rechecks routing between candidate discovery and delivery and does not treat remaining staff access as assignment 153ms
+   ✓ continues independent recipient delivery after a channel failure and surfaces failures for retry without widening revoked access 169ms
+   ✓ qualifies production comment event identities by owner when different tenants reuse the same operation UUID  337ms
+   ✓ persists co-managed notifications and disabled receipts using recipient locale, priority and current content 170ms
+   ✓ creates exactly one in-app notification per qualified recipient under concurrent retries and rolls back outer transactions 220ms
+   ✓ leaves no receipt after template failure and suppresses internal, revoked and private deliveries before storage 246ms
+   ✓ revalidates stored notification content and recipient read restrictions instead of returning cached text 194ms
+   ✓ binds stored notification reads to the receipt recipient, source, thread and current audience 212ms
+   ✓ rechecks the interactive session after waiting for a stored notification lock  1275ms
+   ✓ filters actual inbox pages and all counts before pagination, and rerenders detail/read responses with current shared content  330ms
+   ✓ applies inbox field redactions to rendered text and counts and rejects API override access 211ms
+   ✓ does not let removed notification metadata bypass receipt-based inbox classification 242ms
+   ✓ revalidates queued shared deliveries and replaces cached content while retaining qualified routing 190ms
+   ✓ suppresses receipt-backed queued delivery with stripped metadata, wrong recipients or changed audiences 222ms
+   ✓ holds shared source authority until asynchronous notification delivery finishes 223ms
+   ✓ delivers current ordinary notification rows and suppresses deleted or forged shared rows 169ms
+   ✓ rechecks routing for queued delivery while preserving an authorized historical inbox read 199ms
+   ✓ guards the actual Redis broadcaster and asynchronous post-creation hooks with current shared authority 197ms
+   ✓ connects normal comment events to MSP in-app receipts and emits creation effects only after committed first delivery  1007ms
+   ✓ rolls back MSP notification receipts and effects with a failed inbound outbox completion, then recovers once  364ms
+   ✓ propagates failed ordinary-event MSP fanout for retry without duplicating recipients already committed  308ms
+   ✓ atomically queues all notification channels and recovers missed immediate effects with independent retry state  373ms
+   ✓ does not duplicate a channel when immediate delivery and recovery workers overlap  319ms
+   ✓ suppresses queued channels on revoked access and never treats a damaged shared queue entry as native content 187ms
+   ✓ recovers an uncertain external acceptance with the same notification identity without resending successful channels 248ms
+   ✓ caps retryable attempts, isolates terminal channel failures and backfills legacy receipts idempotently 246ms
+   ✓ recovers committed channels through the scheduled server job handler without requiring the original event 260ms
+   ✓ honors preferences changed after queue creation without hiding the already authorized inbox history 294ms
+   ✓ issues notification signal tokens only for a current bound home session and caps them at its expiry 176ms
+   ✓ binds the actual notification live-token route to its browser session and refuses API overrides 160ms
+   ✓ does not issue a notification signal token if the session expires while waiting for a home identity lock  1280ms
+   ✓ reauthorizes notification activity rows before pagination and totals and keeps API targets from borrowing a browser session 276ms
+   ✓ excludes shared receipts and malformed shared metadata from client notification activities without hiding ordinary notices 177ms
+   ✓ edits and deletes own qualified comments with exact-version retries, preserved audiences and metadata-only committed effects  306ms
+   ✓ rejects other authors, forged stores, implicit disclosure and revoked authority while allowing customer-owned private edits 263ms
+   ✓ rolls back comment edits, receipts, activities and publication with the owning transaction 266ms
+   ✓ rechecks shared edit authority after a thread lock wait and leaves no receipt or effects when the session expires  1424ms
+   ✓ derives conversation write audiences from actual content policy and preserves read-only conversation access 235ms
+   ✓ preserves canonical rich documents through create, inherited replies, exact edit retries and current conversation reads  306ms
+   ✓ keeps rich private notes and edits exclusively in the MSP store and snapshots documents before awaiting authority 209ms
+   ✓ uploads qualified conversation attachments once under concurrent retries without creating generic downloadable files 298ms
+   ✓ inherits private attachment audiences from their actual home or customer comment and denies forged stores and threads 298ms
+   ✓ keeps interrupted attachment uploads pending and hidden, snapshots bytes, and retries the same immutable object 219ms
+   ✓ revalidates attachment read scope, deleted parents and live grants before reaching storage 223ms
+   ✓ keeps attachment transport expiry pending, permits an exact renewed retry and retains reads during license lapse  2419ms
+   ✓ retains attachment access on surviving replies after root deletion while excluding unpublished and deleted parent content 291ms
+   ✓ uses the production attachment provider adapter and leaves incomplete provider acknowledgements unpublished  313ms
+   ✓ derives attachment upload controls from actual qualified authorship, content redactions and lifecycle  542ms
+   ✓ publishes a drafted message and every prepared attachment atomically through the production comment adapter  430ms
+   ✓ keeps draft attachments hidden if an unrelated request creates their future message ID 232ms
+   ✓ retains exact draft content and manifests, rejects changed bytes and competing actors, and recovers incomplete uploads 292ms
+   ✓ keeps private draft messages and files in the correct organization and inherits reply audiences  555ms
+   ✓ rolls draft publication and native effects back with the owner and rejects publication after scope loss or license lapse  333ms
+   ✓ rejects changed draft audiences before publication and refuses damaged published receipts  804ms
+   ✓ rejects stale displayed reply audiences before draft reservation or text creation and retains exact constrained retries  337ms
+   ✓ serves requester-facing files through actual portal identity, never shared IT, private or forged references  330ms
+   ✓ retains customer portal file access after sponsor revocation, lapse and departure while applying current comment visibility 233ms
+   ✓ enforces current portal board, client, role, user and contact access before opening file storage 204ms
+   ✓ keeps staged files invisible to requesters until publication and rejects corrupted bytes or session expiry during download  1012ms
+   ✓ retains requester identity, RBAC, board visibility and audience locks through file transport  366ms
+   ✓ rechecks requester session expiry after comment lock waits before opening storage  1288ms
+   ✓ cancels an author draft idempotently, hides files immediately and keeps tombstones after scrubbing its bytes and content 288ms
+   ✓ expires idle drafts and standalone pending uploads while retaining fresh work and every published file  593ms
+   ✓ retries failed or lost delete acknowledgements at the same path and rejects corrupted cleanup paths without blocking other files  327ms
+   ✓ allows authors to discard their own drafts after grant loss and lapse without granting access to live content 220ms
+   ✓ serializes cancellation after an in-flight upload and never publishes or resurrects its completed object 242ms
+   ✓ cleans only the owning store and invokes the production scheduled handler with idempotent provider deletion  1750ms
+   ✓ rechecks draft session expiry after cleanup lock contention before uploading any bytes  1278ms
+   ✓ removes a published attachment idempotently without changing its message and purges only the selected object  397ms
+   ✓ revokes requester file access on removal while retaining published draft receipts and preventing upload resurrection  351ms
+   ✓ removes private attachments only as their author in their owning organization  319ms
+   ✓ rolls attachment removal back with its caller and rejects staged-file removal through a colliding comment  400ms
+   ✓ requires current write authority for attachment removal and retains file reads during license lapse 259ms
+   ✓ rechecks session expiry after an attachment removal lock wait before marking the file discarded  1311ms
+   ✓ discloses a customer-owned thread and its files atomically with confirmed scope, attribution and exact retry  341ms
+   ✓ rejects stale disclosure confirmation after new replies, attachment changes and conflicting operation reuse  385ms
+   ✓ requires the thread author and explicit confirmation, blocks pending uploads and preserves caller rollback 274ms
+   ✓ retains audience admission after grant loss, license lapse and session expiry behind a thread lock  1400ms
+   ✓ keeps published draft files attached across disclosure and rejects old-audience staged replies  540ms
+   ✓ transfers a confirmed MSP-private thread and files atomically with historical authors and empty tombstones  966ms
+   ✓ resumes a partial private-thread copy at the same reserved path without publishing an incomplete customer thread  335ms
+   ✓ rejects a changed private source after staging and cleans only abandoned destination objects with retry history  322ms
+   ✓ rolls final private-thread publication back without repeating committed file copies  385ms
+   ✓ checks source checksums and session expiry before sending private bytes into customer storage  1375ms
+   ✓ removes a disclosed attachment from its customer-owned path while preserving original private history 269ms
+   ✓ retries abandoned private-transfer deletion after lost acknowledgements and isolates corrupted paths 257ms
+   ✓ denies private disclosure counts and transfers when home policy redacts the source store 225ms
+   ✓ rejects a colliding private-transfer destination without overwriting an existing customer conversation  369ms
+   ✓ recovers co-managed event outbox publication failures with current content and stable strict transport identities 196ms
+   ✓ commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback 274ms
+   ✓ cancels delayed co-managed event outbox message bodies when the source becomes private 216ms
+   ✓ cancels delayed co-managed event outbox message bodies when the source becomes deleted 158ms
+   ✓ retries co-managed event outbox lost acknowledgements, isolates damaged rows and prevents concurrent delivery 219ms
+   ✓ retains metadata-only co-managed event outbox invalidations after source deletion and rejects changed event identities  384ms
+   ✓ holds current source visibility locks through co-managed event outbox transport and recovers after the sender loses its acknowledgement 197ms
+   ✓ declares co-managed consumer obligations before publication and rolls transactional effects back with completion failure 208ms
+   ✓ recovers co-managed consumers that never saw Redis and cancels replay after source restriction without rerunning completed siblings 228ms
+   ✓ commits actual co-managed search indexing with its consumer receipt and applies metadata-only deletion once 256ms
+   ✓ rolls actual co-managed in-app consumers back when completion fails and emits channels only after a successful retry  311ms
+   ✓ routes co-managed consumer recovery through the actual job with isolated targets and skips unpublished work before its batch limit 251ms
+   ✓ does not consume foreign or mismatched co-managed event identities and rolls caller transactions back without completing work 201ms
+   ✓ queues qualified co-managed email recipients without content and resumes only unfinished recipients with current email and body 214ms
+   ✓ suppresses queued co-managed email after the recipient becomes private 154ms
+   ✓ suppresses queued co-managed email after the recipient becomes revoked 199ms
+   ✓ suppresses queued co-managed email after the recipient becomes unassigned 164ms
+   ✓ suppresses queued co-managed email after the recipient becomes inactive 189ms
+   ✓ suppresses queued co-managed email after the recipient becomes opted-out 185ms
+   ✓ holds co-managed email authority through transport, retries a lost acknowledgement with its stable ID and retains terminal history 239ms
+   ✓ connects co-managed email discovery to its own consumer and recovers recipient failures through the production job 232ms
+   ✓ reads customer-owned notification audiences without an MSP grant or an interactive recipient session 128ms
+   ✓ retains customer notification reads after relationship departure, capacity lapse and PSA upgrade 140ms
+   ✓ denies customer notification recipients with current no_role authority 143ms
+   ✓ denies customer notification recipients with current inactive authority 164ms
+   ✓ denies customer notification recipients with current portal authority 136ms
+   ✓ denies customer notification recipients with current suspended authority 121ms
+   ✓ denies customer notification recipients with current foreign_tenant authority 120ms
+   ✓ rechecks customer notification body, publication and root audience and suppresses only the qualified author 199ms
+   ✓ applies the customer recipient bundle scope and field redactions to current notification content 176ms
+   ✓ holds customer recipient and source locks through the awaited notification adapter 141ms
+   ✓ queues customer technician recipients by stable identity and retries only unfinished current recipients 197ms
+   ✓ suppresses queued customer email after current reassigned changes 131ms
+   ✓ suppresses queued customer email after current inactive changes 161ms
+   ✓ suppresses queued customer email after current no_role changes 206ms
+   ✓ suppresses queued customer email after current audience changes 168ms
+   ✓ suppresses queued customer email after current deleted changes 128ms
+   ✓ suppresses queued customer email after current opted_out changes 131ms
+   ✓ retains customer email delivery after departure and upgrade and preserves locks and retry exhaustion 209ms
+   ✓ recovers actual customer email discovery and scheduled delivery without resending completed native siblings 244ms
+   ✓ backfills only unpublished customer email work, preserves completed rollout history and refuses rollback 206ms
+   ✓ discovers additional customer ticket resources and rechecks their current membership without granting read permission 242ms
+   ✓ suppresses close-paired customer comments both before discovery and before a queued send 200ms
+   ✓ rolls customer email discovery and completion back with its caller and sends only after owning commit 231ms
+   ✓ admits an email-only current requester without a portal account and reloads the same contact address and content 160ms
+   ✓ never redirects an old requester obligation to a replacement contact even when they share the same address 254ms
+   ✓ binds requester fallback mail to the current unique default location and cancels it when contact mail becomes available 131ms
+   ✓ does not use fallback email to bypass a requester with inactive_contact restrictions 135ms
+   ✓ does not use fallback email to bypass a requester with inactive_client restrictions 120ms
+   ✓ does not use fallback email to bypass a requester with invalid_address restrictions 120ms
+   ✓ does not use fallback email to bypass a requester with wrong_client restrictions 139ms
+   ✓ does not use fallback email to bypass a requester with invisible_board restrictions 193ms
+   ✓ restricts requester email to current published public agent responses and suppresses self and close-paired mail 239ms
+   ✓ preserves requester ownership after MSP revocation and departure while retaining current visibility and source locks 145ms
+   ✓ rejects foreign and malformed requester email identities without borrowing an MSP session 155ms
+   ✓ issues stable requester reply tokens per delivery and address and preserves identity across retries 171ms
+   ✓ authorizes requester replies only under their current qualified identity and owns all callback mutations 136ms
+   ✓ rejects a requester reply token after auth_missing without invoking the reply writer 144ms
+   ✓ rejects a requester reply token after auth_unaligned without invoking the reply writer 143ms
+   ✓ rejects a requester reply token after sender_changed without invoking the reply writer 123ms
+   ✓ rejects a requester reply token after address_changed without invoking the reply writer 206ms
+   ✓ rejects a requester reply token after contact_changed without invoking the reply writer 138ms
+   ✓ rejects a requester reply token after private without invoking the reply writer 140ms
+   ✓ rejects a requester reply token after expired without invoking the reply writer 195ms
+   ✓ rejects a requester reply token after revoked without invoking the reply writer 161ms
+   ✓ retains requester reply source and recipient locks through the writer and preserves ownership after PSA upgrade 158ms
+   ✓ rechecks requester token expiry after waiting for the canonical thread lock  1260ms
+   ✓ rejects conflicting requester token identity reuse and preserves retained token history on migration replay 164ms
+   ✓ blocks requester reply writes after the sponsorship grace period while leaving token history available 174ms
+   ✓ binds fallback requester reply tokens to the selected active client location without creating a user 147ms
+   ✓ rolls requester reply writes back if the token expires while the writer is awaiting work  1265ms
+   ✓ rejects foreign-owner, legacy and malformed requester reply tokens instead of treating them as another principal 151ms
+   ✓ commits requester email tokens before transport and lets concurrent queue workers complete a recipient once 136ms
+   ✓ reloads requester email content and address on retries with address-bound tokens and a stable Message-ID 187ms
+   ✓ suppresses queued requester email after inactive_contact without issuing a token 227ms
+   ✓ suppresses queued requester email after inactive_client without issuing a token 151ms
+   ✓ suppresses queued requester email after private_thread without issuing a token 152ms
+   ✓ suppresses queued requester email after deleted_comment without issuing a token 132ms
+   ✓ suppresses queued requester email after notifications_disabled without issuing a token 147ms
+   ✓ suppresses queued requester email after subtype_disabled without issuing a token 207ms
+   ✓ suppresses queued requester email after category_disabled without issuing a token 135ms
+   ✓ retains the first requester identity on event replay and does not reroute an old delivery to a new default location 169ms
+   ✓ keeps requester email token, source and identity locks through transport and preserves retry exhaustion after departure 160ms
+   ✓ does not resurrect requester email tokens after expires_at during a retry 199ms
+   ✓ does not resurrect requester email tokens after revoked_at during a retry  3240ms
+   ✓ rolls back requester email discovery with its owning transaction and requires a root recovery connection 157ms
+   ✓ rechecks requester email address changes between token commit and delivery 216ms
+   ✓ rechecks requester email audience changes between token commit and delivery 185ms
+   ✓ rechecks requester email revocation changes between token commit and delivery 209ms
+   ✓ rechecks requester email preferences changes between token commit and delivery 180ms
+   ✓ processes an actual qualified requester email reply atomically in its canonical thread with durable effects and replay 205ms
+   ✓ quarantines actual requester email after sender rejection without native matching or new-ticket side effects 167ms
+   ✓ quarantines actual requester email after authentication rejection without native matching or new-ticket side effects 198ms
+   ✓ quarantines actual requester email after contact rejection without native matching or new-ticket side effects 172ms
+   ✓ quarantines actual requester email after private rejection without native matching or new-ticket side effects 232ms
+   ✓ quarantines actual requester email after revoked rejection without native matching or new-ticket side effects 187ms
+   ✓ quarantines actual requester email after expired rejection without native matching or new-ticket side effects 199ms
+   ✓ quarantines actual requester email after unknown_token rejection without native matching or new-ticket side effects  657ms
+   ✓ quarantines actual requester email after malformed_token rejection without native matching or new-ticket side effects 146ms
+   ✓ quarantines actual requester email after case_variant rejection without native matching or new-ticket side effects 132ms
+   ✓ rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer  422ms
+   ✓ retries actual requester email writer failures without quarantining valid authority or duplicating the eventual reply 179ms
+   ✓ applies requester email reopen policy inside the admitted transaction and destination scope 195ms
+   ✓ applies requester email cutoff policy inside the admitted transaction and destination scope 231ms
+   ✓ applies requester email hidden_destination policy inside the admitted transaction and destination scope 185ms
+   ✓ applies requester email foreign_rule_client policy inside the admitted transaction and destination scope 208ms
+   ✓ applies requester email rate_limited policy inside the admitted transaction and destination scope 233ms
+   ✓ applies requester email automated policy inside the admitted transaction and destination scope 185ms
+   ✓ keeps a default-location requester reply customer-authored without resolving the address to a privileged user 248ms
+   ✓ retains requester email for retry when its worker lacks the required admission adapter 160ms
+   ✓ defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause 163ms
+   ✓ admits a requester reply using its HTML attribute token marker without native fallback 175ms
+   ✓ admits a requester reply using its HTML comment token marker without native fallback 238ms
+   ✓ skips HTML-only requester mail containing just a token, markup and non-content without creating a reply 127ms
+   ✓ discovers production requester mail once, recovers it through the scheduled job and accepts a reply using its committed token 260ms
+   ✓ rolls requester discovery and after-commit delivery back with an enclosing transaction, then recovers once  497ms
+   ✓ preserves native requester delivery for published rollout history and enrolls only unpublished work 245ms
+   ✓ moves primary requester delivery out of the native subscriber without bypassing the co-managed watcher authority boundary 206ms
+   ✓ issues stable customer technician tokens without granting an interactive identity and binds each sent address 171ms
+   ✓ admits customer technician replies to the canonical requester thread using current local authority 187ms
+   ✓ admits customer technician replies to the canonical shared_it thread using current local authority 165ms
+   ✓ admits customer technician replies to the canonical organization_private thread using current local authority 192ms
+   ✓ rejects customer technician reply after sender changes without calling the writer 141ms
+   ✓ rejects customer technician reply after authentication changes without calling the writer 196ms
+   ✓ rejects customer technician reply after inactive changes without calling the writer 292ms
+   ✓ rejects customer technician reply after portal changes without calling the writer 149ms
+   ✓ rejects customer technician reply after no_role changes without calling the writer 173ms
+   ✓ rejects customer technician reply after no_update changes without calling the writer 160ms
+   ✓ rejects customer technician reply after suspended changes without calling the writer 148ms
+   ✓ rejects customer technician reply after audience changes without calling the writer 136ms
+   ✓ rejects customer technician reply after deleted changes without calling the writer 175ms
+   ✓ rejects customer technician reply after unpublished changes without calling the writer 183ms
+   ✓ rejects customer technician reply after expired changes without calling the writer 168ms
+   ✓ rejects customer technician reply after revoked changes without calling the writer 131ms
+   ✓ rejects customer technician reply after foreign_tenant changes without calling the writer 166ms
+   ✓ rolls back late customer technician reply rejection to a savepoint even when its enclosing inbox transaction catches the error 158ms
+   ✓ holds customer technician token, source and identity locks through reply writes and rolls back writer failure 148ms
+   ✓ keeps customer technician token issuance transactional, refuses identity reuse and preserves revoked token history 285ms
+   ✓ enforces current update_scope bundle policy on customer technician reply tokens 152ms
+   ✓ enforces current update_redaction bundle policy on customer technician reply tokens 168ms
+   ✓ enforces current read_redaction bundle policy on customer technician reply tokens 161ms
+   ✓ blocks customer technician reply writes after grace or departure and restores owner authority after independent PSA upgrade 140ms
+   ✓ rechecks customer technician token expiry after a canonical thread lock wait  1242ms
+   ✓ rolls back customer technician writes when token expiry occurs while the writer awaits work  1269ms
+   ✓ rejects malformed and requester tokens at the customer technician boundary 130ms
+   ✓ defers customer technician reply effects until its root transaction commits 144ms
+   ✓ defers customer technician reply effects until its outer transaction commits 139ms
+   ✓ discards customer technician reply hooks after savepoint rollback 141ms
+   ✓ discards customer technician reply hooks after outer rollback 138ms
+   ✓ processes actual technician email in its canonical requester audience with durable effects and qualified authorship 188ms
+   ✓ processes actual technician email in its canonical shared_it audience with durable effects and qualified authorship 188ms
+   ✓ processes actual technician email in its canonical organization_private audience with durable effects and qualified authorship 183ms
+   ✓ quarantines actual technician email after sender rejection with no native fallback or side effects 139ms
+   ✓ quarantines actual technician email after spf_only rejection with no native fallback or side effects 224ms
+   ✓ quarantines actual technician email after missing_auth rejection with no native fallback or side effects 147ms
+   ✓ quarantines actual technician email after no_update rejection with no native fallback or side effects 175ms
+   ✓ quarantines actual technician email after inactive rejection with no native fallback or side effects 163ms
+   ✓ quarantines actual technician email after disclosed rejection with no native fallback or side effects 175ms
+   ✓ quarantines actual technician email after deleted rejection with no native fallback or side effects 177ms
+   ✓ quarantines actual technician email after malformed rejection with no native fallback or side effects 218ms
+   ✓ quarantines actual technician email after case_variant rejection with no native fallback or side effects 174ms
+   ✓ quarantines actual technician email after revoked rejection with no native fallback or side effects 204ms
+   ✓ quarantines actual technician email after expired rejection with no native fallback or side effects  1140ms
+   ✓ quarantines actual technician email after unknown_token rejection with no native fallback or side effects 184ms
+   ✓ rolls actual technician comment and outbox writes back before quarantining a late token rejection  318ms
+   ✓ retains technician email artifacts outside native portal-visible processing without spending retry attempts 186ms
+   ✓ preserves requester audience and qualified identity when a technician reply passes the closed-ticket cutoff 237ms
+   ✓ preserves shared_it audience and qualified identity when a technician reply passes the closed-ticket cutoff 185ms
+   ✓ preserves organization_private audience and qualified identity when a technician reply passes the closed-ticket cutoff 228ms
+   ✓ quarantines technician cutoff replies that fail create_permission admission without creating a ticket 208ms
+   ✓ quarantines technician cutoff replies that fail foreign_client admission without creating a ticket 148ms
+   ✓ quarantines technician cutoff replies that fail destination_scope admission without creating a ticket 179ms
+   ✓ applies technician reopen policy without changing a private comment into a requester response 200ms
+   ✓ applies technician automated policy without changing a private comment into a requester response  373ms
+   ✓ applies technician rate_limited policy without changing a private comment into a requester response 240ms
+   ✓ retries a transient technician reply writer failure and commits only one eventual reply 201ms
+   ✓ processes a technician HTML-only reply using its attribute token marker 200ms
+   ✓ processes a technician HTML-only reply using its comment token marker 248ms
+   ✓ retains technician mail for retry if a durable worker has no qualified admission adapter 133ms
+   ✓ rejects conflicting explicit comment audience and visibility or a different parent audience before persisting mail content 122ms
+   ✓ retains technician reply receipts independently of editable metadata and expired credentials 194ms
+   ✓ rolls technician canonical writes back when durable MIME identity disagrees 181ms
+   ✓ materializes technician MIME files only in their admitted requester conversation and retains MIME separately 266ms
+   ✓ materializes technician MIME files only in their admitted shared_it conversation and retains MIME separately  308ms
+   ✓ materializes technician MIME files only in their admitted organization_private conversation and retains MIME separately 244ms
+   ✓ retains technician MIME artifacts after current deleted authority fails 189ms
+   ✓ retains technician MIME artifacts after current disclosed authority fails 208ms
+   ✓ retains technician MIME artifacts after current inactive authority fails 178ms
+   ✓ retains technician MIME artifacts after current no_update authority fails 211ms
+   ✓ retains technician MIME artifacts after current missing_receipt authority fails 193ms
+   ✓ retains technician MIME artifacts after current changed_actor authority fails 224ms
+   ✓ retains technician MIME artifacts after current changed_source authority fails 185ms
+   ✓ retries technician artifact object acknowledgement loss at the same path without duplicating canonical effects 252ms
+   ✓ materializes accepted technician files after token deletion and editable metadata removal 270ms
+   ✓ rolls back technician file publication if artifact completion loses its fence after upload  347ms
+   ✓ does not publish technician artifact bytes after the retained claim expires during transport  2274ms
+   ✓ materializes one selected embedded image without processing sibling artifacts 272ms
+   ✓ keeps receipt and source policy locks throughout technician artifact transport 281ms
+   ✓ defers technician artifacts on lapse and resumes retained customer ownership after an independent PSA upgrade 234ms
+   ✓ commits outgoing technician requester tokens before transport and admits their actual durable inbox replies 226ms
+   ✓ commits outgoing technician shared_it tokens before transport and admits their actual durable inbox replies 281ms
+   ✓ commits outgoing technician organization_private tokens before transport and admits their actual durable inbox replies 183ms
+   ✓ reuses outgoing technician tokens on acknowledgement retries and creates a distinct address-bound token after address changes 223ms
+   ✓ rechecks outgoing technician address between committed preparation and delivery 239ms
+   ✓ rechecks outgoing technician audience between committed preparation and delivery  1064ms
+   ✓ rechecks outgoing technician revocation between committed preparation and delivery 239ms
+   ✓ rechecks outgoing technician expiry between committed preparation and delivery 223ms
+   ✓ rechecks outgoing technician preferences between committed preparation and delivery 203ms
+   ✓ rechecks outgoing technician reassigned between committed preparation and delivery 228ms
+   ✓ rechecks outgoing technician deleted between committed preparation and delivery 198ms
+   ✓ rechecks outgoing technician inactive between committed preparation and delivery 253ms
+   ✓ reuses committed technician tokens after SMTP acceptance loses its delivery transaction 199ms
+   ✓ publishes inbound requester conversation events only after inbox commit with current content and durable consumers 212ms
+   ✓ publishes inbound shared_it conversation events only after inbox commit with current content and durable consumers 175ms
+   ✓ publishes inbound organization_private conversation events only after inbox commit with current content and durable consumers 214ms
+   ✓ recovers inbound conversation publication from current content after a lost publish acknowledgement 224ms
+   ✓ cancels undelivered inbound conversation content after deleted changes and closes its recovery obligations 225ms
+   ✓ cancels undelivered inbound conversation content after audience changes and closes its recovery obligations 194ms
+   ✓ preserves initial inbound internal-only delivery even when excluded consumer rows are replayed 180ms
+   ✓ retries co-managed inbox comments when the conversation-retention adapter is absent without native fallback 187ms
+   ✓ keeps ordinary PSA inbox comment events in their native outbox 98ms
+   ✓ retains native api comment delivery atomically and recovers the current body 162ms
+   ✓ retains native generic comment delivery atomically and recovers the current body 217ms
+   ✓ retains native optimized comment delivery atomically and recovers the current body 172ms
+   ✓ retains native simple comment delivery atomically and recovers the current body 134ms
+   ✓ keeps native api internal roots organization-private and delivers only after commit 146ms
+   ✓ keeps native generic internal roots organization-private and delivers only after commit 169ms
+   ✓ keeps native optimized internal roots organization-private and delivers only after commit 271ms
+   ✓ keeps native simple internal roots organization-private and delivers only after commit 166ms
+   ✓ rolls back native api comments when durable event retention fails 132ms
+   ✓ rolls back native generic comments when durable event retention fails 143ms
+   ✓ rolls back native optimized comments when durable event retention fails 175ms
+   ✓ rolls back native simple comments when durable event retention fails 145ms
+   ✓ retains native api edit invalidations without either old or new bodies 153ms
+   ✓ retains native generic edit invalidations without either old or new bodies 166ms
+   ✓ retains native deletion invalidation before removing a leaf and recovers it after source removal 211ms
+   ✓ refuses a native deletion invalidation that neither removes its source nor carries a tombstone 145ms
+   ✓ rolls back native generic comment and earlier intents if a later workflow intent fails 190ms
+   ✓ rolls back native optimized comment and earlier intents if a later workflow intent fails 147ms
+   ✓ rolls back native simple comment and earlier intents if a later workflow intent fails 146ms
+   ✓ rolls back native edit when its invalidation cannot be retained 182ms
+   ✓ rolls back native delete when its invalidation cannot be retained 247ms
+   ✓ publishes a scheduled co-managed comment once with atomic state, workflow and notification intent 196ms
+   ✓ serializes duplicate scheduled co-managed publication workers without duplicate events 154ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: inactive_author 147ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: missing_role 136ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: private_audience 167ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: client_author 158ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: deleted_source 145ms
+   ✓ retains a scheduled co-managed comment without publication when current authority changes: lapsed_license 143ms
+   ✓ rolls scheduled state and earlier response intent back when comment intent cannot commit 168ms
+   ✓ recovers a scheduled comment after license restoration without re-creating the original queue job 166ms
+   ✓ recovers scheduled notification transport from the current body after the workspace becomes read-only 180ms
+   ✓ cancels old scheduled content during legacy handoff when its source is deleted 134ms
+   ✓ cancels old scheduled content during legacy handoff when its source is restricted 166ms
+   ✓ continues scheduled maintenance past denied authors instead of starving later due comments 248ms
+   ✓ retains scheduled author, role and source locks until publication authority completes 139ms
+   ✓ preserves ordinary PSA scheduled publication and stable native retries 292ms
+   ✓ applies scheduled publication field authority for body 171ms
+   ✓ applies scheduled publication field authority for response 156ms
+   ✓ applies scheduled publication field authority for response_disabled 156ms
+   ✓ retains workflow model comments under canonical requester audience and recovers current content 143ms
+   ✓ retains workflow model comments under canonical shared_it audience and recovers current content 160ms
+   ✓ retains workflow model comments under canonical organization_private audience and recovers current content 236ms
+   ✓ rolls back workflow model comments when current admission fails: inactive_actor 131ms
+   ✓ rolls back workflow model comments when current admission fails: missing_role 123ms
+   ✓ rolls back workflow model comments when current admission fails: missing_run 162ms
+   ✓ rolls back workflow model comments when current admission fails: cancelled_run 154ms
+   ✓ rolls back workflow model comments when current admission fails: expired_lease 142ms
+   ✓ rolls back workflow model comments when current admission fails: missing_version 132ms
+   ✓ rolls back workflow model comments when current admission fails: lapsed_license 182ms
+   ✓ rolls back workflow model comments when current admission fails: missing_composition 183ms
+   ✓ executes workflow business comments with the exact published version actor and owning commit 265ms
+   ✓ rolls back model workflow comments if durable intent insertion fails 135ms
+   ✓ rolls back business workflow comments if durable intent insertion fails 146ms
+   ✓ rolls back email workflow comments if durable intent insertion fails 202ms
+   ✓ retains the native ticket model adapter intent in its owning transaction 155ms
+   ✓ denies workflow comment side effects hidden by current comments.note field policy 164ms
+   ✓ denies workflow comment side effects hidden by current response_state field policy 132ms
+   ✓ creates email workflow ticket and initial comment in one transaction (retention failure=false) 152ms
+   ✓ creates email workflow ticket and initial comment in one transaction (retention failure=true) 212ms
+   ✓ rejects a workflow comment whose internal author differs from the executing version actor 144ms
+   ✓ commits scheduled comment reschedule before touching the queue 125ms
+   ✓ commits scheduled comment cancel before touching the queue 128ms
+   ✓ denies both schedule commands under current inactive_user authority without queue effects 141ms
+   ✓ denies both schedule commands under current missing_role authority without queue effects 146ms
+   ✓ denies both schedule commands under current expired_session authority without queue effects 141ms
+   ✓ denies both schedule commands under current revoked_session authority without queue effects 181ms
+   ✓ denies both schedule commands under current api_override authority without queue effects 136ms
+   ✓ denies both schedule commands under current lapsed_license authority without queue effects 155ms
+   ✓ rolls back scheduled comment reschedule without changing queue state when audit insertion fails 202ms
+   ✓ rolls back scheduled comment cancel without changing queue state when audit insertion fails 137ms
+   ✓ cancels a newly queued stale schedule when cancellation commits while the queue is responding 171ms
+   ✓ recovers a rescheduled co-managed source after both queue operations fail 197ms
+   ✓ admits new scheduled comments under the current browser identity (expired=false) 153ms
+   ✓ admits new scheduled comments under the current browser identity (expired=true) 145ms
+   ✓ allows a currently authorized technician to cancel a departed authors scheduled comment 156ms
+   ✓ denies schedule commands narrowed by the current scope bundle policy 176ms
+   ✓ denies schedule commands narrowed by the current body bundle policy 156ms
+   ✓ denies schedule commands narrowed by the current schedule bundle policy 150ms
+   ✓ allows cancellation but denies rescheduling beneath a deleted conversation root 168ms
+   ✓ allows cancellation but denies rescheduling beneath a unpublished conversation root 148ms
+   ✓ lets both organizations edit one canonical task and retains foreign attribution without copied users or assignments 261ms
+   ✓ serializes competing shared task edits and rejects stale baselines or reused operation IDs 139ms
+   ✓ denies shared task mutations under current revoked_project authority 199ms
+   ✓ denies shared task mutations under current viewer_staff authority 134ms
+   ✓ denies shared task mutations under current read_only_grant authority 167ms
+   ✓ denies shared task mutations under current inactive_actor authority 108ms
+   ✓ denies shared task mutations under current expired_session authority 114ms
+   ✓ denies shared task mutations under current lapsed_license authority 115ms
+   ✓ rejects shared task status mappings from a different customer phase 128ms
+   ✓ rolls back the canonical task and foreign attribution when its receipt cannot commit 143ms
+   ✓ pages shared project tasks without copying assignments, and loses access immediately on unsharing  594ms
+   ✓ uses phase-specific task statuses instead of project fallback statuses when an override exists 178ms
+   ✓ applies customer bundle field redactions to shared task reads and edits 145ms
+   ✓ applies sponsor bundle field redactions to shared task reads and edits  950ms
+   ✓ preserves explicit audit ownership across foreign connection context and retains legacy context fallback 164ms
+   ✓ shows qualified task change history with immutable names and excludes unrelated audit records 159ms
+   ✓ pages task history using database timestamp precision without duplicates or hidden-change counts 178ms
+   ✓ redacts task history fields and derived authors using current customer bundle authority 175ms
+   ✓ redacts task history fields and derived authors using current sponsor bundle authority 141ms
+   ✓ keeps task history readable during license lapse and denies revoked or expired readers 156ms
+   ✓ omits the task history and its pagination metadata when the history field is hidden 127ms
+   ✓ assigns MSP task participation without changing native customer assignments and retains withdrawal history 235ms
+   ✓ rejects MSP task assignment for current inactive_assignee constraints 130ms
+   ✓ rejects MSP task assignment for current viewer constraints 124ms
+   ✓ rejects MSP task assignment for current no_staff constraints 143ms
+   ✓ rejects MSP task assignment for current no_project_permission constraints 118ms
+   ✓ rejects MSP task assignment for current unshared constraints 115ms
+   ✓ rejects MSP task assignment for current read_only_project constraints 144ms
+   ✓ rejects MSP task assignment for current foreign_tenant constraints 121ms
+   ✓ rejects MSP task assignment for current lapsed constraints 107ms
+   ✓ rejects MSP task assignment for current expired_editor constraints 120ms
+   ✓ serializes customer and MSP task assignments and rejects stale or reused operations 154ms
+   ✓ rolls back task assignment, history and actor attribution when its receipt fails 132ms
+   ✓ offers only assigned collaboration teams with an eligible current member 199ms
+   ✓ uses a proposed qualified task assignment for assigned-work-only candidate policy 194ms
+   ✓ redacts customer task assignment state, history and choices under current field policy 154ms
+   ✓ redacts sponsor task assignment state, history and choices under current field policy 149ms
+   ✓ allows customer withdrawal after project unsharing while retaining the MSP participation record 192ms
+   ✓ combines native and qualified shared tasks before queue sorting, filtering and pagination 253ms
+   ✓ keeps unassigned shared tasks in oversight and removes withdrawn or unshared tasks from working 179ms
+   ✓ lets customers reach their own canonical task queue without MSP or unrelated customer rows  305ms
+   ✓ applies assigned-work-only policy and current staff/session authority before task queue counts 166ms
+   ✓ filters task queues by personal resources and current team assignments 204ms
+   ✓ redacts task queue search, status counts, assignment filters and workspace labels before pagination 263ms
+   ✓ does not expose stale project status fallback after a phase-specific override exists 154ms
+   ✓ keeps two customers with identical task identities distinct in one MSP queue  386ms
+   ✓ task attachments retain qualified audiences, retry identity and independent MSP archive bytes  703ms
+   ✓ task attachments survive encrypted customer export and native restore without the MSP private store  1925ms
+   ✓ task attachments preserve files on surviving replies and reject removed comments or changed audiences 267ms
+   ✓ task attachments reject customer body redaction and preserve failed-upload retry reservations 211ms
+   ✓ task attachments reject sponsor body redaction and preserve failed-upload retry reservations 243ms
+   ✓ task conversations preserve canonical ownership, separate private stores, and durable foreign authorship 198ms
+   ✓ task conversations treat legacy is_internal=false notes as private 152ms
+   ✓ task conversations treat legacy is_internal=true notes as private 159ms
+   ✓ task conversations inherit reply audiences and reject implicit roots, changed audiences, and wrong task references 191ms
+   ✓ task conversations make retries stable, serialize revisions, and never let either organization edit the other author 292ms
+   ✓ task conversations preserve existing replies after root deletion and reject new replies through a surviving child 230ms
+   ✓ task conversations preserve MSP private retry and own-author rules without accepting ticket commands for tasks 244ms
+   ✓ task conversations recheck revoked_project authority for writes and successful retries 150ms
+   ✓ task conversations recheck viewer_staff authority for writes and successful retries 153ms
+   ✓ task conversations recheck read_only_grant authority for writes and successful retries 153ms
+   ✓ task conversations recheck inactive_actor authority for writes and successful retries 160ms
+   ✓ task conversations recheck expired_session authority for writes and successful retries 240ms
+   ✓ task conversations recheck lapsed_license authority for writes and successful retries 151ms
+   ✓ task conversations honor customer body masks and retain independent private-store boundaries 184ms
+   ✓ task conversations honor sponsor body masks and retain independent private-store boundaries  426ms
+   ✓ task conversations roll back content, foreign attribution, and thread metadata when their receipt fails 127ms
+   ✓ task conversations page both stores with microsecond cursors and duplicate IDs in a non-UTC connection  1480ms
+   ✓ task conversations reject inconsistent stored audiences and retain timestamp instants on non-UTC writes 194ms
+   ✓ task conversations migration is repeatable and refuses to erase retained attribution 209ms
+   ✓ task conversations apply author masks to derived fields in both stores 207ms
+   ✓ task conversations apply revision masks to derived fields in both stores 206ms
+   ✓ task conversations apply conversation masks to derived fields in both stores 191ms
+   ✓ task conversations roll back a write when its browser session expires after the body is stored 119ms
+   ✓ native task comments retain private audiences, immutable local names, revision checks, and deleted history  309ms
+   ✓ native task comments show shared attribution but cannot silently reply to or overwrite shared contributions 276ms
+   ✓ native task comments enforce expired_session on bodies, counts, reactions and writes 206ms
+   ✓ native task comments enforce revoked_session on bodies, counts, reactions and writes 201ms
+   ✓ native task comments enforce api_override on bodies, counts, reactions and writes 131ms
+   ✓ native task comments enforce wrong_session_user on bodies, counts, reactions and writes 198ms
+   ✓ native task comments enforce missing_project_role on bodies, counts, reactions and writes 193ms
+   ✓ native task comments apply conversation masks to body/count and reaction projections 239ms
+   ✓ native task comments apply author masks to body/count and reaction projections 172ms
+   ✓ native task comments reject mixed batches that contain a task outside current project scope 207ms
+   ✓ native task comments remain locally readable after trust ends while mutations remain blocked 212ms
+   ✓ native task comments reject portal identities before returning bodies or reaction identities 161ms
+   ✓ native task comments cannot overwrite another customer technician author 149ms
+   ✓ native task comments roll back bodies and queued events when the session expires during a write 134ms
+   ✓ native task comments snapshot command and batch inputs before awaiting their connection 128ms
+   ✓ task events retain metadata-only qualified intent and consumer work atomically with each canonical revision 229ms
+   ✓ task events roll back the comment, thread, receipts and attribution when intent retention fails 128ms
+   ✓ task events cancel stale creates but preserve metadata invalidations after audience restriction or deletion 228ms
+   ✓ task events replay stable identities after transport loss and recover incomplete consumers 141ms
+   ✓ task events update actual search state and cannot resurrect deleted comments through delayed edits or backfills 217ms
+   ✓ task events migration supports rolling ticket producers and refuses loss of retained task history 186ms
+   ✓ task events recover native project publications through the actual maintenance handler after transport failure 157ms
+   ✓ task events roll native comments and legacy notification hooks back if canonical event retention fails 117ms
+   ✓ task events reject cached content and mismatched resource identities instead of publishing a corrupted intent 143ms
+   ✓ project search admits the current parent policy before full results, typeahead, counts and pagination 229ms
+   ✓ project search removes masked bodies from matching, snippets, scores and counts while retaining visible names  305ms
+   ✓ project search masks cached titles and subtitles using project_name and task_name before text matching 269ms
+   ✓ project search masks cached titles and subtitles using projectName and values.task_name before text matching  319ms
+   ✓ project search uses current sources and suppresses stale or deleted task-comment bodies without waiting for indexing 212ms
+   ✓ project search enforces current expired_session for full search and typeahead 144ms
+   ✓ project search enforces current revoked_session for full search and typeahead 163ms
+   ✓ project search enforces current inactive_user for full search and typeahead 163ms
+   ✓ project search enforces current missing_role for full search and typeahead 171ms
+   ✓ project API search retains the actual key and applies key-specific bundle narrowing 250ms
+   ✓ project search action and typeahead bind the actual browser session and reject override authority  336ms
+   ✓ project search follows current client scope even when cached parent ACLs have not been reindexed 177ms
+   ✓ project search suppresses rolling task-comment entries without source revision evidence 169ms
+   ✓ project search rechecks session expiry after producing the admitted result  414ms
+   ✓ project search retains customer-owned history after separation and applies policy after a PSA upgrade 214ms
+   ✓ task conversation actions write through the canonical outbox and keep customer and MSP-private stores separate 247ms
+   ✓ task conversation actions reject expired_session without reading or retaining a mutation 132ms
+   ✓ task conversation actions reject revoked_session without reading or retaining a mutation 150ms
+   ✓ task conversation actions reject api_override without reading or retaining a mutation 109ms
+   ✓ task conversation actions reject wrong_session_user without reading or retaining a mutation 103ms
+   ✓ task conversation actions preserve exact retry receipts and report stale edits as conflicts 184ms
+   ✓ task conversation actions retain recoverable publication after transport failure and retry its original event ID 191ms
+   ✓ task conversation actions suppress replies beneath deleted customer-private roots while retaining child history 287ms
+   ✓ task conversation actions suppress replies beneath deleted msp-private roots while retaining child history  588ms
+   ✓ task conversation actions retain read-only history after license expiry and reject further submissions 147ms
+   ✓ task conversation actions recheck session expiry after assembling the screen and roll back the expired read 163ms
+   ✓ task notifications persist qualified customer/MSP receipts and derive current content for every delivery channel 287ms
+   ✓ task notifications keep customer-private content local and suppress the actual qualified author 209ms
+   ✓ task notification reads and queued delivery honor current scope authority without cached fallback 167ms
+   ✓ task notification reads and queued delivery honor current role authority without cached fallback 215ms
+   ✓ task notification reads and queued delivery honor current staff authority without cached fallback 249ms
+   ✓ task notification reads and queued delivery honor current assignment authority without cached fallback 267ms
+   ✓ task notification reads and queued delivery honor current inactive authority without cached fallback 208ms
+   ✓ task notification reads and queued delivery honor current body_mask authority without cached fallback 202ms
+   ✓ task notification reads and queued delivery honor current deleted authority without cached fallback 215ms
+   ✓ task notification reads and queued delivery honor current private authority without cached fallback 211ms
+   ✓ task notification reads retain customer ownership after separation and resist stripped metadata 219ms
+   ✓ task notification subscriber reconstructs retained intent, deduplicates concurrent consumption, and emits only committed current content 238ms
+   ✓ task notification consumer rolls back both tenant effects on completion failure and retries the same receipts once 248ms
+   ✓ task notification subscriber suppresses native cached comment and mention handlers for retained customer ownership 259ms
+   ✓ task notification migration backfills pending obligations without replaying old native alerts and protects retained receipts 221ms
+   ✓ task notification inbox filters legacy cached notices and denied rows before pagination and counts, including after an upgrade 268ms
+   ✓ task notifications deduplicate direct, team, and additional task resources while requiring current parent project permission  325ms
+   ✓ task notification preferences suppress creation and later delivery independently of authorized inbox history 253ms
+   ✓ task notification delivery holds current customer recipient authority through transport and rejects revocation on the next attempt 271ms
+   ✓ task notification owner reads reject expiry after assembling content and roll back callback work 208ms
+   ✓ task email queues qualified identities for both organizations and retries current content/address with a stable message ID 286ms
+   ✓ task email keeps private customer notes local and excludes qualified authors 293ms
+   ✓ task email rejects current scope changes before sending cached work 168ms
+   ✓ task email rejects current role changes before sending cached work 149ms
+   ✓ task email rejects current staff changes before sending cached work 174ms
+   ✓ task email rejects current assignment changes before sending cached work 207ms
+   ✓ task email rejects current inactive changes before sending cached work 189ms
+   ✓ task email rejects current deleted changes before sending cached work 187ms
+   ✓ task email rejects current private changes before sending cached work 154ms
+   ✓ task email rejects current preferences changes before sending cached work 170ms
+   ✓ task email retains customer-owned delivery after separation while terminating queued MSP delivery 171ms
+   ✓ task email migration preserves rolling ticket writers, enrolls only pending task events, and refuses retained task loss 194ms
+   ✓ task email discovery commits both organizations before transport and recovers failures through the actual maintenance handler  893ms
+   ✓ task email consumer rolls discovery and effects back when completion fails 195ms
+   ✓ task email suppresses legacy native events and cached event-email retries for retained customer ownership 152ms
+   ✓ task email applies current conversation field policy before transport 172ms
+   ✓ task email applies current author field policy before transport 198ms
+   ✓ task email applies current values.task_name field policy before transport 250ms
+   ✓ task email retains source and recipient locks through SMTP and recovers an uncertain provider acknowledgement 203ms
+   ✓ operational time stores customer effort without services or contracts and contributes actual task minutes 128ms
+   ✓ operational time storage rejects commercial billable_duration even through legacy writes 113ms
+   ✓ operational time storage rejects commercial service_id even through legacy writes 95ms
+   ✓ operational time storage rejects commercial contract_line_id even through legacy writes 127ms
+   ✓ operational time storage rejects commercial tax_rate_id even through legacy writes 173ms
+   ✓ operational time storage rejects commercial tax_region even through legacy writes 109ms
+   ✓ operational time storage rejects commercial invoiced even through legacy writes 109ms
+   ✓ operational time keeps its non-invoiceable identity after separation and paid PSA upgrade 111ms
+   ✓ operational time policy retains lifecycle and product locks through mutation and rejects license expiry 205ms
+   ✓ operational time migration preserves history on repeat and refuses destructive rollback 193ms
+   ✓ operational time migration refuses pre-existing billing evidence instead of rewriting commercial minutes 118ms
+   ✓ operational time fields reject explicit pricing and preserve actual effort inputs  2021ms
+   ✓ operational time does not lose effort when concurrent entries update the same task total 148ms
+   ✓ operational time moves recalculate both affected task totals without duplicating effort 107ms
+   ✓ native operational time saves and edits service-free effort without changing task assignments 191ms
+   ✓ native operational time rejects commercial selection service_id before writing 180ms
+   ✓ native operational time rejects commercial selection contract_line_id before writing 104ms
+   ✓ native operational time rejects commercial selection tax_rate_id before writing 187ms
+   ✓ native operational time rejects commercial selection tax_region before writing 129ms
+   ✓ native operational time cannot reopen submitted sheets, impersonate an owner or accept a foreign source  7293ms
+   ✓ native operational time rejects stale sessions, API overrides and missing local time permission 123ms
+   ✓ native operational time rolls back entry, effort and events when the session expires at the final admission 117ms
+   ✓ native operational time retains its mode after upgrade and applies the commercial requirement to new PSA effort 193ms
+   ✓ native operational time applies project masks to returned labels without hiding independent time notes 146ms
+   ✓ native operational time rejects saves outside the current project bundle and preserves the previous entry 132ms
+   ✓ native operational time moves one entry between tasks without duplicating effort and rejects an invalid period 207ms
+   ✓ native operational time supports general effort without a fabricated work record 149ms
+   ✓ native operational time cached search evidence cannot bypass the current work and private-note boundary 174ms
+   ✓ native operational time saves ticket effort without assigning the ticket 128ms
+   ✓ native operational time leaves new paid PSA entries on the ordinary service-backed save path 116ms
+   ✓ native operational time checks actual schedule ownership and supports local interaction effort 164ms
+   ✓ operational time API creates and edits service-free entries with actual duration and private source projections 156ms
+   ✓ operational time API cannot substitute a browser identity, unknown key or foreign key for its credential  538ms
+   ✓ operational time API applies key-specific work restrictions independently of the same user browser grants 135ms
+   ✓ operational time API rolls automatic sheets back with rejected commercial fields or source authority 160ms
+   ✓ operational time API rolls entry, task total, automatic sheet and events back on key expiry at commit admission 167ms
+   ✓ operational time API serializes overlapping creates and automatic sheet allocation for one user 199ms
+   ✓ operational time API keeps historical mode after PSA upgrade and still requires a service for new commercial work 204ms
+   ✓ operational time API rejects invalid duration, submitted sheets and key-specific time mutation denial 185ms
+   ✓ operational time API applies current source masks before returning work-item detail  764ms
+   ✓ operational time API connection binding preserves ordinary commercial PSA creation and details 118ms
+   ✓ operational time API reports license read-only admission as forbidden without leaving work 102ms
+   ✓ operational time API bulk controllers retain the verified key through native create and update dispatch 167ms
+   ✓ native timers keep active clocks outside time entries and stop once into completed operational effort 212ms
+   ✓ native timers serialize concurrent starts and stops without duplicate clocks, entries or events 211ms
+   ✓ native timers preserve original operational mode through separation and paid PSA upgrade 169ms
+   ✓ native timers reject foreign or revoked credentials and reread current work scope at stop 148ms
+   ✓ native timers retain active clocks for reading after license expiry but do not complete new effort 124ms
+   ✓ native timers roll completion, task totals, automatic sheets and receipt back together on final key expiry 215ms
+   ✓ native timers keep completion receipts immutable and do not recreate deleted completed effort 196ms
+   ✓ native timers preserve the start timezone and retry an omitted end without creating new effort 216ms
+   ✓ native timers reject invalid stops and submitted sheets without losing the active clock 188ms
+   ✓ native timers apply current note masks to active clocks and completed receipts and deny full-response edits 249ms
+   ✓ native timers require an owned service for ordinary PSA clocks and complete commercial effort 142ms
+   ✓ native timers mask optional fields equally on first completion and replay 265ms
+   ✓ native timer cancellation releases only the named clock after source scope is lost and leaves newer clocks intact on retry 156ms
+   ✓ native timer cancellation remains available after license expiry but requires a current owned credential 120ms
+   ✓ native timer cancellation cannot remove another user clock or completed effort receipts 162ms
+   ✓ native timer cancellation and stop serialize to one final outcome without orphaned effort 199ms
+   ✓ native timer cancellation controller forwards the verified credential and exact path identity 198ms
+   ✓ native time detail reads return actual operational duration through browser and API without billing enrichment 170ms
+   ✓ native time detail reads enforce current key scope independently from the browser session and mask stored notes 177ms
+   ✓ native time detail reads retain history after lapse, approval and upgrade while rejecting invalid browser identity  673ms
+   ✓ native time detail reads deny a current source outside local bundle scope and do not expose masked interval identity 233ms
+   ✓ native time detail reads recheck credential expiry after waiting for the actual work lock  1787ms
+   ✓ native time detail reads mask financial metadata without altering stored operational effort 166ms
+   ✓ native time detail reads preserve permitted manager access to a deactivated technician history 172ms
+   ✓ native timesheet collections return operational intervals and their admitted change request history 189ms
+   ✓ native timesheet collections exclude out-of-scope work and its review comments from both browser readers 247ms
+   ✓ native timesheet collections mask notes and review history without exposing their state or count 181ms
+   ✓ native timesheet collections reject stale browser credentials and foreign or unpermitted sheets 169ms
+   ✓ native timesheet collections preserve general-time identity and remain readable after entitlement expiry 250ms
+   ✓ native timesheet collections do not upgrade shared sheet locks during concurrent post-upgrade reads 197ms
+   ✓ native timesheet collections reject the whole response when credentials expire during a source lock wait  1824ms
+   ✓ native time deletion removes browser effort and review comments atomically with task totals 178ms
+   ✓ native time deletion removes api effort and review comments atomically with task totals 154ms
+   ✓ native time deletion preserves timer receipts and prevents retry from recreating deleted effort 209ms
+   ✓ native time deletion requires actual key scope and editable sheet and entry state 283ms
+   ✓ native time deletion permits authorized removal of an entry with hidden notes without returning them 154ms
+   ✓ native time deletion rolls effort, review comments, task totals and events back on final key expiry  359ms
+   ✓ native time deletion serializes retries and rejects writes after license expiry  300ms
+   ✓ native time deletion refuses operational billing evidence without changing allocations or balances 186ms
+   ✓ native time deletion reverses commercial post-upgrade allocations and rolls them back with a failed deletion 218ms
+   ✓ native time deletion retains the acting manager separately from a deactivated entry owner 234ms
+   ✓ hour-block entry serialization credits concurrent reversals only once 204ms
+   ✓ hour-block entry serialization uses persisted mode, client and duration and rejects repeat burns 173ms
+   ✓ hour-block entry serialization preserves balances when delete wins against the other command 251ms
+   ✓ hour-block entry serialization preserves balances when reconcile wins against the other command 272ms
+   ✓ hour-block entry serialization skips time invoiced during a reconciliation lock wait  355ms
+   ✓ native time API collections count elapsed operational effort across list search statistics and exports 259ms
+   ✓ native time API collections apply source scope before paging counts and aggregation 258ms
+   ✓ native time API collections cannot infer masked notes or billing from search filters exports or statistics 258ms
+   ✓ native time API collections honor all search array values and actual interval duration filters  335ms
+   ✓ native time API collections reject the whole result when a key expires during a source wait  1834ms
+   ✓ native time review retains browser feedback and sheet state without publishing private text 187ms
+   ✓ native time review retains api feedback and sheet state without publishing private text 198ms
+   ✓ native time review checks actual approval mutations including not-self and managed subject rules 198ms
+   ✓ native time review respects API-key scope and masked review fields before reporting state 215ms
+   ✓ native time review rolls approval feedback and events back on final credential expiry 177ms
+   ✓ native time review rejects draft approval and lapsed writes and serializes repeated approvals 234ms
+   ✓ native time sheet commands support submission review approval and explicit reversal with private audit text 275ms
+   ✓ native time sheet commands let technicians submit and preserve approved entries on a returned sheet 260ms
+   ✓ native time sheet commands cannot act on a whole sheet with an excluded source or forged approver 269ms
+   ✓ native time sheet commands validate bulk members before committing and approve all admitted sheets atomically 246ms
+   ✓ native time sheet commands roll back entries and sheet state when the session expires at commit admission 195ms
+   ✓ native time sheet commands refuse reversal when any entry has been invoiced after PSA upgrade 194ms
+   ✓ native time sheet details return actual visible effort and comments with authenticated authorship 261ms
+   ✓ native time sheet details omit excluded effort and withhold comments about partially visible sheets  440ms
+   ✓ native time sheet details respect field masks for notes, sheet totals, periods and free-text comments 240ms
+   ✓ native time sheet details retain manager attribution and remain readable during write expiry 234ms
+   ✓ native time sheet details roll back a new comment when its browser session expires at final admission 182ms
+   ✓ native time sheet lists share detail projections across own all approval and period views  340ms
+   ✓ native time sheet lists exclude unmanaged owners and keep incomplete global removal counts unknown 257ms
+   ✓ native time sheet lists compute period effort only from visible work and withhold partial-sheet comments and removal counts  321ms
+   ✓ native time sheet lists preserve field masks in employee labels and period metrics 228ms
+   ✓ native time sheet lists include unopened periods without fabricating a backing sheet 209ms
+   ✓ native time sheet lists reject the whole collection when the key expires during a nested source wait  1850ms
+   ✓ native time sheet lifecycle serializes technician opening and grants project managers matching approval defaults  306ms
+   ✓ native time sheet lifecycle deletes only admitted empty drafts and clears their private child records 296ms
+   ✓ native time sheet lifecycle keeps existing history readable during lapse but blocks new sheets and removal  1138ms
+   ✓ native time sheet lifecycle rolls create and its child changes back on final session expiry 167ms
+   ✓ native time sheet lifecycle rolls delete and its child changes back on final session expiry 190ms
+   ✓ native time sheet lifecycle rechecks emptiness after a concurrent entry insert commits 272ms
+   ✓ native time sheet lifecycle applies creation permission to automatic API sheets while allowing existing sheets 290ms
+   ✓ native time sheet lifecycle keeps a customer workspace on the co-managed path through an empty sheet 268ms
+   ✓ customer sheet API returns scoped operational summaries and authentic private comment DTOs 236ms
+   ✓ customer sheet API submits reviews and reverses real entries while storing feedback privately  1104ms
+   ✓ customer sheet API omits hidden source effort and forbids whole-sheet commands over excluded entries  304ms
+   ✓ customer sheet API rolls status feedback and events back when its actual key expires 207ms
+   ✓ customer sheet API honors metric and comment aliases and keeps history readable after write expiry  330ms
+   ✓ customer sheet edits persist notes and serialize explicit creation without changing an existing sheet 247ms
+   ✓ customer sheet edits use real workflow permissions and reject arbitrary approval assignments  382ms
+   ✓ customer sheet edits hide whole-sheet notes under partial source visibility and reject blind replacements 282ms
+   ✓ customer sheet edits honor create and update masks and block writes after entitlement expiry  339ms
+   ✓ customer sheet edits roll notes creation and workflow events back on final key expiry 175ms
+   ✓ customer sheet reporting computes visible statistics and exports all pages with filters and grouping  1758ms
+   ✓ customer sheet reporting exports safe CSV and real grouped XLSX with requested private detail only 289ms
+   ✓ customer sheet reporting preserves masked totals and withholds free text across every export format  409ms
+   ✓ customer time periods share calendar views and authorized CRUD across native and API surfaces 217ms
+   ✓ customer time periods serialize overlap checks with background model writes 157ms
+   ✓ customer time periods refuse to alter used periods and preserve per-item native removal 190ms
+   ✓ customer time periods generate contiguous full periods and roll back overlapping batches 207ms
+   ✓ customer time periods use actual key permission and retain readable history after write expiry 245ms
+   ✓ customer time periods roll back calendar insertion when its key expires before commit 166ms
+   ✓ customer time periods admit native settings generation before reading its configuration and include an exact end boundary 169ms
+   ✓ customer period settings normalize legacy and native API contracts and retain compatible active schedules  499ms
+   ✓ customer period settings serialize conflicting creates without deactivating existing schedules 225ms
+   ✓ customer period settings require current manage permission and remain readable after write expiry 265ms
+   ✓ customer period settings apply actual key bundle scope independently of the browser session 175ms
+   ✓ customer period settings roll changes back when the retained key expires after mutation 159ms
+   ✓ customer period jobs serialize duplicate execution and read the current stored settings 184ms
+   ✓ customer period jobs reject forged queue identity completed jobs and human job records 163ms
+   ✓ customer period jobs skip expired entitlement suspended tenants and inactive configuration  2498ms
+   ✓ customer period jobs roll back generated dates when their retained job changes before final admission 211ms
+   ✓ customer period jobs roll back generated dates if the sponsor becomes read-only during the run 159ms
+   ✓ the nightly maintenance run creates periods in one admitted transaction and skips a read-only sponsor 162ms
+   ✓ the nightly maintenance run rolls back generated periods if the sponsor becomes read-only during the run 231ms
+   ✓ customer period jobs and native generation share semi-monthly and seasonal annual boundaries 32ms
+   ✓ customer schedule reads share private detail projections and actual work titles across native and API 268ms
+   ✓ customer schedule reads require actual assignment and current source permission without time-entry permission 235ms
+   ✓ customer schedule reads retain key-specific bundle masks independently of browser authority 246ms
+   ✓ customer schedule reads retain lapse history and reject missing credentials or suspended workspaces 163ms
+   ✓ customer schedule reads reject the whole collection when its key expires while retaining a work root  1802ms
+   ✓ customer schedule calendar retains the first occurrence exceptions holidays and private Busy projection 153ms
+   ✓ customer schedule calendar includes spanning events and overlapping occurrences with exclusive range ends 221ms
+   ✓ customer schedule calendar filters actual assignments sources and recurrence field masks before disclosure 237ms
+   ✓ customer schedule commands create edit and delete actual API entries without leaking event content 208ms
+   ✓ customer schedule commands retain own-calendar permission and enforce actual write bundle rules 299ms
+   ✓ customer schedule commands validate current assignments partial dates recurrence and retained time dependencies 256ms
+   ✓ customer schedule commands respect current source scope and field masks without blind replacement 196ms
+   ✓ customer schedule commands roll back writes assignments and events when the actual key expires before commit 188ms
+   ✓ customer schedule commands protect active clocks and reject mutations after entitlement lapse 244ms
+   ✓ native schedule commands share current authority and ordinary create edit delete projections 253ms
+   ✓ native schedule commands edit one actual occurrence while preserving its siblings and explicit clears 280ms
+   ✓ native schedule commands split future occurrences without restarting their count or duration  1038ms
+   ✓ native schedule commands update all occurrences from a virtual ID while retaining the original series anchor  307ms
+   ✓ native schedule commands cancel single future and all scopes without dropping the retained master early 246ms
+   ✓ native schedule commands reject forged excluded and out-of-scope virtual occurrences 224ms
+   ✓ native schedule commands roll series children assignments and events back on final session expiry 261ms
+   ✓ native schedule commands preserve recorded time when cancelling an occurrence and refuse destruction of its master 239ms
+   ✓ customer schedule relations move request wall-clock dates and queue meeting updates in the same command 258ms
+   ✓ customer schedule relations cancel linked requests meetings and conflicts atomically while retaining provider IDs 232ms
+   ✓ customer schedule relations retain request-only provider identity before clearing live join fields 187ms
+   ✓ customer schedule relations enforce canonical request binding and cannot approve pending requests through calendar edits 215ms
+   ✓ customer schedule relations roll request meeting intents and conflict cleanup back on final key expiry 284ms
+   ✓ customer schedule meeting sync sends only committed provider identity and clock fields and clears confirmed intent 212ms
+   ✓ customer schedule meeting sync retains failures with bounded backoff and replays provider deletion idempotently 220ms
+   ✓ customer schedule meeting sync serializes duplicate workers and rejects foreign stale or inconsistent operations 266ms
+   ✓ customer schedule meeting sync defers suspended and read-only workspaces without dropping pending operations 187ms
+   ✓ customer schedule meeting sync sweep uses the retained consumer and a successful replay does not call the provider twice 234ms
+   ✓ customer schedule meeting sync retains the actual operation through provider execution and leaves subsequent edits pending 213ms
+   ✓ customer appointment authority applies the same actual technician scope to list and detail 259ms
+   ✓ customer appointment authority filters projected fields and keeps API-key masks separate from native sessions 208ms
+   ✓ customer appointment authority declines approved bookings with atomic request meeting and conflict cleanup 218ms
+   ✓ customer appointment authority honors current configured approvers while rejecting unapproved technicians 186ms
+   ✓ customer appointment authority rolls decline back on final credential expiry and defers writes during lapse 167ms
+   ✓ customer appointment rescheduling keeps requester wall-clock calendar and meeting intent consistent 213ms
+   ✓ customer appointment rescheduling supports pending requests without approving them and rejects impossible local times 194ms
+   ✓ customer appointment rescheduling rolls back request calendar and meeting updates when final credentials expire  400ms
+   ✓ customer appointment approval retains pending calendar identity and requester-local time without exposing internal notes 193ms
+   ✓ customer appointment approval creates one actual allocation for an unlinked request and honors UTC form overrides 200ms
+   ✓ customer appointment approval requires current approver scope active assignees and unmasked fields  305ms
+   ✓ customer appointment association preserves canonical appointment identity and permits later rescheduling 244ms
+   ✓ customer appointment association rejects cross-client links and repairs only its actual legacy ticket allocation 190ms
+   ✓ customer appointment approval and association roll back assignments and bindings on final credential expiry 220ms
+   ✓ customer meeting creation preparation reserves one immutable disclosure without approving or exposing credentials 265ms
+   ✓ customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation 234ms
+   ✓ customer meeting creation preparation rolls back its reservation when credentials expire before commit 234ms
+   ✓ customer meeting creation execution attaches one actual event and approves its retained allocation atomically  392ms
+   ✓ customer meeting creation execution keeps lost-response cleanup separate from explicit approval without a meeting  360ms
+   ✓ customer meeting creation execution preserves the provider receipt when the original credential expires before attachment 212ms
+   ✓ customer meeting creation recovery attaches an interrupted attempt only under its still-current captured authority  369ms
+   ✓ customer meeting creation recovery retracts a changed disclosure instead of approving stale intent 188ms
+   ✓ customer meeting creation UI approval uses the durable provider identity and admitted recipient payload  349ms
+   ✓ customer meeting creation recovery preserves narrow cleanup after credential revocation source removal and suspension 249ms
+   ✓ customer meeting creation recovery keeps an ambiguous absent event pending without reissuing creation 174ms
+   ✓ customer meeting creation recovery serializes duplicate cleanup workers against the actual operation  329ms
+   ✓ customer approved meeting generation uses actual calendar times and all assignees through the native action  333ms
+   ✓ customer approved meeting generation reuses only an undisclosed failed placeholder and repairs its exact legacy allocation  331ms
+   ✓ customer approved meeting generation rejects existing provider evidence and unrelated schedule bindings before creation 235ms
+   ✓ customer approved meeting generation honors current approvers and API-key field masks before disclosing participants  307ms
+   ✓ customer approved meeting generation keeps approval intact on provider failure and permits a fresh attempt after cleanup  840ms
+   ✓ customer approved meeting generation recovery attaches current intent without changing approval metadata 227ms
+   ✓ customer approved meeting generation recovery cleans an event when its retained allocation changes 238ms
+   ✓ customer approved meeting generation rolls attachment back on final credential expiry while retaining compensation evidence  317ms
+   ✓ customer approved meeting generation leaves the appointment unchanged when Teams is unavailable and still requires current admission  341ms
+   ✓ customer meeting artifact reads project only admitted metadata and download through retained document content 181ms
+   ✓ customer meeting artifact reads enforce the actual appointment calendar binding and private assignees 191ms
+   ✓ customer meeting artifact reads reject masked appointment content and generic transcript document escapes 249ms
+   ✓ customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials  1635ms
+   ✓ customer meeting artifact HTTP transcript download uses its owner and bypasses neither scope nor content-type controls 197ms
+   ✓ customer meeting artifact document actions retain owner scope instead of relying on broad document permission 241ms
+   ✓ customer meeting artifact document admission rejects masked transcript bytes and preserves read access during product lapse 269ms
+   ✓ customer meeting artifact API authenticates the actual key through both download URLs without trusting tenant headers or cookies 204ms
+   ✓ customer meeting artifact API rejects invalid empty expired and exhausted keys without browser fallback 157ms
+   ✓ customer meeting artifact API applies key-specific document narrowing even when the same browser user can read the transcript 193ms
+   ✓ customer meeting artifact API rechecks revocation after initial key validation before delivering content  1533ms
+   ✓ customer meeting artifact API cannot use a sponsoring MSP key to select customer content with a tenant header 168ms
+   ✓ customer interaction meeting reads use the same admitted projection in page recent entity and dedicated native actions  339ms
+   ✓ customer interaction meeting reads hide masked text from search totals and meeting enrichment 216ms
+   ✓ customer interaction meeting reads require both owners and the private calendar allocation 242ms
+   ✓ customer interaction meeting reads omit inaccessible related labels and validate an empty entity parent 185ms
+   ✓ customer interaction meeting reads filter out other owners before paginating and counting 173ms
+   ✓ customer interaction meeting reads reject expired credentials after waiting for an actual source lock  1510ms
+   ✓ customer interaction edits persist only writable fields and return the admitted meeting projection from the native action  467ms
+   ✓ customer interaction edits cannot reveal a private appointment meeting through their mutation response 187ms
+   ✓ customer interaction edits enforce changed-field scope while allowing unrelated masked fields to remain private 214ms
+   ✓ customer interaction edits preserve ownership and timing of linked meetings and reject invalid local fields  312ms
+   ✓ customer interaction edits support standalone reparenting only when both old and proposed record scopes admit it 249ms
+   ✓ customer interaction edits roll back on final credential expiry and reject read-only lifecycle writes 173ms
+   ✓ customer interaction lifecycle creates and deletes an admitted local interaction through native actions without accepting forged relationships 237ms
+   ✓ customer interaction lifecycle resolves a contact client and rejects mismatched parents and inactive owners 244ms
+   ✓ customer interaction lifecycle keeps linked meetings and transcript documents when deletion is requested 176ms
+   ✓ customer interaction lifecycle intersects API field scope and rejects revoked keys for creation and deletion 249ms
+   ✓ customer interaction lifecycle rolls back insertion and deletion when credentials expire at the final check 190ms
+   ✓ consolidated ticket export returns every matching shared row in global order regardless of page controls and never native tickets  2148ms
+   ✓ consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation 217ms
+   ✓ consolidated ticket export remains available during license lapse but rejects expired sessions 170ms
+   ✓ bulk handback retains individual authorization and receipts while returning mixed outcomes without copying tickets  763ms
+   ✓ bulk handback rejects masked handoff fields and checks read permission as well as update 159ms
+   ✓ bulk handback returns read-only and per-item invalid results without applying writes 110ms
+   ✓ bulk handback rolls back an individual handoff if its retained session expires before commit 126ms
+   ✓ T021 signal counts equal exactly the rows their authorized filters return and working never contains native tickets 235ms
+   ✓ T021 handed-back tickets and a viewer without a staff assignment contribute no signal 175ms
+   ✓ T021 a redacted driving field excludes the row from its signal and the count follows the filter 178ms
+   ✓ T021 revoked and ended relationships contribute nothing to options, rows or signal counts, and a second customer with the same ticket id stays isolated 155ms
+   ✓ T021 signal counts keep two customer workspaces with the same ticket number and id isolated 246ms
+   ✓ T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options  402ms
+   ✓ T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out 200ms
+   ✓ T014 bulk handback: one receipt per success, stale and forbidden items reported per item, exact retry replays, and working/oversight are re-queried  458ms
+   ✓ shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry 206ms
+   ✓ shared ticket assignment offers only staffed teams with an active eligible member 186ms
+   ✓ shared ticket assignment serializes competing changes and rejects stale operation reuse 169ms
+   ✓ shared ticket assignment hides read-masked assignment values and rejects expired editors 183ms
+   ✓ shared ticket assignment rolls back routing revision attribution and receipt on expiry at commit 186ms
+   ✓ shared ticket assignment requires collaboration scope and honors a retained board grant after explicit revocation 173ms
+   ✓ pre-handoff assignment lets the customer assign visible collaborative work without starting escalation 180ms
+   ✓ pre-handoff assignment lets the sponsor assign visible collaborative work without starting escalation  494ms
+   ✓ pre-handoff assignment preserves its identity through actual escalation and clears working assignment on handback 173ms
+   ✓ pre-handoff assignment does not preserve live access after its board grant is removed or manufacture an explicit grant 156ms
+   ✓ pre-handoff assignment requires collaborative board sharing before any routing record is created 123ms
+   ✓ pre-handoff assignment serializes initial creation across both organizations 108ms
+   ✓ pre-handoff assignment is excluded from working counts when assignment visibility is masked 152ms
+   ✓ pre-handoff assignment rolls back new work routing and receipts on final credential expiry 108ms
+   ✓ organization SLA durable clock > deduplicates concurrent starts and handoffs, keeps customer SLA fields unchanged, and retains exact receipts 225ms
+   ✓ organization SLA durable clock > qualifies source identity and owning tenant even when obligation UUIDs collide 226ms
+   ✓ organization SLA durable clock > rolls the clock and event receipt back together and rejects out-of-order events 291ms
+   ✓ organization SLA durable clock > replays migration safely, refuses history loss, and rejects mismatched clock identities 155ms
+   ✓ handoff SLA starts with actual escalation, resumes the original MSP target and leaves the customer timeline intact 161ms
+   ✓ handoff SLA rejects missing mapping atomically without inventing a fallback 179ms
+   ✓ handoff SLA rejects missing policy atomically without inventing a fallback 127ms
+   ✓ handoff SLA rejects missing target atomically without inventing a fallback 123ms
+   ✓ handoff SLA priority configuration requires the actual sponsor administrator and current revision/session 127ms
+   ✓ handoff SLA uses the MSP default policy through the existing precedence 122ms
+   ✓ handoff SLA uses the MSP board policy through the existing precedence 225ms
+   ✓ handoff SLA uses the MSP client policy through the existing precedence 117ms
+   ✓ handoff SLA configuration blocks suspended workspaces and license-lapsed mutations 139ms
+   ✓ handoff SLA and responsibility both roll back when the initiating session expires at the final receipt 109ms
+   ✓ MSP SLA response counts the first actual requester reply, not customer or MSP-private notes 279ms
+   ✓ MSP SLA response counts the first actual shared_it reply, not customer or MSP-private notes 276ms
+   ✓ MSP SLA response while handed back records the paused elapsed time without restarting responsibility 190ms
+   ✓ MSP SLA response and published comment roll back together if the author expires at the final receipt 163ms
+   ✓ MSP SLA resolution closes during handback when customer closes the canonical ticket 180ms
+   ✓ MSP SLA resolution closes during handback when msp closes the canonical ticket 170ms
+   ✓ MSP SLA resolution preserves the frozen obligation after all ticket visibility is revoked 139ms
+   ✓ MSP SLA resolution rolls back with canonical close validation and transaction failures 169ms
+   ✓ MSP SLA reopen creates a new obligation only for a genuine reopening while MSP remains responsible 172ms
+   ✓ MSP SLA reopen under customer responsibility waits for a fresh escalation 211ms
+   ✓ MSP SLA reopen rolls back on missing setup and leaves the closed obligation intact 158ms
+   ✓ MSP SLA native legacy customer close/reopen actions update the independent obligation 142ms
+   ✓ MSP SLA native optimized customer close/reopen actions update the independent obligation 145ms
+   ✓ MSP SLA shared edit checks the initiating session after its final close receipt  574ms
+   ✓ MSP SLA observation records one due breach under concurrent workers and leaves customer SLA fields intact 155ms
+   ✓ MSP SLA observation does not advance revoked work 145ms
+   ✓ MSP SLA observation does not advance handback work 172ms
+   ✓ MSP SLA observation does not advance terminated work 95ms
+   ✓ MSP SLA observation does not advance suspended work 131ms
+   ✓ MSP SLA observation does not advance read-only work 116ms
+   ✓ MSP SLA observation does not advance wrong-owner work 108ms
+   ✓ MSP SLA observation does not advance wrong-obligation work 110ms
+   ✓ MSP SLA observation keyset scan reaches due work beyond a skipped historical candidate 117ms
+   ✓ MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration 177ms
+   ✓ MSP SLA display distinguishes pre-escalation from unavailable historical timing and retains paused outcomes during lapse 198ms
+   ✓ MSP SLA display obeys sla source redaction 137ms
+   ✓ MSP SLA display obeys tickets.sla_response_at source redaction 152ms
+   ✓ MSP SLA display obeys work source redaction 161ms
+   ✓ MSP SLA display obeys fields.priority.name source redaction 130ms
+   ✓ MSP SLA display obeys tickets.response_state source redaction 129ms
+   ✓ MSP SLA display rejects revoked foreign readers and shows the customer only the retained paused result 162ms
+   ✓ MSP SLA threshold scan captures warning crossings before the due date once across workers 120ms
+   ✓ MSP SLA threshold capture retains all missed warnings and breaches with immutable source configuration 139ms
+   ✓ MSP SLA threshold capture rolls back with the source transaction and deduplicates exact retries 163ms
+   ✓ MSP SLA threshold capture catches handback crossings without later paused or completed targets gaining new notices 269ms
+   ✓ MSP SLA threshold migration replays safely and refuses retained history loss 137ms
+   ✓ MSP SLA threshold capture commits a late first reply and its breach together before any timer run 187ms
+   ✓ MSP SLA notices create one in-app receipt and durable channel tasks under concurrent retries 228ms
+   ✓ MSP SLA notices use the current MSP assignee and stop after removal 165ms
+   ✓ MSP SLA notices use the current MSP board-manager and stop after removal 165ms
+   ✓ MSP SLA notices use the current MSP escalation-manager and stop after removal 213ms
+   ✓ MSP SLA delivery denies revoked notices without cached fallback 178ms
+   ✓ MSP SLA delivery denies metadata notices without cached fallback 197ms
+   ✓ MSP SLA delivery denies threshold-disabled notices without cached fallback 156ms
+   ✓ MSP SLA delivery denies inactive notices without cached fallback 166ms
+   ✓ MSP SLA inbox uses fresh redacted content, qualified counts and actual browser authority 186ms
+   ✓ MSP SLA notices apply title redaction at delivery time 182ms
+   ✓ MSP SLA notices apply sla redaction at delivery time 166ms
+   ✓ MSP SLA notices apply work redaction at delivery time 151ms
+   ✓ MSP SLA notices apply response_state redaction at delivery time 241ms
+   ✓ MSP SLA notice storage and delivery tasks roll back with the caller, then recover once 176ms
+   ✓ MSP SLA notices suppress obsolete warning delivery once the target is breached 168ms
+   ✓ MSP SLA email retries with a stable Message-ID and fresh recipient/content, then delivers once under concurrent workers 238ms
+   ✓ MSP SLA email skips a queued recipient after revoked changes 198ms
+   ✓ MSP SLA email skips a queued recipient after unassigned changes 161ms
+   ✓ MSP SLA email skips a queued recipient after preference changes 197ms
+   ✓ MSP SLA email skips a queued recipient after tenant-settings changes 144ms
+   ✓ MSP SLA email skips a queued recipient after inactive changes 155ms
+   ✓ MSP SLA email skips a queued recipient after field-redaction changes 161ms
+   ✓ MSP SLA email records permanent provider failure without repeated sending 243ms
+   ✓ MSP SLA email records exhausted provider failure without repeated sending 153ms
+   ✓ MSP SLA email retry migration replays safely and refuses to discard retained delivery state 163ms
+   ✓ MSP SLA email warning uses current remaining time without rewriting its captured crossing 137ms
+   ✓ MSP SLA awaiting-client pause composes with handback and preserves elapsed time and breaches 178ms
+   ✓ MSP SLA awaiting-client initial escalation respects msp-pause-disabled independently 141ms
+   ✓ MSP SLA awaiting-client initial escalation respects msp-tracking-disabled independently 139ms
+   ✓ MSP SLA awaiting-client initial escalation respects customer-tracking-disabled independently 136ms
+   ✓ MSP SLA awaiting-client initial escalation respects customer-pause-disabled independently 128ms
+   ✓ MSP SLA awaiting-client does not expose new response state after revoked 145ms
+   ✓ MSP SLA awaiting-client does not expose new response state after terminated 114ms
+   ✓ MSP SLA awaiting-client does not expose new response state after suspended 143ms
+   ✓ MSP SLA awaiting-client does not expose new response state after read-only 107ms
+   ✓ MSP SLA awaiting-client follows native legacy response-state edits atomically 149ms
+   ✓ MSP SLA awaiting-client follows native optimized response-state edits atomically 152ms
+   ✓ MSP SLA awaiting-client records the actual public MSP response before pausing and rolls back with the source 224ms
+   ✓ MSP SLA awaiting-client re-escalation preserves the pause until an actual response-state change 152ms
+   ✓ MSP SLA awaiting-client reopening starts a paused new generation at zero elapsed 188ms
+   ✓ MSP SLA awaiting-client follows scheduled customer publication without inventing an MSP first response 163ms
+   ✓ MSP SLA reply adapters pause on native generic public comments and ignore private notes 186ms
+   ✓ MSP SLA reply adapters pause on native optimized public comments and ignore private notes 169ms
+   ✓ MSP SLA reply adapters resume after an actual qualified requester email and retain replay identity 194ms
+   ✓ MSP SLA reply adapters apply actual customer email requester audience without an MSP response 278ms
+   ✓ MSP SLA reply adapters apply actual customer email shared_it audience without an MSP response 172ms
+   ✓ MSP SLA reply adapters apply actual customer email organization_private audience without an MSP response 194ms
+   ✓ MSP SLA reply adapters resume through the actual requester portal and close/reopen independently 161ms
+   ✓ MSP SLA reply adapters block read-only portal reply without changing source or MSP history 150ms
+   ✓ MSP SLA reply adapters block read-only portal status without changing source or MSP history 112ms
+   ✓ MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation 231ms
+   ✓ MSP SLA ticket API missing reopen setup rolls back the canonical row and retained clock 132ms
+   ✓ MSP SLA ticket API keeps revoked private response and closure changes outside retained MSP history 189ms
+   ✓ MSP SLA ticket API source failures roll back both the response state and its pause event 166ms
+   ✓ MSP SLA bundle child reply reopens its actual master board with one new obligation 183ms
+   ✓ MSP SLA bundle child reply does not restart handed-back master obligations 176ms
+   ✓ MSP SLA bundle child reply does not restart revoked master obligations 194ms
+   ✓ MSP SLA bundle child reply missing reopen setup rolls back the master and child comment together 170ms
+   ✓ MSP SLA bundle child reply concurrent siblings create only one genuine reopen generation 201ms
+   ✓ MSP SLA bundle propagation requires an explicit propagation choice before touching a child 296ms
+   ✓ MSP SLA bundle propagation declining propagation moves the master alone and leaves every child untouched 164ms
+   ✓ MSP SLA bundle propagation closes and reopens each child with its own obligation and closure fields 221ms
+   ✓ MSP SLA bundle propagation missing child reopen mapping rolls back the master and all child state 193ms
+   ✓ MSP SLA bundle propagation leaves revoked child history frozen while customer IT closes the canonical child 168ms
+   ✓ MSP SLA bundle propagation rejects a foreign-board status before committing any ticket or obligation 175ms
+   ✓ MSP SLA bundle propagation open-to-open validates child board ownership (foreign board: false)  905ms
+   ✓ MSP SLA bundle propagation open-to-open validates child board ownership (foreign board: true) 184ms
+   ✓ MSP SLA bundle propagation enforces child close gates and rolls back the completed master 161ms
+   ✓ MSP SLA bundle propagation preserves additional resources when a child assignee is promoted 199ms
+   ✓ MSP SLA workflow updates apply canonical response, close and reopen transitions under the executing version 189ms
+   ✓ MSP SLA workflow updates reject inactive_actor before mutating canonical work 162ms
+   ✓ MSP SLA workflow updates reject missing_role before mutating canonical work 138ms
+   ✓ MSP SLA workflow updates reject cancelled_run before mutating canonical work 150ms
+   ✓ MSP SLA workflow updates reject expired_lease before mutating canonical work 146ms
+   ✓ MSP SLA workflow updates reject missing_version before mutating canonical work 147ms
+   ✓ MSP SLA workflow updates reject lapsed_license before mutating canonical work 156ms
+   ✓ MSP SLA workflow updates reject missing_composition before mutating canonical work 148ms
+   ✓ MSP SLA workflow updates roll back canonical reopen on missing MSP setup 165ms
+   ✓ MSP SLA workflow updates roll back source, clock and audit when the run expires during the writer 160ms
+   ✓ MSP SLA workflow updates reject hidden response_state mutation or returned data 151ms
+   ✓ MSP SLA workflow updates reject hidden priority.name mutation or returned data 167ms
+   ✓ co-managed workflow assignment retains actual user targets, resources and no-op state without resetting SLA 213ms
+   ✓ co-managed workflow assignment retains actual team targets, resources and no-op state without resetting SLA 182ms
+   ✓ co-managed workflow assignment retains actual queue targets, resources and no-op state without resetting SLA  307ms
+   ✓ co-managed workflow assignment rejects expired_lease before changing the ticket 124ms
+   ✓ co-managed workflow assignment rejects missing_role before changing the ticket 223ms
+   ✓ co-managed workflow assignment rejects read_only before changing the ticket 134ms
+   ✓ co-managed workflow assignment rejects missing_composition before changing the ticket 144ms
+   ✓ co-managed workflow assignment rolls back the ticket, resources and audit after late lease expiry 160ms
+   ✓ co-managed workflow assignment retains its optional public comment exactly once on a no-op retry 185ms
+   ✓ co-managed workflow assignment applies action-specific read fields for assigned_to 196ms
+   ✓ co-managed workflow assignment applies action-specific read fields for priority.name 156ms
+   ✓ co-managed workflow close commits canonical closure and one MSP resolution before durable requester delivery 246ms
+   ✓ co-managed workflow close rejects expired_lease without closure, SLA, audit or email intents 150ms
+   ✓ co-managed workflow close rejects missing_role without closure, SLA, audit or email intents 139ms
+   ✓ co-managed workflow close rejects missing_composition without closure, SLA, audit or email intents 186ms
+   ✓ co-managed workflow close rejects lapsed_license without closure, SLA, audit or email intents 169ms
+   ✓ co-managed workflow close rolls back an enqueued email on final lease failure 189ms
+   ✓ co-managed workflow close email suppresses current requester_changed delivery 214ms
+   ✓ co-managed workflow close email suppresses current contact_inactive delivery 146ms
+   ✓ co-managed workflow close email suppresses current board_hidden delivery 256ms
+   ✓ co-managed workflow close email suppresses current author_revoked delivery 158ms
+   ✓ co-managed workflow close email suppresses current reopened delivery 169ms
+   ✓ co-managed workflow close email suppresses current cancelled delivery 195ms
+   ✓ co-managed workflow close email suppresses current notifications_disabled delivery 213ms
+   ✓ co-managed workflow close email retries with stable identity and reloads current address and escaped template data 175ms
+   ✓ co-managed workflow close rejects hidden attributes.resolution_code source fields before queuing a message 202ms
+   ✓ co-managed workflow close rejects hidden response_state source fields before queuing a message 150ms
+   ✓ co-managed workflow close rejects hidden contact_name_id source fields before queuing a message 143ms
+   ✓ co-managed workflow close email concurrent recovery sends one committed command once 185ms
+   ✓ co-managed workflow close without notification needs no requester and queues no email 161ms
+   ✓ MSP time billing work registers one qualified source and keeps customer work outside the MSP invoice loader 145ms
+   ✓ MSP time billing work retains admitted evidence after revocation without allowing another live registration 147ms
+   ✓ MSP time billing work rejects missing local time permission and wrong relationship before capture 156ms
+   ✓ MSP time billing work applies current field scope to captured descriptions 149ms
+   ✓ MSP time billing work reaches the existing catalog charge engine with retained customer provenance  477ms
+   ✓ MSP time billing work supports shared tasks without assigning an MSP project billing identity 150ms
+   ✓ MSP time billing work keeps native ticket and task UUID collisions distinct in normalized billing joins 120ms
+   ✓ MSP shared time save uses the existing writer and reads its own commercial effort without a copied ticket 221ms
+   ✓ MSP timesheet work items include shared references once and retain admitted evidence after revocation 241ms
+   ✓ MSP shared time save retains existing effort after revocation and blocks fresh contributions 237ms
+   ✓ MSP shared time save rechecks the session before committing source evidence and time 170ms
+   ✓ MSP shared time save admits actual API credentials and preserves qualified work on updates and reads 220ms
+   ✓ MSP shared time save applies current home financial field restrictions to writes and reads 192ms
+   ✓ MSP shared time review preserves the native approval transitions and invoiced evidence  331ms
+   ✓ MSP shared time deletion retains the source reference and prevents deleting submitted effort 227ms
+   ✓ native time sheet lifecycle opens a sponsor empty sheet natively and hands the same sheet back once shared effort lands in it  1571ms
+   ✓ native time sheet lifecycle leaves an MSP workspace holding no shared effort entirely on its native path 164ms
+   ✓ native time sheet lifecycle keeps refusing an unauthorized delegate once a sponsor falls through to the native path 220ms
+   ✓ MSP shared timers retain running effort after revocation and stop exactly once into owned time 256ms
+   ✓ MSP shared timers require current home credentials and financial visibility through completion 224ms
+   ✓ MSP shared timer references retain local integrity and cannot be removed by migration rollback 200ms
+   ✓ shared time UI actions register the current browser and resolve only the MSP billing client 235ms
+   ✓ shared time UI actions reject API overrides and redact current local client fields 194ms
+   ✓ shared time billing uses the same current contract selection for manual API and timer saves  338ms
+   ✓ shared time billing rejects foreign or inapplicable explicit contracts and services before writing effort 272ms
+   ✓ shared time billing applies weighted bucket draws and reverses API edits and deletion 292ms
+   ✓ shared time billing allocates and reverses prepaid hours through native API updates and deletion 290ms
+   ✓ shared time billing uses the MSP profile to resolve parallel contracts and excludes inactive lines 242ms
+   ✓ shared effort totals count completed customer and MSP time without exposing private billing or approval details 230ms
+   ✓ shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals 259ms
+   ✓ shared effort totals retain customer-owned effort after termination while MSP reads and customer writes stay closed 264ms
+   ✓ shared effort totals respect source field restrictions ["time_entries.notes","time_entries.approval_status","billing"] 162ms
+   ✓ shared effort totals respect source field restrictions ["effort_totals.mspMinutes"] 173ms
+   ✓ shared effort totals respect source field restrictions ["actual_hours"]  303ms
+   ✓ shared effort totals roll up actual project tasks without using cached hours or colliding ticket IDs 159ms
+   ✓ native task effort action binds customer work to the current browser and denies forged identity and API overrides 169ms
+   ✓ shared effort totals follow task moves between actual projects and retain customer totals when the project grant ends 184ms
+   ✓ relationship closure by customer finalizes evidence before revocation and releases capacity exactly once under concurrent retries 233ms
+   ✓ relationship closure by sponsor finalizes evidence before revocation and releases capacity exactly once under concurrent retries  343ms
+   ✓ relationship closure rolls back evidence capacity and trust on archive_failure 132ms
+   ✓ relationship closure rolls back evidence capacity and trust on late_session_expiry 134ms
+   ✓ relationship closure requires current administrator authority but remains available after license grace expires 153ms
+   ✓ relationship closure pauses the existing MSP SLA at the archive cutoff and blocks later observation 144ms
+   ✓ participation evidence retains explicit handoff history through revocation and source deletion without private ticket fields 163ms
+   ✓ a repeated handback operation converges to one retained handoff, one evidence row and the first receipt 185ms
+   ✓ participation evidence excludes oversight and customer-only work until the MSP actually contributes 194ms
+   ✓ participation evidence records an MSP task assignment and its withdrawal without copying private descriptions 252ms
+   ✓ participation evidence rolls back with the canonical task when the writer expires after capture 129ms
+   ✓ time participation evidence requires a completed entry and native timer retries retain one proof 241ms
+   ✓ time participation evidence preserves first attribution through edits renames and deletion without private timesheet fields 203ms
+   ✓ time participation evidence records both qualified work identities when existing time moves through the API 264ms
+   ✓ time participation evidence can finish retained MSP clocks after revocation without reading newly private customer content 236ms
+   ✓ time participation evidence rolls back with a native save when the current writer expires after capture 245ms
+   ✓ conversation participation retains only shared task revisions after actual MSP contribution 293ms
+   ✓ conversation participation stops new capture after unsharing and never refreshes a replayed event 256ms
+   ✓ conversation participation rolls back the canonical task mutation when capture fails 151ms
+   ✓ conversation participation uses actual ticket authors and excludes private roots and publication bodies 197ms
+   ✓ archive files retain authorized bytes before customer deletion and drain without reopening customer storage 293ms
+   ✓ archive files exclude private, unpublished and newly unshared uploads and capture drafts only at publication  402ms
+   ✓ archive files roll back publication on corrupt source bytes and retain staging across storage failure  350ms
+   ✓ archive reads retain qualified shared history after customer source deletion without restoring live access 177ms
+   ✓ archive reads enforce current MSP client scope and field restrictions on history authors and files 263ms
+   ✓ archive reads deliver pending and stored bytes with integrity and final session checks  1040ms
+   ✓ archive reads download route binds the actual MSP session and returns non-cacheable attachment bytes 250ms
+   ✓ MSP-private archive retains actual task revisions and tombstones without publishing customer history  336ms
+   ✓ MSP-private archive captures published draft files and keeps private and shared policies independent  381ms
+   ✓ MSP-private archive capture rolls back with a private writer that expires after retaining evidence 146ms
+   ✓ sharing reduction archives legacy ticket history before revocation without copying hidden content or replaying capture 210ms
+   ✓ sharing reduction snapshots project history only after MSP participation and rolls back with failed scope changes 274ms
+   ✓ sharing reduction archives board-only visibility using the persisted policy operation 185ms
+   ✓ audience reduction retains only the changed shared thread and its legacy files before hiding it  333ms
+   ✓ audience reduction rolls back captured history when the confirmed disclosure fails 208ms
+   ✓ source move retention captures board-shared history in the native ticket writer before losing its grant 174ms
+   ✓ source move retention preserves project history during a native task move and rolls back on failure 236ms
+   ✓ source move retention preserves project history during a native phase move and rolls back on failure 224ms
+   ✓ archive manifest seals qualified evidence and pending files at closure and survives storage completion and source deletion 231ms
+   ✓ archive manifest failure rolls back final history capture and relationship closure 145ms
+   ✓ closure private history captures legacy MSP notes and files after unsharing without reopening customer content 194ms
+   ✓ closure private history keeps historical authors and empty tombstones for unshared tasks and rolls back with closure 213ms
+   ✓ work snapshot retains only shared metadata after participation and applies current source-field restrictions after deletion 201ms
+   ✓ work snapshot captures ticket context before grant removal and does not refresh newly private metadata 146ms
+   ✓ archive finalizer composes legacy handoffs shared conversations private history and work context before sealing closure 171ms
+   ✓ archive finalizer discovers legacy MSP task audits while enforcing current sharing=true 163ms
+   ✓ archive finalizer discovers legacy MSP task audits while enforcing current sharing=false 175ms
+   ✓ archive finalizer captures completed owned time but not unused time-reference registration  309ms
+   ✓ tenant license state uses real signed tenant binding without changing MSP licensing or co-managed capacity 121ms
+   ✓ tenant license state rejects unbound foreign expired and invalid signatures and rolls activation back 178ms
+   ✓ tenant license state does not revive an expired independent PSA license from a valid installation license 16ms
+   ✓ PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants  495ms
+   ✓ independent PSA upgrade atomically converts an active customer with its own license and closes live trust exactly once  394ms
+   ✓ independent PSA upgrade after departure preserves the original seal and never reopens or recaptures customer sources 152ms
+   ✓ independent PSA upgrade rejects MSP actors and missing or insufficient customer entitlement and rolls final write failure back 248ms
+   ✓ tenant license controls bind browser activation to the customer and never expose or mutate installation licensing 200ms
+   ✓ tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback 209ms
+   ✓ session tier resolution uses the customer entitlement through sign-in and upgrade in the async auth configuration 181ms
+   ✓ session tier resolution uses the customer entitlement through sign-in and upgrade in the sync auth configuration 150ms
+   ✓ hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation 295ms
+   ✓ hosted PSA upgrade rejects unpaid or foreign provider state and rechecks local billing and session after provider reads 167ms
+   ✓ public PSA upgrade binds the browser customer and worker to current authority and refreshes the completed state 204ms
+   ✓ independent hosted checkout recovers a lost response and a paid webhook after the browser closes without changing MSP billing or converting early  336ms
+   ✓ independent hosted checkout refuses foreign payment ownership and rolls billing imports back when final reconciliation fails 157ms
+   ✓ independent hosted checkout cancellation before payment reconciliation releases the pending purchase without ending sponsorship 162ms
+   ✓ independent payment recovery retains asynchronous failure and resumes safely after a lost cancellation response 187ms
+   ✓ independent payment recovery refuses cancellation when the initial invoice has since been paid 196ms
+   ✓ independent billing portal binds paid seat confirmation to its own subscription and current customer authority 96ms
+   ✓ portable vault export retains customer metadata and audited usable secrets after departure without MSP private data  551ms
+   ✓ portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work  573ms
+   ✓ portable workspace core preserves local identity relationships and saved authors while excluding authentication and live trust 166ms
+   ✓ portable workspace core requires current customer directory permissions and rejects revoked or MSP sessions 121ms
+   ✓ portable work export preserves customer and shared ticket history while excluding MSP private notes and transport metadata 169ms
+   ✓ portable work export preserves project structure and task audiences and rejects missing current work permission 217ms
+   ✓ portable document export stages real native and legacy bytes with document versions and KB content under a private lease 137ms
+   ✓ portable document export removes staged bytes on short streams, final session revocation and foreign storage paths 146ms
+   ✓ portable conversation export preserves published customer/shared files after departure without MSP private or pending uploads  446ms
+   ✓ portable workspace coordinator binds actual private and shared conversation files to authenticated package records  3377ms
+   ✓ portable conversation export verifies stored checksums and removes staged files after parent access or path changes  520ms
+   ✓ portable operational export preserves own time review schedules and SLA configuration without commercial or live dispatch bindings 164ms
+   ✓ portable operational export rejects another employee private appointment and missing current permissions or session 148ms
+   ✓ portable operational export retains canonical schedules against concurrent privacy changes 122ms
+   ✓ portable operational export retains canonical schedules against concurrent assignment changes 177ms
+   ✓ portable operational export retains canonical time entries against concurrent work-source changes 162ms
+   ✓ portable asset export preserves actual inventory relationships after departure without provider or commercial bindings 124ms
+   ✓ portable asset export rejects actual MSP and revoked sessions, native record redactions and missing asset read permission 150ms
+   ✓ public departure by customer retains an archive and releases seats once using the reviewed relationship 122ms
+   ✓ public departure by sponsor retains an archive and releases seats once using the reviewed relationship 127ms
+   ✓ public departure rejects foreign provisioning selectors and rolls back closure if archive sealing fails 101ms
+   ✓ public departure browser actions derive customer authority and reject API override or mismatched tracked identity 215ms
+   ✓ portable coordinated snapshot gives independently authorized record collectors one cutoff and rejects expired or forged capabilities 159ms
+   ✓ portable coordinated snapshot still performs document delivery checks against current source and current authority 185ms
+   ✓ self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers 187ms
+   ✓ portable workflow export preserves authored definitions versions and tenant forms after departure without runtime or secret-provider state 109ms
+   ✓ portable workflow export enforces current customer sessions native export permission and definition redactions 178ms
+   ✓ portable workflow business history rejects task field redaction and foreign task-history parents 251ms
+   ✓ portable engagement export retains customer bookings availability and meeting metadata without provider credentials or commercial prices 177ms
+   ✓ portable engagement export denies private meeting ownership and current settings permission or session loss 144ms
+   ✓ portable engagement export rejects a meeting changed after capture before native retention 142ms
+   ✓ portable engagement export reconstructs task-only services and their standard type under actual project admission 124ms
+   ✓ portable workspace graph validates cross-section identities and rejects dangling author service and configuration references  683ms
+   ✓ portable supplemental files capture actual artifact-only bytes and deduplicate by document file identity 164ms
+   ✓ portable supplemental files dispose truncated streams and reject foreign paths before provider access 150ms
+   ✓ portable supplemental files reject revoked private meeting access and changed document coverage after staging 245ms
+   ✓ portable remote meeting files capture real bounded Graph response streams from retained original identities only  554ms
+   ✓ portable remote meeting files reject missing provider receipt and oversized or truncated responses without retained output  452ms
+   ✓ portable remote meeting files reject current provider configuration or session changes after the response stream  374ms
+   ✓ portable workspace coordinator seals all sections at one cutoff and delivers under fresh native locks without provider work  1437ms
+   ✓ portable workspace coordinator rejects source changes after staging and revoked sessions before any delivery callback  1367ms
+   ✓ portable workspace prepared download rejects an expired staging lease before opening a transaction  680ms
+   ✓ portable export browser handler streams after releasing database locks and rejects revoked or foreign requests  1085ms
+   ✓ portable workspace restore inserts actual files records and usable vault into a new suspended tenant atomically  1637ms
+   ✓ portable workspace coordinator removes all staged files after a later credential provider failure and disposes abandoned packages  1124ms
+   ✓ portable installation restore authenticates owner authority and converges retries without replacing tenants  8282ms
+   ✓ portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging  867ms
+   ✓ shared time profile selects only the current MSP client and preserves null/default and retry semantics  393ms
+   ✓ shared time profile changes preserve approved and invoiced entries while native contract selection uses the new default  302ms
+   ✓ shared time profile rejects local customer callers, stale trust and private home client policy 197ms
+   ✓ shared time profile serializes competing defaults and rolls back a change if final authority expires 290ms
+   ✓ shared time profile supports canonical project tasks without modifying customer billing or native assignment 209ms
+   ✓ shared stopwatch starts on the work reference, logs through the shared save, and lists the entry for that work item 246ms
+   ✓ shared stopwatch cannot be redirected: a native clock never logs shared time and a shared clock never logs another item 216ms
+   ✓ shared stopwatch admission denies users without current technician staff assignment, revoked grants and API-key overrides 148ms
+   ✓ shared stopwatch start is refused for API credentials and after the customer revokes the grant, but the open clock survives for pause and discard 222ms
+   ✓ shared time list returns only admitted entries and counts the rest as hidden, never as content 180ms
+   ✓ initial administrator invitation recovery > does not renew or deliver an expired initial invitation when active users and pending invitations fill its allocation 72ms
+   ✓ initial administrator invitation recovery > accepts the replacement token through the real user service exactly once and rejects the old link 147ms
+   ✓ initial administrator invitation recovery > renews a successfully delivered expired invitation once and uses the same workspace allocation and workflow identity 160ms
+   ✓ initial administrator invitation recovery > resends a live invitation with the same link and a fresh 24 hours 98ms
+   ✓ initial administrator invitation recovery > retains the replacement token through failed delivery and does not require new pool capacity 97ms
+   ✓ initial administrator invitation recovery > rejects foreign sessions, revoked home roles, expired sessions and altered invitation scope without changing the token 91ms
+   ✓ initial administrator invitation recovery > does not reset a consumed invitation or an existing administrator before acceptance 84ms
+   × initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token 116ms
+     → expected null not to be null
+   ✓ initial administrator invitation recovery > sends with no retaining transaction open, so the mail path can still take its own locks 90ms
+   ✓ initial administrator invitation recovery > drops a completed send acknowledgment when a replacement token took its place mid-flight 99ms
+   ✓ initial administrator invitation recovery > drops a failed send acknowledgment when a replacement token took its place mid-flight 100ms
+   ✓ shared invoice journey persists qualified MSP and native effort once under concurrent generation and retries  1686ms
+   ✓ shared invoice journey reconciles approved MSP effort into a later contract and claims its native recurring period once  2594ms
+   ✓ shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion  1920ms
+   ✓ co-managed management policy > intersects client and board policy before setup labels, search and selected-client fallback 83ms
+   ✓ co-managed management policy > filters status before pagination and foreign lifecycle reads, retaining only authorized operation identities 52ms
+   ✓ co-managed management policy > denies starts, retries and allocation changes outside current home policy before reserving or invoking a command 99ms
+   ✓ co-managed management policy > retains home policy through authorized resize and distinguishes read access from per-operation management 125ms
+   ✓ co-managed management policy > hides restricted labels and identities, treats search wildcards literally and fails closed on unsupported constraints 69ms
+   ✓ co-managed management policy > retains published rules during commands and observes revocation before the next operation 110ms
+   ✓ co-managed management policy > offers to resend a delivered invitation before it expires, until the administrator has an account 102ms
+   ✓ co-managed management policy > reports expired invitation recovery without exposing the token or offering reset after account creation 105ms
+   ✓ co-managed client target and read contracts > resolves an authorized sponsor-client selector to its exact relationship and reports admission-consistent usage 98ms
+   ✓ co-managed client target and read contracts > shows the setup state on the client view while acceptance is pending, including cleanup progress 120ms
+   ✓ co-managed client target and read contracts > denies foreign clients and forged or mismatched relationship selections without leaking labels 76ms
+   ✓ co-managed client target and read contracts > requires an explicit selection for multiple current relationships and retains ended history 70ms
+   ✓ co-managed client target and read contracts > returns an authorized, searchable cross-client overview without hidden candidate counts 62ms
+   ✓ co-managed client target and read contracts > maps a legacy operation to its authorized client and rejects a conflicting client selector 72ms
+   ✓ co-managed client target and read contracts > keeps client Enable single-setup by resuming the current operation under different operation IDs 58ms
+   ✓ co-managed client target and read contracts > reports changed details for a client with a current setup instead of silently re-running the original 61ms
+   ✓ co-managed client target and read contracts > rejects a client or escalation board deactivated since the form loaded with a correctable code 44ms
+   ✓ routing notifications persist canonical escalation and handback obligations with qualified local destinations and exact retry 185ms
+   ✓ routing notifications create one assignment notice and one email with stable retry identity and no customer mail 178ms
+   ✓ routing notifications skip delayed delivery when recipient becomes unassigned 157ms
+   ✓ routing notifications skip delayed delivery when recipient becomes revoked 153ms
+   ✓ routing notifications skip delayed delivery when recipient becomes inactive 150ms
+   ✓ routing notifications skip delayed delivery when recipient becomes denied 135ms
+   ✓ routing notifications never deliver cached content with forged metadata or a removed routing receipt 166ms
+   ✓ routing notifications honor terminal disabled preferences and recipient team removal 171ms
+   ✓ routing notifications rebuild field-redacted content and suppress hidden routing state 157ms
+   ✓ routing notification obligations roll back with their canonical handoff transaction 113ms
+   ✓ requester task conversation shows only explicit requester threads and persists idempotent portal replies with durable events 267ms
+   ✓ requester task conversation denies current company authority before content or transport 121ms
+   ✓ requester task conversation denies current project authority before content or transport 169ms
+   ✓ requester task conversation denies current visibility authority before content or transport 152ms
+   ✓ requester task conversation denies current role authority before content or transport 135ms
+   ✓ requester task conversation denies current session authority before content or transport 124ms
+   ✓ requester task conversation denies current contact authority before content or transport 148ms
+   ✓ requester task conversation preserves local history and inherited file bytes after relationship termination 281ms
+   ✓ requester task conversation pages before returning private counts and rejects replies to a deleted root  490ms
+   ✓ delegated administration edits only approved board/profile fields with exact retries and qualified attribution 201ms
+   ✓ delegated administration rejects proxies, credential changes, administrator targets and sponsor grant expansion 232ms
+   ✓ delegated invitation resend preserves approved customer identity and terms, and retries delivery without disclosing tokens 243ms
+   ✓ delegated administration rechecks revoked grants, home bundles and sessions and permits security reduction during lapse 159ms
+   ✓ delegated administration discovery follows exact team grants and current membership without management-directory access 158ms
+   ✓ delegated invitation admission rejects expired invitations, changed role terms and exhausted customer seats 135ms
+   ✓ delegated invitation serializes concurrent retries and customer revocation through delivery 186ms
+   ✓ delegated invitation pins role terms against concurrent permission expansion until delivery commits 194ms
+   ✓ delegated administration snapshots actor, target and command before waiting for lifecycle locks 131ms
+   ✓ delegated administration keeps approval identities immutable and supports a fresh approval after revocation 164ms
+   ✓ delegated administration option search paginates only authorized display fields and admitted principals  627ms
+   ✓ co-managed provisioning cleanup > cancels a queued workspace without creating it and acknowledges capacity release exactly once  3635ms
+   ✓ co-managed provisioning cleanup > cleans the real bootstrapped defaults and invitation while retaining the MSP, siblings and reservation tombstone  3553ms
+   ✓ co-managed provisioning cleanup > rolls back data deletion and retains seats on failure, then resumes the same operation  7353ms
+   ✓ co-managed provisioning cleanup > records retryable cleanup failure for unknown tenant data instead of releasing its reservation  6337ms
+   ✓ co-managed provisioning cleanup > cancels after the initial administrator signs up but before acceptance, deleting the account with the workspace  3524ms
+   ✓ co-managed provisioning cleanup > serializes first signup against cancellation so a cancelled workspace cannot be claimed  3613ms
+   ✓ co-managed provisioning cleanup > refuses signup once cancellation was requested 84ms
+   ✓ co-managed provisioning cleanup > rejects a foreign sponsor, missing cancellation request and accepted relationship before deleting rows 71ms
+   ✓ requester task email subscriber durably delivers public MSP comments to the project contact without ticket reply tokens 165ms
+   ✓ requester task email includes current thread participants but excludes unrelated client users and the author 164ms
+   ✓ requester task email suppresses delayed delivery after private changes 156ms
+   ✓ requester task email suppresses delayed delivery after deleted changes 148ms
+   ✓ requester task email suppresses delayed delivery after project_hidden changes 130ms
+   ✓ requester task email suppresses delayed delivery after role changes 122ms
+   ✓ requester task email suppresses delayed delivery after contact changes 144ms
+   ✓ requester task email suppresses delayed delivery after company changes 147ms
+   ✓ requester task email suppresses delayed delivery after user_inactive changes 114ms
+   ✓ requester task email suppresses delayed delivery after retargeted changes 138ms
+   ✓ requester task email never enrolls private threads and keeps local public delivery after relationship departure 176ms
+   ✓ requester task email retries with stable identity and reloaded current content without duplicate concurrent sends 159ms
+   ✓ task thread disclosure preserves canonical identities and files, bumps revisions and emits metadata-only task invalidations 296ms
+   ✓ task thread disclosure requires the root author and a current full snapshot, including pending attachments 247ms
+   ✓ task thread private disclosure copies posted files with historical authors and tombstones and retries one canonical publication  393ms
+   ✓ task thread private disclosure resumes failed byte transfer and cleans only abandoned task disclosure objects  425ms
+   ✓ task thread private disclosure refuses corrupted bytes and forged transfer paths without canonical publication 276ms
+   ✓ task thread disclosure removes MSP live visibility while preserving prior participation and attachment history 224ms
+   ✓ task thread private disclosure rechecks the session after transport before publishing any customer content  858ms
+   ✓ archive boundary paginates authorized work without hidden-only pages or candidate counts  547ms
+   ✓ archive boundary paginates history after private-source and time-entry policy admission  412ms
+   ✓ archive boundary downloads task bytes through the qualified route and rejects ambiguous parent identities 179ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+AssertionError: expected null not to be null
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts:168:108
+    166|       const retry = f.retry(); release(); await Promise.all([delivered…
+    167|       expect((await f.invitation()).token).toBe(original.token);
+    168|       expect((await f.sponsor.table('co_managed_provisioning_operation…
+       |                                                                                                            ^
+    169|       await f.deliver(); expect(send).toHaveBeenCalledOnce();
+    170|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1460 passed (1461)
+   Start at  13:22:31
+   Duration  436.52s (transform 9.84s, setup 86ms, collect 4.62s, tests 427.05s, environment 0ms, prepare 42ms)
+

@@ -1,0 +1,14 @@
+{
+  "old": {
+    "pid": 3054441,
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "nextDistDir": ".next-review-handback-1bdea5dd",
+    "startTicks": "308014583"
+  },
+  "watchStartedAt": "2026-10-25T13:35:03.171774+00:00",
+  "logOffset": 5786848,
+  "signalledAt": "2026-10-25T13:41:25.902480+00:00",
+  "signal": "SIGTERM",
+  "method": "Verified old listener gracefully released after registered new launcher passed typecheck",
+  "watcherLimitation": "Wrapper truncates its log at restart; the saved byte offset missed the serving marker. Watcher stopped; verified termination performed directly."
+}

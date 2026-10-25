@@ -1,63 +1,46 @@
-# Bulk handback recovery and current acceptance
+# Co-managed implementation acceptance
 
-Resuming an interrupted bulk handback replaced the resume prompt with a closed
-results panel. The server returned mixed per-ticket outcomes, but the operator
-could not see them. The composer now opens that panel before moving focus to
-the result list. Frozen request identity, authorization and server receipts are
-unchanged.
+Canonical review serves **build-1792934305248**, application source `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`, on port **23374**. The registered service was admitted normally. Two guides are covered; twelve remain partial. **33/260 requirement rows are verified, 225 implemented-unverified, and two external provider portions remain.** All three readiness predicates stay false. This desk order is incomplete.
 
-The new regression reproduces reload recovery with no fresh selection and a
-mixed conflict/success response. It fails against the old component, then passes
-with the repair. The existing handback and qualified-list suites pass all 42
-cases. See [failure](handback-before.txt) and [passing checks](handback-after.txt).
+The two product repairs are visible recovered bulk-handback results (`1bdea5dd80`) and qualified Back navigation retaining filters/page (`a46feefa6f`). Both were found in real sessions, reproduced by failing regressions, repaired, built and deployed. Product history is retained. The final tooling/evidence update adds the retired-panel import contract and fixes the ordering of an existing database concurrency test; it changes no application code.
 
-The defect was observed on canonical production source `c04a67fff5`, build
-`build-1792926045353`. The existing app remains running while an isolated repair
-build is prepared. No repaired-production acceptance is claimed by this initial
-packet. Subsequent receipts must retain the actual source and build they test.
+## Guide acceptance
 
-New browser attempts and their original failures remain under
-`/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/`. Onboarding exercised
-lost-response retry, one retained operation, cancellation and seat release,
-original delivered invitation claim, customer acceptance and native reload.
-The simulator purchase/allocation run reconciled purchased capacity 14→15,
-proved allocation persistence and its active-seat floor, then restored both
-capacity and allocation. Delegation exercised a new exact-board approval and
-stale-editor denial after revocation. Task assignment and stale-edit checks
-retain their separate failed final instrumentation assertions. These bounded
-checks do not accept every requirement in their larger matrices.
+| Guide | Result | Remaining work or demonstrated outcome |
+| --- | --- | --- |
+| index.html | PARTIAL | Complete the native ticket walkthrough across Entry/Grid: edits, stopwatch, assignment, audience/file/privacy checks and the remaining visual/field controls. Prior auth, native effects and account boundaries remain bounded passes. |
+| guides/index.html | PARTIAL | Reconcile every child-guide link and acceptance outcome on this publication; twelve guide scenarios remain incomplete. Collection navigation does not accept its children. |
+| guides/01-onboarding.html | COVERED | One operation/allocation through lost-response retry; delivered original invitation, pending acceptance denial using a valid positive-control command, customer acceptance/native work, and isolated cancellation/reservation release. |
+| guides/02-licensing-and-seats.html | PARTIAL | Hosted simulator purchase/allocation/floor passed. Still execute lost-response purchase recovery and isolated self-host signed-fixture shortfall, lapse, missing-claim, renewal and UI-off journeys. Real Stripe and real issuer portions are the two external items. |
+| guides/03-access-policies.html | PARTIAL | Viewer Entry/Grid and unassigned-admin denial passed on the new build. Complete board/project/staff/team scope intersections, independent-grant and stale-file/export revocation, restricted-field and direct API write matrices. |
+| guides/04-delegated-administration.html | PARTIAL | Board approval/save/restoration/revoked stale editor passed. Execute nonadministrator profile save and customer-created invitation resend with actual delivery and unchanged recipient, role, link and expiry; revoke those test approvals. |
+| guides/05-ticket-queue.html | COVERED | Working/oversight, workspace/status/search/sort and product Back preserve scope; full-filter export spans pages; three-item lost-response recovery shows success/changed/denied, one note, customer history and correct working/oversight membership. |
+| guides/06-projects-and-tasks.html | PARTIAL | Assignment/removal, local-owner preservation, stale edit and qualified history passed. Create the new project/phase/two-task fixture, exercise team/queue filters and unshared denial, effort totals, and fresh conversation/file denial after project revocation. |
+| guides/07-conversations-and-files.html | PARTIAL | Complete requester participation, replies, audience/file bytes, edit/delete, whole-thread disclosure, uncertain publication recovery and revocation across both organizations and requester. Staff-only text and earlier task-file checks remain bounded. |
+| guides/08-sla.html | PARTIAL | Mapping persistence, old-target immutability and restored mapping are recorded. Complete differing new captured targets, responsibility elapsed-time arithmetic, actual breach delivery/recipient evidence, CE/EE parity and departure clock cutoff. |
+| guides/09-time-and-billing.html | PARTIAL | One isolated qualified commercial 15-minute entry persisted, submitted and approved. Complete stopwatch capture, customer operational entry/sums, contract-line reconciliation, actual draft invoice generation and retained financial visibility. |
+| guides/10-departure-and-archives.html | PARTIAL | Earlier empty-fixture departure passed. Complete departure after real ticket/task/message/file/time participation, all fresh read/write/queued-work denials, retained archive byte/history evidence, invoice reads and once-only capacity reconciliation. |
+| guides/11-export-restore-and-upgrade.html | PARTIAL | Earlier encrypted restore, replay, tamper and wrong-passphrase checks passed. Complete destination-owned entitlement, native recovered-user login and paid activation with retained data and no live trust; simulator-owned portions remain in-card work. |
+| guides/12-customer-integrations.html | PARTIAL | Prepare isolated supported customer bindings and execute provider save/redaction, real Alga sign-in callback/tenant linking, directory sync/revoke, requester outbound/reply ingestion, replay and revoked/lapsed queued-work controls. Protocol-fixture tests do not establish these deployed flows. |
 
-The source census now spells out both external portions and their owner without
-waiving the associated in-card work:
+## Evidence and verification
 
-- `clientIntegration:T018`: real Stripe test-mode shortfall checkout and
-  reconciliation, including the licensed recurring price. The release operator
-  supplies the approved Stripe account, test credentials, price and provider
-  receipts. Configured simulator results remain simulator evidence.
-- `clientIntegration:T019`: real issuer availability for a tenant-bound signed
-  Pro license and refresh on an isolated self-host installation. The release
-  operator supplies the installation and coordinates the license issuer.
-  Locally signed fixtures do not prove real issuer availability.
+- [Guide coverage and actual seek/frame receipts](guide-coverage.json). Onboarding sought to 46.163 seconds and displayed the following frame at 46.200. Ticket queue sought to 27.120 and displayed the following frame at 27.160. Both use the visible chapter selector and HTTP 206 byte-range delivery. The ticket recording combines actual scope, batch and concurrent customer captures; original partial/failed attempts are retained.
+- [Acceptance inventory](census/inventory.json) and [every remaining obligation](census/remaining-acceptance.md). All 260 unique approved IDs remain present. [Integrity receipt](source-integrity.json) verifies all 104 referenced files against application source hashes; this alone is not behavior acceptance.
+- [Focused tests](acceptance-unit.txt): 101 passed in nine files. [Native capability checks](native-capabilities.txt): 42 passed in three files, with unchanged package sources and explicit reuse analysis in the manifest.
+- [Original database run](database-before.txt): 1,460 passed, one failed. [Corrected full run](database-after.txt): 1,461 passed. The test formerly started a retry promise and released mail immediately, permitting either lock order. It now waits for retry commit while send remains blocked, asserts the pending receipt, then releases delivery. Existing token, acknowledgment and once-only assertions are retained; explicit resend after completed delivery remains separately tested. No invitation production code changed.
+- [Runtime process/build receipt](runtime-provenance.json) and [promotion receipt](promotion-watch-result.json). The old detached listener required a verified SIGTERM after normal service replacement. The log watcher missed a truncated log; that instrumentation limitation is retained. No admission bypass or board transition occurred.
+- [Raw artifact hashes/redactions](artifact-hashes.json). Raw browser JSON, screenshots, media and commands remain under `/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/`; playable new guide captures are published under `/evidence/implement-20261025/` on the existing guide service.
 
-Production promotion, fresh Alice login, QA navigation and supported Open
-Review were already confirmed. The OOM report labels its deployment-pending
-observations as historical. Its bounded same-process dev proof is preserved;
-long-term memory stability remains unproved. Full guide and release readiness
-remain incomplete.
+## External portions and owners
 
+- **clientIntegration:T018 — real Stripe test-mode shortfall checkout/reconciliation and licensed recurring price.** The **release operator** must supply the approved Stripe test account, credentials and USD 11.49 recurring SKU/price, then record real provider receipts. Configured simulator evidence does not close this portion. In-card hosted role/flag/recovery work remains explicitly unverified where not executed.
+- **clientIntegration:T019 — real issuer tenant-bound signed Pro license and refresh on isolated self-host.** The **release operator** must arrange the installation and coordinate the license issuer and receipts. Local signed fixtures do not establish issuer availability; the in-card shortfall/lapse/renewal/UI-off journeys are not waived.
 
-## Qualified queue return defect
+## Retained state and limits
 
-The next live queue check found that the detail screen's Back button targeted
-retired `/msp/co-management/tickets` and discarded the applied scope. Shared
-row links now carry the originating qualified list URL, and the detail route
-normalizes that context to the customer-list route before composing native
-back navigation. External destinations and unrelated application routes fall
-back to Customer Tickets. Customer, state, search, sort and pagination remain
-presentation state; authorization still runs on every queue read.
+Three newly accepted one-seat workspaces are retained for follow-up. Simulator-backed purchased capacity is 16, matching retained allocations; the temporary purchase/allocation checks are labelled simulator evidence. Unclaimed cancellation fixtures were cleaned through the product. Disposable bulk tickets and handoff history remain. Delegation approval was revoked after restoring its board description; task name/assignment were restored with qualified history retained. The isolated 15-minute commercial entry remains approved; its temporary staff grant was removed through the product, its account deactivated and test team removed. The temporary High-to-P1 SLA mapping was restored to Not mapped through the product.
 
-The component regression fails on the served implementation (one failure,
-23 passes). The repaired component, qualified list, return-context validation
-and retired-panel contract pass 64 checks. The retired-panel contract is held
-for the final tooling/evidence update. Repaired production return-navigation
-acceptance remains pending the next prepared build and browser rerun.
+Fresh Alice/QA navigation and supported Open Review were already accepted on the prior c04 build and are not relabelled as new provider acceptance. The OOM report now points to the current receipt and retains its dated same-process dev proof. Neither this run nor that bounded check proves long-term memory stability. I would not sign full product, guide, financial/privacy/retention/provider or production readiness from this packet. Twelve guides and 225 requirement rows remain ours to finish; they are not 225 demonstrated missing implementations.
+
+The committed verifier receipt is evaluated at the application candidate before publication. Final publication verification is retained at `/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/verifier-final.json`; the verifier continues to fail closed rather than waive the later test/evidence HEAD difference.

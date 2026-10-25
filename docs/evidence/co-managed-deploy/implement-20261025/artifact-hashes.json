@@ -1,0 +1,50 @@
+{
+  "database-after.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/current-db-suite-after.log",
+    "rawSha256": "f69c10ea2e30e703988c194c0424706aab916d44b291a9c1ed6a39f1b8093177",
+    "publishedSha256": "f69c10ea2e30e703988c194c0424706aab916d44b291a9c1ed6a39f1b8093177",
+    "signedTokensRedacted": 0
+  },
+  "database-before.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/current-db-suite.log",
+    "rawSha256": "75a8e2e928dd2bd0d074668b3734001a635d81858a1ef7e1069486d2251244b6",
+    "publishedSha256": "75a8e2e928dd2bd0d074668b3734001a635d81858a1ef7e1069486d2251244b6",
+    "signedTokensRedacted": 0
+  },
+  "acceptance-unit.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/acceptance-unit.log",
+    "rawSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
+    "publishedSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
+    "signedTokensRedacted": 0
+  },
+  "native-capabilities.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/native-capability-tests.log",
+    "rawSha256": "a9b58c8eb9a0a61fed00b8d503b01779fd2177a02d33811ad24b8eb06964c0eb",
+    "publishedSha256": "a9b58c8eb9a0a61fed00b8d503b01779fd2177a02d33811ad24b8eb06964c0eb",
+    "signedTokensRedacted": 0
+  },
+  "queue-return-before.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/queue-return-before.log",
+    "rawSha256": "e7e2ff40e0a4dd3ecc8c6ef963efe882da3758ca6fcb63d0015c14495affebb7",
+    "publishedSha256": "e7e2ff40e0a4dd3ecc8c6ef963efe882da3758ca6fcb63d0015c14495affebb7",
+    "signedTokensRedacted": 0
+  },
+  "queue-return-after.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/queue-return-after.log",
+    "rawSha256": "326fe8074f995908ff4facc25d708441e4b8ad44351581053f7803b51ce5b700",
+    "publishedSha256": "326fe8074f995908ff4facc25d708441e4b8ad44351581053f7803b51ce5b700",
+    "signedTokensRedacted": 0
+  },
+  "handback-before.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/handback-before.log",
+    "rawSha256": "84dd78d3a6ba1abbb26a31bff1b180c444c4634602bd8fe2862086d89c67cec9",
+    "publishedSha256": "84dd78d3a6ba1abbb26a31bff1b180c444c4634602bd8fe2862086d89c67cec9",
+    "signedTokensRedacted": 0
+  },
+  "handback-after.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/handback-after.log",
+    "rawSha256": "f166e5e0ea79ed2aa43092aa432bf1d76e39e09218be8ba0f7d2943fdc4bf960",
+    "publishedSha256": "f166e5e0ea79ed2aa43092aa432bf1d76e39e09218be8ba0f7d2943fdc4bf960",
+    "signedTokensRedacted": 0
+  }
+}

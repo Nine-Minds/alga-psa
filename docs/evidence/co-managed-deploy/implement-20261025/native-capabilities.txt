@@ -1,0 +1,21 @@
+▲ [WARNING] Duplicate key "@alga-psa/event-schemas" in object literal [duplicate-object-key]
+
+    package.json:65:4:
+      65 │     "@alga-psa/event-schemas": "*"
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The original key "@alga-psa/event-schemas" is here:
+
+    package.json:53:4:
+      53 │     "@alga-psa/event-schemas": "*",
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/tickets
+
+
+ Test Files  3 passed (3)
+      Tests  42 passed (42)
+   Start at  09:07:10
+   Duration  645ms (transform 218ms, setup 352ms, import 250ms, tests 85ms, environment 672ms)
+

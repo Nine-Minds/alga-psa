@@ -430,11 +430,11 @@ authentication-only check made no changes to accounts, passwords, hashes,
 tenant state, roles or grants. Later product acceptance created disposable
 fixtures and exercised ordinary relationship and configuration mutations.
 
-## Subsequent production matrix evidence
+## Historical c04 production matrix evidence
 
-The lead takeover recorded fourteen separate current-c04 production walkthroughs
-and checked playback, chapters and HTTP Range delivery. Their full guide
-scenarios remain partial. The [runtime matrix](c04a67fff5/runtime-matrix.json)
+The lead takeover recorded fourteen separate c04 production walkthroughs
+and checked playback, chapters and HTTP Range delivery. At that run, all full
+guide scenarios were partial. The [runtime matrix](c04a67fff5/runtime-matrix.json)
 records actual bounded outcomes, including private-file disclosure/removal,
 matched Temporal effects and isolated export/restore, separately from deployment
 readiness. Acceptance created disposable customer workspaces and normal content,
@@ -442,3 +442,16 @@ ended only the disposable relationship, and restored reversible scope/allocation
 and workflow-setting changes. It did not replace QA/Alice credentials or grants
 to repair login. This later product testing does not change the bounded dev
 heap evidence above or establish long-term memory stability.
+
+## Implement acceptance update
+
+Canonical port 23374 now serves application source `a46feefa6f`, build
+`build-1792934305248`. The [current receipt](implement-20261025/runtime-provenance.json)
+records the registered production process and bounded same-process guide window.
+The [new guide ledger](implement-20261025/guide-coverage.json) covers onboarding
+and ticket queues on this build; twelve guides remain partial. Historical c04
+and 704f partial recordings retain their original results. The 260-row inventory
+now has 33 verified rows, 225 implemented-unverified rows and two externally
+owned provider portions. All readiness predicates remain false. These product
+acceptance results do not extend the earlier dev memory observation or establish
+long-term memory stability.

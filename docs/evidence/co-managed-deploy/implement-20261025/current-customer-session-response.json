@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-25T13:58:22.001Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+  "buildId": "build-1792934305248",
+  "request": {
+    "method": "GET",
+    "path": "/api/auth/session"
+  },
+  "response": {
+    "status": 200,
+    "email": "desk.accept.1792935749585@cmreview.test",
+    "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+    "userId": "797f8426-e659-4430-8e03-6efc43255471"
+  },
+  "credentialSource": "Private invited-administrator fixture; no credentials/cookies retained here"
+}

@@ -1,0 +1,19 @@
+diff --git a/ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts b/ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts
+index b46fa73e84..ec0a0c8b90 100644
+--- a/ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts
++++ b/ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts
+@@ -163,7 +163,13 @@ export function registerCoManagedInvitationRecoveryTests(getDb: () => Knex,
+       const finish = new Promise<void>(resolve => { release = resolve; });
+       send.mockImplementationOnce(async () => { entered(); await finish; return true; });
+       const delivered = f.deliver(); await sending;
+-      const retry = f.retry(); release(); await Promise.all([delivered, retry]);
++      // Retry must commit while transport is blocked. Starting its promise is
++      // insufficient: an acknowledgment may otherwise commit first, followed
++      // by a legitimate explicit resend clearing it. Holding the send barrier
++      // also proves recovery can progress without a retaining transaction open.
++      await f.retry();
++      expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).toBeNull();
++      release(); await delivered;
+       expect((await f.invitation()).token).toBe(original.token);
+       expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).not.toBeNull();
+       await f.deliver(); expect(send).toHaveBeenCalledOnce();

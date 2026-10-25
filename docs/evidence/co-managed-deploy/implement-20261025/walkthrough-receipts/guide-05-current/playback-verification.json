@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-25T13:45:47.133Z",
+  "guide": "guides/05-ticket-queue.html",
+  "scenario": "guide-05-current",
+  "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "url": "http://127.0.0.1:8874/evidence/implement-20261025/guide-05-current/player.html",
+  "played": {
+    "time": 0.653808,
+    "duration": 64.96,
+    "width": 1440,
+    "height": 1000,
+    "cues": 27
+  },
+  "seek": {
+    "target": 27.12,
+    "chapter": "mixed-results-distinguish-conflict-return-and-access-denied",
+    "control": "visible chapter selector",
+    "actual": 27.164531,
+    "followingFrame": {
+      "mediaTime": 27.16,
+      "presentedFrames": 19
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/5650834",
+  "passed": true
+}

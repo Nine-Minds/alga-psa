@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-25T13:45:46.226Z",
+  "guide": "guides/01-onboarding.html",
+  "scenario": "01-onboarding-current-build",
+  "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "url": "http://127.0.0.1:8874/evidence/implement-20261025/01-onboarding-current-build/player.html",
+  "played": {
+    "time": 0.657161,
+    "duration": 49.2,
+    "width": 1440,
+    "height": 1000,
+    "cues": 23
+  },
+  "seek": {
+    "target": 46.163,
+    "chapter": "accepted-workspace-retains-native-work-after-reload",
+    "control": "visible chapter selector",
+    "actual": 46.208448,
+    "followingFrame": {
+      "mediaTime": 46.2,
+      "presentedFrames": 19
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/5958899",
+  "passed": true
+}

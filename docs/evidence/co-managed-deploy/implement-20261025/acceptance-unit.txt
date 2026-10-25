@@ -1,0 +1,26 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792935724042"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/coManagedTicketListReturn.test.ts (10 tests) 4ms 66 MB heap used
+ ✓ |node| src/test/unit/product/coManagedDeletedPanels.contract.test.ts (2 tests) 5922ms 144 MB heap used
+   ✓ has no production import or re-export of any retired stacked ticket panel  5916ms
+ ✓ |node| src/test/unit/product/coManagedCustomerTicketRoute.test.ts (2 tests) 1ms 147 MB heap used
+ ✓ |jsdom| src/test/unit/product/qualifiedTicketList.test.tsx (28 tests) 2529ms 171 MB heap used
+   ✓ T007 — applied filters, sort and pagination reach the server > sends the submitted search and each toolbar filter, resetting to page 1 every time  629ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > search runs as you type: keystrokes within the pause make one request, Enter applies at once, and Reset clears the text  543ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > writes the typed search to the address bar with replaceState, never a history push  524ms
+ ✓ |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx (6 tests) 224ms 187 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (24 tests) 34ms 212 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTicketSection.test.tsx (6 tests) 268ms 217 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedHandbackRecovery.test.tsx (14 tests) 103ms 156 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx (9 tests) 111ms 150 MB heap used
+
+ Test Files  9 passed (9)
+      Tests  101 passed (101)
+   Start at  13:42:04
+   Duration  23.99s (transform 4.23s, setup 376ms, collect 8.29s, tests 9.20s, environment 374ms, prepare 71ms)
+

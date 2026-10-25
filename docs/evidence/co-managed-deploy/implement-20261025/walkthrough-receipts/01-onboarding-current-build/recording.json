@@ -1,0 +1,276 @@
+{
+  "scenario": "01-onboarding-current-build",
+  "recordedAt": "2026-10-25T13:42:06.523Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "configured-simulator-capacity-prepared",
+      "passed": true,
+      "at": "2026-10-25T13:42:10.928Z"
+    },
+    {
+      "id": "provision-lost-response-was-after-server-execution",
+      "passed": true,
+      "at": "2026-10-25T13:42:18.242Z"
+    },
+    {
+      "id": "retry-retains-operation-id",
+      "passed": true,
+      "at": "2026-10-25T13:42:21.104Z",
+      "data": {
+        "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f"
+      }
+    },
+    {
+      "id": "one-operation-and-allocation-Cancel",
+      "passed": true,
+      "at": "2026-10-25T13:42:21.424Z",
+      "data": {
+        "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f",
+        "tenant": "affb48a4-5d8e-4c64-ac79-83cb312bfbda"
+      }
+    },
+    {
+      "id": "cancel-removes-only-unaccepted-workspace",
+      "passed": true,
+      "at": "2026-10-25T13:42:28.970Z"
+    },
+    {
+      "id": "cancel-releases-reservation-once",
+      "passed": true,
+      "at": "2026-10-25T13:42:29.141Z"
+    },
+    {
+      "id": "one-operation-and-allocation-Accept",
+      "passed": true,
+      "at": "2026-10-25T13:42:39.464Z",
+      "data": {
+        "operationId": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+        "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+      }
+    },
+    {
+      "id": "resend-preserves-workspace-and-allocation",
+      "passed": true,
+      "at": "2026-10-25T13:42:44.119Z"
+    },
+    {
+      "id": "invited-admin-selects-exact-customer-tenant",
+      "passed": true,
+      "at": "2026-10-25T13:42:45.473Z"
+    },
+    {
+      "id": "deep-native-link-requires-customer-acceptance",
+      "passed": true,
+      "at": "2026-10-25T13:42:46.067Z"
+    },
+    {
+      "id": "valid-ordinary-command-denied-before-acceptance",
+      "passed": true,
+      "at": "2026-10-25T13:42:46.279Z",
+      "data": {
+        "status": 500,
+        "positiveControlStatus": 200,
+        "positiveControlCreated": true,
+        "actionSameAsControl": true
+      }
+    },
+    {
+      "id": "accepted-workspace-retains-native-work-after-reload",
+      "passed": true,
+      "at": "2026-10-25T13:42:52.686Z"
+    },
+    {
+      "id": "accepted-client-has-no-cancel-setup-control",
+      "passed": true,
+      "at": "2026-10-25T13:42:54.768Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T13:42:09.116Z",
+      "seconds": 2.593,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:10.928Z",
+      "seconds": 4.405,
+      "actor": "qa",
+      "title": "configured-simulator-capacity-prepared"
+    },
+    {
+      "at": "2026-10-25T13:42:13.323Z",
+      "seconds": 6.8,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-25T13:42:15.772Z",
+      "seconds": 9.249,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:18.242Z",
+      "seconds": 11.719,
+      "actor": "qa",
+      "title": "provision-lost-response-was-after-server-execution"
+    },
+    {
+      "at": "2026-10-25T13:42:21.104Z",
+      "seconds": 14.581,
+      "actor": "qa",
+      "title": "retry-retains-operation-id",
+      "data": {
+        "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f"
+      }
+    },
+    {
+      "at": "2026-10-25T13:42:21.424Z",
+      "seconds": 14.901,
+      "actor": "qa",
+      "title": "one-operation-and-allocation-Cancel",
+      "data": {
+        "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f",
+        "tenant": "affb48a4-5d8e-4c64-ac79-83cb312bfbda"
+      }
+    },
+    {
+      "at": "2026-10-25T13:42:23.579Z",
+      "seconds": 17.056,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/b36207a8-abe9-4e28-a70f-292804ad01d1?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:28.970Z",
+      "seconds": 22.447,
+      "actor": "qa",
+      "title": "cancel-removes-only-unaccepted-workspace"
+    },
+    {
+      "at": "2026-10-25T13:42:29.141Z",
+      "seconds": 22.618,
+      "actor": "qa",
+      "title": "cancel-releases-reservation-once"
+    },
+    {
+      "at": "2026-10-25T13:42:31.921Z",
+      "seconds": 25.398,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-25T13:42:34.671Z",
+      "seconds": 28.148,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:39.464Z",
+      "seconds": 32.941,
+      "actor": "qa",
+      "title": "one-operation-and-allocation-Accept",
+      "data": {
+        "operationId": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+        "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+      }
+    },
+    {
+      "at": "2026-10-25T13:42:41.761Z",
+      "seconds": 35.238,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:44.119Z",
+      "seconds": 37.596,
+      "actor": "qa",
+      "title": "resend-preserves-workspace-and-allocation"
+    },
+    {
+      "at": "2026-10-25T13:42:45.473Z",
+      "seconds": 38.95,
+      "actor": "qa",
+      "title": "invited-admin-selects-exact-customer-tenant"
+    },
+    {
+      "at": "2026-10-25T13:42:46.067Z",
+      "seconds": 39.544,
+      "actor": "qa",
+      "title": "deep-native-link-requires-customer-acceptance"
+    },
+    {
+      "at": "2026-10-25T13:42:46.279Z",
+      "seconds": 39.756,
+      "actor": "qa",
+      "title": "valid-ordinary-command-denied-before-acceptance",
+      "data": {
+        "status": 500,
+        "positiveControlStatus": 200,
+        "positiveControlCreated": true,
+        "actionSameAsControl": true
+      }
+    },
+    {
+      "at": "2026-10-25T13:42:48.406Z",
+      "seconds": 41.883,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T13:42:52.676Z",
+      "seconds": 46.153,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T13:42:52.686Z",
+      "seconds": 46.163,
+      "actor": "qa",
+      "title": "accepted-workspace-retains-native-work-after-reload"
+    },
+    {
+      "at": "2026-10-25T13:42:54.758Z",
+      "seconds": 48.235,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T13:42:54.768Z",
+      "seconds": 48.245,
+      "actor": "qa",
+      "title": "accepted-client-has-no-cancel-setup-control"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "A valid ordinary command created its exact positive-control QA board; the same protocol was denied while customer acceptance was pending. Capacity was increased 15→16 through the configured simulator and the extra accepted fixture is retained. SMTP sink is the configured simulator. No external Microsoft or payment claim. Expired invitation and stale-scope race matrices are tracked separately from this guide."
+  ],
+  "durationSeconds": 49.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

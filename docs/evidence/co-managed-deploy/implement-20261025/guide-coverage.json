@@ -1,0 +1,1274 @@
+{
+  "schemaVersion": 2,
+  "checkedAt": "2026-10-25T13:53:36.196134+00:00",
+  "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+  "buildId": "build-1792934305248",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "requiredGuides": 14,
+  "recordedGuides": 14,
+  "currentBuildRecordedGuides": 3,
+  "coveredGuides": 2,
+  "partialGuides": 12,
+  "blockedGuides": 0,
+  "reviewReady": false,
+  "recordingReady": false,
+  "runtimeSummary": "Canonical build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Two core guide scenarios covered on this build; twelve partial. 33 requirement rows verified, 225 implemented-unverified and two external provider portions. Historical partial media remain historical.",
+  "mediaPlaybackVerified": 14,
+  "mediaPlaybackScope": "Three new-build recordings plus eleven historical partial recordings. This is not fourteen accepted current-build scenarios.",
+  "guides": [
+    {
+      "guide": "index.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/account-boundary/recording.json",
+            "evidence/takeover-c04-production/production-cookie-coexistence/recording.json",
+            "evidence/takeover-c04-production/main-native-effect-final/recording.json",
+            "evidence/takeover-c04-production/main-worker-business-confirmed/recording.json",
+            "evidence/takeover-c04-production/main-native-comment-file/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.webm",
+          "chapterVtt": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt",
+          "recordingJson": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Complete the native ticket walkthrough across Entry/Grid: edits, stopwatch, assignment, audience/file/privacy checks and the remaining visual/field controls. Prior auth, native effects and account boundaries remain bounded passes.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/account-boundary/recording.json",
+          "evidence/takeover-c04-production/production-cookie-coexistence/recording.json",
+          "evidence/takeover-c04-production/main-native-effect-final/recording.json",
+          "evidence/takeover-c04-production/main-worker-business-confirmed/recording.json",
+          "evidence/takeover-c04-production/main-native-comment-file/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.webm",
+        "chapterVtt": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt",
+        "recordingJson": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Production explicit-port origin exercised; public HTTPS with internal PORT3000 and public8443 remain automated unit controls. Other-port value is own QA token under a distinct cookie name, not a fresh login on that port.",
+        "locator.waitFor: Timeout 40000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('SMOKE-SILENT workflow comment').first() to be visible\u001b[22m\n",
+        "Native UI event, succeeded Temporal execution and two persisted root comments verified after fresh worker start. This is not customer workflow entitlement or email-delivery acceptance.",
+        "Native UI comment/file publication, reload, exact byte integrity and foreign tenant denials verified; portable restoration and public-share-link semantics are separate.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    },
+    {
+      "guide": "guides/index.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/collection-final/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Reconcile every child-guide link and acceptance outcome on this publication; twelve guide scenarios remain incomplete. Collection navigation does not accept its children.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/collection-final/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "This is the collection navigation walkthrough with live fixtures; each section has separate outcome limits. It does not establish all section acceptance or real provider/paid activation readiness.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "covered",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/01-onboarding-full-attempt/recording.json",
+            "evidence/takeover-c04-production/01-onboarding-claim-continuation/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/01-current-accepted-customer-confirmation/session-receipt.json",
+        "current-customer-session-response.json"
+      ],
+      "testedRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "runtime": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      },
+      "scenario": {
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "configured-simulator-capacity-prepared",
+            "passed": true,
+            "at": "2026-10-25T13:42:10.928Z"
+          },
+          {
+            "id": "provision-lost-response-was-after-server-execution",
+            "passed": true,
+            "at": "2026-10-25T13:42:18.242Z"
+          },
+          {
+            "id": "retry-retains-operation-id",
+            "passed": true,
+            "at": "2026-10-25T13:42:21.104Z",
+            "data": {
+              "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f"
+            }
+          },
+          {
+            "id": "one-operation-and-allocation-Cancel",
+            "passed": true,
+            "at": "2026-10-25T13:42:21.424Z",
+            "data": {
+              "operationId": "bcdef690-44cc-4eb4-8a94-69825ca7989f",
+              "tenant": "affb48a4-5d8e-4c64-ac79-83cb312bfbda"
+            }
+          },
+          {
+            "id": "cancel-removes-only-unaccepted-workspace",
+            "passed": true,
+            "at": "2026-10-25T13:42:28.970Z"
+          },
+          {
+            "id": "cancel-releases-reservation-once",
+            "passed": true,
+            "at": "2026-10-25T13:42:29.141Z"
+          },
+          {
+            "id": "one-operation-and-allocation-Accept",
+            "passed": true,
+            "at": "2026-10-25T13:42:39.464Z",
+            "data": {
+              "operationId": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+              "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            }
+          },
+          {
+            "id": "resend-preserves-workspace-and-allocation",
+            "passed": true,
+            "at": "2026-10-25T13:42:44.119Z"
+          },
+          {
+            "id": "invited-admin-selects-exact-customer-tenant",
+            "passed": true,
+            "at": "2026-10-25T13:42:45.473Z"
+          },
+          {
+            "id": "deep-native-link-requires-customer-acceptance",
+            "passed": true,
+            "at": "2026-10-25T13:42:46.067Z"
+          },
+          {
+            "id": "valid-ordinary-command-denied-before-acceptance",
+            "passed": true,
+            "at": "2026-10-25T13:42:46.279Z",
+            "data": {
+              "status": 500,
+              "positiveControlStatus": 200,
+              "positiveControlCreated": true,
+              "actionSameAsControl": true
+            }
+          },
+          {
+            "id": "accepted-workspace-retains-native-work-after-reload",
+            "passed": true,
+            "at": "2026-10-25T13:42:52.686Z"
+          },
+          {
+            "id": "accepted-client-has-no-cancel-setup-control",
+            "passed": true,
+            "at": "2026-10-25T13:42:54.768Z"
+          }
+        ],
+        "rawScenarioStatus": "passed"
+      },
+      "recordedAt": "2026-10-25T13:42:06.523Z",
+      "durationSeconds": 49.2,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "invitedAdmin",
+          "email": "desk.accept.1792935749585@cmreview.test",
+          "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+        }
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "playbackProof": {
+        "checkedAt": "2026-10-25T13:45:46.226Z",
+        "guide": "guides/01-onboarding.html",
+        "scenario": "01-onboarding-current-build",
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "build": {
+          "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+          "buildId": "build-1792934305248"
+        },
+        "url": "http://127.0.0.1:8874/evidence/implement-20261025/01-onboarding-current-build/player.html",
+        "played": {
+          "time": 0.657161,
+          "duration": 49.2,
+          "width": 1440,
+          "height": 1000,
+          "cues": 23
+        },
+        "seek": {
+          "target": 46.163,
+          "chapter": "accepted-workspace-retains-native-work-after-reload",
+          "control": "visible chapter selector",
+          "actual": 46.208448,
+          "followingFrame": {
+            "mediaTime": 46.2,
+            "presentedFrames": 19
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/5958899",
+        "passed": true
+      },
+      "recordingPaths": {
+        "webm": "/evidence/implement-20261025/01-onboarding-current-build/walkthrough.webm",
+        "chapterVtt": "/evidence/implement-20261025/01-onboarding-current-build/chapters.vtt",
+        "recordingJson": "/evidence/implement-20261025/01-onboarding-current-build/recording.json"
+      },
+      "limitations": [
+        "A valid ordinary command created its exact positive-control QA board; the same protocol was denied while customer acceptance was pending. Capacity was increased 15\u219216 through the configured simulator and the extra accepted fixture is retained. SMTP sink is the configured simulator. No external Microsoft or payment claim. Expired invitation and stale-scope race matrices are tracked separately from this guide."
+      ],
+      "actorAnnotation": "The original capture helper kept its QA step label after the manual invitation claim. The invited-tenant assertion and a separate fresh invited-admin session receipt establish the customer actor; the raw capture is preserved."
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/02-current-allocation-verified/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Hosted simulator purchase/allocation/floor passed. Still execute lost-response purchase recovery and isolated self-host signed-fixture shortfall, lapse, missing-claim, renewal and UI-off journeys. Real Stripe and real issuer portions are the two external items.",
+      "boundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/02-simulator-purchase-and-allocation/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "simulator-provider-reconciliation-increases-pool",
+              "passed": true,
+              "at": "2026-10-25T12:28:21.536Z",
+              "data": {
+                "original": 14,
+                "target": 15,
+                "provider": "configured Stripe simulator; not real Stripe test mode"
+              }
+            },
+            {
+              "id": "allocation-persisted-in-database-and-reload",
+              "passed": true,
+              "at": "2026-10-25T12:28:25.825Z"
+            },
+            {
+              "id": "below-active-minimum-denied-before-submission",
+              "passed": true,
+              "at": "2026-10-25T12:28:25.861Z"
+            },
+            {
+              "id": "allocation-and-purchased-capacity-restored",
+              "passed": true,
+              "at": "2026-10-25T12:28:29.852Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/02-current-allocation-verified/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Current sponsor pool and reversible allocation growth/restoration verified. Live Stripe purchase and self-host license issuance remain externally owned; allocation-boundary writes follow separately.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/03-access-policies-final/recording.json",
+            "evidence/takeover-c04-production/03-viewer-source-boundaries/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Viewer Entry/Grid and unassigned-admin denial passed on the new build. Complete board/project/staff/team scope intersections, independent-grant and stale-file/export revocation, restricted-field and direct API write matrices.",
+      "boundedEvidence": [],
+      "testedRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "runtime": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      },
+      "scenario": {
+        "status": "partial",
+        "assertions": [
+          {
+            "id": "viewer-entry-category-readonly",
+            "passed": true,
+            "at": "2026-10-25T13:42:31.494Z"
+          },
+          {
+            "id": "viewer-entry-current-status-readable",
+            "passed": true,
+            "at": "2026-10-25T13:42:31.494Z"
+          },
+          {
+            "id": "viewer-entry-no-save-bar",
+            "passed": true,
+            "at": "2026-10-25T13:42:31.644Z"
+          },
+          {
+            "id": "viewer-grid-no-writable-composer",
+            "passed": true,
+            "at": "2026-10-25T13:42:33.002Z"
+          },
+          {
+            "id": "shared-grid-no-native-tags-controls",
+            "passed": true,
+            "at": "2026-10-25T13:42:33.002Z"
+          },
+          {
+            "id": "unassigned-local-administrator-cannot-read-qualified-ticket",
+            "passed": true,
+            "at": "2026-10-25T13:42:36.539Z"
+          }
+        ],
+        "rawScenarioStatus": "partial"
+      },
+      "recordedAt": "2026-10-25T13:42:25.202Z",
+      "durationSeconds": 12.16,
+      "actors": [
+        {
+          "name": "viewer",
+          "email": "noassign@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": false,
+      "playbackProof": {
+        "checkedAt": "2026-10-25T13:50:27.920Z",
+        "scenario": "03-viewer-current-build",
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "build": {
+          "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+          "buildId": "build-1792934305248"
+        },
+        "url": "http://127.0.0.1:8874/evidence/implement-20261025/03-viewer-current-build/player.html",
+        "played": {
+          "time": 0.609585,
+          "duration": 12.16,
+          "width": 1440,
+          "height": 1000
+        },
+        "seek": {
+          "target": 4.862,
+          "actual": 4.864762,
+          "followingFrame": {
+            "mediaTime": 4.88,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/807696",
+        "passed": true
+      },
+      "recordingPaths": {
+        "webm": "/evidence/implement-20261025/03-viewer-current-build/walkthrough.webm",
+        "chapterVtt": null,
+        "recordingJson": "/evidence/implement-20261025/03-viewer-current-build/recording.json"
+      },
+      "limitations": [
+        "Existing View user checked in Entry/Grid; unassigned local administrator denied qualified detail. Still needs scoped board/project/staff/team changes, independent ticket-only grant revocation, stale download/export denial and restricted field-mask/API-write matrix."
+      ]
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/04-delegated-administration/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Board approval/save/restoration/revoked stale editor passed. Execute nonadministrator profile save and customer-created invitation resend with actual delivery and unchanged recipient, role, link and expiry; revoke those test approvals.",
+      "boundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/04-delegation-approval-revocation/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "new-approval-targets-exact-record",
+              "passed": true,
+              "at": "2026-10-25T12:23:31.574Z",
+              "data": {
+                "grantId": "1f71b80f-ac4c-4770-84ab-65ecd3e91aaa",
+                "boardId": "a649bb80-5276-4f18-a6fd-380a5e6d5b52"
+              }
+            },
+            {
+              "id": "approved-msp-board-edit-persists",
+              "passed": true,
+              "at": "2026-10-25T12:23:37.096Z"
+            },
+            {
+              "id": "unapproved-board-has-no-new-delegation",
+              "passed": true,
+              "at": "2026-10-25T12:23:37.180Z"
+            },
+            {
+              "id": "customer-revocation-recorded",
+              "passed": true,
+              "at": "2026-10-25T12:23:39.480Z"
+            },
+            {
+              "id": "stale-msp-editor-refuses-after-revocation",
+              "passed": true,
+              "at": "2026-10-25T12:23:39.585Z"
+            },
+            {
+              "id": "revoked-grant-not-offered-after-reload",
+              "passed": true,
+              "at": "2026-10-25T12:23:39.942Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/04-delegated-administration/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Existing customer-approved board grant used; no existing approval was revoked. New-grant revocation/user/invitation operations remain unexecuted.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "covered",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/05-ticket-queue/recording.json",
+            "evidence/takeover-c04-production/05-filtered-queue-export/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [],
+      "testedRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "runtime": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      },
+      "scenario": {
+        "status": "passed",
+        "assertions": [
+          {
+            "id": "oversight-retains-selected-customer-and-search",
+            "passed": true,
+            "at": "2026-10-25T13:44:47.835Z"
+          },
+          {
+            "id": "reload-retains-workspace-status-search-and-sort",
+            "passed": true,
+            "at": "2026-10-25T13:44:49.153Z"
+          },
+          {
+            "id": "one-visible-row-export-includes-all-three-filtered-rows-once",
+            "passed": true,
+            "at": "2026-10-25T13:44:51.303Z"
+          },
+          {
+            "id": "detail-link-retains-customer-and-relationship",
+            "passed": true,
+            "at": "2026-10-25T13:44:52.213Z"
+          },
+          {
+            "id": "product-back-navigation-restores-applied-qualified-scope",
+            "passed": true,
+            "at": "2026-10-25T13:44:52.270Z"
+          },
+          {
+            "id": "three-disposable-tickets-escalated-through-product",
+            "passed": true,
+            "at": "2026-10-25T13:44:14.376Z"
+          },
+          {
+            "id": "native-list-keeps-native-source",
+            "passed": true,
+            "at": "2026-10-25T13:44:16.472Z"
+          },
+          {
+            "id": "qualified-filter-and-selection-set-survive-reload",
+            "passed": true,
+            "at": "2026-10-25T13:44:19.575Z"
+          },
+          {
+            "id": "full-filtered-export-includes-all-authorized-rows",
+            "passed": true,
+            "at": "2026-10-25T13:44:19.725Z"
+          },
+          {
+            "id": "customer-change-races-stale-selected-revision",
+            "passed": true,
+            "at": "2026-10-25T13:44:22.223Z"
+          },
+          {
+            "id": "reload-offers-explicit-frozen-intent-recovery",
+            "passed": true,
+            "at": "2026-10-25T13:44:25.295Z"
+          },
+          {
+            "id": "mixed-results-distinguish-conflict-return-and-access-denied",
+            "passed": true,
+            "at": "2026-10-25T13:44:25.519Z"
+          },
+          {
+            "id": "recovered-results-panel-is-open-and-focused",
+            "passed": true,
+            "at": "2026-10-25T13:44:25.531Z"
+          },
+          {
+            "id": "lost-response-replay-creates-one-handoff-note",
+            "passed": true,
+            "at": "2026-10-25T13:44:25.746Z"
+          },
+          {
+            "id": "conflicted-item-does-not-receive-bulk-note",
+            "passed": true,
+            "at": "2026-10-25T13:44:25.913Z"
+          },
+          {
+            "id": "oversight-retains-returned-work-without-revoked-ticket-or-duplication",
+            "passed": true,
+            "at": "2026-10-25T13:44:26.516Z"
+          },
+          {
+            "id": "completed-return-requeries-working-membership",
+            "passed": true,
+            "at": "2026-10-25T13:44:27.044Z"
+          },
+          {
+            "id": "customer-native-history-shows-the-successful-shared-note",
+            "passed": true,
+            "at": "2026-10-25T13:44:28.311Z"
+          },
+          {
+            "id": "fixture-responsibility-restored-through-customer-ui",
+            "passed": true,
+            "at": "2026-10-25T13:44:41.459Z"
+          }
+        ],
+        "rawScenarioStatus": "passed"
+      },
+      "recordedAt": "2026-10-25T13:44:43.975Z",
+      "durationSeconds": 64.96,
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "playbackProof": {
+        "checkedAt": "2026-10-25T13:45:47.133Z",
+        "guide": "guides/05-ticket-queue.html",
+        "scenario": "guide-05-current",
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "build": {
+          "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+          "buildId": "build-1792934305248"
+        },
+        "url": "http://127.0.0.1:8874/evidence/implement-20261025/guide-05-current/player.html",
+        "played": {
+          "time": 0.653808,
+          "duration": 64.96,
+          "width": 1440,
+          "height": 1000,
+          "cues": 27
+        },
+        "seek": {
+          "target": 27.12,
+          "chapter": "mixed-results-distinguish-conflict-return-and-access-denied",
+          "control": "visible chapter selector",
+          "actual": 27.164531,
+          "followingFrame": {
+            "mediaTime": 27.16,
+            "presentedFrames": 19
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/5650834",
+        "passed": true
+      },
+      "recordingPaths": {
+        "webm": "/evidence/implement-20261025/guide-05-current/walkthrough.webm",
+        "chapterVtt": "/evidence/implement-20261025/guide-05-current/chapters.vtt",
+        "recordingJson": "/evidence/implement-20261025/guide-05-current/recording.json"
+      },
+      "limitations": [
+        "Composite of actual current-build scope/export, mixed recovery and concurrent customer recordings. Original partial/failed attempts remain unchanged. This accepts this guide only."
+      ]
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/06-task-edit-revocation/recording.json",
+            "evidence/takeover-c04-production/06-project-grant-recovery/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Assignment/removal, local-owner preservation, stale edit and qualified history passed. Create the new project/phase/two-task fixture, exercise team/queue filters and unshared denial, effort totals, and fresh conversation/file denial after project revocation.",
+      "boundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/06-task-assignment-stale-history-final/recording.json",
+          "sourceRevision": "1bdea5dd80021b508699181b8906f4b233ce4efb",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "msp-task-assignment-persists",
+              "passed": true,
+              "at": "2026-10-25T13:10:46.470Z"
+            },
+            {
+              "id": "msp-assignment-does-not-replace-customer-local-owner",
+              "passed": true,
+              "at": "2026-10-25T13:10:46.623Z"
+            },
+            {
+              "id": "remove-msp-assignment-persists",
+              "passed": true,
+              "at": "2026-10-25T13:10:47.895Z"
+            },
+            {
+              "id": "stale-msp-edit-refused",
+              "passed": true,
+              "at": "2026-10-25T13:10:51.196Z"
+            },
+            {
+              "id": "reload-recovers-current-authoritative-value",
+              "passed": true,
+              "at": "2026-10-25T13:10:51.397Z"
+            },
+            {
+              "id": "task-history-retains-qualified-change",
+              "passed": true,
+              "at": "2026-10-25T13:10:53.560Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/06-task-edit-revocation/recording.json",
+          "evidence/takeover-c04-production/06-project-grant-recovery/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "locator.click: Timeout 18000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('option', { name: 'CM Lead customer project 20261025-C04', exact: true })\u001b[22m\n",
+        "Continuation restores the reversible scope change from the failed-label recording; it does not turn that failed recording into a complete scenario.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.",
+        "The initial restore selector was obsolete; separate product continuation restored Collaborate and reloaded. No active project grant was left revoked."
+      ]
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/07-conversations-final/recording.json",
+            "evidence/takeover-c04-production/07-task-thread-files-disclosure/recording.json",
+            "evidence/takeover-c04-production/07-disclosed-file-removal-continuation/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Complete requester participation, replies, audience/file bytes, edit/delete, whole-thread disclosure, uncertain publication recovery and revocation across both organizations and requester. Staff-only text and earlier task-file checks remain bounded.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/07-conversations-final/recording.json",
+          "evidence/takeover-c04-production/07-task-thread-files-disclosure/recording.json",
+          "evidence/takeover-c04-production/07-disclosed-file-removal-continuation/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Three-audience staff text checks passed; requester, attachments, edit/delete and whole-thread disclosure remain outside this recording.",
+        "Unauthorized file read HTTP200",
+        "Exact customer-owned disclosed copy tested; original private source retention is separate and not confused with the disclosed copy.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.",
+        "Initial file-removal polling switched actors before completion; the exact-attachment continuation waited for confirmed removal and verified captured URL404. Historical failed attempts remain separate."
+      ]
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/05-customer-ticket-loop/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Mapping persistence, old-target immutability and restored mapping are recorded. Complete differing new captured targets, responsibility elapsed-time arithmetic, actual breach delivery/recipient evidence, CE/EE parity and departure clock cutoff.",
+      "boundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/08-sla-mapping-and-captured-targets/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "priority-mapping-persists-through-product-and-reload",
+              "passed": true,
+              "at": "2026-10-25T12:35:33.194Z"
+            },
+            {
+              "id": "mapping-edit-does-not-rewrite-existing-obligation",
+              "passed": true,
+              "at": "2026-10-25T12:35:33.353Z"
+            }
+          ]
+        },
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/08-mapping-restored-current-build/recording.json",
+          "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+          "scenarioStatus": "passed",
+          "assertions": [
+            {
+              "id": "temporary-high-priority-mapping-restored-through-product",
+              "passed": true,
+              "at": "2026-10-25T13:47:13.737Z",
+              "data": {
+                "original": "Not mapped"
+              }
+            }
+          ]
+        }
+      ],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/05-customer-ticket-loop/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.",
+        "Observed separate responsibility clocks and paused state; the route labelled priority mapping resolved client composition, so configuration editing was not verified."
+      ]
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/09-timesheet-production/recording.json",
+            "evidence/takeover-c04-production/09-current-operational-time/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "One isolated qualified commercial 15-minute entry persisted, submitted and approved. Complete stopwatch capture, customer operational entry/sums, contract-line reconciliation, actual draft invoice generation and retained financial visibility.",
+      "boundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/09-isolated-approval-with-team-prerequisite/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "exact-new-commercial-entry-rendered",
+              "passed": true,
+              "at": "2026-10-25T13:02:01.378Z"
+            },
+            {
+              "id": "sheet-is-isolated-to-new-review-entry",
+              "passed": true,
+              "at": "2026-10-25T13:02:01.985Z"
+            },
+            {
+              "id": "submitted-sheet-is-preserved",
+              "passed": true,
+              "at": "2026-10-25T13:02:02.258Z"
+            },
+            {
+              "id": "new-sheet-submitted-through-native-control",
+              "passed": true,
+              "at": "2026-10-25T13:02:02.259Z"
+            },
+            {
+              "id": "separate-approver-preserves-qualified-commercial-entry",
+              "passed": true,
+              "at": "2026-10-25T13:02:05.858Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/09-timesheet-production/recording.json",
+          "evidence/takeover-c04-production/09-current-operational-time/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Native timesheet and billing navigation/projections inspected. No whole sheet, older entries or existing invoice was changed. Approval and generation require a fully isolated eligible billing window.",
+        "Native customer operational time launcher exercised; exact persisted receipt determines write outcome. Full-sheet approvals and invoicing remain separate.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/10-c04-departure/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Earlier empty-fixture departure passed. Complete departure after real ticket/task/message/file/time participation, all fresh read/write/queued-work denials, retained archive byte/history evidence, invoice reads and once-only capacity reconciliation.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/10-c04-departure/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Fresh disposable relationship closed through product with seat release and sealed archive, then customer read-only workspace and MSP archive read. It had no shared participation; retained bodies/files and invoices after closure are not verified here."
+      ]
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/11-export-restore-and-upgrade/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Earlier encrypted restore, replay, tamper and wrong-passphrase checks passed. Complete destination-owned entitlement, native recovered-user login and paid activation with retained data and no live trust; simulator-owned portions remain in-card work.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/11-export-restore-and-upgrade/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Current encrypted archive restored through actual operator CLI into suspended tenant aff0c0b1 with inactive administrator and no live trust; original receipt returned on retry and wrong passphrase/tampering rejected. Paid activation and native recovered login require destination-owned entitlement and remain unverified."
+      ]
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+      "coverageStatus": "partial",
+      "status": "complete",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/12-customer-integrations/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Prepare isolated supported customer bindings and execute provider save/redaction, real Alga sign-in callback/tenant linking, directory sync/revoke, requester outbound/reply ingestion, replay and revoked/lapsed queued-work controls. Protocol-fixture tests do not establish these deployed flows.",
+      "boundedEvidence": [],
+      "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+      "runtime": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "buildId": "build-1792926045353"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/takeover-c04-production/12-customer-integrations/recording.json"
+        ]
+      },
+      "recordingPaths": {
+        "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.webm",
+        "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.vtt",
+        "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.json"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Customer and sponsor email settings and customer provider workbench inspected separately. Customer provider save, real Microsoft callback, directory sync, requester inbound/replay/revocation are blocked by missing isolated test binding. System invitation SMTP delivery was verified separately and does not establish customer-provider acceptance.",
+        "Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete."
+      ]
+    }
+  ]
+}

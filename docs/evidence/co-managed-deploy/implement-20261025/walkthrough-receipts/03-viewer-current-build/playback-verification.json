@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-25T13:50:27.920Z",
+  "scenario": "03-viewer-current-build",
+  "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "url": "http://127.0.0.1:8874/evidence/implement-20261025/03-viewer-current-build/player.html",
+  "played": {
+    "time": 0.609585,
+    "duration": 12.16,
+    "width": 1440,
+    "height": 1000
+  },
+  "seek": {
+    "target": 4.862,
+    "actual": 4.864762,
+    "followingFrame": {
+      "mediaTime": 4.88,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/807696",
+  "passed": true
+}

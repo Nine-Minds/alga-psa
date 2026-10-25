@@ -1,0 +1,69 @@
+{
+  "scenario": "fixture-cleanup-billing-technician",
+  "recordedAt": "2026-10-25T13:31:58.972Z",
+  "runtime": {
+    "sourceRevision": "1bdea5dd80021b508699181b8906f4b233ce4efb",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1bdea5dd80021b508699181b8906f4b233ce4efb",
+    "buildId": "build-1792932459349"
+  },
+  "assertions": [
+    {
+      "id": "temporary-staff-assignment-removed-through-product",
+      "passed": true,
+      "at": "2026-10-25T13:32:05.801Z"
+    },
+    {
+      "id": "approved-entry-remains-after-prerequisite-cleanup",
+      "passed": true,
+      "at": "2026-10-25T13:32:06.141Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T13:32:01.349Z",
+      "seconds": 2.377,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T13:32:05.801Z",
+      "seconds": 6.829,
+      "actor": "qa",
+      "title": "temporary-staff-assignment-removed-through-product"
+    },
+    {
+      "at": "2026-10-25T13:32:06.141Z",
+      "seconds": 7.169,
+      "actor": "qa",
+      "title": "approved-entry-remains-after-prerequisite-cleanup"
+    },
+    {
+      "at": "2026-10-25T13:32:06.141Z",
+      "seconds": 7.169,
+      "actor": "qa",
+      "title": "Prerequisite cleanup",
+      "data": {
+        "deactivatedUser": "fce21870-043f-49b9-bce4-450f65e47daf",
+        "removedTeam": "346aa099-9748-49ae-b5cf-0130d7ae0b99",
+        "method": "SQL deactivates only disposable account and removes its isolated test team; approved entry and user/role history preserved"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Fixture cleanup, not acceptance of the time/billing guide."
+  ],
+  "durationSeconds": 7,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

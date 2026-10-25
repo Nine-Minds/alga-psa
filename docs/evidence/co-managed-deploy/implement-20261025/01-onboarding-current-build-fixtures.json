@@ -1,0 +1,26 @@
+[
+  {
+    "operation_id": "bcdef690-44cc-4eb4-8a94-69825ca7989f",
+    "customer_tenant": "affb48a4-5d8e-4c64-ac79-83cb312bfbda",
+    "relationship_id": "ccd330d6-ec73-4a8f-bb94-6fe1ab72520d",
+    "allocation_id": "38b38d24-1aa0-4485-a6b1-a9cda76b80ac",
+    "state": "pending_acceptance",
+    "invitation_sent_at": "2026-10-25T13:42:18.375991+00:00",
+    "invitation_delivery_error": null,
+    "clientId": "b36207a8-abe9-4e28-a70f-292804ad01d1",
+    "email": "desk.cancel.1792935730951@cmreview.test",
+    "workspace": "CM DESK 1792935726307 Cancel IT"
+  },
+  {
+    "operation_id": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+    "customer_tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+    "relationship_id": "4f999745-cbd0-453e-905a-9a5b0210bbb0",
+    "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+    "state": "pending_acceptance",
+    "invitation_sent_at": "2026-10-25T13:42:38.687397+00:00",
+    "invitation_delivery_error": null,
+    "clientId": "5e9c535b-2506-4b36-9303-7032fae88807",
+    "email": "desk.accept.1792935749585@cmreview.test",
+    "workspace": "CM DESK 1792935726307 Accept IT"
+  }
+]
