@@ -92,7 +92,8 @@ export function buildLabelModel(
   const serialSuffix = hidden.has('serialSuffix') ? null : viewModel.serialSuffix;
   const custodyLocation = hidden.has('custodyLocation') ? null : viewModel.custodyLocation ?? null;
   const nextAction = hidden.has('nextAction') ? null : viewModel.nextAction ?? null;
-  // Line budget: held-equipment lines take the work-reason line's place (the 4x2 in tag has no spare height).
+  // Line budget: the two held-equipment lines take the work-reason and serial lines' place (the 4x2 in tag
+  // has no spare height). The asset line still names the held device; its serial suffix yields.
   const custodyPrints = viewModel.labelClass === 'ticket-work-tag' && Boolean(custodyLocation || nextAction);
   return {
     ...viewModel,
@@ -106,7 +107,7 @@ export function buildLabelModel(
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
     display: {
       assetLine: secondaryIdentifier ? `Asset ${secondaryIdentifier}` : null,
-      serialLine: serialSuffix ? `S/N \u2026${serialSuffix}` : null,
+      serialLine: serialSuffix && !custodyPrints ? `S/N \u2026${serialSuffix}` : null,
     },
   };
 }

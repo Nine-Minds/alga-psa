@@ -65,7 +65,7 @@ export const assetCustodyChangedEventPayloadSchema = BaseDomainEventPayloadSchem
   assetId: assetIdSchema,
   custodyId: uuidSchema('Custody ID'),
   clientId: clientIdSchema.optional(),
-  ticketId: uuidSchema('Ticket ID').optional(),
+  ticketId: entityIdSchema('Ticket ID', 'ticket').optional(),
   /** The physical step, or 'updated' for a non-physical edit (purpose, next action, follow-up, condition, accessories). */
   eventType: z.enum([...ASSET_CUSTODY_EVENT_TYPES, 'updated']),
   state: z.enum(['in_office', 'with_vendor', 'closed']),

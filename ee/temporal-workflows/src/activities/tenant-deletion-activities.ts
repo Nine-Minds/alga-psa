@@ -58,6 +58,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // also reference email providers. Delete the route rows first, then senders,
   // before any of those parent tables.
   'email_sender_routes', 'email_sender_addresses',
+  // Equipment custody: events FK to custody; custody FKs to assets, tickets,
+  // users and stock_locations (all deleted below), so both go first.
+  'asset_custody_events', 'asset_custody',
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 

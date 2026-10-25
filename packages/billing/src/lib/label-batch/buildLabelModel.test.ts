@@ -69,6 +69,14 @@ describe('buildLabelModel: held-equipment (custody) lines', () => {
   it('a tag with no custody prints exactly as before', () => {
     const m = buildLabelModel(vm, tenant);
     expect(m).toMatchObject({ detail: 'Hardware', custodyLocation: null, nextAction: null });
+    expect(m.display?.serialLine).toBe(`S/N \u2026${vm.serialSuffix}`);
+  });
+
+  it('custody lines also take the serial line\'s place; the asset line still names the held device', () => {
+    const m = buildLabelModel(held, tenant);
+    expect(m.display?.serialLine).toBeNull();
+    expect(m.display?.assetLine).toBe(`Asset ${vm.secondaryIdentifier}`);
+    expect(buildLabelModel(held, tenant, ['custodyLocation', 'nextAction']).display?.serialLine).toBe(`S/N \u2026${vm.serialSuffix}`);
   });
 
   it('binds custodyLocation and nextAction, and the work tag template uses them', async () => {
@@ -86,9 +94,10 @@ describe('buildLabelModel: held-equipment (custody) lines', () => {
     const column = ast.layout.children[0].children[0].children as any[];
     const px = (n: any) => Number.parseFloat(String(n.style.inline.maxHeight ?? '0'));
     const byId = (id: string) => column.find((n) => n.id === id);
-    // Worst case: custody prints, so the reason line is collapsed. The identifier is uncapped: allow 3 lines at 20px.
-    const heights = column.filter((n) => n.id !== 'reason').map((n) => (n.id === 'ticket-number' ? 3 * 20 * 1.1 : px(n)));
-    const gaps = (column.length - 1) * (0.5 * 3.7795);
+    // Worst case: custody prints, so the reason and serial lines are collapsed. The identifier is uncapped: allow 3 lines at 20px.
+    const printed = column.filter((n) => n.id !== 'reason' && n.id !== 'serial');
+    const heights = printed.map((n) => (n.id === 'ticket-number' ? 3 * 20 * 1.1 : px(n)));
+    const gaps = (printed.length - 1) * (0.5 * 3.7795);
     const total = heights.reduce((a, b) => a + b, 0) + gaps;
     expect(byId('custody-location')).toBeTruthy();
     expect(byId('next-action')).toBeTruthy();
