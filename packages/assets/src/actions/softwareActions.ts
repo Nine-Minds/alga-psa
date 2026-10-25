@@ -154,10 +154,14 @@ export const getAssetSoftware = withAuth(async (
 /**
  * Get software summary statistics for an asset
  */
-export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
+export const getAssetSoftwareSummary = withAuth(async (user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+
     const baseQuery = () => tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', assetId)
       .where('is_current', true);
