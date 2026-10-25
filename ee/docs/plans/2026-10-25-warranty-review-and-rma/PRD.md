@@ -380,3 +380,7 @@ the new serial and inbound tracking; the asset keeps its id but shows the new se
 and an `asset_history` entry. Return the device to the client: the RMA closes as resolved and custody
 closes as returned. Print the RMA tag before shipping and the return slip for the box. Throughout, no
 `stock_units`, `stock_movements`, `stock_levels` or billing rows change.
+
+## Follow-up: vendor conversation link
+
+Shipped without the vendor-conversation link because the ticket-conversations branch is not merged. Today the vendor case number lives on the RMA (`rma_reference`) and can be mirrored to the ticket's external links with one click (a `generic` reference link). Once ticket conversations land, link the vendor email thread to the ticket and the RMA, then remove the generic mirror (`LEVERAGE: friction rma-vendor-case-link`).
