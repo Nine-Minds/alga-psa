@@ -415,6 +415,9 @@
       "@product/service-principals/entry": [
         "../packages/product-service-principals/oss/entry"
       ],
+      "@product/service-principals/types": [
+        "../packages/product-service-principals/types"
+      ],
       "@product/service-principals/ee/entry": [
         "../packages/product-service-principals/ee/entry"
       ],

@@ -31,6 +31,7 @@
       "@shared/lib": ["shared/lib"],
       "@shared/lib/*": ["shared/lib/*"],
       "@product/service-principals/entry": ["packages/product-service-principals/oss/entry"],
+      "@product/service-principals/types": ["packages/product-service-principals/types"],
       "@enterprise": ["packages/ee/src"],
       "@enterprise/*": ["packages/ee/src/*"],
       "@ee": ["packages/ee/src"],

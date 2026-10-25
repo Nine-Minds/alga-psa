@@ -36,14 +36,27 @@ export const SELF_EXEMPT_PATHS = [
 const SCANNED_EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|json|sql|ya?ml|sh)$/;
 const SKIPPED_FILES = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml)$/;
 
-// A key purpose is spelled on one line next to the word "purpose"; a lone
-// 'service' string (e.g. the user type) is allowed.
+// The 'service' key purpose is a quoted 'service' literal with the word
+// "purpose" on the same line or within PURPOSE_WINDOW lines of it (so a purpose
+// tuple or union split across lines is still caught). A lone 'service' string
+// (e.g. the user type) is allowed. Limitation: a literal more than
+// PURPOSE_WINDOW lines from the word "purpose" is not detected.
+export const PURPOSE_WINDOW = 3;
+const SERVICE_LITERAL = /['"`]service['"`]/;
+const PURPOSE_WORD = /purpose/i;
+// `user_type: 'service'` / `userType === 'service'` is the (edition-neutral)
+// user type, never a key purpose.
+const USER_TYPE_VALUE = /user_?type['"`]?\s*(?:===?|!==?|:|=)\s*['"`]service['"`]/i;
+
 export const FORBIDDEN_PATTERNS = [
   { name: 'service_principals table', regex: /\bservice_principals\b/ },
   { name: 'X-Alga-Act-As header', regex: /x-alga-act-as/i },
   {
     name: "'service' key purpose",
-    regex: /purpose[^\n]*['"`]service['"`]|['"`]service['"`][^\n]*purpose/i,
+    regex: SERVICE_LITERAL,
+    excludeRegex: USER_TYPE_VALUE,
+    nearRegex: PURPOSE_WORD,
+    nearWindow: PURPOSE_WINDOW,
   },
   {
     name: 'service-principal entitlement',
@@ -64,8 +77,12 @@ export function findViolations(files) {
     if (isAllowedPath(normalized) || SELF_EXEMPT_PATHS.includes(normalized)) continue;
     const lines = content.split('\n');
     lines.forEach((line, index) => {
-      for (const { name, regex } of FORBIDDEN_PATTERNS) {
-        if (regex.test(line)) {
+      for (const { name, regex, excludeRegex, nearRegex, nearWindow = 0 } of FORBIDDEN_PATTERNS) {
+        if (!regex.test(line) || excludeRegex?.test(line)) continue;
+        const from = Math.max(0, index - nearWindow);
+        const to = Math.min(lines.length - 1, index + nearWindow);
+        const near = !nearRegex || lines.slice(from, to + 1).some((candidate) => nearRegex.test(candidate));
+        if (near) {
           violations.push({ path: normalized, line: index + 1, pattern: name, text: line.trim().slice(0, 160) });
         }
       }

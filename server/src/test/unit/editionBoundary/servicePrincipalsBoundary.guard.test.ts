@@ -15,7 +15,7 @@ describe('T038: service-principal edition-boundary guard', () => {
   it('passes on the tree as it stands', () => {
     const violations = guard.findViolations(guard.collectRepoFiles(REPO_ROOT));
     expect(guard.formatViolations(violations)).toBe('');
-  });
+  }, 120_000);
 
   it.each([
     ['service_principals table', 'await knex("service_principals").select()'],
@@ -29,6 +29,22 @@ describe('T038: service-principal edition-boundary guard', () => {
   ])('catches a violation outside the allowed trees: %s', (pattern, content) => {
     const violations = guard.findViolations([{ path: 'server/src/lib/foo.ts', content }]);
     expect(violations.map((v: { pattern: string }) => v.pattern)).toContain(pattern);
+  });
+
+  it("catches a 'service' purpose split across lines within the window", () => {
+    const content = ['const KEY_PURPOSES = [', "  'general',", "  'mobile',", "  'service',", '];'].join('\n');
+    const violations = guard.findViolations([{ path: 'server/src/lib/foo.ts', content }]);
+    expect(violations.map((v: { pattern: string }) => v.pattern)).toContain("'service' key purpose");
+  });
+
+  it("does not flag the 'service' user type even when 'purpose' is nearby", () => {
+    const content = ["it('x (purpose %s)', () => {", "  row = { user_type: 'service' };", '});'].join('\n');
+    expect(guard.findViolations([{ path: 'server/src/lib/foo.ts', content }])).toEqual([]);
+  });
+
+  it("documents the limit: a 'service' literal beyond the window is not detected", () => {
+    const content = ['// purpose', '', '', '', '', "const x = 'service';"].join('\n');
+    expect(guard.findViolations([{ path: 'server/src/lib/foo.ts', content }])).toEqual([]);
   });
 
   it('allows the same references inside ee/, packages/product-service-principals/ and packages/ee/', () => {

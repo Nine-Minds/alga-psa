@@ -5,7 +5,7 @@ import type {
   BoundaryApiContext,
   BoundaryApiKeyRecord,
   BoundaryKeyGateOwner,
-} from '../../../../../packages/product-service-principals/types';
+} from '@product/service-principals/types';
 
 export async function resolveServicePrincipalApiContext<TUser = unknown>(
   _keyRecord: BoundaryApiKeyRecord,

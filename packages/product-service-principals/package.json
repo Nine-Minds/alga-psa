@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.ts",
-    "./oss/entry": "./oss/entry.ts"
+    "./oss/entry": "./oss/entry.ts",
+    "./types": "./types.ts"
   },
   "dependencies": {},
   "devDependencies": {}
