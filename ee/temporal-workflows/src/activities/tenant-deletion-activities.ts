@@ -71,7 +71,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
   'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
   'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
-  'stock_units', 'project_staging_lines', 'count_sessions', 'vendor_bills', 'sales_orders',
+  // project_staging_lines before stock_units: lines.unit_id -> stock_units is NO ACTION; the
+  // opposite stock_units.allocated_staging_line_id FK is NULL'd in breakCircularDependencies.
+  'project_staging_lines', 'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
   'stock_transfers', 'purchase_orders', 'document_templates',
   'stock_locations',
 
@@ -1737,6 +1739,26 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas or CE without inventory)
     log.debug('Could not clear stock_unit_id in assets (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 6b: NULL out stock_units.allocated_staging_line_id so project_staging_lines
+  // can be deleted. project_staging_lines.unit_id -> stock_units (project_staging_lines_unit_fk)
+  // and stock_units.allocated_staging_line_id -> project_staging_lines
+  // (fk_stock_units_allocated_staging_line) are both NO ACTION and form a restrictive
+  // cycle; the inventory block deletes project_staging_lines before stock_units, which is
+  // only legal once units no longer point at lines (exempted in validate-tenant-management).
+  try {
+    const result6b = await tenantScopedDb.table('stock_units')
+      .whereNotNull('allocated_staging_line_id')
+      .update({ allocated_staging_line_id: null });
+    if (result6b > 0) {
+      log.info('Cleared allocated_staging_line_id references in stock_units', { count: result6b });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas or CE without project staging)
+    log.debug('Could not clear allocated_staging_line_id in stock_units (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }
