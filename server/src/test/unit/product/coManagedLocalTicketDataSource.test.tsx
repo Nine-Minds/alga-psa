@@ -1,12 +1,18 @@
 /** @vitest-environment jsdom */
 import React from 'react';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedLocalTicketDataSourceProvider from '../../../components/co-managed/CoManagedLocalTicketDataSourceProvider';
 import { useTicketDataSource } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
+import { TicketConversationAttachments } from '@alga-psa/tickets/components/ticket/TicketConversationAttachments';
 
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), screen: vi.fn(), conversation: vi.fn(), create: vi.fn(), find: vi.fn(),
-  nativeAdd: vi.fn(), nativeCreate: vi.fn() }));
+  nativeAdd: vi.fn(), nativeCreate: vi.fn(), prepare: vi.fn(), submit: vi.fn() }));
+vi.mock('@alga-psa/tickets/components', async () => import('../../../../../packages/tickets/src/components/ticket/TicketConversationAttachments'));
+vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: ({ resource, comment }: any) => (
+  <a href={`/attachments/${resource.tenant}/${resource.id}/${comment.storeTenant}/${comment.threadId}/${comment.commentId}`}>Customer evidence file</a>
+) }));
+vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submit }));
 vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', () => ({ nativeTicketDataSource: {
   comments: { findCommentById: mocks.find, addTicketCommentWithCacheForCurrentUser: mocks.nativeAdd, createComment: mocks.nativeCreate },
   conversation: {}, slots: {} } }));
@@ -16,6 +22,7 @@ vi.mock('../../../components/co-managed/CoManagedTicketSection', () => ({ defaul
 vi.mock('../../../components/co-managed/CoManagedThreadDisclosure', () => ({ default: () => null }));
 vi.mock('../../../lib/actions/coManagedSharedWorkActions', () => ({ getCoManagedTicketScreenAction: mocks.screen }));
 vi.mock('../../../lib/actions/coManagedTicketConversationActions', () => ({ getCoManagedTicketConversationScreenAction: mocks.conversation }));
+vi.mock('../../../lib/actions/coManagedPrivateTicketCommentActions', () => ({ saveCoManagedPrivateTicketCommentAction: vi.fn() }));
 vi.mock('../../../lib/actions/coManagedTicketCommentActions', () => ({ createCoManagedTicketCommentAction: mocks.create }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string, options?: any) => options?.organization ? `${key}: ${options.organization}` : key }),
   useOptionalI18n: () => null, useFormatters: () => ({ formatDate: (date: Date) => date.toISOString() }) }));
@@ -30,12 +37,42 @@ beforeEach(() => {
   vi.resetAllMocks(); source = null;
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
   mocks.screen.mockResolvedValue({ summary: { resource }, customerName: 'Customer A' });
-  mocks.conversation.mockResolvedValue({ items: [], nextBefore: null, actor: { tenant: 'customer-a', userId: 'user-1' }, writeAudiences: ['requester', 'shared_it', 'organization_private'] });
+  mocks.conversation.mockResolvedValue({ items: [], nextBefore: null, actor: { tenant: 'customer-a', userId: 'user-1' }, writeAudiences: ['requester', 'shared_it', 'organization_private'],
+    draftAttachments: { audiences: ['requester', 'shared_it', 'organization_private'], maxBytes: 1024, maxFiles: 2 } });
   mocks.create.mockResolvedValue({ ok: true, receipt: { commentId: 'comment-1', threadId: 'thread-1', storeTenant: 'customer-a' } });
   mocks.find.mockResolvedValue({ comment_id: 'comment-1', note: richText });
   mocks.nativeAdd.mockResolvedValue({ comment_id: 'native' });
+  mocks.prepare.mockResolvedValue({ captured: true });
+  mocks.submit.mockResolvedValue({ ok: true, receipt: { commentId: 'comment-1', threadId: 'thread-1', storeTenant: 'customer-a' } });
 });
 afterEach(cleanup);
+
+it('renders an authorized comment attachment in the customer native ticket, retaining its store identity', async () => {
+  render(<CoManagedLocalTicketDataSourceProvider ticketId="ticket-a">
+    <TicketConversationAttachments ticketId="ticket-a" comment={{ tenant: 'customer-a', ticket_id: 'ticket-a', thread_id: 'thread-1', comment_id: 'comment-1' } as any} />
+  </CoManagedLocalTicketDataSourceProvider>);
+  expect(await screen.findByRole('link', { name: 'Customer evidence file' })).toHaveAttribute('href', '/attachments/customer-a/ticket-a/customer-a/thread-1/comment-1');
+});
+
+it('publishes customer composer files through the draft flow and keeps one immutable operation after a lost response', async () => {
+  mount();
+  await waitFor(() => expect(source.conversation.composerFooter).toBeTypeOf('function'));
+  const footer = source.conversation.composerFooter({ audienceId: 'organization_private', disabled: false });
+  const file = new File(['private customer bytes'], 'customer-private.txt', { type: 'text/plain' });
+  footer.props.staging.add([file]);
+  mocks.submit.mockRejectedValueOnce(new Error('lost publication acknowledgment'));
+  const send = () => source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, true, false, false, undefined, undefined, undefined, { audienceId: 'organization_private' });
+  await act(async () => { expect(await send()).toHaveProperty('actionError'); });
+  expect(footer.props.staging.getSnapshot()).toHaveLength(1);
+  await act(async () => { expect(await send()).toMatchObject({ comment_id: 'comment-1' }); });
+  expect(mocks.prepare).toHaveBeenCalledTimes(1);
+  expect(mocks.prepare.mock.calls[0][0]).toMatchObject({ resource, actorTenant: 'customer-a', audience: 'organization_private', files: [file] });
+  expect(mocks.submit).toHaveBeenCalledTimes(2);
+  expect(mocks.submit.mock.calls[1][0]).toBe(mocks.submit.mock.calls[0][0]);
+  expect(footer.props.staging.getSnapshot()).toHaveLength(0);
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.nativeAdd).not.toHaveBeenCalled();
+});
 
 it('replaces the Internal toggle with the requester, shared IT and private-to-organization audience control', async () => {
   mount();

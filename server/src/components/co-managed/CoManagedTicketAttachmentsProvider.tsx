@@ -7,12 +7,12 @@ import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 
 /** Bind the native comment slot to its qualified work and actual comment store. */
 export default function CoManagedTicketAttachmentsProvider({ resource, children }: {
-  resource: CoManagedSharedResource; children: ReactNode;
+  resource: CoManagedSharedResource | null; children: ReactNode;
 }) {
   const component = useMemo(() => {
-    const target = { ...resource };
+    const target = resource ? { ...resource } : null;
     return function TicketAttachments({ ticketId, comment }: TicketConversationAttachmentsProps) {
-      if (target.kind !== 'ticket' || ticketId !== target.id || comment.ticket_id !== target.id ||
+      if (!target || target.kind !== 'ticket' || ticketId !== target.id || comment.ticket_id !== target.id ||
           !comment.tenant || !comment.thread_id || !comment.comment_id || comment.deleted_at) return null;
       return <CoManagedCommentAttachments resource={target}
         comment={{ storeTenant: comment.tenant, threadId: comment.thread_id, commentId: comment.comment_id }} />;

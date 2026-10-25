@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IComment } from '@alga-psa/types';
 import type { CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
-import { conversationDocument } from './conversationText';
 import { composeTicketDataSource, type TicketConversationAudiences, type TicketDataSource } from '@alga-psa/tickets/lib/ticketDataSource';
 import { NATIVE_TICKET_CAPABILITIES } from '@alga-psa/tickets/lib/ticketDataSource';
 import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
@@ -13,11 +12,14 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getCoManagedTicketScreenAction } from '@/lib/actions/coManagedSharedWorkActions';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
-import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
 import CoManagedTicketSection from './CoManagedTicketSection';
 import CoManagedEffortSummary from './CoManagedEffortSummary';
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
+import { createTicketCommentWriter, TicketCommentWriteError } from './ticketCommentWriter';
+import SharedCommentAttachmentPicker from './SharedCommentAttachmentPicker';
+import CoManagedTicketAttachmentsProvider from './CoManagedTicketAttachmentsProvider';
 
 const ALL_AUDIENCES: CommentAudience[] = ['requester', 'shared_it', 'organization_private'];
 const MAX_MAP_PAGES = 20;
@@ -53,8 +55,10 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
   const actor = useRef<{ tenant: string; userId: string } | null>(null);
   const resource = useRef<CoManagedSharedResource | null>(null);
   const resourceReady = useRef<Promise<CoManagedSharedResource | null>>(Promise.resolve(null));
-  // A retry of the same content replays the same operation, never a second message.
-  const operation = useRef<{ key: string; id: string } | null>(null);
+  const [draftLimits, setDraftLimits] = useState<ConversationScreen['draftAttachments'] | null>(null);
+  const conversationState = useRef<ConversationScreen | null>(null);
+  const staging = useMemo(() => createAttachmentStaging(newCoManagedOperationId), [ticketId]);
+  const writer = useRef<ReturnType<typeof createTicketCommentWriter> | null>(null);
 
   const loadConversationMap = useCallback(async (target: CoManagedSharedResource) => {
     let before: Awaited<ReturnType<typeof getCoManagedTicketConversationScreenAction>>['nextBefore'] | undefined;
@@ -71,11 +75,12 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
       before = screen.nextBefore;
     }
     known.current = next;
-    if (first) { actor.current = first.actor; setWriteAudiences(first.writeAudiences); }
+    if (first) { actor.current = first.actor; conversationState.current = first; setWriteAudiences(first.writeAudiences); setDraftLimits(first.draftAttachments); }
   }, []);
 
   useEffect(() => {
-    setScreenState(null); setWriteAudiences(null); known.current = new Map();
+    setScreenState(null); setWriteAudiences(null); setDraftLimits(null); known.current = new Map();
+    conversationState.current = null; writer.current = null; staging.clear();
     if (!enabled) return;
     let cancelled = false;
     const loading = getCoManagedTicketScreenAction({ kind: 'local', ticketId }).then(async screen => {
@@ -87,36 +92,35 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
     }).catch(() => { if (!cancelled) setScreenState('failed'); return null; });
     resourceReady.current = loading;
     return () => { cancelled = true; };
-  }, [ticketId, enabled, loadConversationMap]);
+  }, [ticketId, enabled, loadConversationMap, staging]);
 
   /** One audience-aware write; returns the new comment id. */
   const writeComment = useCallback(async (input: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<string> => {
     const target = await resourceReady.current;
     if (!target) throw new Error(tRef.current('coManaged.editor.errors.forbidden'));
-    const document = conversationDocument(input.content);
-    if (!document) throw new Error(tRef.current('coManaged.editor.errors.invalid'));
-    let parent: { storeTenant: string; threadId: string; commentId: string } | undefined;
-    if (input.parentCommentId) {
-      const knownParent = known.current.get(input.parentCommentId);
-      const stored = knownParent ?? await nativeTicketDataSource.comments.findCommentById(input.parentCommentId)
-        .then(comment => comment && 'thread_id' in comment && comment.thread_id ? { storeTenant: target.tenant, threadId: comment.thread_id } : null);
-      if (!stored) throw new Error(tRef.current('coManaged.editor.errors.invalid'));
-      parent = { storeTenant: stored.storeTenant, threadId: stored.threadId, commentId: input.parentCommentId };
+    writer.current ??= createTicketCommentWriter({ resource: target, staging,
+      context: () => {
+        const current = conversationState.current;
+        return { canWrite: Boolean(current?.writeAudiences.length), actorTenant: current?.actor.tenant ?? '',
+          writeAudiences: current?.writeAudiences ?? [], draftAttachments: current?.draftAttachments ?? { audiences: [], maxFiles: 0, maxBytes: 0 } };
+      },
+      parent: async commentId => {
+        const entry = known.current.get(commentId);
+        if (entry) return { storeTenant: entry.storeTenant, threadId: entry.threadId, commentId };
+        const comment = await nativeTicketDataSource.comments.findCommentById(commentId);
+        return comment?.thread_id ? { storeTenant: target.tenant, threadId: comment.thread_id, commentId } : null;
+      },
+    });
+    try {
+      const receipt = await writer.current(input);
+      known.current.set(receipt.commentId, { audience: input.audience, storeTenant: receipt.storeTenant, threadId: receipt.threadId,
+        topLevel: !input.parentCommentId, own: true });
+      return receipt.commentId;
+    } catch (error) {
+      const code = error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome';
+      throw new Error(tRef.current(code === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : `coManaged.editor.errors.${code}`));
     }
-    const key = JSON.stringify([input.content, input.audience, input.parentCommentId ?? null]);
-    if (operation.current?.key !== key) operation.current = { key, id: newCoManagedOperationId() };
-    const result = await createCoManagedTicketCommentAction(target, parent
-      ? { operationId: operation.current.id, document, parent, expectedAudience: input.audience }
-      : { operationId: operation.current.id, document, audience: input.audience });
-    if (!result.ok) {
-      // Only an unconfirmed outcome keeps its operation id; a definite rejection starts fresh next time.
-      if (result.code !== 'unknownOutcome') operation.current = null;
-      throw new Error(tRef.current(`coManaged.editor.errors.${result.code}`));
-    }
-    operation.current = null;
-    known.current.set(result.receipt.commentId, { audience: input.audience, storeTenant: result.receipt.storeTenant, threadId: result.receipt.threadId, topLevel: !parent, own: true });
-    return result.receipt.commentId;
-  }, []);
+  }, [staging]);
 
   const dataSource = useMemo<TicketDataSource>(() => {
     // Native until the co-managed screen has loaded; a ticket that is not co-managed stays native.
@@ -152,6 +156,9 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
     const addComment: TicketDataSource['comments']['addTicketCommentWithCacheForCurrentUser'] = async (ticketIdArg, content, isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients, writeOptions) => {
       const audience = writeOptions?.audienceId as CommentAudience | undefined;
       // Scheduling, resolution and per-recipient email are native-only features of a requester-visible comment.
+      if (staging.getSnapshot().length && (!audience || schedule || isResolution || emailRecipients)) {
+        return actionError(tRef.current('coManaged.editor.errors.invalid')) as never;
+      }
       if (!audience || (audience === 'requester' && (schedule || isResolution || emailRecipients))) {
         return nativeTicketDataSource.comments.addTicketCommentWithCacheForCurrentUser(
           ticketIdArg, content, audience ? false : isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients);
@@ -181,6 +188,8 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
       comments: { addTicketCommentWithCacheForCurrentUser: addComment, createComment },
       conversation: {
         ...(audiences ? { audiences } : {}),
+        composerFooter: ({ audienceId, disabled }) => draftLimits && <SharedCommentAttachmentPicker staging={staging} limits={draftLimits}
+          attachable={Boolean(audienceId && draftLimits.audiences.includes(audienceId as CommentAudience))} disabled={disabled} />,
         // The co-managed document model has no images, files or local mentions.
         ...(audiences ? { editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } } : {}),
         formatAuthorLabel: ({ comment, authorName }) => comment.actor_organization_name ? `${authorName} · ${comment.actor_organization_name}` : authorName,
@@ -190,10 +199,12 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
         timeSummary: ({ timeEntriesRefreshKey }) => <CoManagedEffortSummary target={{ kind: 'shared', resource: screenState.resource }} refreshKey={timeEntriesRefreshKey} />,
       },
     });
-  }, [enabled, screenState, writeAudiences, ticketId, writeComment]);
+  }, [enabled, screenState, writeAudiences, ticketId, writeComment, draftLimits, staging]);
 
   return <TicketDataSourceProvider dataSource={dataSource}>
-    {children}
+    <CoManagedTicketAttachmentsProvider resource={enabled && screenState && screenState !== 'failed' ? screenState.resource : null}>
+      {children}
+    </CoManagedTicketAttachmentsProvider>
     {disclosure && resource.current && <CoManagedThreadDisclosure resource={resource.current} thread={disclosure.thread} actor={disclosure.actor} audiences={disclosure.audiences}
       onClosed={() => setDisclosure(null)} onSaved={() => { const { done } = disclosure; setDisclosure(null); done(); }} />}
   </TicketDataSourceProvider>;

@@ -296,6 +296,41 @@ describe('T008 composer and attachments', () => {
     expect(result).toEqual({ actionError: 'coManaged.editor.errors.invalid' });
     expect(mocks.priv).not.toHaveBeenCalled();
   });
+
+  it('publishes replacement bytes after an uncertain attempt even when file metadata is identical', async () => {
+    const source = build();
+    const footer = source.conversation.composerFooter!({ audienceId: 'shared_it', disabled: false }) as React.ReactElement<any>;
+    const staging = footer.props.staging;
+    const first = new File(['one'], 'same.txt', { type: 'text/plain', lastModified: 10 });
+    const replacement = new File(['two'], 'same.txt', { type: 'text/plain', lastModified: 10 });
+    staging.add([first]);
+    mocks.submit.mockRejectedValueOnce(new Error('Lost response'));
+    const send = () => source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'message', false, false, false, undefined, undefined, undefined, { audienceId: 'shared_it' });
+    await send();
+    staging.remove(staging.getSnapshot()[0].key);
+    staging.add([replacement]);
+    await send();
+    expect(mocks.prepare).toHaveBeenCalledTimes(2);
+    expect(mocks.prepare.mock.calls[1][0].files).toEqual([replacement]);
+    expect(mocks.prepare.mock.calls[1][0].operationId).not.toBe(mocks.prepare.mock.calls[0][0].operationId);
+  });
+
+  it('keeps newly selected files when a previous message finishes publication', async () => {
+    const source = build();
+    const footer = source.conversation.composerFooter!({ audienceId: 'shared_it', disabled: false }) as React.ReactElement<any>;
+    const staging = footer.props.staging;
+    const first = new File(['one'], 'first.txt');
+    const next = new File(['two'], 'next.txt');
+    staging.add([first]);
+    let release!: (value: any) => void;
+    mocks.submit.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const saving = source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'message', false);
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    staging.add([next]);
+    release({ ok: true, receipt: { commentId: 'own', storeTenant: 'customer-a', threadId: 'town' } });
+    await saving;
+    expect(staging.getSnapshot().map((item: any) => item.file)).toEqual([next]);
+  });
 });
 
 describe('T012 MSP shared route', () => {

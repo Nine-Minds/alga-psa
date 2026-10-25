@@ -17,18 +17,17 @@ import {
 import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
 import { conversationDocument } from './conversationText';
 import { newCoManagedOperationId } from './coManagedOperationId';
-import { prepareConversationDraft, submitConversationDraft, type PreparedConversationDraft } from './conversationDraftSubmission';
+import { createTicketCommentWriter, TicketCommentWriteError } from './ticketCommentWriter';
 import CoManagedTicketSection from './CoManagedTicketSection';
 import CoManagedEffortSummary from './CoManagedEffortSummary';
 import SharedCommentAttachmentPicker from './SharedCommentAttachmentPicker';
-import { createAttachmentStaging, stagedFilesSignature, type AttachmentStaging } from '@/lib/co-managed/attachmentStaging';
+import { createAttachmentStaging, type AttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { loadSharedConversation, type SharedConversationSnapshot } from '@/lib/co-managed/loadSharedConversation';
 import { mapConversationItem, isWritableOwnItem, toSharedEditPatch, sharedEditKey, RESTRICTED_AUTHOR_REFERENCE,
   type SharedConversationContext } from '@/lib/co-managed/sharedTicketMapping';
 import type { SharedTicketDetailsResult } from '@/lib/co-managed/sharedTicketDataTypes';
 import { saveSharedTicketEditAction, searchSharedTicketEditOptionsAction } from '@/lib/actions/coManagedTicketEditActions';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
-import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
 import { mutateCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentMutationActions';
 import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManagedPrivateTicketCommentActions';
 
@@ -122,8 +121,6 @@ const INERT: {
   avatars: { getUserAvatarUrlsBatchAction: 'custom', getTeamAvatarUrlsBatchAction: 'custom', getContactAvatarUrlAction: 'custom' },
 };
 
-type ConversationActionResult = { ok: false; code: string } | { ok: true; receipt: { commentId: string; storeTenant: string; threadId: string } };
-
 export function createSharedTicketDataSource(resource: CoManagedSharedResource, loaded: SharedTicketLoaded, options: SharedTicketSourceOptions): TicketDataSource {
   const { t, base = nativeTicketDataSource } = options;
   const { details } = loaded;
@@ -195,54 +192,27 @@ export function createSharedTicketDataSource(resource: CoManagedSharedResource, 
 
   // ---- comments ----
   const staging: AttachmentStaging = createAttachmentStaging(newCoManagedOperationId);
-  let writeOperation: { key: string; id: string; prepared?: PreparedConversationDraft } | null = null;
   const failureText = (code: string) =>
     code === 'unknownOutcome' ? t('coManaged.conversation.unknownOutcome')
       : ['notReady', 'abandoned', 'preparationFailed'].includes(code) ? t(`coManaged.conversation.files.${code}`)
       : message(code === 'aborted' ? 'unknownOutcome' : code);
 
+  const writer = createTicketCommentWriter({ resource, staging,
+    context: () => ({ canWrite, actorTenant: conversation.actor.tenant, writeAudiences: conversation.writeAudiences,
+      draftAttachments: conversation.draftAttachments }),
+    parent: commentId => {
+      const item = itemById().get(commentId);
+      return item ? { storeTenant: item.storeTenant, threadId: item.threadId, commentId: item.commentId } : null;
+    },
+  });
   const writeComment = async (input: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<string> => {
-    const fail = (code: string): never => { throw new Error(failureText(code)); };
-    if (!canWrite || !conversation.writeAudiences.includes(input.audience)) fail('forbidden');
-    const document = conversationDocument(input.content) ?? fail('invalid');
-    let parent: { storeTenant: string; threadId: string; commentId: string } | undefined;
-    if (input.parentCommentId) {
-      const known = itemById().get(input.parentCommentId);
-      if (!known) fail('invalid');
-      parent = { storeTenant: known!.storeTenant, threadId: known!.threadId, commentId: known!.commentId };
-    }
-    const staged = staging.getSnapshot();
-    const { maxFiles, maxBytes, audiences: attachable } = conversation.draftAttachments;
-    if (staged.length && (!attachable.includes(input.audience) || staged.length > maxFiles || staged.some(({ file }) => file.size > maxBytes))) fail('invalid');
-    const key = JSON.stringify([input.content, input.audience, parent?.commentId ?? null, stagedFilesSignature(staged)]);
-    if (writeOperation?.key !== key) writeOperation = { key, id: newCoManagedOperationId() };
-    const operationId = writeOperation.id;
-    const privateStore = conversation.actor.tenant !== resource.tenant && input.audience === 'organization_private';
-    let result: ConversationActionResult | { ok: false; code: string };
     try {
-      if (staged.length) {
-        writeOperation.prepared ??= await prepareConversationDraft({ resource, actorTenant: conversation.actor.tenant, operationId, document, audience: input.audience,
-          parent, files: staged.map(item => item.file) });
-        result = await submitConversationDraft(writeOperation.prepared, () => true, () => {}) as ConversationActionResult;
-      } else if (privateStore) {
-        result = await saveCoManagedPrivateTicketCommentAction(resource, { kind: 'create', operationId, document, ...(parent ? { parent } : {}) }) as ConversationActionResult;
-      } else {
-        result = await createCoManagedTicketCommentAction(resource, parent
-          ? { operationId, document, parent, expectedAudience: input.audience }
-          : { operationId, document, audience: input.audience }) as ConversationActionResult;
-      }
-    } catch {
-      // Unknown outcome: keep the operation (and prepared files) so the retry is the same request.
-      return fail('unknownOutcome');
+      const receipt = await writer(input);
+      await reloadConversation();
+      return receipt.commentId;
+    } catch (error) {
+      throw new Error(failureText(error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome'));
     }
-    if (!result.ok) {
-      if (result.code !== 'unknownOutcome' && result.code !== 'notReady') writeOperation = null;
-      return fail(result.code);
-    }
-    writeOperation = null;
-    staging.clear();
-    await reloadConversation();
-    return result.receipt.commentId;
   };
 
   const audienceFor = (explicit: string | undefined, isInternal: boolean): CommentAudience => {
