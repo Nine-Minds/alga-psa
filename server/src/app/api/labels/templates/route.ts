@@ -16,6 +16,7 @@ const RBAC_RESOURCE_BY_CLASS: Record<LabelClass, string> = {
   'ticket-work-tag': 'ticket',
   'asset-identity': 'asset',
   'stock-unit-identity': 'inventory',
+  'staging-container': 'project',
   // RMA read access is `warranty:read` OR `inventory:read`: this is the primary grant, the alternate is below.
   'rma-work-tag': 'inventory',
 };
