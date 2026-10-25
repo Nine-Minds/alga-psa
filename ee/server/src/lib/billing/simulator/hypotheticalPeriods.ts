@@ -160,10 +160,7 @@ export function listInvoiceWindows(
   from: string,
   count: number,
 ): Array<{ start: string; end: string }> {
-  const historicalCycles = (schedule.history ?? []).map((cycle) => ({
-    start: toUtcMidnight(cycle.start_date),
-    end: toUtcMidnight(cycle.end_date),
-  }));
+  const historicalCycles = scheduleHistoricalCycles(schedule);
   const earliestHistory = historicalCycles
     .map((cycle) => toISODate(toPlainDate(cycle.start)))
     .sort()[0];
@@ -206,6 +203,20 @@ export function listInvoiceWindows(
 
 function toUtcMidnight(value: ISO8601String): ISO8601String {
   return `${toISODate(toPlainDate(value))}T00:00:00Z`;
+}
+
+/**
+ * A scenario schedule's billed cycle history in the UTC-midnight form the
+ * shared client-cadence generator requires. The scenario stores date-only
+ * values; every reader converts here so none passes bare dates through.
+ */
+function scheduleHistoricalCycles(
+  schedule: ScenarioBillingSchedule,
+): Array<{ start: ISO8601String; end: ISO8601String }> {
+  return (schedule.history ?? []).map((cycle) => ({
+    start: toUtcMidnight(cycle.start_date),
+    end: toUtcMidnight(cycle.end_date),
+  }));
 }
 
 export interface GenerateLineServicePeriodsInput {
@@ -295,10 +306,7 @@ export function generateLineServicePeriods(
                   dayOfWeek: invoiceSchedule.anchor.day_of_week,
                   referenceDate: invoiceSchedule.anchor.reference_date,
                 },
-                historicalCycles: (invoiceSchedule.history ?? []).map((cycle) => ({
-                  start: cycle.start_date,
-                  end: cycle.end_date,
-                })),
+                historicalCycles: scheduleHistoricalCycles(invoiceSchedule),
               }).records,
       };
     },

@@ -19,6 +19,7 @@ import {
 import { ensureClientBillingSettingsRow } from './billingSettings';
 import { loadBilledClientCadenceRecurringPeriods } from './billedClientCadenceRecurringPeriods';
 import type { HistoricalBillingCycleBoundary } from './clientCadenceServicePeriods';
+import { dbDateObjectToDateOnly, isDbLocalMidnightDate } from './dbDateOnly';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -29,6 +30,12 @@ function normalizeDbIsoUtcMidnight(value: unknown): ISO8601String {
     return ensureUtcMidnightIsoDate(value);
   }
   if (isDateObject(value)) {
+    // A `date` column hydrates as local midnight on a non-UTC server: that is the
+    // stored calendar day, not a mid-day instant. Any other non-UTC-midnight Date
+    // is still rejected below.
+    if (isDbLocalMidnightDate(value)) {
+      return ensureUtcMidnightIsoDate(`${dbDateObjectToDateOnly(value)}T00:00:00Z`);
+    }
     return ensureUtcMidnightIsoDate(value.toISOString());
   }
   return ensureUtcMidnightIsoDate(String(value));
