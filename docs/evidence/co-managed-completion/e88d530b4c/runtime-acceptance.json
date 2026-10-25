@@ -1,0 +1,242 @@
+{
+  "observedAt": "2026-10-25T02:15:00Z",
+  "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "evidenceCommit": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+  "evidenceCommitScope": "documentation/evidence only; the running application was built from candidateRevision",
+  "runtime": {
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "buildId": "build-1792892121948",
+    "actor": "qa@emeraldcity.oz",
+    "actorType": "internal MSP technician",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "organizationDisplayed": "Emerald City"
+  },
+  "results": [
+    {
+      "area": "Native versus shared ticket list route decision",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets; /msp/tickets/customer",
+      "initialState": "Authenticated QA session; production candidate built from adeabb3274. Native All Tickets rendered 14 items. Customer Tickets rendered one shared White Rabbit IT ticket, 000002.",
+      "action": "Navigated between the native All Tickets and shared Customer Tickets routes, reloaded both, and compared rendered records and route names.",
+      "persistedResultAfterReload": "Native All Tickets still rendered 14 items; Customer Tickets still rendered one distinct shared ticket. No merged list was observed.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "native-tickets.png",
+        "customer-tickets.png"
+      ],
+      "limitation": "Read-only route/data-source observation. Filters, URL-state, export, authorized writes, SSR mutations, and client-ticket navigation regressions were not exercised."
+    },
+    {
+      "area": "Shared ticket detail, audience labels, SLA and retained effort read",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580; related customer White Rabbit IT",
+      "route": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "initialState": "Current White Rabbit IT fixture 000002; Open, High, MSP-responsible, no MSP assignee; history contains shared and MSP-only entries; distinct White Rabbit and Oz SLA sections and retained MSP time are displayed.",
+      "action": "Opened the current shared ticket detail and read its visible timeline, SLA and effort sections. No write was made.",
+      "persistedResultAfterReload": "Not independently reloaded in this observation; no mutation was made. Existing displayed history and effort remain visible.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "shared-ticket.png"
+      ],
+      "limitation": "An MSP view does not establish customer audience separation. No comment, attachment, assignment, escalation/handback, time write, revocation, or customer reload was executed."
+    },
+    {
+      "area": "Multipart action gate",
+      "status": "not-run",
+      "actor": null,
+      "tenant": null,
+      "route": null,
+      "initialState": "Workspace acceptance state and currently authorized customer-administrator session were not established.",
+      "action": "No ordinary mutation or acceptance action was submitted.",
+      "persistedResultAfterReload": null,
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [],
+      "blocker": "Need a verified disposable pending-acceptance workspace and its authorized customer administrator to prove mutation refusal, acceptance, and post-acceptance writes without changing active White Rabbit history."
+    },
+    {
+      "area": "Microsoft OIDC application callback",
+      "status": "not-run",
+      "actor": null,
+      "tenant": null,
+      "route": null,
+      "initialState": "No customer-owned OIDC binding or authorized customer administrator session verified.",
+      "action": "No OIDC callback was invoked.",
+      "persistedResultAfterReload": null,
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [],
+      "blocker": "Positive application callback and negative issuer, audience, expiry, nonce, PKCE and replay cases remain unexecuted. Emulator evidence must be labeled as such; live Microsoft authority acceptance is separate."
+    },
+    {
+      "area": "Customer /msp/account product boundary",
+      "status": "not-run",
+      "actor": null,
+      "tenant": null,
+      "route": "/msp/account and child routes",
+      "initialState": "The available authenticated browser actor is an internal MSP technician, not a customer actor.",
+      "action": "No customer-path denial claim was made from the MSP session.",
+      "persistedResultAfterReload": null,
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [],
+      "blocker": "Require separately authenticated customer actor and authorized PSA control actor; customer denial across root and child paths remains unverified."
+    },
+    {
+      "area": "Customer provider configuration and inbound mail",
+      "status": "not-run",
+      "actor": null,
+      "tenant": null,
+      "route": null,
+      "initialState": "No current customer-owned provider binding or dedicated inbound test mailbox was verified.",
+      "action": "No provider, inbound message, reply, duplicate delivery, revocation or cross-tenant request was submitted.",
+      "persistedResultAfterReload": null,
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [],
+      "blocker": "Need a disposable provider binding and mailbox plus separate authorized customer/MSP actors. No live Microsoft acceptance is claimed."
+    },
+    {
+      "area": "Shared ticket/task collaboration, audience, SLA and time writes",
+      "status": "partial-read-only",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580; related customer White Rabbit IT",
+      "route": "Current shared ticket detail listed above",
+      "initialState": "Existing history shows labeled shared and MSP-only comments, distinct organization SLA blocks, and MSP recorded commercial effort.",
+      "action": "Read the current fixture as QA; made no mutations.",
+      "persistedResultAfterReload": "No new persisted result; reads only.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "shared-ticket.png"
+      ],
+      "blocker": "No customer-side comparison or new action was performed. Task collaboration, authorship qualification, privacy denial, assignments, escalation/handback, independent clocks, operational/commercial separation, revocation and retained history after revocation remain unverified."
+    },
+    {
+      "area": "Native ticket, comments, attachments, projects, time, workflows and client-ticket navigation",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets and /msp/tickets/customer",
+      "initialState": "Authenticated QA Tester in Emerald City. Native list had 14 items. No existing customer history was modified.",
+      "action": "Navigated/reloaded native and shared ticket routes; created labeled MSP-only ticket TIC001020 for client Emerald City; opened its detail and reloaded it.",
+      "persistedResultAfterReload": "The two ticket lists remained distinct after reload. Ticket TIC001020 and its description persisted at /msp/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819; list total increased to 15.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "native-tickets.png",
+        "customer-tickets.png",
+        "shared-ticket.png",
+        "cm-native-ticket-worker-event.png",
+        "worker-business-event.json"
+      ],
+      "blocker": "Native comments, attachments, project/task screens, time writes, workflows and client-ticket tab navigation were not exercised.",
+      "limitation": "Native comments, attachments, project/task screens, time writes, workflow editor/control, and client-ticket tab navigation were not fully exercised. Live updates were offline; see runtimeLimitation."
+    },
+    {
+      "area": "Ordinary PSA ticket write and SSR/read after mutation",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/create-ticket -> /msp/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819",
+      "initialState": "Native All Tickets showed 14 items. Selected internal Emerald City client and General Support board; no active customer relationship was modified.",
+      "action": "Created uniquely labeled ticket CM-DEPLOY-ACCEPTANCE-20261025-0158-WORKER as QA Tester and reloaded its detail.",
+      "persistedResultAfterReload": "TIC001020 remained rendered with its title and description; native list count became 15.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "cm-native-ticket-worker-event.png",
+        "worker-business-event.json"
+      ],
+      "limitation": "One internal native ticket action only; does not prove co-managed acceptance gate behavior or other PSA write surfaces."
+    },
+    {
+      "area": "Workflow worker business-event processing",
+      "status": "partial-processing-no-run",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "Native ticket creation; downstream workflow:events:global stream",
+      "initialState": "A unique native ticket did not exist; workflow worker was running and global stream was idle at the earlier observation.",
+      "action": "Created ticket TIC001020 through the product and inspected the worker\u2019s corresponding TICKET_CREATED event.",
+      "persistedResultAfterReload": "Ticket persisted. Worker resolved payload.TicketCreated.v1 and ticket correlation, matched two of three workflows, skipped both because paused, and acknowledged stream message 1792893767326-0. No workflow run started.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "worker-business-event.json"
+      ],
+      "blocker": "A valid event was processed, but no active eligible workflow performed a business action. Verify completion with an appropriately authorized active workflow in a disposable fixture."
+    },
+    {
+      "area": "Active workflow business event and persisted actions",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets -> /msp/workflow-editor/bdfbb4ba-42f0-4173-9134-2b24fec45134 -> /msp/workflow-control -> /msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+      "initialState": "Published Smoke CM: ticket created -> silent + cc comments workflow was Paused; QA internal-ticket tenant and workflow were confirmed through product UI.",
+      "action": "Temporarily activated that one workflow, created disposable QA ticket TIC001021, observed event/run, then restored workflow to Paused.",
+      "persistedResultAfterReload": "Run 8b7b4f9e-eb64-4efb-b259-0ce6ab3c1997 was Succeeded (2s). Ticket reload displayed both workflow comments (SMOKE-SILENT and SMOKE-CC). Worker log records event 902f6728-2980-4625-81f5-db626aa21928, TICKET_CREATED, matchingWorkflows=2, startedRuns=1, one other paused match. Prior Paused state was restored.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "workflow-run.json",
+        "co-managed-workflow-success.png",
+        "co-managed-workflow-ticket-comments.png"
+      ],
+      "limitation": "One native event workflow only; does not prove co-managed customer privacy, tasks, tenant boundaries, provider/mail, approvals, SLA, or time scenarios. The workflow created public comments on an internal QA ticket."
+    },
+    {
+      "area": "Authorized PSA account route remains functional",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/account",
+      "initialState": "Authenticated QA session on production build adeabb3274.",
+      "action": "Opened /msp/account and waited for account data.",
+      "persistedResultAfterReload": "Account Management rendered plan/tier and billing summary, then Danger Zone; authorized PSA route remained available.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [],
+      "limitation": "This internal MSP success does not test customer denial at /msp/account or any child route."
+    },
+    {
+      "area": "Workflow worker business effect and state restoration",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets -> workflow editor -> /msp/workflow-control -> TIC001021 detail",
+      "initialState": "Published workflow bdfbb4ba-42f0-4173-9134-2b24fec45134 was Paused; disposable internal QA ticket did not exist.",
+      "action": "Temporarily activated the workflow through product UI, created TIC001021, observed TICKET_CREATED event and execution, reloaded ticket, then restored workflow to Paused.",
+      "persistedResultAfterReload": "Event 902f6728-2980-4625-81f5-db626aa21928 started run 8b7b4f9e-eb64-4efb-b259-0ce6ab3c1997; run succeeded and two workflow comments persisted on ticket fd378092-ce14-4423-a988-a9816ba0c950. Prior workflow Paused state restored.",
+      "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "evidence": [
+        "workflow-run.json",
+        "co-managed-workflow-success.png",
+        "co-managed-workflow-ticket-comments.png"
+      ],
+      "limitation": "Internal native ticket workflow only; does not satisfy customer collaboration, privacy, SLA, or tenant acceptance."
+    }
+  ],
+  "runtimeLimitation": {
+    "status": "verification-pending-after-configuration-repair",
+    "priorObservedEndpoints": {
+      "/api/notifications/live-token": 503,
+      "/api/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819/live-token": 500
+    },
+    "repair": "card-owned hocuspocus:21 healthy on 1235; HOCUSPOCUS_JWT_SECRET configured only in ignored server/.env.local; review-app:24 restarted through supported board at 02:17:09Z",
+    "currentVerification": "Not testable until admitted build listens. Token status and actual websocket delivery have not been verified."
+  },
+  "notOverallAcceptance": true,
+  "configurationRepair": {
+    "cardHocuspocusService": "hocuspocus:21",
+    "port": 1235,
+    "healthHttp": 200,
+    "startedAt": "2026-10-25T02:13:44.546Z",
+    "reviewAppRestart": "admitted 2026-10-25T02:17:09.105Z; current normal build is still active",
+    "security": "Secret stored only in ignored server/.env.local and supplied to the card-owned service with Node literal-safe --env-file; value is not recorded in evidence.",
+    "verification": "Pending HTTP readiness, token endpoints and actual websocket delivery; open defect remains."
+  },
+  "latestRuntimeObservation": {
+    "observedAt": "2026-10-25T02:26:00Z",
+    "service": "review-app:24",
+    "buildCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "runtimeSourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+    "processPid": 2049894,
+    "processState": "Next production build active; log reports finalizing page optimization and collecting build traces",
+    "readiness": "HTTP 000 during build",
+    "log": "/home/robert/.alga-dev/card-services/card-service_964ce5e0-45a5-41b2-8e2c-73903742a85a_review-app_24/service.log",
+    "priorBuild": "adeabb3274fc18a62a101238c67729cd23435afb / build-1792892121948 remains a separate prior serving build record"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "observedAt": "2026-10-25T02:12:00Z",
+  "applicationBuildRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "buildId": "build-1792892121948",
+  "actor": {
+    "email": "qa@emeraldcity.oz",
+    "type": "internal MSP technician"
+  },
+  "tenant": {
+    "name": "Emerald City",
+    "id": "24ac76c8-df59-4b10-8371-c56222904580"
+  },
+  "workflow": {
+    "id": "bdfbb4ba-42f0-4173-9134-2b24fec45134",
+    "name": "Smoke CM: ticket created -> silent + cc comments",
+    "priorState": "Paused",
+    "temporaryState": "Active",
+    "restoredState": "Paused"
+  },
+  "ticket": {
+    "number": "TIC001021",
+    "id": "fd378092-ce14-4423-a988-a9816ba0c950",
+    "title": "CM-DEPLOY-ACTIVE-WORKFLOW-20261025-0210",
+    "client": "Emerald City",
+    "disposableQaFixture": true
+  },
+  "event": {
+    "id": "902f6728-2980-4625-81f5-db626aa21928",
+    "type": "TICKET_CREATED",
+    "payloadSchema": "payload.TicketCreated.v1",
+    "stream": "workflow:events:global",
+    "workerLog": ".card-service-logs/workflow-worker.log",
+    "totalWorkflows": 3,
+    "matchingWorkflows": 2,
+    "startedRuns": 1,
+    "pausedSkips": 1
+  },
+  "run": {
+    "id": "8b7b4f9e-eb64-4efb-b259-0ce6ab3c1997",
+    "status": "Succeeded",
+    "durationSeconds": 2
+  },
+  "action": {
+    "route": "/msp/tickets -> /msp/workflow-editor/bdfbb4ba-42f0-4173-9134-2b24fec45134 -> /msp/workflow-control -> /msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+    "resultAfterReload": "Both workflow-created comments persisted on the ticket: SMOKE-SILENT workflow comment and SMOKE-CC workflow comment.",
+    "audience": "The first configured comment is public; this test used the internal Emerald City tenant and QA-authored ticket."
+  },
+  "evidence": [
+    "co-managed-workflow-success.png",
+    "co-managed-workflow-ticket-comments.png"
+  ],
+  "limitations": [
+    "This validates one event-triggered native ticket workflow only. It does not establish task collaboration, privacy separation, cross-tenant behavior or any of the other acceptance scenarios.",
+    "This is production app runtime evidence; it is not a live Microsoft authority test."
+  ]
+}

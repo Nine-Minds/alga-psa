@@ -1,0 +1,689 @@
+{
+  "checkedAt": "2026-10-25T02:26:00Z",
+  "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "requiredGuides": 14,
+  "coveredGuides": 0,
+  "blockedGuides": 14,
+  "guides": [
+    {
+      "guide": "index.html",
+      "recordingPaths": {
+        "webm": "review-walkthrough.webm",
+        "chapterVtt": "review-walkthrough.vtt",
+        "recordingJson": "review-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "index.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/index.html",
+      "recordingPaths": {
+        "webm": "guides/collection-walkthrough.webm",
+        "chapterVtt": "guides/collection-walkthrough.vtt",
+        "recordingJson": "guides/collection-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/index.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "recordingPaths": {
+        "webm": "guides/01-onboarding-walkthrough.webm",
+        "chapterVtt": "guides/01-onboarding-walkthrough.vtt",
+        "recordingJson": "guides/01-onboarding-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/01-onboarding.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "recordingPaths": {
+        "webm": "guides/02-licensing-and-seats-walkthrough.webm",
+        "chapterVtt": "guides/02-licensing-and-seats-walkthrough.vtt",
+        "recordingJson": "guides/02-licensing-and-seats-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/02-licensing-and-seats.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "recordingPaths": {
+        "webm": "guides/03-access-policies-walkthrough.webm",
+        "chapterVtt": "guides/03-access-policies-walkthrough.vtt",
+        "recordingJson": "guides/03-access-policies-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/03-access-policies.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "recordingPaths": {
+        "webm": "guides/04-delegated-administration-walkthrough.webm",
+        "chapterVtt": "guides/04-delegated-administration-walkthrough.vtt",
+        "recordingJson": "guides/04-delegated-administration-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/04-delegated-administration.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "recordingPaths": {
+        "webm": "guides/05-ticket-queue-walkthrough.webm",
+        "chapterVtt": "guides/05-ticket-queue-walkthrough.vtt",
+        "recordingJson": "guides/05-ticket-queue-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/05-ticket-queue.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "recordingPaths": {
+        "webm": "guides/06-projects-and-tasks-walkthrough.webm",
+        "chapterVtt": "guides/06-projects-and-tasks-walkthrough.vtt",
+        "recordingJson": "guides/06-projects-and-tasks-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/06-projects-and-tasks.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "recordingPaths": {
+        "webm": "guides/07-conversations-and-files-walkthrough.webm",
+        "chapterVtt": "guides/07-conversations-and-files-walkthrough.vtt",
+        "recordingJson": "guides/07-conversations-and-files-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/07-conversations-and-files.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "recordingPaths": {
+        "webm": "guides/08-sla-walkthrough.webm",
+        "chapterVtt": "guides/08-sla-walkthrough.vtt",
+        "recordingJson": "guides/08-sla-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/08-sla.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "recordingPaths": {
+        "webm": "guides/09-time-and-billing-walkthrough.webm",
+        "chapterVtt": "guides/09-time-and-billing-walkthrough.vtt",
+        "recordingJson": "guides/09-time-and-billing-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/09-time-and-billing.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "recordingPaths": {
+        "webm": "guides/10-departure-and-archives-walkthrough.webm",
+        "chapterVtt": "guides/10-departure-and-archives-walkthrough.vtt",
+        "recordingJson": "guides/10-departure-and-archives-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/10-departure-and-archives.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "recordingPaths": {
+        "webm": "guides/11-export-restore-and-upgrade-walkthrough.webm",
+        "chapterVtt": "guides/11-export-restore-and-upgrade-walkthrough.vtt",
+        "recordingJson": "guides/11-export-restore-and-upgrade-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/11-export-restore-and-upgrade.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "recordingPaths": {
+        "webm": "guides/12-customer-integrations-walkthrough.webm",
+        "chapterVtt": "guides/12-customer-integrations-walkthrough.vtt",
+        "recordingJson": "guides/12-customer-integrations-walkthrough.json"
+      },
+      "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "Current HTTP-ready runtime for the guide scenario",
+        "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
+        "A genuine separate WebM captured during this guide\u2019s walkthrough",
+        "Timed chapter WebVTT matched to the recording",
+        "Browser-verified playback and chapter seeking"
+      ],
+      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "scaffoldPresent": {
+        "chapterVtt": true,
+        "recordingJson": true,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/12-customer-integrations.html",
+        "status": "not executed as a complete production walkthrough"
+      },
+      "limitations": [
+        "A production application read check is not full acceptance of this guide\u2019s scenario.",
+        "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "runtime": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "productionVerified": false,
+        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+      },
+      "build": {
+        "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+        "priorBuildId": "build-1792892121948",
+        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "status": "rebuilding; no current HTTP readiness"
+      }
+    }
+  ],
+  "runtimeSummary": "Production review-app:24 is in a normal board-admitted rebuild for evidence-only HEAD e88d530b4c0fadfa40d3c0a77cf7102745187219; application source revision remains adeabb3274fc18a62a101238c67729cd23435afb. The earlier adeabb production build was ready, but live-update repair has not yet been verified after restart. Full product scenarios and genuine walkthrough recordings remain incomplete: 0/14.",
+  "metadataUpdatedAt": "2026-10-25T01:18:28.714114+00:00",
+  "runtime": {
+    "sourceRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+    "mode": "development",
+    "origin": "http://feature-co-managed-it.localhost:3374",
+    "productionVerified": false
+  },
+  "build": {
+    "sourceRevision": null,
+    "status": "production-not-admitted; worker compiler inputs audited only"
+  },
+  "evidenceCommit": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+  "lastRefreshedAt": "2026-10-25T02:15:00Z",
+  "latestBuildAttempt": {
+    "candidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+    "status": "building",
+    "observedAt": "2026-10-25T02:26:00Z",
+    "readinessHttp": 0,
+    "log": "/home/robert/.alga-dev/card-services/card-service_964ce5e0-45a5-41b2-8e2c-73903742a85a_review-app_24/service.log"
+  }
+}
