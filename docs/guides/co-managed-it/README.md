@@ -2,7 +2,7 @@
 
 Use these guides to review the customer workspace, collaboration, and relationship lifecycle separately. Start with the ticket-screen walkthrough for the existing White Rabbit fixture, then choose the sections you want to assess.
 
-The [ticket-screen walkthrough](http://100.82.172.57:8874/) retains its October 17 results and evidence. These source guides are rendered with an explicit candidate revision and 14-row recording coverage file; the generated page provenance and blocked recording scaffolds use those inputs. Their steps have **not been executed against the current review app**. A documented expected result is not a recorded pass.
+The [ticket-screen walkthrough](http://100.82.172.57:8874/) links the recorded results and evidence. These source guides are rendered with an explicit runtime revision and 14-row recording coverage file. Consult each recording's scenario result and limitations: a playable recording can show a partial or blocked scenario. Expected results in the instructions are not recorded passes. Preserve the actual application build revision when the checkout contains later documentation or tooling changes.
 
 ## Regenerate guide pages
 
@@ -63,7 +63,7 @@ The review app is [feature-co-managed-it.localhost:23374](http://feature-co-mana
 
 | Identity or record | Use |
 | --- | --- |
-| `qa@emeraldcity.oz` | QA Tester, Oz MSP technician; shared-ticket work. This is not a blanket management or billing administrator identity. |
+| `qa@emeraldcity.oz` | QA Tester, Oz workspace administrator with a co-managed technician assignment. Confirm the current session and offered controls; do not add grants to bypass a denial. |
 | `alice@whiterabbit.test` | White Rabbit IT customer administrator; customer-owned tickets and relationship controls. |
 | `noassign@emeraldcity.oz` | MSP viewer. Despite the name, this account has a viewer assignment. |
 | [White Rabbit client](http://feature-co-managed-it.localhost:23374/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed) | Existing client relationship and Co-managed IT view. Last recorded allocation: two seats. |

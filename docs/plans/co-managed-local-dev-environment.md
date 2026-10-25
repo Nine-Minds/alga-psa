@@ -76,6 +76,13 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4374/health        # 2
    `scripts/dev/generate-co-managed-worker-env.sh` (reads `server/.env.local` +
    `secrets/`, writes the two gitignored `.env`s, and replicates the
    Dockerfile's `dist/seeds/onboarding` copy that provisioning needs).
+   It also copies configured system-mail and Microsoft endpoint settings so
+   invitation activities use the same transport as the app. For production
+   review, set `CO_MANAGED_WORKER_APPLICATION_URL` to the review-app origin
+   before generating the files; invitation links must open that app. Keep
+   generated files private. Cold-restart the card-owned workers through their
+   registered services after changing their environment; reusing an existing
+   child process does not reload it.
 4. Start/restart the three board card services (`dev-server`,
    `temporal-worker`, `workflow-worker`) via `alga-dev workflow-restart-service
    --projectId=964ce5e0-... --name=<svc>`; verify with `alga-dev list-sessions`

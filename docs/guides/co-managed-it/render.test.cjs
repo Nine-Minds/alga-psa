@@ -39,6 +39,8 @@ function fixture({ completed = false, corrupt = null } = {}) {
       row.actors = ['Synthetic test actor'];
       row.steps = [{ action: 'Synthetic renderer fixture' }];
       row.outcomes = ['Renderer emitted player markup'];
+      row.scenario = { status: 'partial; provider acceptance blocked' };
+      row.limitations = ['External provider <binding> is unavailable.'];
       row.durationSeconds = 12;
       row.runtime = { sourceRevision: revision, environment: 'isolated synthetic renderer test' };
       row.build = { sourceRevision: revision };
@@ -88,6 +90,9 @@ test('completed recording renders an embedded player, copied WebM/VTT, metadata,
   assert.match(guideHtml, /<track kind="chapters"/);
   assert.match(guideHtml, /video\.currentTime=Number\(select\.value\)/);
   assert.match(guideHtml, /src="01-onboarding-walkthrough\.webm"/);
+  assert.match(guideHtml, /Scenario result:<\/strong> partial; provider acceptance blocked/);
+  assert.match(guideHtml, /External provider &lt;binding&gt; is unavailable/);
+  assert.match(guideHtml, /does not establish acceptance of unverified steps/);
   const artifactPath = name => path.join(path.dirname(f.outputPath), `guides/01-onboarding-walkthrough.${name}`);
   assert.equal(fs.readFileSync(artifactPath('webm')).subarray(0, 4).toString('hex'), '1a45dfa3');
   assert.match(fs.readFileSync(artifactPath('vtt'), 'utf8'), /Synthetic chapter/);

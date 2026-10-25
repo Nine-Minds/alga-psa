@@ -256,6 +256,8 @@ function completedRecording(row, pageName) {
     html: `<section class="walkthrough-recording" id="${id}-recording" data-recording-status="complete" aria-labelledby="${id}-recording-title">
 <h2 id="${id}-recording-title">Walkthrough recording</h2>
 <p>Recorded ${escape(row.recordedAt)} at revision <code>${escape(row.testedRevision)}</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> ${escape(row.scenario?.status ?? 'executed; consult the recorded outcomes')}. A playable recording does not establish acceptance of unverified steps.</p>
+${row.limitations?.length ? `<ul class="recording-limitations">${row.limitations.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : ''}
 <video controls preload="metadata" aria-label="${escape(row.guide)} walkthrough recording"><source src="${escape(webm)}" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="${escape(vtt)}" default></video>
 <label for="${id}-chapters">Chapters</label><select id="${id}-chapters">${options}</select>
 <p><a href="${escape(json)}">Recording metadata</a> · <a href="${escape(vtt)}">Chapter file</a></p>

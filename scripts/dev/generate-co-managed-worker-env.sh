@@ -5,16 +5,11 @@
 # are gitignored.
 #
 # Layout this script assumes (see docs/plans/co-managed-local-dev-environment.md):
-#   - app server:        localhost:3374 (board-owned service running
-#                        `NODE_ENV=development NODE_OPTIONS="--max-old-space-size=32768 --enable-source-maps"
-#                         PORT=3374 ../node_modules/.bin/next dev` from server/ —
-#                        NOT `npm run dev`: its nx build-deps step forces a
-#                        production server:build on every cache miss, which
-#                        OOMed/died repeatedly here. Build workspace deps first
-#                        (npx nx build-deps server, or the per-package builds
-#                        in the docs) and run next dev directly.)
-#   - isolated database: server_co_managed on the alga-psa-local-test postgres
-#                        (direct 127.0.0.1:5472 — pgbouncer only routes "server")
+#   - app server:        board-owned dev-server on :3374 or review-app on :23374.
+#                        Set CO_MANAGED_WORKER_APPLICATION_URL to the review
+#                        origin when testing invitation links in production mode.
+#   - isolated database: server_co_managed on card-owned co-managed-it-postgres
+#                        (direct 127.0.0.1:5376).
 #   - temporal dev:      docker container co-managed-it-temporal-dev, 127.0.0.1:7374
 #   - redis:             dedicated branch redis (docker container
 #                        co-managed-it-redis, 127.0.0.1:6374). NOTE: the
@@ -51,7 +46,7 @@ DB_PORT="$(get_env DB_PORT)"
 REDIS_HOST="$(get_env REDIS_HOST)"
 REDIS_PORT="$(get_env REDIS_PORT)"
 TEMPORAL_ADDRESS="$(get_env TEMPORAL_ADDRESS)"
-APPLICATION_URL="$(get_env APPLICATION_URL)"
+APPLICATION_URL="${CO_MANAGED_WORKER_APPLICATION_URL:-$(get_env APPLICATION_URL)}"
 ALGA_AUTH_KEY="$(get_secret_file alga_auth_key)"
 CREDENTIAL_ENCRYPTION_KEY="$(get_secret_file credential_encryption_key)"
 
@@ -124,6 +119,21 @@ PORT=4374
 EOF
 
 echo "wrote ee/temporal-workflows/.env and services/workflow-worker/.env"
+
+# Fresh customer workspaces have no tenant email provider yet. Their initial
+# invitation uses the system provider, so workers need the same mail settings
+# as the app. Copy literal lines; sourcing these files corrupts unquoted '&'
+# characters in passwords. Keep optional provider overrides for review stacks.
+for worker_env in "$REPO_ROOT/ee/temporal-workflows/.env" "$REPO_ROOT/services/workflow-worker/.env"; do
+  for key in EMAIL_ENABLE EMAIL_PROVIDER EMAIL_HOST EMAIL_PORT EMAIL_FROM EMAIL_FROM_NAME \
+    EMAIL_USERNAME EMAIL_USER EMAIL_PASSWORD EMAIL_PASS EMAIL_REJECT_UNAUTHORIZED EMAIL_REQUIRE_TLS \
+    MICROSOFT_LOGIN_BASE_URL MICROSOFT_GRAPH_BASE_URL; do
+    line="$(grep -m1 "^${key}=" "$ENV_LOCAL" || true)"
+    if [[ -n "$line" ]]; then
+      printf '%s\n' "$line" >> "$worker_env"
+    fi
+  done
+done
 
 # The temporal worker's dist runtime resolves onboarding seeds from
 # dist/seeds/onboarding (Docker parity: ee/temporal-workflows/Dockerfile copies
