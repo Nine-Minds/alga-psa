@@ -77,6 +77,7 @@ import {
 } from '../../../../packages/tickets/src/actions/checklists/ticketChecklistActions';
 import {
   createChecklistTemplate,
+  updateChecklistTemplate,
   getChecklistTemplates,
   duplicateChecklistTemplateToClient,
   addChecklistTemplateItem,
@@ -791,6 +792,70 @@ describe('ticket checklists', () => {
       const audits = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
         .where({ ticket_id: otherTicket, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' });
       expect(audits).toHaveLength(0);
+    });
+
+    describe('ownership vs rule client matchers', () => {
+      it('rejects a rule on an owned template that names another client', async () => {
+        const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const templateId = await createScopedTemplate(fixture.clientId);
+        expect(
+          await createChecklistTemplateApplyRule(templateId, { client_ids: [fixture.clientId, other.clientId] })
+        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope' });
+
+        const rule = expectActionSuccess(await createChecklistTemplateApplyRule(templateId, {}));
+        expect(
+          await updateChecklistTemplateApplyRule(rule.apply_rule_id, { client_ids: [other.clientId] })
+        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope' });
+      });
+
+      it('stores a rule naming only the owner as "any client", and it fires only on the owner\'s tickets', async () => {
+        const owner = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const templateId = await createScopedTemplate(owner.clientId, ['Owner step']);
+        const rule = expectActionSuccess(
+          await createChecklistTemplateApplyRule(templateId, { client_ids: [owner.clientId], keywords: ['owner-only-kw'] })
+        );
+        expect(rule.client_ids).toBeNull();
+
+        const ownerTicket = await createTicketViaModel(owner, { title: 'owner-only-kw request' });
+        const otherTicket = await createTicketViaModel(other, { title: 'owner-only-kw request' });
+        expect(await appliedTemplateIds(ownerTicket)).toContain(templateId);
+        expect(await appliedTemplateIds(otherTicket)).not.toContain(templateId);
+      });
+
+      it('a rule naming another client can never apply an owned template there (rows written outside the actions)', async () => {
+        const owner = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const templateId = await createScopedTemplate(owner.clientId);
+        await scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules').insert({
+          tenant: fixture.tenantId,
+          template_id: templateId,
+          client_ids: db.raw('ARRAY[?]::uuid[]', [other.clientId]),
+          is_enabled: true,
+        });
+        const otherTicket = await createTicketViaModel(other, { title: 'Anything' });
+        expect(await appliedTemplateIds(otherTicket)).not.toContain(templateId);
+      });
+
+      it('giving a template an owner resets owner-only rule clients and refuses rules naming other clients', async () => {
+        const owner = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+
+        const ok = await createScopedTemplate(null);
+        const okRule = expectActionSuccess(await createChecklistTemplateApplyRule(ok, { client_ids: [owner.clientId] }));
+        expectActionSuccess(await updateChecklistTemplate(ok, { client_id: owner.clientId }));
+        const okRuleAfter = await scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules')
+          .where({ apply_rule_id: okRule.apply_rule_id }).first();
+        expect(okRuleAfter.client_ids).toBeNull();
+
+        const blocked = await createScopedTemplate(null);
+        expectActionSuccess(await createChecklistTemplateApplyRule(blocked, { client_ids: [owner.clientId, other.clientId] }));
+        expect(await updateChecklistTemplate(blocked, { client_id: owner.clientId })).toMatchObject({
+          messageKey: 'features/tickets:errors.checklist.templateRulesTargetOtherClients',
+        });
+        const unchanged = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: blocked }).first();
+        expect(unchanged.client_id).toBeNull();
+      });
     });
 
     it('auto-apply skips an out-of-scope template even when the rule matches', async () => {

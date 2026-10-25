@@ -1699,7 +1699,9 @@
       "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
       "ruleOriginInvalid": "One of the selected ticket sources is not valid.",
       "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
-      "templateClientInvalid": "The selected client was not found."
+      "templateClientInvalid": "The selected client was not found.",
+      "ruleClientOutsideTemplateScope": "This template belongs to one client, so its rules cannot target other clients.",
+      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client."
     }
   },
   "ticketSection": {

@@ -6,11 +6,13 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import {
+  APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE,
   APPLY_RULE_KEYWORD_TOO_LONG,
   APPLY_RULE_MAX_KEYWORDS,
   APPLY_RULE_MAX_KEYWORD_LENGTH,
   APPLY_RULE_ORIGIN_INVALID,
   APPLY_RULE_TOO_MANY_KEYWORDS,
+  TEMPLATE_RULES_TARGET_OTHER_CLIENTS,
 } from './applyRuleMatcherValidation';
 
 export type ChecklistActionError = ActionMessageError | ActionPermissionError;
@@ -29,6 +31,8 @@ const APPLY_RULE_SCOPE_ERROR_KEYS: Record<string, string> = {
   [APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY]: 'features/tickets:errors.checklist.ruleSubcategoryRequiresCategory',
   [TEMPLATE_CLIENT_MISMATCH]: 'features/tickets:errors.checklist.templateClientMismatch',
   [TEMPLATE_CLIENT_INVALID]: 'features/tickets:errors.checklist.templateClientInvalid',
+  [APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE]: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope',
+  [TEMPLATE_RULES_TARGET_OTHER_CLIENTS]: 'features/tickets:errors.checklist.templateRulesTargetOtherClients',
 };
 
 const EXPECTED_CHECKLIST_MESSAGES = new Set([

@@ -415,6 +415,14 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   // --- Auto-apply rule management ---
 
+  // The persisted owner of the template being edited (the dialog closes on save, so a pending
+  // change of owner in the form never applies to the rules shown here).
+  const ownerClientName: string | null = editingTemplate?.client_id
+    ? templates.find((tpl) => tpl.template_id === editingTemplate.template_id)?.client_name
+      ?? editingTemplate.client_name
+      ?? t('ticketing.checklistTemplates.scope.unknownClient')
+    : null;
+
   const handleAddRule = async () => {
     if (!editingTemplate) return;
     try {
@@ -962,14 +970,10 @@ const ChecklistTemplatesSettings: React.FC = () => {
                   </p>
                 </div>
 
-                {editingTemplate.client_id && (
+                {ownerClientName != null && (
                   <Alert variant="warning">
                     <AlertDescription>
-                      {t('ticketing.checklistTemplates.fields.rules.clientScopedWarning', {
-                        client: templates.find((tpl) => tpl.template_id === editingTemplate.template_id)?.client_name
-                          ?? editingTemplate.client_name
-                          ?? t('ticketing.checklistTemplates.scope.unknownClient'),
-                      })}
+                      {t('ticketing.checklistTemplates.fields.rules.clientScopedWarning', { client: ownerClientName })}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -1042,10 +1046,13 @@ const ChecklistTemplatesSettings: React.FC = () => {
                     definitions={serviceRequestDefinitions}
                     onClientPicked={(clientId) => void loadClientNames([clientId])}
                     onChange={(patch) => handleRuleMatcherChange(rule, patch)}
+                    ownerClientName={ownerClientName}
                   />
                   {ruleHasNoMatchers(rule) && (
                     <p className="text-xs font-medium text-muted-foreground">
-                      {t('ticketing.checklistTemplates.fields.rules.appliesToAll')}
+                      {ownerClientName != null
+                        ? t('ticketing.checklistTemplates.fields.rules.appliesToAllClientTickets', { client: ownerClientName })
+                        : t('ticketing.checklistTemplates.fields.rules.appliesToAll')}
                     </p>
                   )}
                   </div>

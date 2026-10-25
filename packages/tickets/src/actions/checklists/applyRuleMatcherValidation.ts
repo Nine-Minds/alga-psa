@@ -61,3 +61,30 @@ export function uniqueIdsOrNull(ids: readonly string[] | null | undefined): stri
   const unique = Array.from(new Set((ids ?? []).filter(Boolean)));
   return unique.length > 0 ? unique : null;
 }
+
+export const APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE =
+  'This template belongs to one client, so its rules cannot target other clients.';
+export const TEMPLATE_RULES_TARGET_OTHER_CLIENTS =
+  "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client.";
+
+/**
+ * The client matcher of a rule on a template owned by `templateClientId`.
+ *
+ * Ownership (checklist_templates.client_id) is a hard boundary enforced at apply time; the rule's
+ * client matcher is targeting inside that boundary. On an owned template the only client a rule
+ * could ever fire for is the owner, so naming another client would save a rule that silently never
+ * applies there: rejected. Naming only the owner is redundant with ownership and is stored as
+ * "any client" (null), so the rule follows the template if its owner is later released.
+ * Tenant-wide templates (no owner) keep the list as given.
+ */
+export function ruleClientIdsForTemplate(
+  templateClientId: string | null | undefined,
+  clientIds: readonly string[] | null | undefined
+): string[] | null {
+  const ids = uniqueIdsOrNull(clientIds);
+  if (!templateClientId || !ids) return ids;
+  if (ids.some((id) => id !== templateClientId)) {
+    throw new Error(APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE);
+  }
+  return null;
+}

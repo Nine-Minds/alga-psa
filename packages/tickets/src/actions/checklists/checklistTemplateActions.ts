@@ -13,7 +13,8 @@ import {
   type ChecklistActionError,
 } from './checklistActionErrors';
 import {
-  uniqueIdsOrNull,
+  TEMPLATE_RULES_TARGET_OTHER_CLIENTS,
+  ruleClientIdsForTemplate,
   validateRuleKeywords,
   validateRuleOrigins,
 } from './applyRuleMatcherValidation';
@@ -100,7 +101,7 @@ export interface ChecklistTemplateApplyRuleInput {
  * Columns written for a rule's matchers. Normalises + validates the new
  * matcher fields; naming a definition implies "from service request".
  */
-function applyRuleMatcherColumns(input: ChecklistTemplateApplyRuleInput) {
+function applyRuleMatcherColumns(input: ChecklistTemplateApplyRuleInput, templateClientId: string | null) {
   const keywordMode = input.keyword_mode ?? 'any';
   const keywordTarget = input.keyword_target ?? 'title_and_description';
   // Out-of-range mode/target values are rejected by the table's CHECK constraints (23514).
@@ -110,7 +111,7 @@ function applyRuleMatcherColumns(input: ChecklistTemplateApplyRuleInput) {
     category_id: input.category_id || null,
     subcategory_id: input.subcategory_id || null,
     priority_id: input.priority_id || null,
-    client_ids: uniqueIdsOrNull(input.client_ids),
+    client_ids: ruleClientIdsForTemplate(templateClientId, input.client_ids),
     ticket_origins: validateRuleOrigins(input.ticket_origins),
     from_service_request: Boolean(input.from_service_request) || definitionId !== null,
     service_request_definition_id: definitionId,
@@ -179,6 +180,35 @@ async function assertApplyRuleScopeIsConsistent(
     .first('category_id', 'parent_category');
   if (!subcategory || subcategory.parent_category !== categoryId) {
     throw new Error(APPLY_RULE_SUBCATEGORY_INVALID);
+  }
+}
+
+/**
+ * Giving a template an owner: its rules' client matchers must fit inside that owner (see
+ * ruleClientIdsForTemplate). Rules naming only the owner are reset to "any client"; a rule naming
+ * any other client blocks the change rather than being silently narrowed.
+ */
+async function narrowRuleClientsToOwner(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  ownerClientId: string
+): Promise<void> {
+  const rules = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+    .where({ template_id: templateId })
+    .whereNotNull('client_ids')
+    .select('apply_rule_id', 'client_ids') as Array<{ apply_rule_id: string; client_ids: string[] | null }>;
+  for (const rule of rules) {
+    try {
+      ruleClientIdsForTemplate(ownerClientId, rule.client_ids);
+    } catch {
+      throw new Error(TEMPLATE_RULES_TARGET_OTHER_CLIENTS);
+    }
+  }
+  if (rules.length) {
+    await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+      .whereIn('apply_rule_id', rules.map((rule) => rule.apply_rule_id))
+      .update({ client_ids: null, updated_at: trx.fn.now() });
   }
 }
 
@@ -284,17 +314,22 @@ export const updateChecklistTemplate = withAuth(
       }
       if (input.description !== undefined) updates.description = input.description;
       if (input.is_active !== undefined) updates.is_active = input.is_active;
-      if (input.client_id !== undefined) {
-        if (input.client_id) await assertClientBelongsToTenant(db, tenant, input.client_id);
-        updates.client_id = input.client_id || null;
-      }
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        if (input.client_id !== undefined) {
+          if (input.client_id) {
+            await assertClientBelongsToTenant(trx, tenant, input.client_id);
+            await narrowRuleClientsToOwner(trx, tenant, templateId, input.client_id);
+          }
+          updates.client_id = input.client_id || null;
+        }
 
-      const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
-        .where({ template_id: templateId })
-        .update(updates)
-        .returning('*');
-      if (!row) throw new Error('Checklist template not found');
-      return row;
+        const [row] = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .update(updates)
+          .returning('*');
+        if (!row) throw new Error('Checklist template not found');
+        return row;
+      });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);
       if (expected) {
@@ -546,7 +581,7 @@ export const createChecklistTemplateApplyRule = withAuth(
           .insert({
             tenant,
             template_id: templateId,
-            ...applyRuleMatcherColumns(input),
+            ...applyRuleMatcherColumns(input, template.client_id ?? null),
           })
           .returning('*');
         return row;
@@ -567,16 +602,25 @@ export const updateChecklistTemplateApplyRule = withAuth(
       await requireSettingsPermission(user);
 
       const { knex: db } = await createTenantKnex();
-      await assertApplyRuleScopeIsConsistent(db, tenant, input);
-      const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
-        .where({ apply_rule_id: applyRuleId })
-        .update({
-          ...applyRuleMatcherColumns(input),
-          updated_at: db.fn.now(),
-        })
-        .returning('*');
-      if (!row) throw new Error('Apply rule not found');
-      return row;
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const existing = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+          .where({ apply_rule_id: applyRuleId })
+          .first('template_id');
+        if (!existing) throw new Error('Apply rule not found');
+        const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: existing.template_id })
+          .first('client_id');
+        await assertApplyRuleScopeIsConsistent(trx, tenant, input);
+        const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+          .where({ apply_rule_id: applyRuleId })
+          .update({
+            ...applyRuleMatcherColumns(input, template?.client_id ?? null),
+            updated_at: trx.fn.now(),
+          })
+          .returning('*');
+        if (!row) throw new Error('Apply rule not found');
+        return row;
+      });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);
       if (expected) {
