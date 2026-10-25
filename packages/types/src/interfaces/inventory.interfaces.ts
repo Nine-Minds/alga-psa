@@ -166,6 +166,10 @@ export interface IStockUnit extends TenantEntity {
   location_name?: string | null;
   client_name?: string | null;
   product_name?: string | null;
+  /** The claimant of an `allocated` unit: a sales order's number, or a project staging claim (C6). */
+  allocated_so_number?: string | null;
+  allocated_project_id?: string | null;
+  allocated_project_number?: string | null;
 }
 
 export interface IStockMovement extends TenantEntity {

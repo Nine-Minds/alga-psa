@@ -764,6 +764,15 @@ export default function ProjectMaterialsDrawer({
                         {material.description && (
                           <div className="text-xs text-gray-500">{material.description}</div>
                         )}
+                        {material.from_staging_line_id && (
+                          <Badge
+                            variant="info"
+                            className="mt-1"
+                            {...withDataAutomationId({ id: `${id}-from-staging-${material.project_material_id}` })}
+                          >
+                            {materialsT('fromStaging', 'From staging')}
+                          </Badge>
+                        )}
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
                       <td className="py-2 text-right">

@@ -133,6 +133,20 @@ const getStatusType = async (
   return status?.status_type ?? null;
 };
 
+// Project staging (C6): reserved or staged stock lines still hold stock. Deleting the project would leave
+// those claims orphaned, so it is refused until they are released or installed.
+const countActiveStagingStockClaims = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'project_staging_lines')
+    .where({ project_id: options.entityId, kind: 'stock' })
+    .whereIn('status', ['reserved', 'staged'])
+    .count<{ count: string }>('* as count')
+    .first();
+  return Number(result?.count ?? 0);
+};
+
 const countAssetAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
     const result = await tenantScopedTable(trx, options.tenant, 'asset_associations')
@@ -321,6 +335,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countProjectTaskWorkItems('time_entries')
       },
       { type: 'project_material', table: 'project_materials', foreignKey: 'project_id', label: 'material' },
+      {
+        type: 'staging_stock_claim',
+        table: 'project_staging_lines',
+        label: 'reserved or staged stock item',
+        countQuery: countActiveStagingStockClaims
+      },
       {
         type: 'asset_association',
         table: 'asset_associations',

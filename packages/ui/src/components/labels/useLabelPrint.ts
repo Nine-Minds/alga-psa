@@ -29,6 +29,12 @@ export interface LabelPrintRequest {
   linkedAssetId?: string;
 }
 
+/** A mixed print: labels of several classes in ONE PDF, in this order (C6 staging bulk print). */
+export interface LabelPrintItemsRequest {
+  items: Array<{ labelClass: LabelClass; id: string }>;
+  layout?: unknown;
+}
+
 export type LabelPrintOutcome =
   | { status: 'printed'; printed: number; skipped: number; blobUrl: string; popupBlocked: boolean }
   | { status: 'failed'; httpStatus: number; message: string; failures: LabelPrintFailure[] };
@@ -66,14 +72,14 @@ export function useLabelPrint() {
     return body.assets ?? [];
   }, []);
 
-  const print = useCallback(async (request: LabelPrintRequest): Promise<LabelPrintOutcome> => {
+  const send = useCallback(async (body: LabelPrintRequest | LabelPrintItemsRequest, requested: number): Promise<LabelPrintOutcome> => {
     setIsPrinting(true);
     try {
       const response = await fetch('/api/labels/pdf', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         const { message, failures } = await readError(response);
@@ -85,7 +91,7 @@ export function useLabelPrint() {
       const opened = window.open(blobUrl, '_blank');
       return {
         status: 'printed',
-        printed: request.ids.length - skipped,
+        printed: requested - skipped,
         skipped,
         blobUrl,
         popupBlocked: !opened,
@@ -102,5 +108,8 @@ export function useLabelPrint() {
     }
   }, []);
 
-  return { print, loadTemplates, loadLinkedAssets, isPrinting };
+  const print = useCallback((request: LabelPrintRequest) => send(request, request.ids.length), [send]);
+  const printItems = useCallback((request: LabelPrintItemsRequest) => send(request, request.items.length), [send]);
+
+  return { print, printItems, loadTemplates, loadLinkedAssets, isPrinting };
 }

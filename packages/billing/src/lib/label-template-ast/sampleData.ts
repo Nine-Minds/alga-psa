@@ -13,6 +13,8 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   detail: 'Diagnose power fault',
   secondaryIdentifier: 'AT-000123',
   serialSuffix: '7K2Q',
+  // Shown only by templates that bind it (the staging box label): "Box n of m".
+  sequence: { n: 3, total: 5 },
   tenantClient: { name: 'Example MSP', logoUrl: null, brandText: 'Example MSP' },
-  display: { assetLine: 'Asset AT-000123', serialLine: 'S/N \u20267K2Q' },
+  display: { assetLine: 'Asset AT-000123', serialLine: 'S/N \u20267K2Q', sequenceLine: 'Box 3 of 5' },
 });

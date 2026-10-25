@@ -457,3 +457,35 @@ export const releaseAllProjectStaging = withAuth(async (
   if (isGateError(g)) return g;
   return releaseAllProjectClaims(g.db, tenant, projectId, userId(user));
 }));
+
+// ---- Pickers -----------------------------------------------------------------------------------
+
+/** The project's tasks (with their phase) for staging and box task pickers. */
+export const listProjectStagingTasks = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+): Promise<Array<{ task_id: string; task_name: string; phase_name: string }> | StagingActionError | StockConflictResult> => run(async () => {
+  const g = await gate(user, tenant, projectId, 'read');
+  if (isGateError(g)) return g;
+  return g.db('project_tasks as t')
+    .join('project_phases as ph', function () {
+      this.on('ph.phase_id', '=', 't.phase_id').andOn('ph.tenant', '=', 't.tenant');
+    })
+    .where({ 't.tenant': tenant, 'ph.project_id': projectId })
+    .select('t.task_id', 't.task_name', 'ph.phase_name')
+    .orderBy('ph.order_number', 'asc')
+    .orderBy('t.wbs_code', 'asc')
+    .limit(1000);
+}));
+
+/** Active stock locations, for where a box physically is. Informational only: staging moves no stock. */
+export const listProjectStagingLocations = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+): Promise<Array<{ location_id: string; name: string }> | StagingActionError | StockConflictResult> => run(async () => {
+  const g = await gate(user, tenant, projectId, 'read');
+  if (isGateError(g)) return g;
+  return g.db('stock_locations').where({ tenant, is_active: true }).select('location_id', 'name').orderBy('name', 'asc');
+}));

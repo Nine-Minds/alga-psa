@@ -150,7 +150,7 @@ export async function listMaterials(
 ): Promise<MaterialRow[]> {
   const cfg = PARENTS[parentType];
   return runInTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx(`${cfg.table} as m`)
+    const query = trx(`${cfg.table} as m`)
       .leftJoin('service_catalog as sc', function () {
         this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');
       })
@@ -163,7 +163,15 @@ export async function listMaterials(
         'sc.cost_currency as catalog_cost_currency',
       )
       .orderBy('m.created_at', 'desc');
-    return rows as MaterialRow[];
+    if (parentType === 'project') {
+      // C6: which materials were installed from staging (the drawer marks them).
+      query
+        .leftJoin('project_staging_lines as psl', function () {
+          this.on('psl.project_material_id', '=', 'm.project_material_id').andOn('psl.tenant', '=', 'm.tenant');
+        })
+        .select('psl.staging_line_id as from_staging_line_id');
+    }
+    return (await query) as MaterialRow[];
   });
 }
 

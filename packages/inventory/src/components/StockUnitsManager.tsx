@@ -577,10 +577,19 @@ export function StockUnitsManager({
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
-      render: (v: any) => (
-        <Badge variant={statusVariant(v)} size="sm">
-          {humanizeStatus(v)}
-        </Badge>
+      render: (v: any, record: IStockUnit) => (
+        <div className="flex flex-col items-start gap-0.5">
+          <Badge variant={statusVariant(v)} size="sm">
+            {humanizeStatus(v)}
+          </Badge>
+          {v === 'allocated' && (record.allocated_project_number || record.allocated_so_number) && (
+            <span className="text-xs text-muted-foreground" id={`stock-unit-claimant-${record.unit_id}`}>
+              {record.allocated_project_number
+                ? t('stockUnits.claimant.project', 'Project {{number}}', { number: record.allocated_project_number })
+                : t('stockUnits.claimant.salesOrder', 'Sales order {{number}}', { number: record.allocated_so_number })}
+            </span>
+          )}
+        </div>
       ),
     },
     {

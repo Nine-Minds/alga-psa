@@ -55,6 +55,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
@@ -120,6 +121,8 @@ function computeProjectScheduleAmountsForNotification(
 export type ProjectUpdateResult = IProject & {
     deposit_reconciliation_needed?: boolean;
     products_moved_to_hold?: number;
+    /** Set when the project was just closed with reserved or staged stock still claimed for it (C6). */
+    active_staging_claims?: number;
 };
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -1679,7 +1682,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        const { beforeProject, updatedProject, billingCloseResult } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
@@ -1698,7 +1701,12 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
             const billingCloseResult = transitionedToClosed
                 ? await closeProjectBillingSchedule(trx, tenant, projectId)
                 : undefined;
-            return { beforeProject, updatedProject: project, billingCloseResult };
+            // Stale reservations (C6): a project closing with stock still reserved or staged for it
+            // keeps that stock away from everyone else; the editor offers to release it.
+            const activeStagingClaims = transitionedToClosed
+                ? await countActiveStockClaims(trx, tenant, projectId)
+                : 0;
+            return { beforeProject, updatedProject: project, billingCloseResult, activeStagingClaims };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -1777,6 +1785,9 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         }
         const depositReconciliationNeeded = billingCloseResult?.depositReconciliationNeeded ?? false;
         const productsMovedToHold = billingCloseResult?.productsMovedToHold ?? 0;
+        if (activeStagingClaims > 0) {
+            Object.assign(updatedProject, { active_staging_claims: activeStagingClaims });
+        }
         return billingCloseResult === undefined
             ? updatedProject
             : Object.assign(updatedProject, {
