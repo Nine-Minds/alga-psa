@@ -45,6 +45,8 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+import { contractLineRecurringStreams } from '../../../shared/billingClients/contractLineTimingRule';
+
 const wizard = enabled ? await import('../src/actions/contractWizardActions') : (null as any);
 
 const messageOf = (value: any): string => value?.actionError ?? value?.permissionError ?? '';
@@ -194,5 +196,50 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
     expect(Number(row.block_price)).toBe(440000);
     const svcRows = await db('contract_template_line_services').where({ tenant, template_line_id: templateLine.template_line_id });
     expect(svcRows.map((r) => r.service_id).sort()).toEqual([svcA, svcB].sort());
+  });
+  // Contract-wide timing = advance with a cadence Prepaid Block line: the Hourly block line is
+  // arrears-only (timing is per charge, not per line), and its block fee goes in advance through
+  // the `prepaid_block` stream. Regression: the wizard used to stamp the contract-wide advance on
+  // the block line and the contract failed validation.
+  const cadenceBlock = { ...block, issue_mode: 'cadence' as const, block_minutes: 600, block_price: 150000, expiry_months: null, trigger_on_expiry: false };
+
+  it('client wizard: contract-wide advance + cadence block saves; line is arrears, prepaid_block stream is advance', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      billing_timing: 'advance',
+      billing_frequency: 'monthly',
+      prepaid_block_lines: [{ name: 'Cadence block', services: [{ service_id: svcA, hourly_rate: 15000 }], block: cadenceBlock }],
+    }));
+    expect(messageOf(result)).toBe('');
+    contractIds.push(result.contract_id);
+
+    const line = await db('contract_lines').where({ tenant, contract_id: result.contract_id, contract_line_name: 'Cadence block' }).first();
+    expect(line.billing_timing).toBe('arrears');
+    const config = await db('contract_line_prepaid_blocks').where({ tenant, contract_line_id: line.contract_line_id }).first();
+    expect(config.issue_mode).toBe('cadence');
+    const streams = contractLineRecurringStreams(line, config);
+    expect(streams.map((s) => [s.stream, s.duePosition])).toEqual([['line', 'arrears'], ['prepaid_block', 'advance']]);
+  });
+
+  it('template wizard: contract-wide advance + cadence block saves; line is arrears, prepaid_block stream is advance', async () => {
+    const result = await wizard.createContractTemplateFromWizard({
+      contract_name: `Tpl cadence ${uuidv4().slice(0, 6)}`,
+      billing_frequency: 'monthly',
+      billing_timing: 'advance',
+      currency_code: 'USD',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [],
+      prepaid_block_lines: [{ name: 'Tpl cadence block', services: [{ service_id: svcA }], block: cadenceBlock }],
+    });
+    expect(messageOf(result)).toBe('');
+    templateIds.push(result.contract_id);
+
+    const templateLine = await db('contract_template_lines').where({ tenant, template_id: result.contract_id, template_line_name: 'Tpl cadence block' }).first();
+    expect(templateLine.billing_timing).toBe('arrears');
+    const row = await db('contract_template_line_prepaid_blocks').where({ tenant, template_line_id: templateLine.template_line_id }).first();
+    expect(row.issue_mode).toBe('cadence');
+    const streams = contractLineRecurringStreams({ contract_line_type: templateLine.line_type, billing_timing: templateLine.billing_timing }, row);
+    expect(streams.map((s) => [s.stream, s.duePosition])).toEqual([['line', 'arrears'], ['prepaid_block', 'advance']]);
   });
 });
