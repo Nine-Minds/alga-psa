@@ -387,6 +387,8 @@ export async function draftContractToScenario(
         trigger_on_expiry: expiryMonths === null ? false : Boolean(block.trigger_on_expiry),
         trigger_on_renewal: Boolean(block.trigger_on_renewal),
         replenishment_tier: block.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+        issue_mode: block.issue_mode === "cadence" ? "cadence" : "consumption",
+        rollover_periods: block.rollover_periods ?? 0,
       },
     });
   });

@@ -154,6 +154,8 @@ interface PrepaidBlockRow {
   trigger_on_expiry: boolean | null;
   trigger_on_renewal: boolean | null;
   replenishment_tier: string | null;
+  issue_mode?: string | null;
+  rollover_periods?: number | string | null;
 }
 
 /**
@@ -174,6 +176,8 @@ function toScenarioPrepaidBlock(row: PrepaidBlockRow | undefined): ScenarioPrepa
     trigger_on_expiry: Boolean(row.trigger_on_expiry),
     trigger_on_renewal: Boolean(row.trigger_on_renewal),
     replenishment_tier: row.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+    issue_mode: row.issue_mode === "cadence" ? "cadence" : "consumption",
+    rollover_periods: row.rollover_periods != null ? Number(row.rollover_periods) : 0,
   };
 }
 

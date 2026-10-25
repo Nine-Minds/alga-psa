@@ -34,6 +34,7 @@ import {
   resolvePoolForService,
   type ConfiguredService,
   type ContractChargeSource,
+  type CadencePrepaidBlockSupply,
   type HourBlockDrawSupply,
   type PoolDefinition,
   type PoolPeriodState,
@@ -412,6 +413,31 @@ export class ScenarioChargeSource implements ContractChargeSource {
       readyAsOf: issue.issueDate,
       billingProfile: null,
     }));
+  }
+
+  /**
+   * The line's cadence block terms. Which periods are due, their dates and the
+   * price are the resolver's; the scenario only says what the block is.
+   */
+  async cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null> {
+    const config = this.input.line.prepaid_block;
+    const ledger = this.ledger();
+    if (!config || config.issue_mode !== "cadence" || !ledger?.cadenceRule) {
+      return null;
+    }
+    const { line } = this.input;
+    const { soldAs } = ledger;
+    return {
+      contractLineId: line.key,
+      blockMinutes: config.block_minutes,
+      blockPrice: config.block_price,
+      rolloverPeriods: config.rollover_periods ?? 0,
+      scopeServiceIds: line.services.map((service) => service.service_id),
+      soldAsServiceId: soldAs.service_id,
+      serviceName: soldAs.service_name,
+      soldAsTaxRateId: soldAs.tax_rate_id,
+      cadence: ledger.cadenceRule,
+    };
   }
 
   async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {

@@ -68,7 +68,7 @@ import {
   uniqueProductServices,
 } from "./scenarioChargeSource";
 import { createReadOnlyTaxPorts } from "./readOnlyTaxPorts";
-import { buildPrepaidBlockLedger } from "./prepaidBlockLedger";
+import { buildCadencePrepaidBlockLedger, buildPrepaidBlockLedger } from "./prepaidBlockLedger";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import {
   loadSimulatorInvoiceParties,
@@ -137,7 +137,13 @@ export async function loadSimulationCalculationInput(
   const db = tenantDb(knex, tenant);
   await validateScenarioTenantScope(knex, tenant, scenario);
   const diagnostics: SimulationDiagnostic[] = [];
-  const currencyCode = scenario.currency_code || "USD";
+  const currencyCode = scenario.currency_code;
+  if (!currencyCode) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "This scenario has no currency. Set the contract's currency, then simulate again.",
+    );
+  }
 
   // --- Client context (read-only) ---
   let client: SimulationBillingClient;
@@ -229,22 +235,6 @@ export async function loadSimulationCalculationInput(
       contractEndDate,
     );
 
-    // Prepaid Block lines: issuance and draws are dated one-offs, not service
-    // periods, so the scenario source answers for each invoice window itself
-    // (window-driven families). The hourly charge below then prices only the
-    // demand no block absorbed.
-    const ledger = buildPrepaidBlockLedger({
-      scenario,
-      line,
-      invoicePeriods,
-      contractStartDate,
-      contractEndDate,
-      diagnostics,
-    });
-    if (ledger) {
-      run.prepaidLedgers.set(line.key, ledger);
-    }
-
     const streamPeriods = generateLineServicePeriods({
       line,
       horizon: scenario.horizon,
@@ -278,6 +268,38 @@ export async function loadSimulationCalculationInput(
         rounds[round] = { ...rounds[round], [stream]: timing };
         roundsByWindow.set(periodIndex, rounds);
       }
+    }
+
+    // Prepaid Block lines. Consumption blocks: issuance and draws are dated
+    // one-offs, not service periods, so the scenario source answers for each
+    // invoice window itself (window-driven families). Cadence blocks: one block
+    // per due block period, so the ledger is built from the periods above. The
+    // hourly charge then prices only the demand no block absorbed.
+    const dueTimings = (stream: "line" | "prepaid_block") =>
+      Array.from(roundsByWindow, ([periodIndex, rounds]) =>
+        rounds.flatMap((round) =>
+          round[stream] ? [{ periodIndex, timing: round[stream]! }] : [],
+        ),
+      ).flat();
+    const ledger =
+      line.prepaid_block?.issue_mode === "cadence"
+        ? buildCadencePrepaidBlockLedger({
+            scenario,
+            line,
+            blockTimings: dueTimings("prepaid_block"),
+            hourlyTimings: dueTimings("line"),
+            diagnostics,
+          })
+        : buildPrepaidBlockLedger({
+            scenario,
+            line,
+            invoicePeriods,
+            contractStartDate,
+            contractEndDate,
+            diagnostics,
+          });
+    if (ledger) {
+      run.prepaidLedgers.set(line.key, ledger);
     }
 
     if (assignedPeriods === 0) {
@@ -531,7 +553,8 @@ export function buildSimulatedPeriod(
         calculation.sourceCharges[lineIndex],
       );
       const blockLine =
-        canonicalLine.chargeFamily === "prepaidBlock"
+        canonicalLine.chargeFamily === "prepaidBlock" ||
+        canonicalLine.chargeFamily === "cadencePrepaidBlock"
           ? ("prepaid_block" as const)
           : canonicalLine.chargeFamily === "hourBlockDraw"
             ? ("block_draw" as const)
@@ -642,7 +665,7 @@ export function buildSimulatedPeriod(
       invoiceNumber: `SIM-${scenario.scenario_id}-${window.index + 1}`,
       issueDate: window.startDate,
       dueDate: endInclusive,
-      currencyCode: scenario.currency_code || "USD",
+      currencyCode: scenario.currency_code,
       poNumber: null,
       tenantClient: invoiceParties.tenantClient,
       customer: invoiceParties.customer,
@@ -674,11 +697,14 @@ export function buildSimulatedPeriod(
 /* Formatting                                                         */
 /* ------------------------------------------------------------------ */
 
-function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
+/** Minor units in the currency's own digits (JPY has none, KWD has three). */
+function formatCents(minorUnits: number, currencyCode: string): string {
+  const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: currencyCode || "USD",
-  }).format(cents / 100);
+    currency: currencyCode,
+  });
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+  return formatter.format(minorUnits / 10 ** digits);
 }
 
 function formatHours(hours: number): string {
