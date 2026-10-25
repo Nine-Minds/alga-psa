@@ -1,0 +1,1021 @@
+{
+  "checkedAt": "2026-10-25T05:39:39Z",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "requiredGuides": 14,
+  "coveredGuides": 0,
+  "blockedGuides": 14,
+  "guides": [
+    {
+      "guide": "index.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "index.html",
+        "status": "partial"
+      },
+      "limitations": [
+        "This is runtime smoke evidence, not the complete main-guide acceptance journey.",
+        "Open Review currently resolves to the separate registered :23374 app."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [
+        "qa@emeraldcity.oz"
+      ],
+      "steps": [
+        "Authenticated directly to candidate :23376",
+        "Opened /msp/tickets and /msp/tickets/customer"
+      ],
+      "outcomes": [
+        "Candidate serves build-1792904848073; native and customer ticket routes returned 200"
+      ],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "main-walkthrough.webm",
+        "chapterVttPath": "evidence/walkthroughs-e88d530b4c/main/chapters.vtt",
+        "coveragePath": "evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "locator.waitFor: Timeout 18000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('000002', { exact: true }).first() to be visible\u001b[22m\n",
+          "Native comment and submitted attachment, separate queues, shared effort and customer privacy recorded. Full native workflow/approval/invoice acceptance and all externally owned prerequisites remain separate.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/main/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/index.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/index.html",
+        "status": "partial"
+      },
+      "limitations": [
+        "The full collection scenario and every section were not walked.",
+        "Open Review returned QA on :23374 rather than this candidate."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [
+        "qa@emeraldcity.oz",
+        "alice@whiterabbit.test"
+      ],
+      "steps": [
+        "Opened collection routes in authenticated sessions"
+      ],
+      "outcomes": [
+        "Current candidate routes loaded; no full 12-section collection journey was performed"
+      ],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "collection-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/collection/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "This is the collection navigation walkthrough with live fixtures; each section has separate outcome limits. It does not establish all section acceptance or real provider/paid activation readiness.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/collection/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/01-onboarding.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "01-onboarding-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/01-onboarding/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Provisioning, original invitation delivery/claim, multipart pending denial, acceptance and onboarding writes were verified in successive real sessions. Two clips include automation waits that were corrected by later clips. Ordinary PSA and account denial are covered separately.",
+          "No live Microsoft sign-in or external paid-license validation is established."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/01-onboarding/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/02-licensing-and-seats.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "02-licensing-and-seats-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/02-licensing-and-seats/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Isolated Stripe simulator purchase; not live Stripe acceptance. Reconciliation and provisioning follow.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/02-licensing-and-seats/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/03-access-policies.html",
+        "status": "partial"
+      },
+      "limitations": [
+        "Only these two paths were checked; the full boundary matrix and authorized PSA control actor were not exercised."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [
+        "alice@whiterabbit.test"
+      ],
+      "steps": [
+        "Opened /msp/account and /msp/account/users"
+      ],
+      "outcomes": [
+        "Both showed \u201cPage not available in your current product experience\u201d; no account content was exposed"
+      ],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "03-access-policies-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/03-access-policies/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Customer board scope persistence/restoration verified. Independent ticket grants can preserve access; this is not a full revocation or viewer matrix.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/03-access-policies/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/04-delegated-administration.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "04-delegated-administration-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/04-delegated-administration/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Existing customer-approved board grant used; no existing approval was revoked. New-grant revocation/user/invitation operations remain unexecuted.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/04-delegated-administration/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/05-ticket-queue.html",
+        "status": "partial"
+      },
+      "limitations": [
+        "Queue filters, attachments, full audience matrix, revocation, and the complete ticket scenario remain unverified."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [
+        "qa@emeraldcity.oz",
+        "alice@whiterabbit.test"
+      ],
+      "steps": [
+        "Loaded native/shared ticket detail as QA and native detail as Alice",
+        "QA submitted a shared comment while Alice had the ticket open",
+        "Reloaded Alice ticket detail"
+      ],
+      "outcomes": [
+        "Shared comment appeared in Alice\u2019s open view after commit and remained after reload",
+        "Native and shared ticket screens both rendered"
+      ],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "05-ticket-queue-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/05-ticket-queue/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/05-ticket-queue/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/06-projects-and-tasks.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "06-projects-and-tasks-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/06-projects-and-tasks/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Shared task edit/revision, note persistence and project revocation/restoration checked. Files, requester access, disclosure, assignment and operational time are separate checks.",
+          "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/06-projects-and-tasks/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/07-conversations-and-files.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "07-conversations-and-files-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/07-conversations-and-files/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Posted task shared/private file publication and two-organization byte authorization verified. Removal, whole-thread disclosure, requester and portable/archive integration require additional checks.",
+          "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/07-conversations-and-files/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/08-sla.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "08-sla-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/08-sla/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/08-sla/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/09-time-and-billing.html",
+        "status": "partial"
+      },
+      "limitations": [
+        "No native timesheet list projection, approval, billing, or operational-time comparison was executed on this candidate."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [
+        "qa@emeraldcity.oz"
+      ],
+      "steps": [
+        "Opened shared ticket detail and read retained time summary"
+      ],
+      "outcomes": [
+        "Customer 0 hours, MSP 3.25 hours, combined 3.25 hours displayed"
+      ],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "09-time-and-billing-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/09-time-and-billing/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Customer operational effort and MSP commercial effort were recorded separately. Complete timesheet approval and MSP invoice reconciliation remain unverified.",
+          "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/09-time-and-billing/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/10-departure-and-archives.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "10-departure-and-archives-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/10-departure-and-archives/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "The first clip ends after a successful UI departure with a verification-query column error; the second clip corrects that read and confirms one released seat and one sealed manifest.",
+          "The disposable workspace had no participated shared work. Retention of shared files, private evidence and billed history remains unverified here."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/10-departure-and-archives/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/11-export-restore-and-upgrade.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "11-export-restore-and-upgrade-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/11-export-restore-and-upgrade/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Real customer export downloaded and hashed. Isolated installation restore and paid activation were not performed; destination license/subscription is externally required.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/11-export-restore-and-upgrade/walkthrough.webm"
+      }
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "recordingPaths": {
+        "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.webm",
+        "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.vtt",
+        "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.json"
+      },
+      "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "status": "blocked",
+      "missing": [
+        "The complete guide-specific product scenario with authorized actor(s) and persisted/reloaded outcomes at this candidate",
+        "Browser-verified playback and chapter seeking for a current WebM",
+        "Current-revision WebM not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.webm",
+        "Current-revision chapter VTT not yet recorded at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.vtt",
+        "Current-revision recording JSON not yet written at current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.json"
+      ],
+      "blocker": "Current candidate runtime acceptance and genuine per-guide recordings remain incomplete. Current and historical artifact paths are revision-separated; historical media cannot satisfy current acceptance.",
+      "scaffoldPresent": {
+        "chapterVtt": false,
+        "recordingJson": false,
+        "webm": false
+      },
+      "scenario": {
+        "guide": "guides/12-customer-integrations.html",
+        "status": "not executed as a complete current-candidate walkthrough"
+      },
+      "limitations": [
+        "Historical e88d530b4c media retains its original source revision and limitations; it is not current acceptance evidence.",
+        "The current candidate has no verified WebM playback or chapter seeking."
+      ],
+      "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+      "runtime": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23376",
+        "productionVerified": true,
+        "buildId": "build-1792904848073",
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "evidence": "runtime-acceptance.json"
+      },
+      "build": {
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+        "buildId": "build-1792904848073",
+        "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+      },
+      "actors": [],
+      "steps": [],
+      "outcomes": [],
+      "chapters": [],
+      "historicalRecording": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "scenario": "partial; consult outcomes and limitations",
+        "webmPath": "12-customer-integrations-walkthrough.webm",
+        "chapterVttPath": "../evidence/walkthroughs-e88d530b4c/12-customer-integrations/chapters.vtt",
+        "coveragePath": "../evidence/walkthroughs-e88d530b4c/video-coverage.json",
+        "playbackVerified": true,
+        "chapterSeekVerified": true,
+        "limitations": [
+          "Customer and sponsor email settings and customer provider workbench inspected separately. Customer provider save, real Microsoft callback, directory sync, requester inbound/replay/revocation are blocked by missing isolated test binding. System invitation SMTP delivery was verified separately and does not establish customer-provider acceptance.",
+          "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+        ],
+        "pathStatus": "historical distribution path; current destination is revision-scoped and separate",
+        "archiveSourcePath": "../../walkthroughs-e88d530b4c/12-customer-integrations/walkthrough.webm"
+      }
+    }
+  ],
+  "runtimeSummary": "Candidate cd28aa9531f7bd465711f90b92bf8592185d9c77 serves build-1792904848073 at :23376 and direct QA authentication plus selected route checks passed. Open Review still enters the separate :23374 service. PLAN acceptance is partial; all fourteen current-revision recordings and full guide scenarios remain blocked.",
+  "metadataUpdatedAt": "2026-10-25T05:39:39Z",
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "mode": "production",
+    "origin": "http://feature-co-managed-it.localhost:23376",
+    "productionVerified": true,
+    "buildId": "build-1792904848073",
+    "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+    "evidence": "runtime-acceptance.json",
+    "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+    "openReviewActor": "qa@emeraldcity.oz"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073",
+    "status": "built and serving from .next-review-candidate-racefix; launcher stamped only after HEAD and tracked-source fingerprint checks"
+  },
+  "inventoryCorrection": {
+    "correctedAt": "2026-10-25",
+    "currentArtifactRoot": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/",
+    "currentPathsAreDistinctFromHistorical": true,
+    "currentArtifactsPresent": false,
+    "historicalRoot": "../walkthroughs-e88d530b4c/",
+    "note": "All current WebM/VTT/JSON destinations are candidate-revision scoped and do not alias the e88d530b4c historical distribution."
+  }
+}

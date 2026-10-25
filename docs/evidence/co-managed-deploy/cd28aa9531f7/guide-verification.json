@@ -1,0 +1,494 @@
+{
+  "verifiedAt": "2026-10-25T05:40:37Z",
+  "currentCandidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "currentPages": [
+    {
+      "guide": "index.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/index.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "httpStatus": 200,
+      "blockedPlayer": true,
+      "hasCurrentSource": false,
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false,
+      "hasHistoricalMetadata": true,
+      "chapterScaffold": true
+    }
+  ],
+  "currentRecordingCoverage": "0/14 current candidate recordings complete; every current player is blocked with no source. Each guide links the retained historical e88d530b4c media and original coverage limitations.",
+  "historicalRecordings": {
+    "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "buildId": null,
+    "results": [
+      {
+        "guide": "index.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/6270225",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 75.88,
+          "chapterCount": 8,
+          "seekTargetSeconds": 20.414,
+          "seekedToSeconds": 20.414,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/index.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/2091904",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 25.68,
+          "chapterCount": 5,
+          "seekTargetSeconds": 5.868,
+          "seekedToSeconds": 5.868,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/01-onboarding.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/5112794",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 79.4,
+          "chapterCount": 12,
+          "seekTargetSeconds": 12.894,
+          "seekedToSeconds": 12.894,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/02-licensing-and-seats.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/1028359",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 12.12,
+          "chapterCount": 3,
+          "seekTargetSeconds": 5.525,
+          "seekedToSeconds": 5.525,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/03-access-policies.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/1858980",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 16.48,
+          "chapterCount": 4,
+          "seekTargetSeconds": 8.054,
+          "seekedToSeconds": 8.054,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/04-delegated-administration.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/1843696",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 16.2,
+          "chapterCount": 3,
+          "seekTargetSeconds": 7.798,
+          "seekedToSeconds": 7.798,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/05-ticket-queue.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/2495670",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 24.52,
+          "chapterCount": 4,
+          "seekTargetSeconds": 4.94,
+          "seekedToSeconds": 4.94,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/06-projects-and-tasks.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/6149128",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 68.52,
+          "chapterCount": 12,
+          "seekTargetSeconds": 9.287,
+          "seekedToSeconds": 9.287,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/07-conversations-and-files.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/4755004",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 57.68,
+          "chapterCount": 9,
+          "seekTargetSeconds": 16.378,
+          "seekedToSeconds": 16.378,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/08-sla.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/2496870",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 24.44,
+          "chapterCount": 4,
+          "seekTargetSeconds": 4.91,
+          "seekedToSeconds": 4.91,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/09-time-and-billing.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/3805867",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 38.36,
+          "chapterCount": 6,
+          "seekTargetSeconds": 12.814,
+          "seekedToSeconds": 12.814,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/10-departure-and-archives.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/2578691",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 33.36,
+          "chapterCount": 6,
+          "seekTargetSeconds": 9.173,
+          "seekedToSeconds": 9.173,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/11-export-restore-and-upgrade.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/1026253",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 11.92,
+          "chapterCount": 3,
+          "seekTargetSeconds": 5.888,
+          "seekedToSeconds": 5.888,
+          "playbackStarted": true
+        }
+      },
+      {
+        "guide": "guides/12-customer-integrations.html",
+        "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "range": {
+          "status": 206,
+          "contentRange": "bytes 0-3/2178868",
+          "signature": [
+            26,
+            69,
+            223,
+            163
+          ]
+        },
+        "browser": {
+          "durationSeconds": 22.48,
+          "chapterCount": 4,
+          "seekTargetSeconds": 5.007,
+          "seekedToSeconds": 5.007,
+          "playbackStarted": true
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "Historical e88d recordings were range-served, played and sought to their archived chapter cues; they remain historical, with their original limitations.",
+    "This does not verify playback or chapter seeking for current-candidate recordings, which do not exist."
+  ],
+  "currentAllBlocked": true
+}

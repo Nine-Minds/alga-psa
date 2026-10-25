@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "candidate": null,
+  "implementationReady": false,
+  "humanReviewReady": false,
+  "productionReady": false,
+  "blocking": {
+    "implementation": [
+      "no manifest at docs/evidence/co-managed-completion/cd28aa9531f7bd465711f90b92bf8592185d9c77/manifest.json",
+      "manifest is missing or unreadable"
+    ],
+    "humanReview": [
+      "no manifest at docs/evidence/co-managed-completion/cd28aa9531f7bd465711f90b92bf8592185d9c77/manifest.json",
+      "manifest is missing or unreadable"
+    ],
+    "production": [
+      "no manifest at docs/evidence/co-managed-completion/cd28aa9531f7bd465711f90b92bf8592185d9c77/manifest.json",
+      "manifest is missing or unreadable"
+    ]
+  },
+  "counts": {},
+  "manifestPath": "docs/evidence/co-managed-completion/cd28aa9531f7bd465711f90b92bf8592185d9c77/manifest.json",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "runtimeBuildId": "build-1792904848073",
+  "observedAt": "2026-10-25T05:52:00Z",
+  "verdict": "fail-closed: required candidate manifest is absent"
+}

@@ -1,0 +1,237 @@
+{
+  "observedAt": "2026-10-25T05:52:00Z",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "buildId": "build-1792904848073",
+  "evidenceScope": "partial runtime acceptance against isolated production candidate :23376; no full PLAN pass claimed",
+  "runtime": {
+    "origin": "http://feature-co-managed-it.localhost:23376",
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+    "buildId": "build-1792904848073",
+    "liveNextProcessPid": 3876055,
+    "liveNextProcessCwd": "/home/robert/alga-copies/feature-co-managed-it/server"
+  },
+  "results": [
+    {
+      "area": "Production candidate provenance",
+      "status": "pass",
+      "actor": null,
+      "route": "/api/health",
+      "action": "Verified launcher-written revision stamp, BUILD_ID, live process CWD and HTTP health. Launcher writes the stamp after its post-build HEAD and tracked-source fingerprint checks.",
+      "result": {
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "buildId": "build-1792904848073",
+        "httpStatus": 200
+      }
+    },
+    {
+      "area": "Authenticated candidate routes",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz",
+      "route": "/msp/tickets; /msp/tickets/customer",
+      "action": "Signed in through the normal credentials form directly against :23376 and opened both product routes.",
+      "result": "Both pages rendered with HTTP 200; this does not establish full runtime acceptance."
+    },
+    {
+      "area": "Supported Open Review entry",
+      "status": "pass",
+      "actor": "qa@emeraldcity.oz",
+      "route": "/msp/tickets",
+      "action": "Promoted the already-built candidate distribution to canonical review-app using board conclude/ensure; retained :23375 and :23376. Open Review resumed the registration and authenticated QA.",
+      "result": "Board annotation confirms Review opened as qa@emeraldcity.oz at http://feature-co-managed-it.localhost:23374/msp/tickets. Canonical /api/health returned 200; process serves .next-review-candidate-racefix with build-1792904848073 and stamp cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b."
+    },
+    {
+      "area": "Customer account boundary",
+      "status": "partial-pass",
+      "actor": "alice@whiterabbit.test",
+      "route": "/msp/account; /msp/account/users",
+      "action": "Opened the account root and child route.",
+      "result": "Both showed \u201cPage not available in your current product experience\u201d; no account content was exposed. Remaining account routes and PSA control behavior were not checked."
+    },
+    {
+      "area": "Shared comment after-commit refresh",
+      "status": "partial-pass",
+      "actors": [
+        "qa@emeraldcity.oz",
+        "alice@whiterabbit.test"
+      ],
+      "route": "/msp/co-management/tickets/... and /msp/tickets/{ticketId}",
+      "action": "QA submitted a shared comment while Alice had the native ticket detail open.",
+      "result": "The comment appeared in Alice\u2019s already-open view after commit and was present after reload."
+    },
+    {
+      "area": "Native time detail projection",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz",
+      "route": "/msp/co-management/tickets/...",
+      "action": "Read the shared ticket detail time summary.",
+      "result": "Customer 0 hours, MSP 3.25 hours, combined 3.25 hours displayed. Native timesheet list projection and approval/billing flows remain unverified."
+    },
+    {
+      "area": "Worker invitation mail configuration",
+      "status": "focused-regression-pass",
+      "test": "scripts/tests/co-managed-worker-env.test.mjs",
+      "result": "1/1 passed."
+    },
+    {
+      "area": "Legacy file-download tenant context",
+      "status": "focused-regression-pass",
+      "test": "server/src/test/unit/api/fileDownloadTenantContext.test.ts",
+      "result": "4/4 passed."
+    },
+    {
+      "area": "After-commit live update helper",
+      "status": "focused-regression-pass",
+      "test": "packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts",
+      "result": "18/18 passed; co-managed real product refresh also passed in the two-actor check above."
+    },
+    {
+      "area": "Compiled worker build and health",
+      "status": "partial-pass",
+      "result": {
+        "temporalWorker": {
+          "build": "npm run build passed",
+          "childPid": 4008993,
+          "startedAt": "2026-10-25T05:33:49Z",
+          "health": "HTTP 200; five queues RUNNING",
+          "boardReadinessProbe": {
+            "port": 8375,
+            "path": "/health",
+            "registered": true,
+            "httpStatus": 200
+          }
+        },
+        "workflowWorker": {
+          "build": "npm run build passed",
+          "childPid": 4012279,
+          "startedAt": "2026-10-25T05:34:09Z",
+          "health": "HTTP 200; temporal/eventStream/dataStoreSweep ready",
+          "boardReadinessProbe": {
+            "port": 4374,
+            "path": "/health",
+            "registered": true,
+            "httpStatus": 200
+          },
+          "postStartBusinessEffect": {
+            "status": "observed",
+            "workerId": "runtime-v2-events-1792906452222",
+            "events": [
+              "TICKET_COMMENT_ADDED",
+              "TICKET_MESSAGE_ADDED"
+            ],
+            "result": "Fresh event worker received and processed the ticket events for the co-managed tenant; stream acknowledgements are logged. Zero workflows matched, so no downstream workflow side effect is claimed."
+          }
+        }
+      },
+      "limitation": "Workflow event processing and acknowledgements were observed after fresh start. Temporal worker is built and healthy with all five queues RUNNING; a post-start Temporal business effect remains unverified."
+    },
+    {
+      "area": "PLAN acceptance remaining",
+      "status": "blocked",
+      "result": "Multipart pending enforcement, acceptance/onboarding, Microsoft OIDC/provider behavior, inbound mail, full customer denial matrix, attachments/audience boundaries, revocation, operational vs commercial time, native timesheet rows, recipient refresh and native PSA regression have not all been executed against this candidate."
+    },
+    {
+      "area": "Current runtime guide recordings",
+      "status": "blocked",
+      "result": "0/14 current recordings. All destinations are distinct and revision-scoped under current/cd28aa9531f7bd465711f90b92bf8592185d9c77; none exist. Historical e88d530b4c media remains separate and is not current evidence."
+    }
+  ],
+  "limitations": [
+    "PLAN scenarios listed under remainingPlanScenarios are incomplete; no full acceptance claim.",
+    "All 14 current guide recordings are absent; retained e88d530b4c playback evidence is historical only.",
+    "Temporal worker has no demonstrated post-start business effect."
+  ],
+  "remainingPlanScenarios": [
+    {
+      "area": "Multipart enforcement and onboarding",
+      "status": "not-run-on-current-candidate",
+      "actorRequirement": "distinct pre-acceptance, accepting, and admitted actors; current actors/accounts may be used without credential changes",
+      "persistedReloadEvidence": null,
+      "blocker": "Candidate was not promoted through supported Open Review; do not substitute prior e88d build results."
+    },
+    {
+      "area": "Microsoft OIDC and customer provider/inbound mail",
+      "status": "blocked",
+      "simulator": "not-run on this candidate",
+      "liveProvider": "not run; requires the configured Microsoft authority/provider and controlled callback/inbound sender",
+      "requiredCases": [
+        "issuer",
+        "audience",
+        "expiry",
+        "nonce",
+        "PKCE",
+        "replay",
+        "provider persistence",
+        "inbound/reply",
+        "duplicate delivery",
+        "revocation",
+        "cross-tenant denial"
+      ]
+    },
+    {
+      "area": "Customer authorization and audience boundaries",
+      "status": "partial",
+      "observed": "account root and /msp/account/users rendered unavailable; an MSP-only Customer Tickets action was denied",
+      "remaining": [
+        "all child-route matrix",
+        "authorized PSA behavior",
+        "ticket/task audience partition",
+        "attachment download and cross-tenant denial",
+        "revocation with retained history"
+      ]
+    },
+    {
+      "area": "Timesheets and commercial/operational time",
+      "status": "partial",
+      "observed": "shared ticket detail displayed Customer 0 hours, MSP 3.25 hours, combined 3.25 hours",
+      "remaining": [
+        "native timesheet row persisted/reloaded",
+        "approval and billing lifecycle",
+        "operational vs commercial attribution",
+        "revocation behavior"
+      ]
+    },
+    {
+      "area": "Native regressions",
+      "status": "not-run-on-current-candidate",
+      "required": [
+        "native ticket list state and SSR",
+        "native comment",
+        "native attachment",
+        "project/task flows",
+        "time/workflow behavior",
+        "customer client tab"
+      ],
+      "blocker": "No candidate Open Review session reached an authenticated QA runtime after promotion attempt."
+    },
+    {
+      "area": "Current-runtime guide recordings",
+      "status": "blocked",
+      "required": 14,
+      "complete": 0,
+      "blocker": "No current WebM/VTT/recording JSON; separate revision-specific destinations are inventoried, historical media retained under e88d530b4c."
+    }
+  ],
+  "externalBlockers": [
+    {
+      "dependency": "Supported Open Review canonical service",
+      "status": "local operational blocker",
+      "detail": "board registrations at :23374 were stopped before readiness; :23375 and :23376 remain live"
+    },
+    {
+      "dependency": "Microsoft identity authority and provider callbacks",
+      "status": "not exercised",
+      "detail": "no live-provider result claimed"
+    },
+    {
+      "dependency": "Inbound mail delivery path",
+      "status": "not exercised",
+      "detail": "no live-provider result claimed"
+    },
+    {
+      "dependency": "Current-build browser capture across all fourteen guides",
+      "status": "incomplete",
+      "detail": "requires working canonical Open Review and genuine browser recording artifacts"
+    }
+  ]
+}
