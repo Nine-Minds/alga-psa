@@ -1,0 +1,57 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792934123659"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ❯ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (24 tests | 1 failed) 74ms 61 MB heap used
+   ✓ T003 no native ticket-id action and no foreign-tenant avatar call > answers every method of every ticket-id keyed group without reaching the native implementation 1ms
+   ✓ T003 no native ticket-id action and no foreign-tenant avatar call > never calls avatar batch actions, with the customer tenant or any other 1ms
+   ✓ T003 no native ticket-id action and no foreign-tenant avatar call > classifies the same method set as the native source, and turns every optional capability off 1ms
+   ✓ T006 field edits and pickers > saves a status change with the expected baseline and an operation id 1ms
+   ✓ T006 field edits and pickers > advances the baseline after a save, and reports a conflict without changing it 0ms
+   ✓ T006 field edits and pickers > retries an unknown outcome with the same operation id, then starts a fresh one 1ms
+   ✓ T006 field edits and pickers > refuses fields the shared model cannot write and never calls the command 0ms
+   ✓ T006 field edits and pickers > saves the description through the attributes object 1ms
+   ✓ T006 field edits and pickers > lists options from the co-managed search, following pages, and never from tenant lookups 1ms
+   ✓ T006 field edits and pickers > is read-only for a viewer without write authority 1ms
+   ✓ T006 field edits and pickers > points back at Customer Tickets and refreshes through the supplied function 0ms
+   ✓ T007 conversation > shows collaborator authors with their organization, the restricted marker for hidden authors, and offers only permitted audiences 5ms
+   ✓ T007 conversation > posts the chosen audience through createCoManagedTicketCommentAction and returns the saved comment 1ms
+   ✓ T007 conversation > writes organization-private notes of a foreign viewer through the private command 1ms
+   ✓ T007 conversation > turns a failed write into a returned error, not a throw 0ms
+   ✓ T007 conversation > edits and deletes only the viewer's own items, through the mutation command 1ms
+   ✓ T007 conversation > routes the audience change through the disclosure dialog and only for own top-level threads 1ms
+   ✓ T008 composer and attachments > disallows image, file and mention blocks and turns off scheduling and resolution 1ms
+   ✓ T008 composer and attachments > sends staged files through the draft flow and clears them only after the message is saved 3ms
+   ✓ T008 composer and attachments > refuses files for an audience the draft flow does not support 4ms
+   ✓ T012 MSP shared route > renders the native container under the shared data source, with the section slot and a read-only viewer frozen 5ms
+   ✓ T012 MSP shared route > shows a clear error, not the container, when the ticket cannot be loaded 25ms
+   × T012 MSP shared route > preserves the originating qualified queue in native back navigation 18ms
+     → expected '/msp/co-management/tickets' to be '/msp/tickets/customer?queueView=overs…' // Object.is equality
+   ✓ T012 MSP shared route > keeps the page on the native screen: shared screen inside the feature boundary, no stacked panel 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx > T012 MSP shared route > preserves the originating qualified queue in native back navigation
+AssertionError: expected '/msp/co-management/tickets' to be '/msp/tickets/customer?queueView=overs…' // Object.is equality
+
+Expected: "/msp/tickets/customer?queueView=oversight&workspace=all&searchQuery=printer&queueSort=title&pageSize=1"
+Received: "/msp/co-management/tickets"
+
+ ❯ src/test/unit/product/coManagedSharedTicketDataSource.test.tsx:316:43
+    314|     render(<SharedTicketScreen resource={resource} initialDetails={bas…
+    315|     await waitFor(() => expect(probe.source).not.toBeNull());
+    316|     expect(probe.source!.screen.backHref).toBe(backHref);
+       |                                           ^
+    317|   });
+    318| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+   Start at  13:15:24
+   Duration  4.68s (transform 163ms, setup 135ms, collect 151ms, tests 74ms, environment 215ms, prepare 31ms)
+

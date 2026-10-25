@@ -1,0 +1,21 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792934181111"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/coManagedTicketListReturn.test.ts (10 tests) 4ms 85 MB heap used
+ ✓ |node| src/test/unit/product/coManagedDeletedPanels.contract.test.ts (2 tests) 5462ms 135 MB heap used
+   ✓ has no production import or re-export of any retired stacked ticket panel  5456ms
+ ✓ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (24 tests) 62ms 117 MB heap used
+ ✓ |jsdom| src/test/unit/product/qualifiedTicketList.test.tsx (28 tests) 2449ms 183 MB heap used
+   ✓ T007 — applied filters, sort and pagination reach the server > sends the submitted search and each toolbar filter, resetting to page 1 every time  545ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > search runs as you type: keystrokes within the pause make one request, Enter applies at once, and Reset clears the text  547ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > writes the typed search to the address bar with replaceState, never a history push  530ms
+
+ Test Files  4 passed (4)
+      Tests  64 passed (64)
+   Start at  13:16:21
+   Duration  18.69s (transform 2.67s, setup 189ms, collect 5.84s, tests 7.98s, environment 180ms, prepare 66ms)
+

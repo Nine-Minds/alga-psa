@@ -44,3 +44,20 @@ Review were already confirmed. The OOM report labels its deployment-pending
 observations as historical. Its bounded same-process dev proof is preserved;
 long-term memory stability remains unproved. Full guide and release readiness
 remain incomplete.
+
+
+## Qualified queue return defect
+
+The next live queue check found that the detail screen's Back button targeted
+retired `/msp/co-management/tickets` and discarded the applied scope. Shared
+row links now carry the originating qualified list URL, and the detail route
+normalizes that context to the customer-list route before composing native
+back navigation. External destinations and unrelated application routes fall
+back to Customer Tickets. Customer, state, search, sort and pagination remain
+presentation state; authorization still runs on every queue read.
+
+The component regression fails on the served implementation (one failure,
+23 passes). The repaired component, qualified list, return-context validation
+and retired-panel contract pass 64 checks. The retired-panel contract is held
+for the final tooling/evidence update. Repaired production return-navigation
+acceptance remains pending the next prepared build and browser rerun.

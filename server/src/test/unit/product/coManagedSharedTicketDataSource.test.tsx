@@ -309,6 +309,13 @@ describe('T012 MSP shared route', () => {
     expect(probe.source).toBeNull();
   });
 
+  it('preserves the originating qualified queue in native back navigation', async () => {
+    const backHref = '/msp/tickets/customer?queueView=oversight&workspace=all&searchQuery=printer&queueSort=title&pageSize=1';
+    render(<SharedTicketScreen resource={resource} initialDetails={baseDetails()} backHref={backHref} />);
+    await waitFor(() => expect(probe.source).not.toBeNull());
+    expect(probe.source!.screen.backHref).toBe(backHref);
+  });
+
   it('keeps the page on the native screen: shared screen inside the feature boundary, no stacked panel', () => {
     const page = readFileSync(path.resolve(__dirname, '../../../app/msp/co-management/tickets/[customerTenant]/[relationshipId]/[ticketId]/page.tsx'), 'utf8');
     expect(page).toMatch(/<CoManagedFeatureBoundary><SharedTicketScreen /);

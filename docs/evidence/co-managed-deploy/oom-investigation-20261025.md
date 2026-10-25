@@ -1,14 +1,16 @@
 # Co-managed development server OOM investigation — 2026-10-25
 
-Production promotion is confirmed: canonical port 23374 serves source
-`c04a67fff5b553d2c2a1f55a14194f829343adae`, build `build-1792926045353`.
-Fresh Alice login, QA native/shared navigation and supported Open Review passed.
-See [runtime acceptance](c04a67fff5/runtime-acceptance.json) and
-[runtime provenance](c04a67fff5/runtime-provenance.json). Fourteen recorded
-production walkthroughs remain partial; deployment is no longer their blocker.
-The dated preparation notes below retain their original observations. They do
-not describe the current deployment. Bounded same-process development reload
-proof remains valid; long-term memory stability remains unproved.
+Production promotion is confirmed; it is no longer the guide blocker. The
+[Implement runtime receipt](implement-20261025/runtime-provenance.json) records
+the exact currently observed production source, build, port and process. The
+[Implement ledger](implement-20261025/README.md) distinguishes current guide
+assertions from historical partial recordings and later repair preparation.
+Fresh Alice login, QA navigation and supported Open Review were confirmed on
+`c04a67fff5` / `build-1792926045353` before these repairs; their original
+[acceptance receipt](c04a67fff5/runtime-acceptance.json) remains unchanged.
+The dated preparation notes below are historical observations. Bounded
+same-process development reload proof remains valid; long-term memory stability
+remains unproved.
 
 ## Registered runtime verification, 10:26–10:28 UTC
 

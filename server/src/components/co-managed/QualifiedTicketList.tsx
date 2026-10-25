@@ -220,10 +220,15 @@ export default function QualifiedTicketList({
     }
   }, [exporting, idPrefix, request]);
 
-  const openIdentity = useCallback((identity: TicketListIdentity) => {
+  const detailHref = useCallback((identity: TicketListIdentity) => {
     const href = ticketListDetailHref(identity);
-    router.push(href);
-  }, [router]);
+    if (identity.kind !== 'shared') return href;
+    const returnHref = buildTicketListHref({ ...scope, workspace }, presentation, { includeClient: Boolean(clientId) });
+    return `${href}?returnTo=${encodeURIComponent(returnHref)}`;
+  }, [scope, workspace, presentation, clientId]);
+  const openIdentity = useCallback((identity: TicketListIdentity) => {
+    router.push(detailHref(identity));
+  }, [router, detailHref]);
 
   const items = result?.items ?? [];
   const unknown = t('coManaged.ticket.restricted', 'Restricted');
@@ -288,7 +293,7 @@ export default function QualifiedTicketList({
         return (
           <div className="min-w-0">
             <Link
-              href={ticketListDetailHref(identity)}
+              href={detailHref(identity)}
               prefetch={false}
               className="text-primary underline underline-offset-2"
               onClick={event => {
@@ -344,7 +349,7 @@ export default function QualifiedTicketList({
       ...(view.columns.responsibility ? [responsibilityColumn] : []),
       ...(view.columns.updated ? [updatedColumn] : []),
     ];
-  }, [eligibleKeys.size, formatDate, openIdentity, selectionColumn, t, unknown, view.columns]);
+  }, [eligibleKeys.size, formatDate, detailHref, openIdentity, selectionColumn, t, unknown, view.columns]);
 
   // Workspace options come from the authorized reader's own result (never a
   // foreign directory); the selected one is kept even if it later disappears so

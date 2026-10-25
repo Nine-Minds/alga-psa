@@ -17,8 +17,9 @@ import type { SharedTicketDetailsResult } from '@/lib/co-managed/sharedTicketDat
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import { createSharedTicketDataSource } from './sharedTicketDataSource';
 import { useCoManagedSharedTimeConfig } from './useCoManagedSharedTimeConfig';
+import { DEFAULT_CUSTOMER_TICKETS_HREF } from '@/lib/co-managed/ticketListReturn';
 
-export const CO_MANAGED_TICKETS_HREF = '/msp/co-management/tickets';
+export const CO_MANAGED_TICKETS_HREF = DEFAULT_CUSTOMER_TICKETS_HREF;
 
 type Disclosure = {
   thread: { storeTenant: string; threadId: string }; actor: { tenant: string; userId: string }; audiences: CommentAudience[];
@@ -31,9 +32,10 @@ type Disclosure = {
  * `initialDetails` is null when the server could not load the ticket (not
  * shared with this user, revoked, or unavailable).
  */
-export default function SharedTicketScreen({ resource, initialDetails }: {
+export default function SharedTicketScreen({ resource, initialDetails, backHref = CO_MANAGED_TICKETS_HREF }: {
   resource: CoManagedSharedResource;
   initialDetails: SharedTicketDetailsResult | null;
+  backHref?: string;
 }) {
   const { t } = useTranslation('msp/licensing');
   const { data: session } = useSession();
@@ -69,8 +71,8 @@ export default function SharedTicketScreen({ resource, initialDetails }: {
     }), []);
 
   const source = useMemo(() => details && conversation
-    ? createSharedTicketDataSource(resource, { details, conversation }, { t, refresh, backHref: CO_MANAGED_TICKETS_HREF, requestDisclosure })
-    : null, [resource, details, conversation, t, refresh, requestDisclosure]);
+    ? createSharedTicketDataSource(resource, { details, conversation }, { t, refresh, backHref, requestDisclosure })
+    : null, [resource, details, conversation, t, refresh, backHref, requestDisclosure]);
   const dataSource = useMemo(() => source ? composeTicketDataSource(source, { time }) : null, [source, time]);
 
   if (failed || !details) {

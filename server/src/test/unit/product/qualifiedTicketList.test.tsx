@@ -231,10 +231,16 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
 
   it('links identical ids to their own qualified routes and shows the server totals', async () => {
     mount();
-    expect(await screen.findByRole('link', { name: 'T-1 · Alpha ticket' }))
-      .toHaveAttribute('href', '/msp/co-management/tickets/alpha/relationship-alpha/same-id');
-    expect(screen.getByRole('link', { name: 'T-1 · Beta ticket' }))
-      .toHaveAttribute('href', '/msp/co-management/tickets/customer/relationship/same-id');
+    const alpha = await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    const beta = screen.getByRole('link', { name: 'T-1 · Beta ticket' });
+    const alphaUrl = new URL(alpha.getAttribute('href')!, 'https://review.invalid');
+    const betaUrl = new URL(beta.getAttribute('href')!, 'https://review.invalid');
+    expect(alphaUrl.pathname).toBe('/msp/co-management/tickets/alpha/relationship-alpha/same-id');
+    expect(betaUrl.pathname).toBe('/msp/co-management/tickets/customer/relationship/same-id');
+    expect(alphaUrl.searchParams.get('returnTo')).toBe('/msp/tickets/customer?queueView=working&workspace=all');
+    expect(betaUrl.searchParams.get('returnTo')).toBe(alphaUrl.searchParams.get('returnTo'));
+    fireEvent.click(alpha);
+    expect(mocks.push).toHaveBeenLastCalledWith(alpha.getAttribute('href'));
     // The counts come from the server response, not from the rows on screen.
     expect(screen.getByText('coManaged.queue.counts:{"count":51,"open":50,"closed":1}')).toBeInTheDocument();
   });
