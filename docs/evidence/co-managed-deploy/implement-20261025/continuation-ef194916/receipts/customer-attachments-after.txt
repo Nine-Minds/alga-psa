@@ -1,0 +1,98 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792941352845"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/conversationDraftSubmission.test.ts (9 tests) 11ms 15 MB heap used
+ ❯ |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx (8 tests | 2 failed) 20248ms 70 MB heap used
+   × renders an authorized comment attachment in the customer native ticket, retaining its store identity 10005ms
+     → Unable to find role="link" and name "Customer evidence file"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+   × publishes customer composer files through the draft flow and keeps one immutable operation after a lost response 10006ms
+     → expected undefined to be type of 'function'
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+   ✓ replaces the Internal toggle with the requester, shared IT and private-to-organization audience control 53ms
+   ✓ writes the chosen audience through the co-managed comment command, not the native comment action 57ms
+   ✓ replays the same operation when an unconfirmed write is retried with the same content 56ms
+   ✓ stays the native data source while the release flag is off and for tickets that are not co-managed 4ms
+   ✓ hides the native time panel (denied on co_managed tenants) and supplies the effort split slot instead 62ms
+   ✓ keeps native time capabilities until the co-managed screen has loaded or when the flag is off 2ms
+ ✓ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (25 tests) 65ms 107 MB heap used
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx > renders an authorized comment attachment in the customer native ticket, retaining its store identity
+TestingLibraryElementError: Unable to find role="link" and name "Customer evidence file"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/test/unit/product/coManagedLocalTicketDataSource.test.tsx:53:23
+     51|   render(<CoManagedLocalTicketDataSourceProvider ticketId="ticket-a">
+     52|     <TicketConversationAttachments ticketId="ticket-a" comment={{ tena…
+     53|   </CoManagedLocalTicketDataSourceProvider>);
+       |                       ^
+     54|   expect(await screen.findByRole('link', { name: 'Customer evidence fi…
+     55| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx > publishes customer composer files through the draft flow and keeps one immutable operation after a lost response
+AssertionError: expected undefined to be type of 'function'
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ src/test/unit/product/coManagedLocalTicketDataSource.test.tsx:58:66
+     57| it('publishes customer composer files through the draft flow and keeps…
+     58|   mount();
+     59|   await waitFor(() => expect(source.conversation.composerFooter).toBeT…
+       |                                                       ^
+     60|   const footer = source.conversation.composerFooter({ audienceId: 'org…
+     61|   const file = new File(['private customer bytes'], 'customer-private.…
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 40 passed (42)
+   Start at  15:15:53
+   Duration  30.65s (transform 2.03s, setup 177ms, collect 5.82s, tests 20.32s, environment 170ms, prepare 59ms)
+

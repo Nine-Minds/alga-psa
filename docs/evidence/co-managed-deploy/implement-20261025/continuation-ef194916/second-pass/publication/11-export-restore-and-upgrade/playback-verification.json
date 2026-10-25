@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:19.089Z",
+  "guide": "guides/11-export-restore-and-upgrade.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/11-export-restore-and-upgrade.html",
+  "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.608105,
+    "duration": 7.4,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "customer-export-remains-available-after-reload",
+    "target": 4.503,
+    "actual": 4.526887,
+    "followingFrame": {
+      "mediaTime": 4.52,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/713083",
+  "passed": true
+}

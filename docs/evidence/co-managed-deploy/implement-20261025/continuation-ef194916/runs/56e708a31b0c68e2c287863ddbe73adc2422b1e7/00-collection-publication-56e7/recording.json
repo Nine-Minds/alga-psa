@@ -1,0 +1,427 @@
+{
+  "scenario": "00-collection-publication-56e7",
+  "recordedAt": "2026-10-25T20:45:06.493Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "composite-embedded-for-recorded-build-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.025Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.036Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "f7728d2b16c9fbd0be6542b6b60210c5ef9628139e459f64ca04c230414612ab"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.140Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.143Z",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.233Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.237Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "53ae9ac33bed0b2ea1c87ea0d50b136871e1b9bda3636a50ce4512e66f0a719f"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.313Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.316Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "536377cf290052508c08b7f02cd2e5354bab2b2811f6946f3c391480deb9079a"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.405Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.408Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "762d4d17f1ffab403301c07169947ec3e480d5d2d3adff54f7c6bb61e40e75f1"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.483Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.486Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "c21a3761399dfacc5bfbb0833ef57a226db6799805e3ebc4fcf109acaf8ad2ef"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.573Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.576Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "1ec5cd135ded564a4d5631f79a2c4d0f419ed03d9817bb5cf581ccec737b6847"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.663Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.666Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "ac37df50f78669a3bc425e71baaedad30216f3cf67e600959cb470555b3f121a"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.745Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.748Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "0be19048bcaaa0e2f24d660f02575ef10cc58cb74317e65d3c7d9360ac0eb0d0"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.833Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.839Z",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "db08f133a344ebfde3be050312dce34bab9a699a9328055d6805e2009aa56d7d"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.929Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:08.932Z",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e"
+      }
+    },
+    {
+      "id": "composite-embedded-for-recorded-build-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:09.029Z"
+    },
+    {
+      "id": "outcome-and-build-match-ledger-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:09.032Z",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524"
+      }
+    },
+    {
+      "id": "collection-composes-twelve-current-guide-recordings",
+      "passed": true,
+      "at": "2026-10-25T20:45:09.047Z"
+    },
+    {
+      "id": "overview-also-embeds-current-composite",
+      "passed": true,
+      "at": "2026-10-25T20:45:09.070Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:45:08.025Z",
+      "seconds": 1.532,
+      "title": "composite-embedded-for-recorded-build-01-onboarding.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.036Z",
+      "seconds": 1.543,
+      "title": "outcome-and-build-match-ledger-01-onboarding.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "f7728d2b16c9fbd0be6542b6b60210c5ef9628139e459f64ca04c230414612ab"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.140Z",
+      "seconds": 1.647,
+      "title": "composite-embedded-for-recorded-build-02-licensing-and-seats.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.143Z",
+      "seconds": 1.65,
+      "title": "outcome-and-build-match-ledger-02-licensing-and-seats.html",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.233Z",
+      "seconds": 1.74,
+      "title": "composite-embedded-for-recorded-build-03-access-policies.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.237Z",
+      "seconds": 1.744,
+      "title": "outcome-and-build-match-ledger-03-access-policies.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "53ae9ac33bed0b2ea1c87ea0d50b136871e1b9bda3636a50ce4512e66f0a719f"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.313Z",
+      "seconds": 1.82,
+      "title": "composite-embedded-for-recorded-build-04-delegated-administration.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.316Z",
+      "seconds": 1.823,
+      "title": "outcome-and-build-match-ledger-04-delegated-administration.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "536377cf290052508c08b7f02cd2e5354bab2b2811f6946f3c391480deb9079a"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.405Z",
+      "seconds": 1.912,
+      "title": "composite-embedded-for-recorded-build-05-ticket-queue.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.408Z",
+      "seconds": 1.915,
+      "title": "outcome-and-build-match-ledger-05-ticket-queue.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "762d4d17f1ffab403301c07169947ec3e480d5d2d3adff54f7c6bb61e40e75f1"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.483Z",
+      "seconds": 1.99,
+      "title": "composite-embedded-for-recorded-build-06-projects-and-tasks.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.486Z",
+      "seconds": 1.993,
+      "title": "outcome-and-build-match-ledger-06-projects-and-tasks.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "c21a3761399dfacc5bfbb0833ef57a226db6799805e3ebc4fcf109acaf8ad2ef"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.573Z",
+      "seconds": 2.08,
+      "title": "composite-embedded-for-recorded-build-07-conversations-and-files.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.576Z",
+      "seconds": 2.083,
+      "title": "outcome-and-build-match-ledger-07-conversations-and-files.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "1ec5cd135ded564a4d5631f79a2c4d0f419ed03d9817bb5cf581ccec737b6847"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.663Z",
+      "seconds": 2.17,
+      "title": "composite-embedded-for-recorded-build-08-sla.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.666Z",
+      "seconds": 2.173,
+      "title": "outcome-and-build-match-ledger-08-sla.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "ac37df50f78669a3bc425e71baaedad30216f3cf67e600959cb470555b3f121a"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.745Z",
+      "seconds": 2.252,
+      "title": "composite-embedded-for-recorded-build-09-time-and-billing.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.748Z",
+      "seconds": 2.255,
+      "title": "outcome-and-build-match-ledger-09-time-and-billing.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "0be19048bcaaa0e2f24d660f02575ef10cc58cb74317e65d3c7d9360ac0eb0d0"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.833Z",
+      "seconds": 2.34,
+      "title": "composite-embedded-for-recorded-build-10-departure-and-archives.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.839Z",
+      "seconds": 2.346,
+      "title": "outcome-and-build-match-ledger-10-departure-and-archives.html",
+      "data": {
+        "scenario": "covered",
+        "recordedOn": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "currentBuild": true,
+        "compositeSha256": "db08f133a344ebfde3be050312dce34bab9a699a9328055d6805e2009aa56d7d"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:08.929Z",
+      "seconds": 2.436,
+      "title": "composite-embedded-for-recorded-build-11-export-restore-and-upgrade.html"
+    },
+    {
+      "at": "2026-10-25T20:45:08.932Z",
+      "seconds": 2.439,
+      "title": "outcome-and-build-match-ledger-11-export-restore-and-upgrade.html",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:09.029Z",
+      "seconds": 2.536,
+      "title": "composite-embedded-for-recorded-build-12-customer-integrations.html"
+    },
+    {
+      "at": "2026-10-25T20:45:09.032Z",
+      "seconds": 2.539,
+      "title": "outcome-and-build-match-ledger-12-customer-integrations.html",
+      "data": {
+        "scenario": "blocked-external",
+        "recordedOn": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "currentBuild": false,
+        "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:09.047Z",
+      "seconds": 2.554,
+      "title": "collection-composes-twelve-current-guide-recordings"
+    },
+    {
+      "at": "2026-10-25T20:45:09.070Z",
+      "seconds": 2.577,
+      "title": "overview-also-embeds-current-composite"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Collection composition only; unresolved child scenarios and external fixtures remain separately labelled and keep reviewReady=false."
+  ],
+  "durationSeconds": 3.44,
+  "actors": []
+}

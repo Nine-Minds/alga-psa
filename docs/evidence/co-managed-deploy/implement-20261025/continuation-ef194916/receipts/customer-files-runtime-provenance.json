@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-25T15:39:23.044752+00:00",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "sourceStamp": "1b9b112749b948ee1b6611b91e07d52e7b98ba32+da39a3ee5e6b",
+  "buildId": "build-1792941614066",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "dist": "server/.next-review-customer-files",
+  "healthStatus": 200,
+  "pid": 43770,
+  "startTicks": "308909484",
+  "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+  "htmlBuildConfirmed": true
+}

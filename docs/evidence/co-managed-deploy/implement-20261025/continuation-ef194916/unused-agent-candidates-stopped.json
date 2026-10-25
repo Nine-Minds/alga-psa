@@ -1,0 +1,28 @@
+[
+  {
+    "pid": 3876055,
+    "port": 23376,
+    "service": "review-app-candidate-racefix-isolated",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "startTicks": "305234664",
+    "env": [
+      "CO_MANAGED_REVIEW_DIST=.next-review-candidate-racefix",
+      "PORT=23376"
+    ],
+    "at": "2026-10-25T15:57:36.304498+00:00",
+    "action": "SIGTERM verified detached listener"
+  },
+  {
+    "pid": 2334739,
+    "port": 23378,
+    "service": "review-app-repaired-candidate",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "startTicks": "307341968",
+    "env": [
+      "CO_MANAGED_REVIEW_DIST=.next-review-c04a67-production",
+      "PORT=23378"
+    ],
+    "at": "2026-10-25T15:57:36.304616+00:00",
+    "action": "SIGTERM verified detached listener"
+  }
+]

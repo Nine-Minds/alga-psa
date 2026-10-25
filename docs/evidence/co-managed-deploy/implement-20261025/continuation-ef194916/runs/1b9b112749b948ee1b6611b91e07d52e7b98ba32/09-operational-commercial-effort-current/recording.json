@@ -1,0 +1,162 @@
+{
+  "scenario": "09-operational-commercial-effort-current",
+  "recordedAt": "2026-10-25T16:32:29.931Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "customer-six-minutes-have-no-commercial-routing",
+      "passed": true,
+      "at": "2026-10-25T16:32:32.904Z",
+      "data": {
+        "entry": {
+          "entry_id": "2a08cc69-d5cf-40b6-84d6-78b2d385c923",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "service_id": null,
+          "contract_line_id": null,
+          "work_item_type": "project_task",
+          "work_item_id": "3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "id": "alice-reconciles-six-plus-twenty-one-minutes",
+      "passed": true,
+      "at": "2026-10-25T16:32:34.848Z",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.35 hours",
+          "0.45 hours"
+        ]
+      }
+    },
+    {
+      "id": "alice-does-not-see-other-organization-time-note",
+      "passed": true,
+      "at": "2026-10-25T16:32:34.855Z"
+    },
+    {
+      "id": "qa-reconciles-six-plus-twenty-one-minutes",
+      "passed": true,
+      "at": "2026-10-25T16:32:36.881Z",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.35 hours",
+          "0.45 hours"
+        ]
+      }
+    },
+    {
+      "id": "qa-does-not-see-other-organization-time-note",
+      "passed": true,
+      "at": "2026-10-25T16:32:36.889Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:32:32.334Z",
+      "seconds": 2.403,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:32:32.904Z",
+      "seconds": 2.973,
+      "actor": "alice",
+      "title": "customer-six-minutes-have-no-commercial-routing",
+      "data": {
+        "entry": {
+          "entry_id": "2a08cc69-d5cf-40b6-84d6-78b2d385c923",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "service_id": null,
+          "contract_line_id": null,
+          "work_item_type": "project_task",
+          "work_item_id": "3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T16:32:34.833Z",
+      "seconds": 4.902,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:32:34.848Z",
+      "seconds": 4.917,
+      "actor": "alice",
+      "title": "alice-reconciles-six-plus-twenty-one-minutes",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.35 hours",
+          "0.45 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T16:32:34.855Z",
+      "seconds": 4.924,
+      "actor": "alice",
+      "title": "alice-does-not-see-other-organization-time-note"
+    },
+    {
+      "at": "2026-10-25T16:32:36.869Z",
+      "seconds": 6.938,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:32:36.881Z",
+      "seconds": 6.95,
+      "actor": "qa",
+      "title": "qa-reconciles-six-plus-twenty-one-minutes",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.35 hours",
+          "0.45 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T16:32:36.889Z",
+      "seconds": 6.958,
+      "actor": "qa",
+      "title": "qa-does-not-see-other-organization-time-note"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Operational/commercial effort segment only; stopwatch and catalog invoicing are separate guide obligations."
+  ],
+  "durationSeconds": 7.88,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

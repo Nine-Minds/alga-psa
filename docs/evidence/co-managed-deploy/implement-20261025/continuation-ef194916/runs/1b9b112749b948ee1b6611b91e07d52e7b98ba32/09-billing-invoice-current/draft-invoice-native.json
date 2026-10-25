@@ -1,0 +1,258 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing&subtab=drafts&invoiceId=8fb4458e-fb10-4474-9267-8ac9e7ca8362",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nInvoicing\nGenerate\nDrafts\nFinalized\nProject Billing\n3 columns hidden.\nShow all\n\t\nInvoice Number\n\t\nClient\n\t\nAmount\n\t\nActions\n\n\n\t\nINV-000003\n\t\nWhite Rabbit\n\t\n$30.00\n\t\n\n\n\t\nINV-000004\n\t\nWhite Rabbit\n\t\n$30.00\n\t\n\n\n\t\nINV-000002\n\t\nWhite Rabbit\n\t\n$200.00\n\t\nInvoice Details\n\nEdit draft invoice metadata before finalizing.\n\nInvoice Number\nStatus\nDraft\nInvoice Date\nDue Date\nClient\nWhite Rabbit\nAmount\n$30.00\nBilling Profile\nCM Acceptance Profile 1792944312315\n\nThe invoice, its lines and its emailed copy follow this profile.\n\nCancel\nSave\nInvoice Preview\nTax: Internal\nDetailed Template (Standard)\nFinalize Invoice\nDownload PDF\nReverse Draft\nCM Contracted Support 1792944312315\n\nOz\n\nINVOICE\n\nInvoice #:\nINV-000004\nIssue Date:\n25/10/2026\nDue Date:\n24/11/2026\nPO #:\n-\n\nFrom\n\nOz\n\nBill To\n\nWhite Rabbit\n\n42 Rabbit Hole Lane, Underland Woods, Wonderland, WND, 1234, United Kingdom\n\nDescription\tQty\tRate\tAmount\nCM Contracted Support 1792944312315\t0.25\t$120.00\t$30.00\nSubtotal\n$30.00\nTax\n$0.00\nTotal\n$30.00",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_14_-trigger-0",
+      "text": "Generate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_14_-trigger-1",
+      "text": "Drafts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_14_-trigger-2",
+      "text": "Finalized",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_14_-trigger-3",
+      "text": "Project Billing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-all-drafts",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-43905293-0114-4ddd-81e6-1cbf34ea5452",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-row-actions-43905293-0114-4ddd-81e6-1cbf34ea5452",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-8fb4458e-fb10-4474-9267-8ac9e7ca8362",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-row-actions-8fb4458e-fb10-4474-9267-8ac9e7ca8362",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-69a224cf-a9a4-4a28-bbc3-fc4798b4b176",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-row-actions-69a224cf-a9a4-4a28-bbc3-fc4798b4b176",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-invoice-number-input",
+      "text": "",
+      "value": "INV-000004",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-invoice-date-input",
+      "text": "",
+      "value": "10/25/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-due-date-input",
+      "text": "",
+      "value": "11/24/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-invoice-billing-profile-select",
+      "text": "CM Acceptance Profile 1792944312315",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-invoice-details-cancel",
+      "text": "Cancel",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-invoice-details-save",
+      "text": "Save",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_3d_",
+      "text": " Detailed Template (Standard)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-finalize",
+      "text": "Finalize Invoice",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-download-pdf",
+      "text": "Download PDF",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-reverse-draft-button",
+      "text": "Reverse Draft",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.318
+02-licensing-hosted-current
+
+2
+00:00:03.318 --> 00:00:04.699
+qa: navigate
+
+3
+00:00:04.699 --> 00:00:05.386
+qa: lost-response-executes-one-provider-operation
+
+4
+00:00:05.386 --> 00:00:07.807
+qa: fresh-reload-reconciles-verified-target
+
+5
+00:00:07.807 --> 00:00:10.084
+qa: navigate
+
+6
+00:00:10.084 --> 00:00:10.252
+qa: allocation-persists-and-does-not-change-purchased-capacity
+
+7
+00:00:10.252 --> 00:00:12.240
+qa: below-usage-reduction-is-disabled
+
+8
+00:00:12.240 --> 00:00:15.782
+02-completed-hosted-operation-replay-current
+
+9
+00:00:15.782 --> 00:00:16.667
+qa: navigate
+
+10
+00:00:16.667 --> 00:00:18.360
+qa: completed-hosted-purchase-same-operation-replay-is-accepted

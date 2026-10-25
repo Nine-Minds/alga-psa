@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export, restore and independence · Co-Managed IT</title><meta name="description" content="Export, restore and independence: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside class="provenance" id="current-acceptance">Recorded on 1b9b112749b948ee1b6611b91e07d52e7b98ba32, build-1792941614066 (an earlier build; the current application is 56e708a31b0c68e2c287863ddbe73adc2422b1e7, build-1792957994771). Guide scenario: blocked-external — see the unblock record for the missing resource and the action that unblocks it. 11 covered on the current build / 0 partial / 3 blocked-external. Playback verified for 14 of 14. reviewReady=false.</aside><h1 id="export-restore-and-independence">Export, restore and independence</h1><section id="current-walkthrough" class="walkthrough-recording"><h2>Current build recording</h2><p>Scenario: blocked-external. Blocked-external: no approved tenant-bound destination license and no prepared destination-owned paid subscription. Activation, recovered native login/data/files/credentials and completed paid upgrade are not accepted. Current browser export and entitlement denial passed. Current archive content inspection remains in reach and unverified. Playback proof is separate from this result.</p><video controls="" muted="" preload="metadata" width="1280" style="max-width: 100%;" src="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/walkthrough.webm"><track kind="chapters" src="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/chapters.vtt" srclang="en" default=""></video><label for="current-chapters">Seek a current recording chapter</label><select id="current-chapters" style="max-width: 100%;"><option value="0.000">00:00:00.000 11-post-departure-export-upgrade-boundary-current</option><option value="2.348">00:00:02.348 exportCustomer: navigate</option><option value="2.433">00:00:02.433 exportCustomer: short-passphrase-blocked-by-export-form</option><option value="3.470">00:00:03.470 exportCustomer: actual-encrypted-archive-downloaded-after-departure</option><option value="4.503">00:00:04.503 exportCustomer: customer-export-remains-available-after-reload</option><option value="6.417">00:00:06.417 exportCustomer: navigate</option></select><p><a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/recording.json">Composite metadata</a> · <a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/chapters.vtt">Chapter file</a> · <a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/playback-verification.json">Playback receipt</a> · </p><script>(()=>{const section=document.getElementById('current-walkthrough'),v=section.querySelector('video'),s=section.querySelector('select');s.addEventListener('change',()=>{v.currentTime=Number(s.value);v.play().catch(()=>{});});})();</script></section>
+<p>A customer can download an encrypted workspace backup, restore it through an installation operator, or upgrade the current workspace to independent AlgaPSA. Upgrade keeps the current hosting; moving installations requires export and restore.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use a customer administrator and disposable customer data with identifiable tickets, tasks, documents, files and business credentials. Restore additionally requires an isolated destination installation, its database-owner operator, file storage and destination entitlement. Upgrade requires a separate disposable relationship and the customer's own paid/test subscription or tenant-bound signed Pro license.</p>
+<p>The latest ticket-screen review did not freshly demonstrate these journeys. The restore/activation tooling is implemented, but there is no customer restore wizard. Do not upgrade the active White Rabbit review fixture. See <a href="index.html#review-order-and-retained-changes">review order</a>.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>A backup that cannot restore without the original installation's keys.</li>
+<li>Customer data loss, broken file links or inclusion of MSP-private data.</li>
+<li>Restoring live trust, old connections or active automation unintentionally.</li>
+<li>Upgrade using the sponsor's entitlement or releasing its allocation twice.</li>
+</ul>
+<h2 id="1-download-an-encrypted-customer-workspace">1. Download an encrypted customer workspace</h2>
+<p>As the customer administrator, open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/export">Export workspace</a>. Enter and confirm a private passphrase of 16–1024 UTF-8 bytes, then choose the download action. Retain the archive privately and reload the export page to check continued access.</p>
+<p>Expected: a complete encrypted download, not a success page mistaken for the archive. The export includes authorized customer records/files and the customer business credential vault, while excluding MSP-private stores, installation keys, sessions and live MSP trust. Use operator inspection and restore to prove contents; a nonempty file alone is insufficient.</p>
+<p>Repeat export after departure on its prepared fixture to confirm the customer can still recover its own data. Do not put passphrases or decrypted credentials in screenshots, review evidence or shell arguments.</p>
+<p>The October 25 operator check restored the current production export into a
+new isolated tenant (<code>1f7161e2</code>). It retained two tickets, one project, one task,
+22 comments and one shared file with matching archive checksum; its only user
+remains inactive and the tenant is suspended pending activation. Retrying
+returned the original receipt. Wrong passphrases and a tampered archive were
+rejected. This is operator restore evidence, separate from the export video.
+Destination paid activation, native login and full credential recovery remain
+unaccepted.</p>
+<h2 id="2-inspect-and-restore-on-an-isolated-destination">2. Inspect and restore on an isolated destination</h2>
+<p>The installation operator runs the following from the destination checkout's <code>server/</code> directory, with its documented destination configuration loaded. Replace placeholders before execution. These commands prompt for the archive passphrase.</p>
+<pre><code class="language-sh">npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --inspect --archive /absolute/customer-backup.alga
+</code></pre>
+<p>Record the inspection manifest and select the source administrator UUID from verified archive content. Choose a new, unused destination tenant UUID.</p>
+<pre><code class="language-sh">npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --restore --archive /absolute/customer-backup.alga --destination-tenant &lt;new-tenant-uuid&gt; --administrator-user-id &lt;source-admin-uuid&gt;
+</code></pre>
+<p>Expected: authenticated archive contents restore into an isolated destination with remapped identities. Users remain inactive pending activation, connections require reauthorization and restored dispatch remains paused. Wrong passphrases or altered archives must fail without a partially active workspace. Preserve the restore receipt.</p>
+<h2 id="3-activate-with-the-destination39s-own-entitlement">3. Activate with the destination's own entitlement</h2>
+<p>For self-hosted activation, obtain a Pro license signed for the new destination tenant and retain a new operation UUID:</p>
+<pre><code class="language-sh">npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant &lt;restored-tenant-uuid&gt; --operation-id &lt;retained-operation-uuid&gt; --license-file /absolute/customer-pro-license.jwt
+</code></pre>
+<p>For hosted activation, the destination must already have its own current paid subscription in native billing records and a verifiable provider subscription:</p>
+<pre><code class="language-sh">npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate-hosted --destination-tenant &lt;restored-tenant-uuid&gt; --operation-id &lt;retained-operation-uuid&gt;
+</code></pre>
+<p>Activation prompts for a new administrator password. Hosted activation does not purchase or provision that subscription; its dedicated restore billing setup remains a preparation gap.</p>
+<p>Sign in to the destination as the activated administrator. Compare source records, file bytes, document links, attribution and authorized business credential values through native screens. Verify other users remain inactive, workflows remain paused and old provider/MSP connections have not revived. Replaying the same activation operation must return its receipt without resetting credentials or unpausing work.</p>
+<h2 id="4-upgrade-a-current-workspace-independently">4. Upgrade a current workspace independently</h2>
+<p>On a separate disposable customer workspace, open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/upgrade">Upgrade to AlgaPSA</a>. Record required technician seats. For hosted review, complete the customer's test purchase and refresh until its own paid entitlement is verified. For self-hosted review, use <strong>Manage workspace license</strong> to install the customer's tenant-bound signed test license.</p>
+<p>Payment alone must not end MSP trust. Once ready, choose <strong>Upgrade workspace</strong>, confirm the described effects, and wait for completion. Select <strong>Open AlgaPSA</strong>, refresh the session and inspect the same tickets/projects/history.</p>
+<p>Expected: the same workspace becomes independent, live MSP access closes and its old allocation releases once. Sponsor licenses cannot substitute for customer entitlement. A refresh/retry must not run conversion or charge again. The MSP's permitted archive remains available.</p>
+<h2 id="pass-criteria-and-retained-state">Pass criteria and retained state</h2>
+<p>Record export, restore and activation receipts separately from upgrade results. Pass only when native destination data/files/credential recovery and paused trust/automation are verified, or when same-workspace upgrade preserves data under its own entitlement. Store archives and licenses privately. Retain an activated/restored or upgraded fixture; neither operation is undone by resetting a checkbox.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedPortableExport.tsx">Customer export screen</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/scripts/restore-portable-workspace.ts">Operator restore CLI</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/docs/features/co-managed-portable-workspace.md">Portable workspace behavior and limitations</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedUpgrade.tsx">Upgrade screen</a></li>
+</ul>
+</main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer>
+</body></html>

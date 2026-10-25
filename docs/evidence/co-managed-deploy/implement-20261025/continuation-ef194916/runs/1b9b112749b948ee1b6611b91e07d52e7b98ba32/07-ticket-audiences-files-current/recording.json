@@ -1,0 +1,345 @@
+{
+  "scenario": "07-ticket-audiences-files-current",
+  "recordedAt": "2026-10-25T15:58:25.028Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "qa-shared-publication-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:29.734Z"
+    },
+    {
+      "id": "customer-native-ticket-renders-authorized-shared-attachment",
+      "passed": true,
+      "at": "2026-10-25T15:58:33.121Z"
+    },
+    {
+      "id": "qa-msp-private-publication-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:36.490Z"
+    },
+    {
+      "id": "alice-customer-private-publication-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:41.177Z"
+    },
+    {
+      "id": "qa-requester-publication-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:46.909Z"
+    },
+    {
+      "id": "qa-permitted-shared-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:55.385Z"
+    },
+    {
+      "id": "qa-permitted-requester-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:55.422Z"
+    },
+    {
+      "id": "qa-permitted-msp-private-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:55.490Z"
+    },
+    {
+      "id": "qa-cannot-read-other-organization-private-message",
+      "passed": true,
+      "at": "2026-10-25T15:58:55.490Z"
+    },
+    {
+      "id": "qa-copied-other-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T15:58:55.538Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "alice-permitted-shared-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:57.838Z"
+    },
+    {
+      "id": "alice-permitted-requester-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:57.879Z"
+    },
+    {
+      "id": "alice-permitted-customer-private-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:58:57.919Z"
+    },
+    {
+      "id": "alice-cannot-read-other-organization-private-message",
+      "passed": true,
+      "at": "2026-10-25T15:58:57.919Z"
+    },
+    {
+      "id": "alice-copied-other-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T15:58:57.932Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "requester-sees-only-requester-audience",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.021Z"
+    },
+    {
+      "id": "requester-downloads-public-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.044Z"
+    },
+    {
+      "id": "requester-denied-shared-staff-file",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.053Z",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "id": "requester-denied-msp-private-staff-file",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.061Z",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "id": "requester-denied-customer-private-staff-file",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.070Z",
+      "data": {
+        "status": 401
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:58:27.690Z",
+      "seconds": 2.662,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:29.734Z",
+      "seconds": 4.706,
+      "actor": "qa",
+      "title": "qa-shared-publication-file-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:33.064Z",
+      "seconds": 8.036,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:33.121Z",
+      "seconds": 8.093,
+      "actor": "alice",
+      "title": "customer-native-ticket-renders-authorized-shared-attachment"
+    },
+    {
+      "at": "2026-10-25T15:58:35.166Z",
+      "seconds": 10.138,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:36.490Z",
+      "seconds": 11.462,
+      "actor": "qa",
+      "title": "qa-msp-private-publication-file-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:39.819Z",
+      "seconds": 14.791,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:41.177Z",
+      "seconds": 16.149,
+      "actor": "alice",
+      "title": "alice-customer-private-publication-file-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:44.407Z",
+      "seconds": 19.379,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:46.909Z",
+      "seconds": 21.881,
+      "actor": "qa",
+      "title": "qa-requester-publication-file-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:54.843Z",
+      "seconds": 29.815,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:55.385Z",
+      "seconds": 30.357,
+      "actor": "qa",
+      "title": "qa-permitted-shared-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:55.422Z",
+      "seconds": 30.394,
+      "actor": "qa",
+      "title": "qa-permitted-requester-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:55.490Z",
+      "seconds": 30.462,
+      "actor": "qa",
+      "title": "qa-permitted-msp-private-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:55.490Z",
+      "seconds": 30.462,
+      "actor": "qa",
+      "title": "qa-cannot-read-other-organization-private-message"
+    },
+    {
+      "at": "2026-10-25T15:58:55.538Z",
+      "seconds": 30.51,
+      "actor": "qa",
+      "title": "qa-copied-other-private-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T15:58:57.611Z",
+      "seconds": 32.583,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:58:57.838Z",
+      "seconds": 32.81,
+      "actor": "alice",
+      "title": "alice-permitted-shared-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:57.879Z",
+      "seconds": 32.851,
+      "actor": "alice",
+      "title": "alice-permitted-requester-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:57.919Z",
+      "seconds": 32.891,
+      "actor": "alice",
+      "title": "alice-permitted-customer-private-bytes"
+    },
+    {
+      "at": "2026-10-25T15:58:57.919Z",
+      "seconds": 32.891,
+      "actor": "alice",
+      "title": "alice-cannot-read-other-organization-private-message"
+    },
+    {
+      "at": "2026-10-25T15:58:57.932Z",
+      "seconds": 32.904,
+      "actor": "alice",
+      "title": "alice-copied-other-private-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T15:59:00.010Z",
+      "seconds": 34.982,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T15:59:00.021Z",
+      "seconds": 34.993,
+      "actor": "requester",
+      "title": "requester-sees-only-requester-audience"
+    },
+    {
+      "at": "2026-10-25T15:59:00.044Z",
+      "seconds": 35.016,
+      "actor": "requester",
+      "title": "requester-downloads-public-file-bytes"
+    },
+    {
+      "at": "2026-10-25T15:59:00.053Z",
+      "seconds": 35.025,
+      "actor": "requester",
+      "title": "requester-denied-shared-staff-file",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "at": "2026-10-25T15:59:00.061Z",
+      "seconds": 35.033,
+      "actor": "requester",
+      "title": "requester-denied-msp-private-staff-file",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "at": "2026-10-25T15:59:00.070Z",
+      "seconds": 35.042,
+      "actor": "requester",
+      "title": "requester-denied-customer-private-staff-file",
+      "data": {
+        "status": 401
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Ticket audience/file bytes matrix only. Replies, edits/deletion, disclosure, uncertain publication recovery and requester task conversation require their own current-build recordings."
+  ],
+  "durationSeconds": 36,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "requester",
+      "email": "cm.requester.1792939134918@cmreview.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

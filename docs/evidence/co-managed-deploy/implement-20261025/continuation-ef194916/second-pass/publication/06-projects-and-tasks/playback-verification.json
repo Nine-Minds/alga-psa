@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:09.801Z",
+  "guide": "guides/06-projects-and-tasks.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/06-projects-and-tasks.html",
+  "compositeSha256": "a75f79c1acb35fcb6dd3a9d168b136942546d453ccad32e1a54442725d9e474d",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606813,
+    "duration": 116.32,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-projects-and-tasks/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "navigate",
+    "target": 93.04,
+    "actual": 93.070608,
+    "followingFrame": {
+      "mediaTime": 93.08,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/11783280",
+  "passed": true
+}

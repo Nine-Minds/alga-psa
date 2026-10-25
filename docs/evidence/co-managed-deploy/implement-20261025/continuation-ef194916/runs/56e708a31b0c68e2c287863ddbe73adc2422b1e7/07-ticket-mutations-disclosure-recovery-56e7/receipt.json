@@ -1,0 +1,36 @@
+{
+  "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "sharedRoot": {
+    "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+    "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+    "storeTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "threadId": "4ea257ce-1672-4408-b6af-a41fe78d5e81",
+    "commentId": "4ea257ce-1672-4408-b6af-a41fe78d5e81"
+  },
+  "sharedReply": "CM conversation 1792959081141 customer reply 1792959219011",
+  "privateSource": {
+    "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+    "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+    "storeTenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "threadId": "d237865a-572a-4e68-ae7e-4a4df9d9e552",
+    "commentId": "d237865a-572a-4e68-ae7e-4a4df9d9e552"
+  },
+  "disclosedDestination": {
+    "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+    "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+    "storeTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "threadId": "5c0dc283-5a69-417a-aa54-68008a566e20",
+    "commentId": "5c0dc283-5a69-417a-aa54-68008a566e20"
+  },
+  "privateReply": "CM conversation 1792959081141 MSP private reply 1792959219011",
+  "oldRequesterFile": "/api/client-portal/conversation-attachments/8ff5c03c-651f-4998-9080-5a79fe09bb1e?ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&threadId=5c0dc283-5a69-417a-aa54-68008a566e20&commentId=5c0dc283-5a69-417a-aa54-68008a566e20",
+  "publicationOperationIds": [
+    "f8408b74-b6b4-4885-bdce-f88b255eca84",
+    "f8408b74-b6b4-4885-bdce-f88b255eca84"
+  ],
+  "recoveryText": "CM conversation 1792959081141 recovered publication 1792959287188",
+  "recoveryFile": "cm-recovery-1792959287188.txt"
+}

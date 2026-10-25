@@ -1,0 +1,185 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.219
+09-billing-capture-56e7
+
+2
+00:00:00.219 --> 00:00:02.514
+Operator prerequisite: isolated technician and approval team
+
+3
+00:00:02.514 --> 00:00:05.594
+qa: navigate
+
+4
+00:00:05.594 --> 00:00:06.927
+qa: navigate
+
+5
+00:00:06.927 --> 00:00:09.362
+qa: qualified-work-billing-profile-persists
+
+6
+00:00:09.362 --> 00:00:10.606
+billingTech: navigate
+
+7
+00:00:10.606 --> 00:00:12.660
+billingTech: contracted-time-is-commercial-owned-and-qualified
+
+8
+00:00:12.660 --> 00:00:13.857
+billingTech: navigate
+
+9
+00:00:13.857 --> 00:00:15.897
+billingTech: catalog-time-is-commercial-owned-and-qualified
+
+10
+00:00:15.897 --> 00:00:15.968
+billingTech: navigate
+
+11
+00:00:15.968 --> 00:00:16.160
+billingTech: native-timesheet-shows-9136ae0d-6e74-47a0-9f20-27aac288903f
+
+12
+00:00:16.160 --> 00:00:18.347
+billingTech: isolated-sheet-has-two-exact-review-entries
+
+13
+00:00:18.347 --> 00:00:18.922
+qa: navigate
+
+14
+00:00:18.922 --> 00:00:19.760
+qa: separate-approver-approved-both-qualified-entries
+
+15
+00:00:19.760 --> 00:00:22.181
+09-operational-commercial-effort-56e7
+
+16
+00:00:22.181 --> 00:00:24.682
+alice: navigate
+
+17
+00:00:24.682 --> 00:00:26.602
+qa: navigate
+
+18
+00:00:26.602 --> 00:00:27.118
+alice: navigate
+
+19
+00:00:27.118 --> 00:00:29.036
+alice: customer-six-minutes-have-no-commercial-routing
+
+20
+00:00:29.036 --> 00:00:29.077
+alice: navigate
+
+21
+00:00:29.077 --> 00:00:31.039
+alice: alice-does-not-see-other-organization-time-note
+
+22
+00:00:31.039 --> 00:00:31.069
+qa: navigate
+
+23
+00:00:31.069 --> 00:00:31.112
+qa: qa-does-not-see-other-organization-time-note
+
+24
+00:00:31.112 --> 00:00:31.880
+qa: both-organizations-see-the-same-effort
+
+25
+00:00:31.880 --> 00:00:34.380
+09-native-stopwatch-56e7
+
+26
+00:00:34.380 --> 00:00:37.482
+qa: navigate
+
+27
+00:00:37.482 --> 00:00:41.310
+stopwatchTech: navigate
+
+28
+00:00:41.310 --> 00:00:41.855
+stopwatchTech: native-stop-prefills-one-billable-minute-from-short-real-span
+
+29
+00:00:41.855 --> 00:00:41.997
+stopwatchTech: stopwatch-save-creates-one-qualified-commercial-minute
+
+30
+00:00:41.997 --> 00:00:45.278
+stopwatchTech: stopwatch-session-is-logged-and-no-open-timer-remains
+
+31
+00:00:45.278 --> 00:00:46.320
+qa: navigate
+
+32
+00:00:46.320 --> 00:00:46.526
+09-catalog-pricing-reconciliation-56e7
+
+33
+00:00:46.526 --> 00:00:47.029
+source-is-approved-commercial-catalog-time-on-shared-work
+
+34
+00:00:47.029 --> 00:00:51.993
+qa: existing-profile-drafts
+
+35
+00:00:51.993 --> 00:00:54.802
+qa: navigate
+
+36
+00:00:54.802 --> 00:00:56.730
+qa: reversing-the-profile-drafts-reopens-the-examined-entry
+
+37
+00:00:56.730 --> 00:00:59.324
+qa: navigate
+
+38
+00:00:59.324 --> 00:01:01.322
+qa: review-lists-uncovered-catalog-time-with-catalog-rate-explanation
+
+39
+00:01:01.322 --> 00:01:07.089
+qa: navigate
+
+40
+00:01:07.089 --> 00:01:09.115
+qa: date-filter-includes-period-ending-nov-1
+
+41
+00:01:09.115 --> 00:01:10.813
+qa: eligible-entries
+
+42
+00:01:10.813 --> 00:01:13.582
+qa: preview-prices-catalog-time-at-catalog-rate
+
+43
+00:01:13.582 --> 00:01:14.739
+qa: catalog-time-reconciles-to-the-catalog-rate-and-its-source-entries
+
+44
+00:01:14.739 --> 00:01:16.635
+qa: each-entry-is-invoiced-exactly-once
+
+45
+00:01:16.635 --> 00:01:18.651
+qa: navigate
+
+46
+00:01:18.651 --> 00:01:21.080
+qa: navigate

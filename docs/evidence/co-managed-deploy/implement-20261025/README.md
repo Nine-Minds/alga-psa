@@ -1,3 +1,7 @@
+Current consolidated coverage: **7 covered / 4 partial / 3 blocked-external**. All fourteen composites have published playback and chapter-seek proofs; `recordingReady=true`, `reviewReady=false`. See [coverage report](coverage-report.md) and [current acceptance summary](continuation-ef194916/README.md). Deployed application source remains `1b9b112749` / `build-1792941614066`.
+
+Current continuation packet: [continuation-ef194916](continuation-ef194916/README.md). The root guide ledger and completion verdict track source `1b9b112749b948ee1b6611b91e07d52e7b98ba32`; the original packet below is historical. The pass remains incomplete.
+
 # Co-managed implementation acceptance
 
 Canonical review serves **build-1792934305248**, application source `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`, on port **23374**. The registered service was admitted normally. Two guides are covered; twelve remain partial. **32/260 requirement rows are verified, 226 implemented-unverified, and two external provider portions remain.** All three readiness predicates stay false. This desk order is incomplete.

@@ -1,0 +1,209 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/export",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n20b527f2-8631-4fe7-a744-dc20883a0c5a\nQuick Create\nDR\nExport workspace\n\nDownload an encrypted backup of your customer workspace.\n\nCM DESK 1792935726307 Accept IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\n\nUse a passphrase between 16 and 1024 UTF-8 bytes.\n\nPrepare and download backup",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "DR",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-export-passphrase",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-export-confirm-passphrase",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-export-download",
+      "text": "Prepare and download backup",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,490 @@
+{
+  "guide": "guides/07-conversations-and-files.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 181.92,
+  "sha256": "1ec5cd135ded564a4d5631f79a2c4d0f419ed03d9817bb5cf581ccec737b6847",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/recording.json",
+      "name": "07-composer-draft-recovery-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 15.92,
+      "offsetSeconds": 0,
+      "sha256": "fc354a0fc2dc2081758e3d2c2a77f6e04a890e37a1029afa48a2088cdcca15dc",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 10
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/recording.json",
+      "name": "07-ticket-audiences-files-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 46.2,
+      "offsetSeconds": 15.92,
+      "sha256": "3c6141a2c754fd0f3a83914f11e5511611c7c061ebf896c7fba50c4599bbe0b1",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 20
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/recording.json",
+      "name": "07-grid-parity-and-file-limits-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 21.68,
+      "offsetSeconds": 62.120000000000005,
+      "sha256": "7a77251b3ac8c40eb3415aa8148a02326ee277f6cfb8989dfe2f766db81621be",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 10
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/recording.json",
+      "name": "07-ticket-mutations-disclosure-recovery-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 80.36,
+      "offsetSeconds": 83.80000000000001,
+      "sha256": "0a53f2693a1b43f3c8ae3d8e7b5b6b3b61bbdc250e6ed2938647459986b0d70c",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 17
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/recording.json",
+      "name": "07-requester-task-conversation-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 17.76,
+      "offsetSeconds": 164.16000000000003,
+      "sha256": "e040363f2879cc22e98516af47d53c0d6cc6f74fff0d80f62307d6afa2040fcb",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 7
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "07-composer-draft-recovery-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 3.17,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.931,
+      "title": "composed",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.003,
+      "title": "unknown-outcome-surfaced-and-composer-stays-open",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.038,
+      "title": "staged-file-retained-after-unknown-outcome",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.262,
+      "title": "retry-reused-the-same-operation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.552,
+      "title": "retry-created-no-duplicate-message",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.6,
+      "title": "published-file-bytes-complete",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.846,
+      "title": "reopened-composer-is-empty-after-confirmation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 15.129,
+      "title": "ordinary-publish-confirmed-and-closed",
+      "actor": "qa"
+    },
+    {
+      "seconds": 15.92,
+      "title": "07-ticket-audiences-files-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 18.404,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 24.728,
+      "title": "qa-shared-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 28.41,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 28.512,
+      "title": "customer-native-ticket-renders-authorized-shared-attachment",
+      "actor": "alice"
+    },
+    {
+      "seconds": 31.676000000000002,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 36.782,
+      "title": "qa-msp-private-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 40.18,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 43.663,
+      "title": "alice-customer-private-publication-file-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 46.81,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.469,
+      "title": "qa-requester-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 55.857,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.709,
+      "title": "qa-permitted-shared-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.753,
+      "title": "qa-permitted-requester-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.782000000000004,
+      "title": "qa-permitted-msp-private-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.809000000000005,
+      "title": "qa-copied-other-private-file-link-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 58.832,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 59.08,
+      "title": "alice-permitted-shared-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 59.111000000000004,
+      "title": "alice-permitted-requester-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 59.147,
+      "title": "alice-permitted-customer-private-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 61.24,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 61.277,
+      "title": "requester-downloads-public-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 62.120000000000005,
+      "title": "07-grid-parity-and-file-limits-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 64.813,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 66.409,
+      "title": "QA-Grid-shows-requester-and-MSP-private",
+      "actor": "qa"
+    },
+    {
+      "seconds": 68.492,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 70.554,
+      "title": "Alice-Grid-shows-requester-and-customer-private",
+      "actor": "alice"
+    },
+    {
+      "seconds": 72.63300000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 73.587,
+      "title": "limits-help",
+      "actor": "qa"
+    },
+    {
+      "seconds": 73.715,
+      "title": "twenty-one-files-reported-before-publication",
+      "actor": "qa"
+    },
+    {
+      "seconds": 76.922,
+      "title": "over-limit-send-persists-nothing-and-keeps-draft",
+      "actor": "qa"
+    },
+    {
+      "seconds": 76.973,
+      "title": "removing-one-file-clears-the-count-error",
+      "actor": "qa"
+    },
+    {
+      "seconds": 79.525,
+      "title": "oversize-file-reported-before-publication",
+      "actor": "qa"
+    },
+    {
+      "seconds": 81.715,
+      "title": "every-offered-audience-states-attachment-availability",
+      "actor": "qa"
+    },
+    {
+      "seconds": 83.089,
+      "title": "probe-left-no-message",
+      "actor": "qa"
+    },
+    {
+      "seconds": 83.80000000000001,
+      "title": "07-ticket-mutations-disclosure-recovery-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 86.34900000000002,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 89.82900000000001,
+      "title": "customer-reply-persists-on-MSP-root",
+      "actor": "alice"
+    },
+    {
+      "seconds": 92.06400000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 92.66900000000001,
+      "title": "MSP-sees-customer-reply-with-author-organization",
+      "actor": "qa"
+    },
+    {
+      "seconds": 97.27300000000001,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 98.632,
+      "title": "eligible-author-edit-propagates-to-customer-with-reply-retained",
+      "actor": "alice"
+    },
+    {
+      "seconds": 100.65300000000002,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 105.102,
+      "title": "deleted-root-is-tombstoned-and-customer-reply-survives",
+      "actor": "qa"
+    },
+    {
+      "seconds": 107.28900000000002,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 108.305,
+      "title": "qa-deleted-root-file-link-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 110.32300000000001,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 112.23800000000001,
+      "title": "alice-deleted-root-file-link-denied",
+      "actor": "alice"
+    },
+    {
+      "seconds": 114.245,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 119.11200000000001,
+      "title": "explicit-file-removal-denies-old-link",
+      "actor": "qa"
+    },
+    {
+      "seconds": 121.12700000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 131.25,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 134.757,
+      "title": "whole-private-thread-preview-counts-root-reply-and-file",
+      "actor": "qa"
+    },
+    {
+      "seconds": 135.43800000000002,
+      "title": "MSP-private-original-is-retained-readonly",
+      "actor": "qa"
+    },
+    {
+      "seconds": 137.467,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 139.18300000000002,
+      "title": "customer-receives-entire-disclosed-thread-and-matching-file",
+      "actor": "alice"
+    },
+    {
+      "seconds": 141.228,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 141.263,
+      "title": "requester-receives-disclosed-reply-and-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 143.353,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 148.824,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 149.154,
+      "title": "whole-thread-restriction-revokes-requester-message-reply-and-copied-file",
+      "actor": "requester"
+    },
+    {
+      "seconds": 151.263,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 158.267,
+      "title": "lost-publication-response-recovers-one-message-with-same-operation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 163.33700000000002,
+      "title": "recovered-publication-has-complete-byte-exact-file-after-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 164.16000000000003,
+      "title": "07-requester-task-conversation-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 167.44400000000002,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 168.79700000000003,
+      "title": "customer-native-project-setting-enables-requester-tasks",
+      "actor": "alice"
+    },
+    {
+      "seconds": 170.81600000000003,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 174.55400000000003,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 174.59000000000003,
+      "title": "requester-task-downloads-exact-public-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 175.62000000000003,
+      "title": "requester-task-reply-persists-through-portal-reload",
+      "actor": "requester"
+    },
+    {
+      "seconds": 177.71500000000003,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 179.70000000000002,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 181.40000000000003,
+      "title": "restored-task-visibility-revokes-copied-requester-file-link",
+      "actor": "requester"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

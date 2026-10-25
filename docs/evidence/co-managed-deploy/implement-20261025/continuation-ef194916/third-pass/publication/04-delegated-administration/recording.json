@@ -1,0 +1,165 @@
+{
+  "guide": "guides/04-delegated-administration.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 42.64,
+  "sha256": "536377cf290052508c08b7f02cd2e5354bab2b2811f6946f3c391480deb9079a",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/recording.json",
+      "name": "04-delegation-board-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 11.76,
+      "offsetSeconds": 0,
+      "sha256": "3bb07f428afc1634d6a0b434603090bc05aeb6b188ddfd905dfca53d982eefe1",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 6
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/recording.json",
+      "name": "04-delegation-complete-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 30.88,
+      "offsetSeconds": 11.76,
+      "sha256": "e9e65f87f6259dea12c666e941bdbb3900095985e2bc7452ca597da6f85543d8",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 11
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "04-delegation-board-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.22,
+      "title": "Prerequisite setup: disposable empty board created using customer defaults"
+    },
+    {
+      "seconds": 2.473,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 4.342,
+      "title": "new-approval-targets-exact-record",
+      "actor": "alice"
+    },
+    {
+      "seconds": 8.184,
+      "title": "approved-msp-board-edit-persists",
+      "actor": "alice"
+    },
+    {
+      "seconds": 8.376,
+      "title": "unapproved-board-has-no-new-delegation",
+      "actor": "alice"
+    },
+    {
+      "seconds": 10.312,
+      "title": "customer-revocation-recorded",
+      "actor": "alice"
+    },
+    {
+      "seconds": 10.52,
+      "title": "stale-msp-editor-refuses-after-revocation",
+      "actor": "alice"
+    },
+    {
+      "seconds": 10.842,
+      "title": "revoked-grant-not-offered-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 11.76,
+      "title": "04-delegation-complete-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 11.812,
+      "title": "served-build-matches-current-candidate"
+    },
+    {
+      "seconds": 14.145,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 16.357,
+      "title": "customer-approves-one-nonadministrator-profile",
+      "actor": "alice"
+    },
+    {
+      "seconds": 17.133,
+      "title": "administrator-profile-is-not-eligible",
+      "actor": "alice"
+    },
+    {
+      "seconds": 19.128,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 20.454,
+      "title": "delegated-profile-persists-after-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 22.519,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 24.439,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 26.578,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 28.717,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.637999999999998,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 34.884,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 35.771,
+      "title": "resend-preserves-invitation-terms",
+      "actor": "qa"
+    },
+    {
+      "seconds": 39.324,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 41.461,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 41.748,
+      "title": "review-approvals-revoked-profile-restored",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

@@ -1,0 +1,97 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:08.983
+05-current-mixed-recovery-confirmed
+
+2
+00:00:08.983 --> 00:00:11.337
+alice: three-disposable-tickets-escalated-through-product
+
+3
+00:00:11.337 --> 00:00:13.360
+qa: navigate
+
+4
+00:00:13.360 --> 00:00:14.426
+qa: navigate
+
+5
+00:00:14.426 --> 00:00:14.541
+qa: qualified-filter-and-selection-set-survive-reload
+
+6
+00:00:14.541 --> 00:00:17.125
+qa: full-filtered-export-includes-all-authorized-rows
+
+7
+00:00:17.125 --> 00:00:19.087
+qa: customer-change-races-stale-selected-revision
+
+8
+00:00:19.087 --> 00:00:20.550
+qa: third-selected-explicit-only-grant-revoked
+
+9
+00:00:20.550 --> 00:00:20.858
+qa: reload-offers-explicit-frozen-intent-recovery
+
+10
+00:00:20.858 --> 00:00:21.111
+qa: mixed-results-distinguish-conflict-return-and-access-denied
+
+11
+00:00:21.111 --> 00:00:21.264
+qa: lost-response-replay-creates-one-handoff-note
+
+12
+00:00:21.264 --> 00:00:21.861
+qa: conflicted-item-does-not-receive-bulk-note
+
+13
+00:00:21.861 --> 00:00:22.387
+qa: oversight-retains-returned-work-without-revoked-ticket-or-duplication
+
+14
+00:00:22.387 --> 00:00:23.723
+qa: completed-return-requeries-working-membership
+
+15
+00:00:23.723 --> 00:00:29.320
+qa: customer-native-history-shows-the-successful-shared-note
+
+16
+00:00:29.320 --> 00:00:44.120
+05-current-mixed-recovery-confirmed / customer-video
+
+17
+00:00:44.120 --> 00:00:46.449
+05-current-scope-export
+
+18
+00:00:46.449 --> 00:00:47.888
+qa: navigate
+
+19
+00:00:47.888 --> 00:00:48.592
+qa: oversight-retains-selected-customer-and-search
+
+20
+00:00:48.592 --> 00:00:50.589
+qa: reload-retains-workspace-status-search-and-sort
+
+21
+00:00:50.589 --> 00:00:50.731
+qa: navigate
+
+22
+00:00:50.731 --> 00:00:51.675
+qa: one-visible-row-export-includes-all-three-filtered-rows-once
+
+23
+00:00:51.675 --> 00:00:51.741
+qa: detail-link-retains-customer-and-relationship
+
+24
+00:00:51.741 --> 00:00:52.680
+qa: product-back-navigation-restores-applied-qualified-scope

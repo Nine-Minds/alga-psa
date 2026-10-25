@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T20:45:19.331Z",
+  "guide": "guides/index.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/index.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/index.html",
+  "compositeSha256": "19f72428c6477ce5e1cac719d032366bd46a8942cb5a56eed1e187d9f286367d",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.602319,
+    "duration": 7.44,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/collection/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "composite-embedded-for-recorded-build-05-ticket-queue.html",
+    "target": 5.912,
+    "actual": 5.916241,
+    "followingFrame": {
+      "mediaTime": 5.92,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/1063031",
+  "passed": true
+}

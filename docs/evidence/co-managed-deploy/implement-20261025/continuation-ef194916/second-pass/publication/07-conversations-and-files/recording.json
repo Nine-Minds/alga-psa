@@ -1,0 +1,444 @@
+{
+  "guide": "guides/07-conversations-and-files.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "partial",
+  "remaining": "Product defect: a server-executed dropped publication response shows an unknown-outcome warning but closes and clears the native composer. The same immutable intent cannot be recovered through the offered UI without reconstruction. Attachment removal, whole-thread transfer/restriction, requester task messages/replies and exact file bytes passed. No duplicate resend or product repair is claimed.",
+  "durationSeconds": 165.88,
+  "sha256": "fc72ba5def6e519b7223ee1f421ab006c004d91817bcaca6d475cb3f87e13ace",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/recording.json",
+      "name": "07-ticket-audiences-files-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 36,
+      "offsetSeconds": 0,
+      "sha256": "412c3dd09e41c93b4121d0093ef1e832f85c8009202706429b889e8dcb7ae169",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 20
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/recording.json",
+      "name": "07-ticket-mutations-confirmed-save-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 46.56,
+      "offsetSeconds": 36,
+      "sha256": "3830cbcb80a0d2eafa8dbe8f8aff108336a609d45c27a6f658b40364c2772bae",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/walkthrough.webm",
+      "originalScenarioStatus": "failed",
+      "assertions": 7
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversation-lifecycle-continuation/recording.json",
+      "name": "07-conversation-lifecycle-continuation",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 13.24,
+      "offsetSeconds": 82.56,
+      "sha256": "5a0d1087dd0819035293adab4db86a969700dd7eb8ccc78a07042db8b94755f6",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversation-lifecycle-continuation/walkthrough.webm",
+      "originalScenarioStatus": "failed",
+      "assertions": 2
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-thread-disclosure-and-publication-recovery/recording.json",
+      "name": "07-thread-disclosure-and-publication-recovery",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 48.2,
+      "offsetSeconds": 95.8,
+      "sha256": "e45248b05e220a08658ca526ebb77116f4de6af8a0bcdfacd7908a326254c446",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-thread-disclosure-and-publication-recovery/walkthrough.webm",
+      "originalScenarioStatus": "failed",
+      "assertions": 8
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-uncertain-response-recovery-blocker/recording.json",
+      "name": "07-uncertain-response-recovery-blocker",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 7.24,
+      "offsetSeconds": 144,
+      "sha256": "3964cd8ec7863787f54204d9eb5ae319106e70cc2649f0a7921b245c4ff5510c",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-uncertain-response-recovery-blocker/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 3
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-requester-task-conversation-complete/recording.json",
+      "name": "07-requester-task-conversation-complete",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 14.64,
+      "offsetSeconds": 151.24,
+      "sha256": "941adb6d55d8398626b5dc337b3ca526749ceca1fb673a45c2f10aa03f743c55",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-requester-task-conversation-complete/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 7
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "07-ticket-audiences-files-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.662,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.706,
+      "title": "qa-shared-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 8.036,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 8.093,
+      "title": "customer-native-ticket-renders-authorized-shared-attachment",
+      "actor": "alice"
+    },
+    {
+      "seconds": 10.138,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.462,
+      "title": "qa-msp-private-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 14.791,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 16.149,
+      "title": "alice-customer-private-publication-file-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 19.379,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.881,
+      "title": "qa-requester-publication-file-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.815,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.357,
+      "title": "qa-permitted-shared-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.394,
+      "title": "qa-permitted-requester-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.462,
+      "title": "qa-permitted-msp-private-bytes",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.51,
+      "title": "qa-copied-other-private-file-link-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.583,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.81,
+      "title": "alice-permitted-shared-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.851,
+      "title": "alice-permitted-requester-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.891,
+      "title": "alice-permitted-customer-private-bytes",
+      "actor": "alice"
+    },
+    {
+      "seconds": 34.982,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 35.016,
+      "title": "requester-downloads-public-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 36,
+      "title": "07-ticket-mutations-confirmed-save-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 38.634,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 40.980000000000004,
+      "title": "customer-reply-persists-on-MSP-root",
+      "actor": "alice"
+    },
+    {
+      "seconds": 43.144999999999996,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 43.191,
+      "title": "MSP-sees-customer-reply-with-author-organization",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.208,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 46.257999999999996,
+      "title": "eligible-author-edit-propagates-to-customer-with-reply-retained",
+      "actor": "alice"
+    },
+    {
+      "seconds": 48.230000000000004,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 50.004,
+      "title": "deleted-root-is-tombstoned-and-customer-reply-survives",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.088,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.471000000000004,
+      "title": "qa-deleted-root-file-link-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 54.472,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 54.553,
+      "title": "alice-deleted-root-file-link-denied",
+      "actor": "alice"
+    },
+    {
+      "seconds": 56.525,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 82.56,
+      "title": "07-conversation-lifecycle-continuation",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 82.827,
+      "title": "Resume accepted mutation segment after persisted reply/edit/tombstone"
+    },
+    {
+      "seconds": 85.58500000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 87.489,
+      "title": "explicit-file-removal-denies-old-link",
+      "actor": "qa"
+    },
+    {
+      "seconds": 87.517,
+      "title": "removed-file-is-absent-after-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 89.524,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 94.57900000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 95.8,
+      "title": "07-thread-disclosure-and-publication-recovery",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 96.041,
+      "title": "Resume accepted mutation segment after persisted reply/edit/tombstone"
+    },
+    {
+      "seconds": 98.703,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 99.44,
+      "title": "explicit-file-removal-denies-old-link",
+      "actor": "qa"
+    },
+    {
+      "seconds": 101.49199999999999,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 102.648,
+      "title": "whole-private-thread-preview-counts-root-reply-and-file",
+      "actor": "qa"
+    },
+    {
+      "seconds": 103.307,
+      "title": "MSP-private-original-is-retained-readonly",
+      "actor": "qa"
+    },
+    {
+      "seconds": 105.425,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 105.53999999999999,
+      "title": "customer-receives-entire-disclosed-thread-and-matching-file",
+      "actor": "alice"
+    },
+    {
+      "seconds": 107.566,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 107.604,
+      "title": "requester-receives-disclosed-reply-and-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 109.74799999999999,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 113.089,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 113.112,
+      "title": "whole-thread-restriction-revokes-requester-message-reply-and-copied-file",
+      "actor": "requester"
+    },
+    {
+      "seconds": 115.239,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 144,
+      "title": "07-uncertain-response-recovery-blocker",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 146.708,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 150.032,
+      "title": "observed-unknown-response-closes-the-native-composer",
+      "actor": "qa"
+    },
+    {
+      "seconds": 150.335,
+      "title": "observed-reopening-has-cleared-the-original-compose-text",
+      "actor": "qa"
+    },
+    {
+      "seconds": 150.432,
+      "title": "published-file-is-complete-despite-unknown-acknowledgment",
+      "actor": "qa"
+    },
+    {
+      "seconds": 151.24,
+      "title": "07-requester-task-conversation-complete",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 153.716,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 154.458,
+      "title": "customer-native-project-setting-enables-requester-tasks",
+      "actor": "alice"
+    },
+    {
+      "seconds": 156.43300000000002,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 159.38600000000002,
+      "title": "navigate",
+      "actor": "requester"
+    },
+    {
+      "seconds": 159.42600000000002,
+      "title": "requester-task-downloads-exact-public-file-bytes",
+      "actor": "requester"
+    },
+    {
+      "seconds": 160.472,
+      "title": "requester-task-reply-persists-through-portal-reload",
+      "actor": "requester"
+    },
+    {
+      "seconds": 162.441,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 164.447,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 165.072,
+      "title": "restored-task-visibility-revokes-copied-requester-file-link",
+      "actor": "requester"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

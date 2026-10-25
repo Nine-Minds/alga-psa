@@ -1,0 +1,34 @@
+{
+  "scenario": "09-billing-invoice-rehearsal",
+  "recordedAt": "2026-10-25T15:28:08.956Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T15:28:11.392Z",
+      "seconds": 2.436,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#automatic-invoices-table tbody tr').filter({ hasText: 'CM Acceptance Contract 1792940395745' }).locator('button[id^=\"toggle-group-\"]')\u001b[22m\n",
+  "durationSeconds": 28.4,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

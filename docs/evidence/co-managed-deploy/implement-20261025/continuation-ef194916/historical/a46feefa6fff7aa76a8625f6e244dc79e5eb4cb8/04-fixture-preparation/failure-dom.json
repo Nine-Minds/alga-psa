@@ -1,0 +1,181 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/users",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nUsers\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nUsers\nUser Management\n\nManage MSP users and permissions\n\nMSP\nClient Portal\nActive Users\nCreate New MSP User\nFirst Name *\nLast Name *\nEmail *\nPrimary Role\nAdmin\nReports To (optional)\nSelect manager\nPassword (Leave blank to send invitation)\nNo password required — we will send them an email invitation to set it themselves.\nSend Invitation\nCancel\nList\nStructure\n\nManage individual users, roles, and permissions.\n\nFirst Name\n\t\nLast Name\n\t\nEmail\n\t\nRole\n\t\nLast Login\n\t\nActions\n\n\nAL\nAlice\n\t\nLiddell\n\t\nalice@whiterabbit.test\n\t\nAdmin\n\t\nOct 25, 2026\nvia credentials\n\t\nOpen menu",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-view-btn",
+      "text": "MSP",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-view-btn",
+      "text": "Client Portal",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_r_",
+      "text": "Active Users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "first-name",
+      "text": "",
+      "value": "Delegation",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "last-name",
+      "text": "",
+      "value": "Profile1792938451756",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email",
+      "text": "",
+      "value": "cm.profile.1792938451756@cmreview.test",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_25_",
+      "text": "Admin",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "account-manager-picker-trigger",
+      "text": "Select manager",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "password",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "show-password-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "submit-new-msp-user-btn",
+      "text": "Send Invitation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-new-msp-user-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "List",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Structure",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-ea343af6-c05d-471c-987d-635dca584d4a",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "scenario": "probe-customer-after-departure",
+  "recordedAt": "2026-10-25T19:09:39.572Z",
+  "runtime": {
+    "sourceRevision": "c31dc3bfadd41285c77ea6a8c064951a8de9590f",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c31dc3bfadd41285c77ea6a8c064951a8de9590f",
+    "buildId": "build-1792952196688"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T19:09:42.289Z",
+      "seconds": 2.717,
+      "actor": "c",
+      "title": "navigate",
+      "data": "/msp/tickets/2785d10c-5a9f-42f3-9495-ba557b11e1ce"
+    },
+    {
+      "at": "2026-10-25T19:09:47.342Z",
+      "seconds": 7.77,
+      "actor": "c",
+      "title": "edit-button",
+      "data": {
+        "count": 1,
+        "enabled": true
+      }
+    },
+    {
+      "at": "2026-10-25T19:09:47.906Z",
+      "seconds": 8.334,
+      "actor": "c",
+      "title": "title-input",
+      "data": {
+        "count": 1
+      }
+    },
+    {
+      "at": "2026-10-25T19:09:51.436Z",
+      "seconds": 11.864,
+      "actor": "c",
+      "title": "after-save",
+      "data": {
+        "title": "CM DEPART 1792954374803 shared ticket",
+        "toasts": [
+          "",
+          "Failed to update ticket",
+          "Failed to update title"
+        ],
+        "failures": []
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "probe"
+  ],
+  "durationSeconds": 12.6,
+  "actors": [
+    {
+      "name": "c",
+      "email": "depart.admin.1792954374803@cmreview.test",
+      "tenant": "1725ae28-ec4c-401a-97d4-0537c3056281"
+    }
+  ]
+}

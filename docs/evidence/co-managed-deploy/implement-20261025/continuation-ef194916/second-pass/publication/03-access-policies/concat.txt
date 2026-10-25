@@ -1,0 +1,4 @@
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/walkthrough.webm'

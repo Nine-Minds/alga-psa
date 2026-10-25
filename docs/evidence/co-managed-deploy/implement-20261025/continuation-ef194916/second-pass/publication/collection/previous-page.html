@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Co-Managed IT review guides · Co-Managed IT</title><meta name="description" content="Co-Managed IT review guides: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="co-managed-it-review-guides">Co-Managed IT review guides</h1>
+<p>Use these guides to review the customer workspace, collaboration, and relationship lifecycle separately. Start with the ticket-screen walkthrough for the existing White Rabbit fixture, then choose the sections you want to assess.</p>
+<p>The <a href="http://100.82.172.57:8874/">ticket-screen walkthrough</a> links the recorded results and evidence. These source guides are rendered with an explicit runtime revision and 14-row recording coverage file. Consult each recording&#39;s scenario result and limitations: a playable recording can show a partial or blocked scenario. Expected results in the instructions are not recorded passes. Preserve the actual application build revision when the checkout contains later documentation or tooling changes.</p>
+<h2 id="regenerate-guide-pages">Regenerate guide pages</h2>
+<p>Render to a temporary directory first. The renderer validates the supplied revision against the coverage file, requires all 14 guide rows, and writes completed recordings or blocked JSON and WebVTT scaffolds without changing these source files or fabricating WebM files.</p>
+<pre><code class="language-sh">node docs/guides/co-managed-it/render.cjs /tmp/co-managed-guides \
+  --revision &quot;$RECORDED_RUNTIME_REVISION&quot; \
+  --publication-revision &quot;$PUBLISHED_GUIDE_REVISION&quot; \
+  --coverage /absolute/path/to/video-coverage.json
+</code></pre>
+<p><code>--publication-revision</code> is optional and defaults to <code>--revision</code>. Use it for
+a later documentation-only publication: source links and the guide header use
+the publication SHA, while media validation and recording metadata retain the
+actual runtime SHA. It never promotes scenario acceptance.</p>
+<p>The output directory represents the review packet&#39;s <code>guides/</code> directory and
+contains the collection guide and 12 section guides. Coverage <code>recordingPaths</code>
+are relative to the packet root, so section artifacts must start with <code>guides/</code>.
+The renderer removes that prefix when writing them beneath the output directory.
+The main walkthrough is maintained in the review packet&#39;s root <code>index.html</code>
+and has its own recording artifacts.</p>
+<h3 id="render-a-completed-walkthrough">Render a completed walkthrough</h3>
+<p>Coverage rows may use <code>status: &quot;complete&quot;</code> after the product interaction has
+been recorded and checked in a browser. Set <code>testedRevision</code>, <code>recordedAt</code>,
+<code>durationSeconds</code>, <code>actors</code>, <code>steps</code>, <code>outcomes</code>, and <code>chapters</code>. Set both
+<code>playbackVerified</code> and <code>chapterSeekVerified</code> to <code>true</code>. <code>runtime</code> must identify
+the same <code>sourceRevision</code> (or <code>revision</code>), and <code>build.sourceRevision</code> must match
+the candidate. <code>recordingSourcePaths.webm</code> and <code>.chapterVtt</code> point to files
+relative to the coverage JSON. The renderer validates the WebM container and
+duration with <code>ffprobe</code>, checks the timed VTT chapters, copies the media to
+<code>recordingPaths</code>, and writes a player with chapter seeking.</p>
+<p>Blocked rows still need a blocker and a <code>missing</code> list. They must not claim a
+recording timestamp or verified playback/chapter seeking. To validate renderer
+behavior without product evidence, run <code>node --test docs/guides/co-managed-it/render.test.cjs</code>. That test creates a synthetic clip
+in a temporary directory. It is not a walkthrough and must not be added to
+acceptance evidence.</p>
+<h2 id="choose-a-section">Choose a section</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Guide</th>
+<th>What you can assess</th>
+<th>Preparation beyond the recorded fixture</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="01-onboarding.html">1. Customer onboarding</a></td>
+<td>Workspace creation, invitation, acceptance, recovery, cancellation</td>
+<td>A new disposable client, administrator mailbox and available seats</td>
+</tr>
+<tr>
+<td><a href="02-licensing-and-seats.html">2. Licensing and seats</a></td>
+<td>Sponsor pool, purchase, allocation and capacity limits</td>
+<td>Billing administrator; configured test payment provider or signed test license</td>
+</tr>
+<tr>
+<td><a href="03-access-policies.html">3. Access policies</a></td>
+<td>Boards, projects, staff, teams and individual-ticket grants</td>
+<td>Customer administrator and MSP access administrator; disposable scoped work</td>
+</tr>
+<tr>
+<td><a href="04-delegated-administration.html">4. Delegated administration</a></td>
+<td>Customer approval, bounded MSP changes and revocation</td>
+<td>An approved technician/team and disposable customer records</td>
+</tr>
+<tr>
+<td><a href="05-ticket-queue.html">5. Ticket queue operations</a></td>
+<td>Filtering, CSV export, bulk return and recovery</td>
+<td>Two disposable, MSP-responsible customer tickets for bulk tests</td>
+</tr>
+<tr>
+<td><a href="06-projects-and-tasks.html">6. Projects and tasks</a></td>
+<td>Shared tasks, edits, assignment, history and effort</td>
+<td>A disposable customer project and tasks; verify the current fixture before editing</td>
+</tr>
+<tr>
+<td><a href="07-conversations-and-files.html">7. Conversations and files</a></td>
+<td>Audiences, replies, files, thread disclosure and requester access</td>
+<td>Small test files; requester account and task access for portal tests</td>
+</tr>
+<tr>
+<td><a href="08-sla.html">8. SLA configuration</a></td>
+<td>Policies, priority mapping and independent responsibility clocks</td>
+<td>MSP SLA administrator; disposable ticket for new escalation</td>
+</tr>
+<tr>
+<td><a href="09-time-and-billing.html">9. Time approval and billing</a></td>
+<td>Stopwatch, effort ownership, timesheets and commercial billing</td>
+<td>Current time period, service/contract setup, approver and billing operator</td>
+</tr>
+<tr>
+<td><a href="10-departure-and-archives.html">10. Departure and archives</a></td>
+<td>Access cutoff, retained work/files and released allocations</td>
+<td>A separate relationship that can be ended permanently</td>
+</tr>
+<tr>
+<td><a href="11-export-restore-and-upgrade.html">11. Export, restore and independence</a></td>
+<td>Encrypted export, operator restore and independent upgrade</td>
+<td>Customer administrator; isolated destination and operator for restore; own paid/test entitlement for upgrade</td>
+</tr>
+<tr>
+<td><a href="12-customer-integrations.html">12. Customer-owned integrations</a></td>
+<td>Provider setup, identity, directory and email journeys</td>
+<td>Isolated test provider bindings and test mailboxes</td>
+</tr>
+</tbody></table></div>
+<h2 id="fixtures">Fixtures</h2>
+<p>The review app is <a href="http://feature-co-managed-it.localhost:23374/auth/msp/signin">feature-co-managed-it.localhost:23374</a>. Port 3374 is the development app. The October 25 repaired production recordings use source <code>c04a67fff5</code> and build <code>build-1792926045353</code>. See <a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/docs/evidence/co-managed-deploy/c04a67fff5/runtime-matrix.json">the current matrix</a> and <a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/docs/evidence/co-managed-deploy/c04a67fff5/walkthroughs/video-coverage.json">media coverage</a>. All full scenarios remain partial. Check the displayed organization and current state before using a record.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Identity or record</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>qa@emeraldcity.oz</code></td>
+<td>QA Tester, Oz workspace administrator with a co-managed technician assignment. Confirm the current session and offered controls; do not add grants to bypass a denial.</td>
+</tr>
+<tr>
+<td><code>alice@whiterabbit.test</code></td>
+<td>White Rabbit IT customer administrator; customer-owned tickets and relationship controls.</td>
+</tr>
+<tr>
+<td><code>noassign@emeraldcity.oz</code></td>
+<td>MSP viewer. Despite the name, this account has a viewer assignment.</td>
+</tr>
+<tr>
+<td><a href="http://feature-co-managed-it.localhost:23374/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed">White Rabbit client</a></td>
+<td>Existing client relationship and Co-managed IT view. October 25 allocation: one seat; the reversible +1 test restored this value.</td>
+</tr>
+<tr>
+<td><a href="http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500">Ticket 000002, MSP</a></td>
+<td>Shared detail; last recorded MSP-responsible and unassigned.</td>
+</tr>
+<tr>
+<td><a href="http://feature-co-managed-it.localhost:23374/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500">Ticket 000002, customer</a></td>
+<td>Same authoritative ticket, viewed as Alice.</td>
+</tr>
+<tr>
+<td><a href="http://feature-co-managed-it.localhost:23374/msp/tickets/5a9fda39-4057-4e0f-81f0-e5e9d5cd23ce">Native Oz ticket TIC001011</a></td>
+<td>Control for ordinary MSP ticket behavior.</td>
+</tr>
+</tbody></table></div>
+<p>Open Review must enter directly as <code>qa@emeraldcity.oz</code>; confirm the avatar and Oz organization before starting. Do not switch to Glinda or broaden QA&#39;s grants to work around a missing staff assignment. The record IDs in this guide are historical pointers only: verify each organization, relationship and record in the current app before navigating or changing it.</p>
+<h2 id="review-order-and-retained-changes">Review order and retained changes</h2>
+<p>For a full review, follow guides 1–9, then integrations, export and restore, and finally upgrade or departure on <strong>separate disposable relationships</strong>. Upgrade and departure end live trust; the active White Rabbit relationship supports the existing ticket review and should remain available.</p>
+<p>Use a unique suffix such as <code>CM-REVIEW-20261025-A</code> for new records and messages. Record the account, organization, record link, initial state, action, result after reload, and any retained effect. Preserve sent messages, recorded time and financial evidence. Restore reversible settings to their original values. Do not use old September fixture IDs or reset scripts against the rebuilt database.</p>
+<h2 id="record-results">Record results</h2>
+<p>For each flow record <strong>Pass</strong>, <strong>Fail</strong>, <strong>Blocked</strong>, or <strong>Not run</strong>, with a screenshot or record link. A missing project, provider binding, approver or entitlement is a preparation blocker, not a pass. If a save has an uncertain outcome, recover the same operation through the offered retry before submitting another.</p>
+<p>These guides do not change the card&#39;s approval, CI, merge or production-readiness status. Real payment-provider, licensing, identity and deployment acceptance remain separate from simulator-based review.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedClientView.tsx">Client management composition</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/docs/plans/2026-09-20-co-managed-it-completion/PRD.md">Whole-card completion requirements</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/docs/plans/2026-10-15-co-managed-native-ticket-screen/PRD.md">Native ticket screen requirements</a></li>
+</ul>
+<section class="walkthrough-recording" id="index-recording" data-recording-status="complete" aria-labelledby="index-recording-title">
+<h2 id="index-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:49:39.359Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>This is the collection navigation walkthrough with live fixtures; each section has separate outcome limits. It does not establish all section acceptance or real provider/paid activation readiness.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li></ul>
+<video controls preload="metadata" aria-label="guides/index.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt" default></video>
+<label for="index-chapters">Chapters</label><select id="index-chapters"><option value="0">collection final</option><option value="5.225">Licensed customer workspace overview</option><option value="10.707">Client-linked co-managed workspace</option><option value="15.583">Separate Customer Tickets surface</option><option value="20.657">Customer controls own sharing</option><option value="25.397">Customer portability surface</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("index-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

@@ -1,0 +1,66 @@
+{
+  "scenario": "07-requester-ticket-preparation-retry",
+  "recordedAt": "2026-10-25T14:40:48.547Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "requester-can-read-own-new-ticket",
+      "passed": true,
+      "at": "2026-10-25T14:40:53.376Z",
+      "data": {
+        "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+        "title": "CM requester conversation 1792939250877",
+        "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "userId": "5c078e8f-1985-4c39-babc-0d38350973a7"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:40:50.793Z",
+      "seconds": 2.246,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/tickets"
+    },
+    {
+      "at": "2026-10-25T14:40:53.367Z",
+      "seconds": 4.82,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T14:40:53.376Z",
+      "seconds": 4.829,
+      "actor": "requester",
+      "title": "requester-can-read-own-new-ticket",
+      "data": {
+        "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+        "title": "CM requester conversation 1792939250877",
+        "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "userId": "5c078e8f-1985-4c39-babc-0d38350973a7"
+      }
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Requester creates its own disposable customer ticket. Conversation/audience/file behavior is a separate current-build run."
+  ],
+  "durationSeconds": 4.84,
+  "actors": [
+    {
+      "name": "requester",
+      "email": "cm.requester.1792939134918@cmreview.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

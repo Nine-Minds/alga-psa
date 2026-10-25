@@ -1,0 +1,293 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-managed/archive",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM DESK BULK 1792933878902 1\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nCM DESK BULK 1792933878902 0\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nCM access 1792942366365 1\nCM DESK 1792935726307 Accept\nCM access 1792942366365 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 1\nCM DESK 1792935726307 Accept\nPrevious\nNext\nCM isolated SLA 1792945887398 1\n\nCM DESK 1792935726307 Accept\n\nMSP-private note\nOct 25, 2026, 12:33 PM\n\nQA Tester · Oz\n\nCM cutoff 1792946015139 MSPprivate\n\nConversation\nOct 25, 2026, 12:33 PM\n\nQA Tester · Oz\n\nCM cutoff 1792946015139 shared\n\nSaved work details\nOct 25, 2026, 12:33 PM\n\nCM isolated SLA 1792945887398 1\n\nStatus\nOpen\nPriority\nCritical\nMSP-private note\nOct 25, 2026, 12:33 PM\n\nQA Tester · Oz\n\nCM cutoff 1792946015139 MSPprivate\n\nConversation\nOct 25, 2026, 12:33 PM\n\nQA Tester · Oz\n\nCM cutoff 1792946015139 shared\n\nEscalated to MSP\nOct 25, 2026, 12:31 PM\n\nDesk Reviewer · CM DESK 1792935726307 Accept IT\n\nCM target2 1792945887398\n\nPrevious\nNext\nRetained files\ncm-cutoff-shared-1792946015139.txt31 bytes\ncm-cutoff-MSPprivate-1792946015139.txt35 bytesMSP-private file\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-refresh",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-cdb5635c-de99-4de9-a33e-963ca5750dd9",
+      "text": "CM DESK BULK 1792933878902 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-cfff4242-7962-4100-a54c-687eaa540500",
+      "text": "SMOKE callout count change 142333White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-d863e047-efcd-4712-be1a-5a0e0cbe69f9",
+      "text": "CM DESK BULK 1792933878902 0White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-dc04da68-785a-41a2-8981-dc23832716af",
+      "text": "Printer offline in accountsWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-16a124c1-1309-4ea5-89aa-cc7c55fd059c",
+      "text": "CM access 1792942366365 1CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-9c8a547b-9519-486f-9d3a-2a7adb829b32",
+      "text": "CM access 1792942366365 0CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-d752f251-369d-41de-b167-5e24b7bed410",
+      "text": "CM isolated SLA 1792945887398 0CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+      "text": "CM isolated SLA 1792945887398 1CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

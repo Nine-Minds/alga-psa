@@ -1,0 +1,379 @@
+{
+  "scenario": "00-collection-current-publication-complete",
+  "recordedAt": "2026-10-25T17:08:32.626Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "current-composite-embedded-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.053Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.060Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "bae09d2178b130587929ff483c152c59545ffc4893f1804d11dedcf015cca97b"
+      }
+    },
+    {
+      "id": "current-composite-embedded-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.158Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.161Z",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66"
+      }
+    },
+    {
+      "id": "current-composite-embedded-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.230Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.231Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "ae926b10d3e5e131eae6ab200f39a8077cf5b6c03fdf13f45e9a729fe084daec"
+      }
+    },
+    {
+      "id": "current-composite-embedded-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.311Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.313Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "6910eb6d774d675b6d0792a5cfd25376e5b19711a752bda475cfd44f3f49323d"
+      }
+    },
+    {
+      "id": "current-composite-embedded-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.383Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.385Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "16edfcbd4487520a23b46845982fb56929a00a7f2735ed22b0c568828563e8a5"
+      }
+    },
+    {
+      "id": "current-composite-embedded-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.460Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.462Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "a75f79c1acb35fcb6dd3a9d168b136942546d453ccad32e1a54442725d9e474d"
+      }
+    },
+    {
+      "id": "current-composite-embedded-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.554Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.556Z",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "fc72ba5def6e519b7223ee1f421ab006c004d91817bcaca6d475cb3f87e13ace"
+      }
+    },
+    {
+      "id": "current-composite-embedded-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.649Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.651Z",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "e65dc55c4627f1f196b4278c9d1b66ede7d9e4941457e48bfea01e6701372505"
+      }
+    },
+    {
+      "id": "current-composite-embedded-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.732Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.734Z",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "15069440543968000578d2a397e411b451402f33e8d13d3fa24711d5fab9888b"
+      }
+    },
+    {
+      "id": "current-composite-embedded-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.820Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.823Z",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "a774535f68a3b843e48d3075968861504f87c9182e633c8926c9d23b3e189f3e"
+      }
+    },
+    {
+      "id": "current-composite-embedded-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.908Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.911Z",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e"
+      }
+    },
+    {
+      "id": "current-composite-embedded-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.980Z"
+    },
+    {
+      "id": "current-outcome-and-source-match-ledger-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.981Z",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524"
+      }
+    },
+    {
+      "id": "collection-composes-twelve-current-guide-recordings",
+      "passed": true,
+      "at": "2026-10-25T17:08:33.991Z"
+    },
+    {
+      "id": "overview-also-embeds-current-composite",
+      "passed": true,
+      "at": "2026-10-25T17:08:34.012Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T17:08:33.053Z",
+      "seconds": 0.427,
+      "title": "current-composite-embedded-01-onboarding.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.060Z",
+      "seconds": 0.434,
+      "title": "current-outcome-and-source-match-ledger-01-onboarding.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "bae09d2178b130587929ff483c152c59545ffc4893f1804d11dedcf015cca97b"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.158Z",
+      "seconds": 0.532,
+      "title": "current-composite-embedded-02-licensing-and-seats.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.161Z",
+      "seconds": 0.535,
+      "title": "current-outcome-and-source-match-ledger-02-licensing-and-seats.html",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.230Z",
+      "seconds": 0.604,
+      "title": "current-composite-embedded-03-access-policies.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.231Z",
+      "seconds": 0.605,
+      "title": "current-outcome-and-source-match-ledger-03-access-policies.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "ae926b10d3e5e131eae6ab200f39a8077cf5b6c03fdf13f45e9a729fe084daec"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.311Z",
+      "seconds": 0.685,
+      "title": "current-composite-embedded-04-delegated-administration.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.313Z",
+      "seconds": 0.687,
+      "title": "current-outcome-and-source-match-ledger-04-delegated-administration.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "6910eb6d774d675b6d0792a5cfd25376e5b19711a752bda475cfd44f3f49323d"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.383Z",
+      "seconds": 0.757,
+      "title": "current-composite-embedded-05-ticket-queue.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.385Z",
+      "seconds": 0.759,
+      "title": "current-outcome-and-source-match-ledger-05-ticket-queue.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "16edfcbd4487520a23b46845982fb56929a00a7f2735ed22b0c568828563e8a5"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.460Z",
+      "seconds": 0.834,
+      "title": "current-composite-embedded-06-projects-and-tasks.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.462Z",
+      "seconds": 0.836,
+      "title": "current-outcome-and-source-match-ledger-06-projects-and-tasks.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "a75f79c1acb35fcb6dd3a9d168b136942546d453ccad32e1a54442725d9e474d"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.554Z",
+      "seconds": 0.928,
+      "title": "current-composite-embedded-07-conversations-and-files.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.556Z",
+      "seconds": 0.93,
+      "title": "current-outcome-and-source-match-ledger-07-conversations-and-files.html",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "fc72ba5def6e519b7223ee1f421ab006c004d91817bcaca6d475cb3f87e13ace"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.649Z",
+      "seconds": 1.023,
+      "title": "current-composite-embedded-08-sla.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.651Z",
+      "seconds": 1.025,
+      "title": "current-outcome-and-source-match-ledger-08-sla.html",
+      "data": {
+        "scenario": "covered",
+        "compositeSha256": "e65dc55c4627f1f196b4278c9d1b66ede7d9e4941457e48bfea01e6701372505"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.732Z",
+      "seconds": 1.106,
+      "title": "current-composite-embedded-09-time-and-billing.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.734Z",
+      "seconds": 1.108,
+      "title": "current-outcome-and-source-match-ledger-09-time-and-billing.html",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "15069440543968000578d2a397e411b451402f33e8d13d3fa24711d5fab9888b"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.820Z",
+      "seconds": 1.194,
+      "title": "current-composite-embedded-10-departure-and-archives.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.823Z",
+      "seconds": 1.197,
+      "title": "current-outcome-and-source-match-ledger-10-departure-and-archives.html",
+      "data": {
+        "scenario": "partial",
+        "compositeSha256": "a774535f68a3b843e48d3075968861504f87c9182e633c8926c9d23b3e189f3e"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.908Z",
+      "seconds": 1.282,
+      "title": "current-composite-embedded-11-export-restore-and-upgrade.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.911Z",
+      "seconds": 1.285,
+      "title": "current-outcome-and-source-match-ledger-11-export-restore-and-upgrade.html",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.980Z",
+      "seconds": 1.354,
+      "title": "current-composite-embedded-12-customer-integrations.html"
+    },
+    {
+      "at": "2026-10-25T17:08:33.981Z",
+      "seconds": 1.355,
+      "title": "current-outcome-and-source-match-ledger-12-customer-integrations.html",
+      "data": {
+        "scenario": "blocked-external",
+        "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524"
+      }
+    },
+    {
+      "at": "2026-10-25T17:08:33.991Z",
+      "seconds": 1.365,
+      "title": "collection-composes-twelve-current-guide-recordings"
+    },
+    {
+      "at": "2026-10-25T17:08:34.012Z",
+      "seconds": 1.386,
+      "title": "overview-also-embeds-current-composite"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Collection composition only; unresolved child scenarios and external fixtures remain separately labelled and keep reviewReady=false."
+  ],
+  "durationSeconds": 2.24,
+  "actors": []
+}

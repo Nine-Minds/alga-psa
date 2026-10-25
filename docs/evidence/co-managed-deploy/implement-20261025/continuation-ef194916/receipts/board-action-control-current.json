@@ -1,0 +1,14 @@
+{
+  "action": "7f992b5260f1a1e81f72b4564cd3b569e83ccf0f15",
+  "input": {
+    "board_name": "CM DESK pending guard control 1792942794900",
+    "is_default": false,
+    "is_inactive": false,
+    "display_order": 0
+  },
+  "status": 200,
+  "created": true,
+  "boardId": "a416196a-3a09-4b44-87e7-95b553640928",
+  "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32"
+}

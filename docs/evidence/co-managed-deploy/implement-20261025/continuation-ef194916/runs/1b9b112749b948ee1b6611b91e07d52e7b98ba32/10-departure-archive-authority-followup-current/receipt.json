@@ -1,0 +1,9 @@
+{
+  "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+  "ticket": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+  "retainedFile": "/api/co-management/archive-files/e54ec835-27ae-4e4f-8072-c7ddb5084f3b?customerTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&relationshipId=4f999745-cbd0-453e-905a-9a5b0210bbb0&ticketId=e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+  "homePolicyBundle": "de7d6cc8-aaee-405c-8263-2f6a597c1794",
+  "homePolicyAssignment": "disabled after check",
+  "firstSegment": "10-departure-participation-archive-current",
+  "originalAssertionCorrection": "The original viewer had broad local retained-record read authority; its 200 is not evidence of unauthorized disclosure."
+}

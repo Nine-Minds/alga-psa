@@ -1,0 +1,131 @@
+{
+  "scenario": "10-departure-archive-authority-followup-current",
+  "recordedAt": "2026-10-25T16:34:42.274Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "broad-home-reader-has-organization-owned-retained-read",
+      "passed": true,
+      "at": "2026-10-25T16:34:45.315Z",
+      "data": {
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "sha256": "8e06aa03d81377ba49912a07ab61d9da4592770814dcf37b97e00f88680ce1a6",
+        "explanation": "Live staff assignment is not the authority for organization-owned retained evidence. The original unassigned viewer was not an unauthorized archive fixture."
+      }
+    },
+    {
+      "id": "same-reader-with-unrelated-client-policy-denied-retained-file",
+      "passed": true,
+      "at": "2026-10-25T16:34:45.616Z",
+      "data": {
+        "status": 404,
+        "allowedClient": "151ce95d-225d-4756-be83-89580d04ef22",
+        "excludedArchiveClient": "5e9c535b-2506-4b36-9303-7032fae88807"
+      }
+    },
+    {
+      "id": "restricted-home-policy-also-removes-archive-list-item",
+      "passed": true,
+      "at": "2026-10-25T16:34:46.363Z"
+    },
+    {
+      "id": "customer-keeps-native-record-and-private-content",
+      "passed": true,
+      "at": "2026-10-25T16:34:48.672Z"
+    },
+    {
+      "id": "customer-former-MSP-SLA-is-closed-or-unavailable",
+      "passed": true,
+      "at": "2026-10-25T16:35:13.674Z",
+      "data": {
+        "displayed": null
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:34:44.599Z",
+      "seconds": 2.325,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-25T16:34:45.315Z",
+      "seconds": 3.041,
+      "actor": "viewer",
+      "title": "broad-home-reader-has-organization-owned-retained-read",
+      "data": {
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "sha256": "8e06aa03d81377ba49912a07ab61d9da4592770814dcf37b97e00f88680ce1a6",
+        "explanation": "Live staff assignment is not the authority for organization-owned retained evidence. The original unassigned viewer was not an unauthorized archive fixture."
+      }
+    },
+    {
+      "at": "2026-10-25T16:34:45.616Z",
+      "seconds": 3.342,
+      "actor": "viewer",
+      "title": "same-reader-with-unrelated-client-policy-denied-retained-file",
+      "data": {
+        "status": 404,
+        "allowedClient": "151ce95d-225d-4756-be83-89580d04ef22",
+        "excludedArchiveClient": "5e9c535b-2506-4b36-9303-7032fae88807"
+      }
+    },
+    {
+      "at": "2026-10-25T16:34:46.363Z",
+      "seconds": 4.089,
+      "actor": "viewer",
+      "title": "restricted-home-policy-also-removes-archive-list-item"
+    },
+    {
+      "at": "2026-10-25T16:34:48.617Z",
+      "seconds": 6.343,
+      "actor": "departureCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:34:48.672Z",
+      "seconds": 6.398,
+      "actor": "departureCustomer",
+      "title": "customer-keeps-native-record-and-private-content"
+    },
+    {
+      "at": "2026-10-25T16:35:13.674Z",
+      "seconds": 31.4,
+      "actor": "departureCustomer",
+      "title": "customer-former-MSP-SLA-is-closed-or-unavailable",
+      "data": {
+        "displayed": null
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Corrected local archive authority control and post-departure native customer read. Commercial financial continuity, queued-delivery suppression and post-cutoff archive immutability remain unverified."
+  ],
+  "durationSeconds": 32.36,
+  "actors": [
+    {
+      "name": "viewer",
+      "email": "noassign@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "departureCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

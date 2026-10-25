@@ -1,0 +1,53 @@
+{
+  "scenario": "09-billing-fixture-ui-preparation",
+  "recordedAt": "2026-10-25T15:02:16.044Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "seeded-contract-visible-in-native-billing",
+      "passed": true,
+      "at": "2026-10-25T15:02:18.984Z",
+      "data": {
+        "contractId": "95dafe0f-6952-4a90-a3f4-91674f10f85c"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:02:18.818Z",
+      "seconds": 2.774,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts&contractId=95dafe0f-6952-4a90-a3f4-91674f10f85c&contractView=lines"
+    },
+    {
+      "at": "2026-10-25T15:02:18.984Z",
+      "seconds": 2.94,
+      "actor": "qa",
+      "title": "seeded-contract-visible-in-native-billing",
+      "data": {
+        "contractId": "95dafe0f-6952-4a90-a3f4-91674f10f85c"
+      }
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Contract fixture visibility only; no time approval or invoice acceptance."
+  ],
+  "durationSeconds": 3.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

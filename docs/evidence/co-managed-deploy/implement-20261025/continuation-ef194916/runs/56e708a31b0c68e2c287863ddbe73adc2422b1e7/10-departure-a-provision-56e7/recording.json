@@ -1,0 +1,207 @@
+{
+  "scenario": "10-departure-a-provision-56e7",
+  "recordedAt": "2026-10-25T20:24:18.301Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "disposable-workspace-provisioned-with-one-allocation",
+      "passed": true,
+      "at": "2026-10-25T20:24:40.392Z",
+      "data": {
+        "operationId": "b240dca9-0e9e-4225-a91b-3d7879323451",
+        "customer": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+      }
+    },
+    {
+      "id": "customer-accepts-and-reaches-its-native-desk",
+      "passed": true,
+      "at": "2026-10-25T20:24:47.765Z"
+    },
+    {
+      "id": "msp-technician-has-collaborate-access",
+      "passed": true,
+      "at": "2026-10-25T20:24:50.935Z"
+    },
+    {
+      "id": "msp-maps-every-customer-priority-to-its-sla",
+      "passed": true,
+      "at": "2026-10-25T20:24:53.596Z",
+      "data": {
+        "mapped": {
+          "co-sla-map-dd8e8e08-1d3e-4b66-bf81-a1a1ddbfd86d": "P1 - Critical",
+          "co-sla-map-f21630be-73dc-485e-8a07-7d99fd64da7b": "P1 - Critical",
+          "co-sla-map-2a5e9dc2-05de-46e4-808c-90934df8f599": "P1 - Critical",
+          "co-sla-map-872168ad-2940-4c16-9cc4-4fc531d49e8e": "P1 - Critical",
+          "co-sla-map-a250ee3c-c536-44b1-80c6-988feb992d38": "P1 - Critical"
+        }
+      }
+    },
+    {
+      "id": "customer-native-ticket-created",
+      "passed": true,
+      "at": "2026-10-25T20:24:57.649Z",
+      "data": {
+        "ticket": "c7c64319-d853-4b83-b774-a846d285aa1f",
+        "client": "CD\nCM DEPART 1792959853966 IT\ncompany",
+        "board": "Service Desk"
+      }
+    },
+    {
+      "id": "customer-hands-the-native-ticket-to-the-msp",
+      "passed": true,
+      "at": "2026-10-25T20:24:58.267Z",
+      "data": {
+        "route": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+      }
+    },
+    {
+      "id": "msp-opens-the-shared-ticket",
+      "passed": true,
+      "at": "2026-10-25T20:25:00.295Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:24:31.605Z",
+      "seconds": 13.304,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-25T20:24:36.908Z",
+      "seconds": 18.607,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T20:24:40.392Z",
+      "seconds": 22.091,
+      "actor": "qa",
+      "title": "disposable-workspace-provisioned-with-one-allocation",
+      "data": {
+        "operationId": "b240dca9-0e9e-4225-a91b-3d7879323451",
+        "customer": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+      }
+    },
+    {
+      "at": "2026-10-25T20:24:43.626Z",
+      "seconds": 25.325,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T20:24:47.754Z",
+      "seconds": 29.453,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T20:24:47.765Z",
+      "seconds": 29.464,
+      "actor": "qa",
+      "title": "customer-accepts-and-reaches-its-native-desk"
+    },
+    {
+      "at": "2026-10-25T20:24:49.737Z",
+      "seconds": 31.436,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/ff49c96a-143b-4859-9a3f-4a2eac68bec8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T20:24:50.935Z",
+      "seconds": 32.634,
+      "actor": "qa",
+      "title": "msp-technician-has-collaborate-access"
+    },
+    {
+      "at": "2026-10-25T20:24:52.941Z",
+      "seconds": 34.64,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=b240dca9-0e9e-4225-a91b-3d7879323451"
+    },
+    {
+      "at": "2026-10-25T20:24:53.596Z",
+      "seconds": 35.295,
+      "actor": "qa",
+      "title": "msp-maps-every-customer-priority-to-its-sla",
+      "data": {
+        "mapped": {
+          "co-sla-map-dd8e8e08-1d3e-4b66-bf81-a1a1ddbfd86d": "P1 - Critical",
+          "co-sla-map-f21630be-73dc-485e-8a07-7d99fd64da7b": "P1 - Critical",
+          "co-sla-map-2a5e9dc2-05de-46e4-808c-90934df8f599": "P1 - Critical",
+          "co-sla-map-872168ad-2940-4c16-9cc4-4fc531d49e8e": "P1 - Critical",
+          "co-sla-map-a250ee3c-c536-44b1-80c6-988feb992d38": "P1 - Critical"
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:24:55.935Z",
+      "seconds": 37.634,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T20:24:57.649Z",
+      "seconds": 39.348,
+      "actor": "departAdmin",
+      "title": "customer-native-ticket-created",
+      "data": {
+        "ticket": "c7c64319-d853-4b83-b774-a846d285aa1f",
+        "client": "CD\nCM DEPART 1792959853966 IT\ncompany",
+        "board": "Service Desk"
+      }
+    },
+    {
+      "at": "2026-10-25T20:24:58.267Z",
+      "seconds": 39.966,
+      "actor": "departAdmin",
+      "title": "customer-hands-the-native-ticket-to-the-msp",
+      "data": {
+        "route": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:00.284Z",
+      "seconds": 41.983,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:00.295Z",
+      "seconds": 41.994,
+      "actor": "qa",
+      "title": "msp-opens-the-shared-ticket"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 42.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "departAdmin",
+      "email": "depart.admin.1792959853966@cmreview.test",
+      "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    }
+  ]
+}

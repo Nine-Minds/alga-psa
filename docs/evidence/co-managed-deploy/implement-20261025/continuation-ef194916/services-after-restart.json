@@ -1,0 +1,451 @@
+{
+  "services": [
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "dev-server",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:24",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh dev-server --health http://127.0.0.1:3374/auth/msp/signin /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-dev-server.sh",
+      "readiness": {
+        "port": 3374,
+        "path": "/auth/msp/signin"
+      },
+      "status": "live",
+      "createdAt": "2026-10-25T00:55:53.963Z",
+      "createdBy": "human",
+      "restartedAt": "2026-10-25T12:13:23.558Z",
+      "restartedBy": "system",
+      "wantedUntil": "2026-10-25T05:31:43.142Z",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:3374",
+        "updatedAt": "2026-10-25T12:13:23.935Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:35:40.420Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "hocuspocus",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:hocuspocus:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/hocuspocus",
+      "command": "NODE_ENV=production PORT=1235 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh hocuspocus --health http://127.0.0.1:1235/health node --env-file=../server/.env.local server.js",
+      "status": "live",
+      "createdAt": "2026-10-25T02:13:44.546Z",
+      "createdBy": "Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:1235",
+        "updatedAt": "2026-10-25T02:13:44.872Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.183Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-guide",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-guide:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it",
+      "command": "node scripts/dev/serve-co-managed-review-guide.mjs /home/robert/card-reviews/co-managed-it-3363",
+      "readiness": {
+        "port": 8874,
+        "path": "/"
+      },
+      "status": "live",
+      "createdAt": "2026-10-25T03:07:45.070Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.183Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app-candidate",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app-candidate:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "PORT=23375 bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "readiness": {
+        "port": 23375,
+        "path": "/api/health"
+      },
+      "status": "live",
+      "createdAt": "2026-10-25T04:17:33.096Z",
+      "createdBy": "human",
+      "facts": {
+        "phase": "serving",
+        "phaseAt": "2026-10-25T04:35:30.566Z",
+        "updatedAt": "2026-10-25T04:35:31.194Z",
+        "algaUrl": "http://localhost:23375"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:34:43.979Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app-candidate-racefix-isolated",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app-candidate-racefix-isolated:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23376 CO_MANAGED_REVIEW_DIST=.next-review-candidate-racefix /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app-candidate-racefix-isolated --health http://127.0.0.1:23376/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "status": "live",
+      "createdAt": "2026-10-25T04:44:45.214Z",
+      "createdBy": "agent:Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:23376",
+        "updatedAt": "2026-10-25T04:44:45.543Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.192Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:27",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh temporal-worker --health http://127.0.0.1:8375/health node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "status": "live",
+      "createdAt": "2026-10-25T05:33:49.196Z",
+      "createdBy": "agent:Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:8375",
+        "updatedAt": "2026-10-25T05:33:49.541Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.193Z"
+      },
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "restartedAt": "2026-10-25T11:21:37.138Z",
+      "restartedBy": "agent:Draft Implementation"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "workflow-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:workflow-worker:25",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh workflow-worker --health http://127.0.0.1:4374/health node --env-file=.env .",
+      "status": "live",
+      "createdAt": "2026-10-25T05:34:09.747Z",
+      "createdBy": "agent:Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:4374",
+        "updatedAt": "2026-10-25T05:34:10.166Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.202Z"
+      },
+      "readiness": {
+        "port": 4374,
+        "path": "/health"
+      },
+      "restartedAt": "2026-10-25T11:22:05.182Z",
+      "restartedBy": "agent:Draft Implementation"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "NEXTAUTH_URL=http://feature-co-managed-it.localhost:23374 APPLICATION_URL=http://feature-co-managed-it.localhost:23374 HOST=http://feature-co-managed-it.localhost:23374 NM_STORE_URL=http://feature-co-managed-it.localhost:23374 NEXT_DIST_DIR=.next-review-candidate-racefix NODE_ENV=production PORT=23374 npx next start -p 23374 -H 0.0.0.0",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-25T05:49:17.881Z",
+      "createdBy": "human",
+      "restartedAt": "2026-10-25T05:50:36.403Z",
+      "restartedBy": "human",
+      "wantedUntil": "2026-10-25T14:44:26.800Z",
+      "facts": {
+        "algaUrl": "http://localhost:23374",
+        "updatedAt": "2026-10-25T05:50:36.897Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T11:22:04.580Z"
+      },
+      "concludedAt": "2026-10-25T11:22:38.484Z",
+      "concludedBy": "agent:Draft Implementation",
+      "concludedReason": "Promote provenance-verified c04a67 repaired candidate after Alice, QA, and worker checks passed"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app-smoke-704f",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app-smoke-704f:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "PORT=23377 CO_MANAGED_REVIEW_DIST=.next-review-smoke-704f bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "readiness": {
+        "port": 23377,
+        "path": "/api/health"
+      },
+      "status": "live",
+      "createdAt": "2026-10-25T06:41:21.947Z",
+      "createdBy": "human",
+      "facts": {
+        "phase": "serving",
+        "phaseAt": "2026-10-25T06:58:38.594Z",
+        "updatedAt": "2026-10-25T06:58:39.030Z",
+        "algaUrl": "http://localhost:23377"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.202Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-build-prep-4ec8da91",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-4ec8da91:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-4ec8da91 bash -lc 'CO_MANAGED_REVIEW_PREPARE_ONLY=1 PORT=23378 CO_MANAGED_REVIEW_DIST=.next-review-co-managed-4ec8da91 bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh; result=$?; sleep 60; exit $result'",
+      "status": "concluded",
+      "createdAt": "2026-10-25T08:50:07.112Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T09:10:34.042Z"
+      },
+      "concludedAt": "2026-10-25T09:10:39.220Z",
+      "concludedBy": "human",
+      "concludedReason": "Isolated build-only preparation completed; app startup was skipped"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-build-prep-71fd898d",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-71fd898d:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-71fd898d bash -lc 'CO_MANAGED_REVIEW_PREPARE_ONLY=1 PORT=23379 CO_MANAGED_REVIEW_DIST=.next-review-co-managed-71fd898d bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh; result=$?; sleep 60; exit $result'",
+      "status": "concluded",
+      "createdAt": "2026-10-25T09:11:34.829Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T09:32:04.103Z"
+      },
+      "concludedAt": "2026-10-25T09:32:52.346Z",
+      "concludedBy": "human",
+      "concludedReason": "Final-HEAD isolated build preparation completed; app startup skipped"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app-repaired-candidate",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app-repaired-candidate:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23378 CO_MANAGED_REVIEW_DIST=.next-review-c04a67-production /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app-repaired-candidate --health http://127.0.0.1:23378/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "status": "live",
+      "createdAt": "2026-10-25T11:00:12.824Z",
+      "createdBy": "agent:Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:23378",
+        "updatedAt": "2026-10-25T11:00:13.149Z"
+      },
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:32:10.211Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "co-managed-worker-provenance-build",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:co-managed-worker-provenance-build:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh co-managed-worker-provenance-build bash -lc 'flock -x /home/robert/.alga-dev/locks/next-build.lock; npm --prefix ee/temporal-workflows run build && npm --prefix services/workflow-worker run build; result=$?; sleep 3600; exit $result'",
+      "status": "concluded",
+      "createdAt": "2026-10-25T11:20:12.741Z",
+      "createdBy": "agent:Draft Implementation",
+      "lastHealth": {
+        "status": "failed",
+        "checkedAt": "2026-10-25T11:20:34.642Z",
+        "reason": "Process is no longer running",
+        "exited": true
+      },
+      "concludedAt": "2026-10-25T11:20:39.882Z",
+      "concludedBy": "agent:Draft Implementation",
+      "concludedReason": "Replace build command so the global build lock remains held for both worker builds"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "co-managed-worker-provenance-build",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:co-managed-worker-provenance-build:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh co-managed-worker-provenance-build bash -lc 'flock -x /home/robert/.alga-dev/locks/next-build.lock -c \"npm --prefix ee/temporal-workflows run build && npm --prefix services/workflow-worker run build\"; result=$?; echo WORKER_BUILD_RESULT=$result; sleep 3600'",
+      "status": "concluded",
+      "createdAt": "2026-10-25T11:20:40.042Z",
+      "createdBy": "agent:Draft Implementation",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T11:21:04.772Z"
+      },
+      "concludedAt": "2026-10-25T11:21:36.607Z",
+      "concludedBy": "agent:Draft Implementation",
+      "concludedReason": "Worker build outputs completed successfully"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:25",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23374 CO_MANAGED_REVIEW_DIST=.next-review-c04a67-production /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app --health http://127.0.0.1:23374/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-25T11:22:41.627Z",
+      "createdBy": "agent:Draft Implementation",
+      "restartedAt": "2026-10-25T11:27:45.563Z",
+      "restartedBy": "agent:Draft Implementation",
+      "facts": {
+        "algaUrl": "http://127.0.0.1:23374",
+        "updatedAt": "2026-10-25T11:27:45.908Z"
+      },
+      "wantedUntil": "2026-10-25T16:03:08.772Z",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T13:00:07.782Z"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-25T11:44:41.901Z"
+        ]
+      },
+      "concludedAt": "2026-10-25T13:04:15.484Z",
+      "concludedBy": "Implement",
+      "concludedReason": "Replace c04 canonical build with prepared handback recovery repair 1bdea5dd80 under Implement order"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-build-prep-handback",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-handback:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-handback bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/scripts/prepare-build.sh",
+      "status": "concluded",
+      "createdAt": "2026-10-25T12:47:06.007Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T13:02:06.471Z"
+      },
+      "concludedAt": "2026-10-25T13:04:05.086Z",
+      "concludedBy": "Implement",
+      "concludedReason": "Isolated handback repair build finished successfully; releasing preparation reservation"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:24",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23374 CO_MANAGED_REVIEW_DIST=.next-review-handback-1bdea5dd /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app --health http://127.0.0.1:23374/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-25T13:04:15.967Z",
+      "createdBy": "Implement",
+      "suspendedAt": "2026-10-25T13:04:19.633Z",
+      "suspendedReason": "\"Implement\" does not use it",
+      "concludedAt": "2026-10-25T13:35:02.706Z",
+      "concludedBy": "Implement",
+      "concludedReason": "Promote prepared return-context fix a46feefa6f"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-build-prep-return",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-return:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-return bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/scripts/prepare-return-build.sh",
+      "status": "concluded",
+      "createdAt": "2026-10-25T13:17:51.814Z",
+      "createdBy": "Implement",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T13:33:06.537Z"
+      },
+      "concludedAt": "2026-10-25T13:35:02.655Z",
+      "concludedBy": "Implement",
+      "concludedReason": "Return-context production build prepared successfully"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:26",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23374 CO_MANAGED_REVIEW_DIST=.next-review-return-a46feefa /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app --health http://127.0.0.1:23374/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "suspended",
+      "createdAt": "2026-10-25T13:35:04.195Z",
+      "createdBy": "Implement",
+      "suspendedAt": "2026-10-25T13:35:05.532Z",
+      "suspendedReason": "\"Implement\" does not use it"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-build-prep-current",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-current:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-current bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/prepare-current.sh",
+      "status": "live",
+      "createdAt": "2026-10-25T14:26:07.655Z",
+      "createdBy": "Implement",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-25T14:36:10.852Z"
+      }
+    }
+  ]
+}

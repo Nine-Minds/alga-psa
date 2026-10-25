@@ -1,0 +1,171 @@
+{
+  "scenario": "09-billing-invoice-rehearsal-retry",
+  "recordedAt": "2026-10-25T15:28:44.325Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [
+    {
+      "id": "isolated-preview-reconciles-15-minutes-at-120-per-hour",
+      "passed": true,
+      "at": "2026-10-25T15:28:47.284Z",
+      "data": {
+        "expectedMinutes": 15,
+        "rateCentsPerHour": 12000,
+        "expectedSubtotalCents": 3000
+      }
+    },
+    {
+      "id": "draft-invoice-keeps-MSP-client-profile-and-amount",
+      "passed": true,
+      "at": "2026-10-25T15:28:48.128Z",
+      "data": {
+        "invoice": {
+          "invoice_id": "43905293-0114-4ddd-81e6-1cbf34ea5452",
+          "invoice_number": "INV-000003",
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "status": "draft",
+          "subtotal": 3000,
+          "total_amount": 3000
+        }
+      }
+    },
+    {
+      "id": "invoice-links-exact-commercial-entry-once",
+      "passed": true,
+      "at": "2026-10-25T15:28:48.276Z",
+      "data": {
+        "sources": [
+          {
+            "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+            "work_item_snapshot": {
+              "rate": 12000,
+              "title": "CM continuation task 1 1792938628367",
+              "version": 2,
+              "rateKind": "uniform",
+              "entryDate": "2026-10-25",
+              "netAmount": 3000,
+              "serviceId": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+              "workItemId": "d07b5183-f423-4cef-8df3-d27a7e1619dd",
+              "description": null,
+              "serviceName": "CM Contracted Support 1792940395745",
+              "uniformRate": 12000,
+              "sourceTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+              "ticketNumber": null,
+              "workItemType": "project_task",
+              "billedMinutes": 15,
+              "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+              "workReferenceId": "cfb6e09a-b513-4e28-ac98-a8257af2921a"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "customer-operational-time-is-not-a-source",
+      "passed": true,
+      "at": "2026-10-25T15:28:48.429Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:28:46.728Z",
+      "seconds": 2.403,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T15:28:47.284Z",
+      "seconds": 2.959,
+      "actor": "qa",
+      "title": "isolated-preview-reconciles-15-minutes-at-120-per-hour",
+      "data": {
+        "expectedMinutes": 15,
+        "rateCentsPerHour": 12000,
+        "expectedSubtotalCents": 3000
+      }
+    },
+    {
+      "at": "2026-10-25T15:28:48.128Z",
+      "seconds": 3.803,
+      "actor": "qa",
+      "title": "draft-invoice-keeps-MSP-client-profile-and-amount",
+      "data": {
+        "invoice": {
+          "invoice_id": "43905293-0114-4ddd-81e6-1cbf34ea5452",
+          "invoice_number": "INV-000003",
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "status": "draft",
+          "subtotal": 3000,
+          "total_amount": 3000
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T15:28:48.276Z",
+      "seconds": 3.951,
+      "actor": "qa",
+      "title": "invoice-links-exact-commercial-entry-once",
+      "data": {
+        "sources": [
+          {
+            "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+            "work_item_snapshot": {
+              "rate": 12000,
+              "title": "CM continuation task 1 1792938628367",
+              "version": 2,
+              "rateKind": "uniform",
+              "entryDate": "2026-10-25",
+              "netAmount": 3000,
+              "serviceId": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+              "workItemId": "d07b5183-f423-4cef-8df3-d27a7e1619dd",
+              "description": null,
+              "serviceName": "CM Contracted Support 1792940395745",
+              "uniformRate": 12000,
+              "sourceTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+              "ticketNumber": null,
+              "workItemType": "project_task",
+              "billedMinutes": 15,
+              "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+              "workReferenceId": "cfb6e09a-b513-4e28-ac98-a8257af2921a"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T15:28:48.429Z",
+      "seconds": 4.104,
+      "actor": "qa",
+      "title": "customer-operational-time-is-not-a-source"
+    },
+    {
+      "at": "2026-10-25T15:28:50.568Z",
+      "seconds": 6.243,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/43905293-0114-4ddd-81e6-1cbf34ea5452"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Draft invoice only; nothing finalized or emailed. Stopwatch, customer operational reconciliation and the catalog-only entry remain separate obligations."
+  ],
+  "durationSeconds": 7.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

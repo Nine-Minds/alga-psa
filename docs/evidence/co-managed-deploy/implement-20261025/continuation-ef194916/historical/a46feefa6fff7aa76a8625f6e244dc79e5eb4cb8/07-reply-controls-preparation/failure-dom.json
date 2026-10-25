@@ -1,0 +1,188 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\n\nThis ticket or access list could not be loaded. Your access may have changed.\n\nRestricted ticket",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

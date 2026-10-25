@@ -1,0 +1,25 @@
+{
+  "service": {
+    "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "name": "review-build-prep-current",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-current:21",
+    "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-current bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/prepare-current.sh",
+    "status": "concluded",
+    "createdAt": "2026-10-25T14:26:07.655Z",
+    "createdBy": "Implement",
+    "lastHealth": {
+      "status": "running",
+      "checkedAt": "2026-10-25T14:41:11.024Z"
+    },
+    "operation": {
+      "id": "4eec24ea-4735-4dc1-a9ac-d49db598716e",
+      "expiresAt": "2026-10-25T14:45:13.573Z"
+    },
+    "concludedAt": "2026-10-25T14:43:13.681Z",
+    "concludedBy": "Implement",
+    "concludedReason": "Browser reproduction found customer-owned shared-task time launcher failure; stop ef build and prepare repaired source"
+  }
+}

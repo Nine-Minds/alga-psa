@@ -1,0 +1,102 @@
+{
+  "entry": {
+    "entry_id": "ec3c3993-ca33-4dca-b4df-947ef4da2944",
+    "billable_duration": 6,
+    "approval_status": "APPROVED",
+    "invoiced": false,
+    "contract_line_id": null,
+    "contract_line_unresolved_reason": null,
+    "billing_mode": "commercial",
+    "work_item_type": "co_managed",
+    "service_id": "2ee6f215-feee-4f42-924b-09533a329d47",
+    "service_name": "CM Catalog Support 1792944312315",
+    "default_rate": 12000,
+    "client_id": "151ce95d-225d-4756-be83-89580d04ef22"
+  },
+  "invoice": {
+    "invoice_id": "b8841459-2dda-4da1-83d0-0bcdfe4da964",
+    "invoice_number": "INV-000012",
+    "status": "draft",
+    "subtotal": 1200,
+    "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+    "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+  },
+  "charges": [
+    {
+      "description": "CM Catalog Support 1792944312315",
+      "quantity": 0.1,
+      "unit_price": 12000,
+      "net_amount": 1200
+    }
+  ],
+  "sources": [
+    "ec3c3993-ca33-4dca-b4df-947ef4da2944"
+  ],
+  "expectedCents": 1200,
+  "contractInvoice": {
+    "invoice_id": "bf46474f-be07-419f-a531-c5f687c5a758",
+    "invoice_number": "INV-000010",
+    "status": "draft",
+    "subtotal": 6000,
+    "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+    "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+  },
+  "contracted": {
+    "charges": [
+      {
+        "description": "CM Contracted Support 1792944312315",
+        "quantity": 0.25,
+        "unit_price": 12000,
+        "net_amount": 3000
+      },
+      {
+        "description": "CM Contracted Support 1792944312315",
+        "quantity": 0.25,
+        "unit_price": 12000,
+        "net_amount": 3000
+      }
+    ],
+    "sources": [
+      "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+      "9136ae0d-6e74-47a0-9f20-27aac288903f"
+    ]
+  },
+  "reversedDrafts": [
+    {
+      "invoice_id": "fbdce204-f404-4b3d-98e5-57605183ff50",
+      "invoice_number": "INV-000005",
+      "billing_cycle_id": "87874d90-0d8b-4d0a-abde-7936c605c3a5"
+    },
+    {
+      "invoice_id": "ca7be875-e132-4ad5-b6b6-0cdcc3f9f158",
+      "invoice_number": "INV-000006",
+      "billing_cycle_id": "87874d90-0d8b-4d0a-abde-7936c605c3a5"
+    }
+  ],
+  "eligible": {
+    "contracted": [
+      {
+        "entry_id": "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+        "billable_duration": 15,
+        "service_id": "c7c29168-250e-4294-8d9d-76fee5c4425e"
+      },
+      {
+        "entry_id": "9136ae0d-6e74-47a0-9f20-27aac288903f",
+        "billable_duration": 15,
+        "service_id": "c7c29168-250e-4294-8d9d-76fee5c4425e"
+      }
+    ],
+    "catalog": [
+      {
+        "entry_id": "22d6acc4-1e3d-4769-bf10-f8668793decd",
+        "billable_duration": 6,
+        "service_id": "2ee6f215-feee-4f42-924b-09533a329d47"
+      },
+      {
+        "entry_id": "ec3c3993-ca33-4dca-b4df-947ef4da2944",
+        "billable_duration": 6,
+        "service_id": "2ee6f215-feee-4f42-924b-09533a329d47"
+      }
+    ]
+  }
+}

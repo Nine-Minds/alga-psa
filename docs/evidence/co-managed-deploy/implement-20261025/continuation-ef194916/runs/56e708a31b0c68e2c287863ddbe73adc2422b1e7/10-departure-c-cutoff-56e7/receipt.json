@@ -1,0 +1,175 @@
+{
+  "stageB": "10-departure-b-content-56e7",
+  "before": {
+    "capacity": 19,
+    "allocation": {
+      "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+      "seats": 1,
+      "state": "active",
+      "released_at": null
+    },
+    "delivery": {
+      "status": "pending",
+      "attempt_count": 1,
+      "error_code": "email_provider_failed",
+      "completed_at": null
+    },
+    "clock": {
+      "identity": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "ticketId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+        "obligationId": "c714e537-b746-4a2c-a1e9-748d44449f4e",
+        "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+      },
+      "response": {
+        "dueAt": "2026-10-25T21:24:58.087Z",
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": "2026-10-25T20:25:14.392Z",
+        "targetMinutes": 60,
+        "completedElapsedMilliseconds": 16305
+      },
+      "schedule": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "entries": [],
+        "is_24x7": true,
+        "holidays": [],
+        "timezone": "UTC",
+        "is_default": false,
+        "schedule_id": "24x7-fallback",
+        "schedule_name": "24x7 (Fallback)"
+      },
+      "startedAt": "2026-10-25T20:24:58.087Z",
+      "observedAt": "2026-10-25T20:25:28.370Z",
+      "resolution": {
+        "dueAt": null,
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": null,
+        "targetMinutes": 60,
+        "completedElapsedMilliseconds": null
+      },
+      "pauseReasons": [
+        "awaiting_client"
+      ],
+      "elapsedMilliseconds": 30283
+    }
+  },
+  "after": {
+    "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+    "seats": 1,
+    "state": "released",
+    "released_at": "2026-10-25T20:26:39.8+00:00"
+  },
+  "clockAfter": {
+    "identity": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "ticketId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+      "obligationId": "c714e537-b746-4a2c-a1e9-748d44449f4e",
+      "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    },
+    "response": {
+      "dueAt": "2026-10-25T21:24:58.087Z",
+      "breached": false,
+      "breachedAt": null,
+      "completedAt": "2026-10-25T20:25:14.392Z",
+      "targetMinutes": 60,
+      "completedElapsedMilliseconds": 16305
+    },
+    "schedule": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "entries": [],
+      "is_24x7": true,
+      "holidays": [],
+      "timezone": "UTC",
+      "is_default": false,
+      "schedule_id": "24x7-fallback",
+      "schedule_name": "24x7 (Fallback)"
+    },
+    "startedAt": "2026-10-25T20:24:58.087Z",
+    "observedAt": "2026-10-25T20:26:39.756Z",
+    "resolution": {
+      "dueAt": null,
+      "breached": false,
+      "breachedAt": null,
+      "completedAt": null,
+      "targetMinutes": 60,
+      "completedElapsedMilliseconds": null
+    },
+    "pauseReasons": [
+      "awaiting_client",
+      "customer_responsible"
+    ],
+    "elapsedMilliseconds": 30283
+  },
+  "faultDisarmedAt": "2026-10-25T20:26:41.193Z",
+  "queuedDeliveryAfter": {
+    "status": "skipped",
+    "attempt_count": 2,
+    "error_code": null,
+    "completed_at": "2026-10-25T20:28:00.289678+00:00"
+  },
+  "manifest": {
+    "content_hash": "b7670f1ebf3645bb61c04a6334050e199a79a4e443ca89ef79888b6c72dd3de1",
+    "sealed_at": "2026-10-25T20:26:39.795851+00:00"
+  },
+  "evidenceAtSeal": 13,
+  "archiveTextBefore": "Shared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM DESK BULK 1792931890975 1\nWhite Rabbit\nCM DESK BULK 1792943612068 0\nWhite Rabbit\nCM DESK BULK 1792933878902 1\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nCM DESK BULK 1792933878902 0\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nCM access 1792942366365 1\nCM DESK 1792935726307 Accept\nCM access 1792942366365 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 1\nCM DESK 1792935726307 Accept\nCM calendar SLA 1792947582941\nCM DESK 1792942795727 Accept\nCM DEPART 1792959853966 shared ticket\nCM DEPART 1792959853966\nPrevious\nNext\nCM DEPART 1792959853966 shared ticket\n\nCM DEPART 1792959853966\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 queued-at-cutoff\n\nMSP-private note\nOct 25, 2026, 4:26 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 MSPprivate\n\nSaved work details\nOct 25, 2026, 4:26 PM\n\nCM DEPART 1792959853966 shared ticket\n\nStatus\nOpen\nPriority\nLow\nConversation\nOct 25, 2026, 4:26 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 shared\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 mail-control\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 queued-at-cutoff\n\nTime recorded\nOct 25, 2026, 4:25 PM\n\nCM Depart Tech 1792959853966 · Oz\n\nTime recorded\nOct 25, 2026, 4:25 PM\n\nCM Depart Tech 1792959853966 · Oz\n\nConversation\nOct 25, 2026, 4:25 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 mail-control\n\nMSP-private note\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 MSPprivate\n\nConversation\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 shared\n\nWork updated\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nMSP assignment changed\nEscalated to MSP\nOct 25, 2026, 4:24 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nPlease take this disposable departure ticket 1792959853966\n\nPrevious\nNext\nRetained files\ncm-depart-shared-1792959853966.txt31 bytes\ncm-depart-MSPprivate-1792959853966.txt35 bytesMSP-private file\nPrevious\nNext",
+  "customerChange": {
+    "titleEditOffered": false,
+    "saveOffered": false,
+    "composerOffered": false,
+    "timePanelError": false
+  },
+  "postDeparturePreview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate 2 separate invoices.\nInvoice 1\nClient Details\n\nCM DEPART 1792959853966\n\nN/A\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nCM Catalog Support 1792944312315\t0.16666666666666666\t$120.00\t$20.00\nSubtotal\t$20.00\nTax\t$0.00\nTotal\t$20.00\nInvoice 2\nClient Details\n\nCM DEPART 1792959853966\n\nN/A\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nCM Catalog Support 1792944312315\t0.3333333333333333\t$120.00\t$40.00\nSubtotal\t$40.00\nTax\t$0.00\nTotal\t$40.00\nClose Preview\nGenerate Invoice",
+  "postDepartureSources": [
+    {
+      "entry": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+      "invoice": "INV-000014",
+      "status": "draft",
+      "snapshot": {
+        "rate": 12000,
+        "title": "CM DEPART 1792959853966 shared ticket",
+        "version": 2,
+        "rateKind": "uniform",
+        "entryDate": "2026-10-25",
+        "netAmount": 2000,
+        "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+        "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+        "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+        "serviceName": "CM Catalog Support 1792944312315",
+        "uniformRate": 12000,
+        "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+        "ticketNumber": "000001",
+        "workItemType": "ticket",
+        "billedMinutes": 10,
+        "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+      }
+    },
+    {
+      "entry": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+      "invoice": "INV-000015",
+      "status": "draft",
+      "snapshot": {
+        "rate": 12000,
+        "title": "CM DEPART 1792959853966 shared ticket",
+        "version": 2,
+        "rateKind": "uniform",
+        "entryDate": "2026-10-25",
+        "netAmount": 4000,
+        "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+        "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+        "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+        "serviceName": "CM Catalog Support 1792944312315",
+        "uniformRate": 12000,
+        "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+        "ticketNumber": "000001",
+        "workItemType": "ticket",
+        "billedMinutes": 20,
+        "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+      }
+    }
+  ]
+}

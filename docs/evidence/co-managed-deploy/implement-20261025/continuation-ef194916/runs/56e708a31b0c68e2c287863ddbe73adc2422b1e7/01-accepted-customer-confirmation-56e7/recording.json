@@ -1,0 +1,70 @@
+{
+  "scenario": "01-accepted-customer-confirmation-56e7",
+  "recordedAt": "2026-10-25T20:34:45.091Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "fresh-accepted-admin-login-selects-exact-accepted-tenant",
+      "passed": true,
+      "at": "2026-10-25T20:34:45.523Z",
+      "data": {
+        "tenant": "1abff734-2991-44be-ad9f-78d6837f11be",
+        "userId": "5362b60a-eccc-48fc-829b-4364ee38ca02",
+        "userType": "internal",
+        "productCode": "co_managed"
+      }
+    },
+    {
+      "id": "fresh-accepted-session-retains-native-work-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:34:47.797Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:34:45.523Z",
+      "seconds": 0.432,
+      "actor": "acceptedCustomer",
+      "title": "fresh-accepted-admin-login-selects-exact-accepted-tenant",
+      "data": {
+        "tenant": "1abff734-2991-44be-ad9f-78d6837f11be",
+        "userId": "5362b60a-eccc-48fc-829b-4364ee38ca02",
+        "userType": "internal",
+        "productCode": "co_managed"
+      }
+    },
+    {
+      "at": "2026-10-25T20:34:47.426Z",
+      "seconds": 2.335,
+      "actor": "acceptedCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T20:34:47.797Z",
+      "seconds": 2.706,
+      "actor": "acceptedCustomer",
+      "title": "fresh-accepted-session-retains-native-work-after-reload"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Fresh post-acceptance session confirmation; the invitation, pending-acceptance denial and cancellation are in the onboarding recording."
+  ],
+  "durationSeconds": 3.64,
+  "actors": [
+    {
+      "name": "acceptedCustomer",
+      "email": "desk.accept.1792960463141@cmreview.test",
+      "tenant": "1abff734-2991-44be-ad9f-78d6837f11be"
+    }
+  ]
+}

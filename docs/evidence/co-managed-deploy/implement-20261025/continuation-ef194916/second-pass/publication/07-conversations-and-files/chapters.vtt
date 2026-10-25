@@ -1,0 +1,293 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.662
+07-ticket-audiences-files-current
+
+2
+00:00:02.662 --> 00:00:04.706
+qa: navigate
+
+3
+00:00:04.706 --> 00:00:08.036
+qa: qa-shared-publication-file-bytes
+
+4
+00:00:08.036 --> 00:00:08.093
+alice: navigate
+
+5
+00:00:08.093 --> 00:00:10.138
+alice: customer-native-ticket-renders-authorized-shared-attachment
+
+6
+00:00:10.138 --> 00:00:11.462
+qa: navigate
+
+7
+00:00:11.462 --> 00:00:14.791
+qa: qa-msp-private-publication-file-bytes
+
+8
+00:00:14.791 --> 00:00:16.149
+alice: navigate
+
+9
+00:00:16.149 --> 00:00:19.379
+alice: alice-customer-private-publication-file-bytes
+
+10
+00:00:19.379 --> 00:00:21.881
+qa: navigate
+
+11
+00:00:21.881 --> 00:00:29.815
+qa: qa-requester-publication-file-bytes
+
+12
+00:00:29.815 --> 00:00:30.357
+qa: navigate
+
+13
+00:00:30.357 --> 00:00:30.394
+qa: qa-permitted-shared-bytes
+
+14
+00:00:30.394 --> 00:00:30.462
+qa: qa-permitted-requester-bytes
+
+15
+00:00:30.462 --> 00:00:30.510
+qa: qa-permitted-msp-private-bytes
+
+16
+00:00:30.510 --> 00:00:32.583
+qa: qa-copied-other-private-file-link-denied
+
+17
+00:00:32.583 --> 00:00:32.810
+alice: navigate
+
+18
+00:00:32.810 --> 00:00:32.851
+alice: alice-permitted-shared-bytes
+
+19
+00:00:32.851 --> 00:00:32.891
+alice: alice-permitted-requester-bytes
+
+20
+00:00:32.891 --> 00:00:34.982
+alice: alice-permitted-customer-private-bytes
+
+21
+00:00:34.982 --> 00:00:35.016
+requester: navigate
+
+22
+00:00:35.016 --> 00:00:36.000
+requester: requester-downloads-public-file-bytes
+
+23
+00:00:36.000 --> 00:00:38.634
+07-ticket-mutations-confirmed-save-current
+
+24
+00:00:38.634 --> 00:00:40.980
+alice: navigate
+
+25
+00:00:40.980 --> 00:00:43.145
+alice: customer-reply-persists-on-MSP-root
+
+26
+00:00:43.145 --> 00:00:43.191
+qa: navigate
+
+27
+00:00:43.191 --> 00:00:46.208
+qa: MSP-sees-customer-reply-with-author-organization
+
+28
+00:00:46.208 --> 00:00:46.258
+alice: navigate
+
+29
+00:00:46.258 --> 00:00:48.230
+alice: eligible-author-edit-propagates-to-customer-with-reply-retained
+
+30
+00:00:48.230 --> 00:00:50.004
+qa: navigate
+
+31
+00:00:50.004 --> 00:00:52.088
+qa: deleted-root-is-tombstoned-and-customer-reply-survives
+
+32
+00:00:52.088 --> 00:00:52.471
+qa: navigate
+
+33
+00:00:52.471 --> 00:00:54.472
+qa: qa-deleted-root-file-link-denied
+
+34
+00:00:54.472 --> 00:00:54.553
+alice: navigate
+
+35
+00:00:54.553 --> 00:00:56.525
+alice: alice-deleted-root-file-link-denied
+
+36
+00:00:56.525 --> 00:01:22.560
+qa: navigate
+
+37
+00:01:22.560 --> 00:01:22.827
+07-conversation-lifecycle-continuation
+
+38
+00:01:22.827 --> 00:01:25.585
+Resume accepted mutation segment after persisted reply/edit/tombstone
+
+39
+00:01:25.585 --> 00:01:27.489
+qa: navigate
+
+40
+00:01:27.489 --> 00:01:27.517
+qa: explicit-file-removal-denies-old-link
+
+41
+00:01:27.517 --> 00:01:29.524
+qa: removed-file-is-absent-after-reload
+
+42
+00:01:29.524 --> 00:01:34.579
+qa: navigate
+
+43
+00:01:34.579 --> 00:01:35.800
+qa: navigate
+
+44
+00:01:35.800 --> 00:01:36.041
+07-thread-disclosure-and-publication-recovery
+
+45
+00:01:36.041 --> 00:01:38.703
+Resume accepted mutation segment after persisted reply/edit/tombstone
+
+46
+00:01:38.703 --> 00:01:39.440
+qa: navigate
+
+47
+00:01:39.440 --> 00:01:41.492
+qa: explicit-file-removal-denies-old-link
+
+48
+00:01:41.492 --> 00:01:42.648
+qa: navigate
+
+49
+00:01:42.648 --> 00:01:43.307
+qa: whole-private-thread-preview-counts-root-reply-and-file
+
+50
+00:01:43.307 --> 00:01:45.425
+qa: MSP-private-original-is-retained-readonly
+
+51
+00:01:45.425 --> 00:01:45.540
+alice: navigate
+
+52
+00:01:45.540 --> 00:01:47.566
+alice: customer-receives-entire-disclosed-thread-and-matching-file
+
+53
+00:01:47.566 --> 00:01:47.604
+requester: navigate
+
+54
+00:01:47.604 --> 00:01:49.748
+requester: requester-receives-disclosed-reply-and-file-bytes
+
+55
+00:01:49.748 --> 00:01:53.089
+qa: navigate
+
+56
+00:01:53.089 --> 00:01:53.112
+requester: navigate
+
+57
+00:01:53.112 --> 00:01:55.239
+requester: whole-thread-restriction-revokes-requester-message-reply-and-copied-file
+
+58
+00:01:55.239 --> 00:02:24.000
+qa: navigate
+
+59
+00:02:24.000 --> 00:02:26.708
+07-uncertain-response-recovery-blocker
+
+60
+00:02:26.708 --> 00:02:30.032
+qa: navigate
+
+61
+00:02:30.032 --> 00:02:30.335
+qa: observed-unknown-response-closes-the-native-composer
+
+62
+00:02:30.335 --> 00:02:30.432
+qa: observed-reopening-has-cleared-the-original-compose-text
+
+63
+00:02:30.432 --> 00:02:31.240
+qa: published-file-is-complete-despite-unknown-acknowledgment
+
+64
+00:02:31.240 --> 00:02:33.716
+07-requester-task-conversation-complete
+
+65
+00:02:33.716 --> 00:02:34.458
+alice: navigate
+
+66
+00:02:34.458 --> 00:02:36.433
+alice: customer-native-project-setting-enables-requester-tasks
+
+67
+00:02:36.433 --> 00:02:39.386
+qa: navigate
+
+68
+00:02:39.386 --> 00:02:39.426
+requester: navigate
+
+69
+00:02:39.426 --> 00:02:40.472
+requester: requester-task-downloads-exact-public-file-bytes
+
+70
+00:02:40.472 --> 00:02:42.441
+requester: requester-task-reply-persists-through-portal-reload
+
+71
+00:02:42.441 --> 00:02:44.447
+qa: navigate
+
+72
+00:02:44.447 --> 00:02:45.072
+alice: navigate
+
+73
+00:02:45.072 --> 00:02:45.880
+requester: restored-task-visibility-revokes-copied-requester-file-link

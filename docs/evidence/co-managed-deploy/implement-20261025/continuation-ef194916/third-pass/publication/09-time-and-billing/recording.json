@@ -1,0 +1,287 @@
+{
+  "guide": "guides/09-time-and-billing.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "Capture, routing and separate approval; customer operational effort; native stopwatch; catalog pricing review (uncovered catalog time needs no pricing decision and is billed as-is) and catalog invoice reconciliation at the catalog rate traced to its source entries. Drafts only; nothing finalized or emailed.",
+  "durationSeconds": 81.08,
+  "sha256": "0be19048bcaaa0e2f24d660f02575ef10cc58cb74317e65d3c7d9360ac0eb0d0",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/recording.json",
+      "name": "09-billing-capture-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 19.76,
+      "offsetSeconds": 0,
+      "sha256": "515cb564e546d5284ab2ad733527164a2f98bd207e7d487718cbc98d20d73681",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 9
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/recording.json",
+      "name": "09-operational-commercial-effort-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 12.12,
+      "offsetSeconds": 19.76,
+      "sha256": "65dc2ca00014badc75b60056c484499803fffe1f099bb9a69c74f4f20702e5d6",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 6
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/recording.json",
+      "name": "09-native-stopwatch-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 14.44,
+      "offsetSeconds": 31.880000000000003,
+      "sha256": "51a6e7a2d6c1b5f2a9a0e68b83af5def2bf5cbb587bb95116f24ac95fb9b4ab5",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 3
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/recording.json",
+      "name": "09-catalog-pricing-reconciliation-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 34.76,
+      "offsetSeconds": 46.32,
+      "sha256": "e98636fd5cd68b09572a3f0fddf1f70838f6a55eeccf1415d4fa3909eb7a274f",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 12
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "09-billing-capture-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.219,
+      "title": "Operator prerequisite: isolated technician and approval team"
+    },
+    {
+      "seconds": 2.514,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 5.594,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 6.927,
+      "title": "qualified-work-billing-profile-persists",
+      "actor": "qa"
+    },
+    {
+      "seconds": 9.362,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 10.606,
+      "title": "contracted-time-is-commercial-owned-and-qualified",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 12.66,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 13.857,
+      "title": "catalog-time-is-commercial-owned-and-qualified",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 15.897,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 15.968,
+      "title": "native-timesheet-shows-9136ae0d-6e74-47a0-9f20-27aac288903f",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 16.16,
+      "title": "isolated-sheet-has-two-exact-review-entries",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 18.347,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.922,
+      "title": "separate-approver-approved-both-qualified-entries",
+      "actor": "qa"
+    },
+    {
+      "seconds": 19.76,
+      "title": "09-operational-commercial-effort-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 22.181,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 24.682000000000002,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 26.602,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 27.118000000000002,
+      "title": "customer-six-minutes-have-no-commercial-routing",
+      "actor": "alice"
+    },
+    {
+      "seconds": 29.036,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 29.077,
+      "title": "alice-does-not-see-other-organization-time-note",
+      "actor": "alice"
+    },
+    {
+      "seconds": 31.039,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.069000000000003,
+      "title": "qa-does-not-see-other-organization-time-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.112000000000002,
+      "title": "both-organizations-see-the-same-effort",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.880000000000003,
+      "title": "09-native-stopwatch-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 34.38,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 37.482,
+      "title": "navigate",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 41.31,
+      "title": "native-stop-prefills-one-billable-minute-from-short-real-span",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 41.855000000000004,
+      "title": "stopwatch-save-creates-one-qualified-commercial-minute",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 41.997,
+      "title": "stopwatch-session-is-logged-and-no-open-timer-remains",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 45.278000000000006,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.32,
+      "title": "09-catalog-pricing-reconciliation-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 46.526,
+      "title": "source-is-approved-commercial-catalog-time-on-shared-work"
+    },
+    {
+      "seconds": 47.029,
+      "title": "existing-profile-drafts",
+      "actor": "qa"
+    },
+    {
+      "seconds": 51.993,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 54.802,
+      "title": "reversing-the-profile-drafts-reopens-the-examined-entry",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.730000000000004,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 59.324,
+      "title": "review-lists-uncovered-catalog-time-with-catalog-rate-explanation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.322,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 67.089,
+      "title": "date-filter-includes-period-ending-nov-1",
+      "actor": "qa"
+    },
+    {
+      "seconds": 69.11500000000001,
+      "title": "eligible-entries",
+      "actor": "qa"
+    },
+    {
+      "seconds": 70.813,
+      "title": "preview-prices-catalog-time-at-catalog-rate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 73.582,
+      "title": "catalog-time-reconciles-to-the-catalog-rate-and-its-source-entries",
+      "actor": "qa"
+    },
+    {
+      "seconds": 74.739,
+      "title": "each-entry-is-invoiced-exactly-once",
+      "actor": "qa"
+    },
+    {
+      "seconds": 76.635,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 78.65100000000001,
+      "title": "navigate",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

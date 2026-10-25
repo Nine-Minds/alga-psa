@@ -1,0 +1,1553 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+[co-managed onboarding permissions] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+[co-managed onboarding permissions] 1/1 tenant 0499be73-c0c1-48c5-bd54-db287c323c25 (co_managed): +145 permissions, ~0 descriptions, +276 grants, 0 unknown permissions and 0 extra grants preserved
+[co-managed onboarding permissions] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+[co-managed onboarding role grants] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+[co-managed onboarding role grants] 1/1 tenant 0499be73-c0c1-48c5-bd54-db287c323c25 (co_managed): +0 default-role grants
+[co-managed onboarding role grants] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+Created default project task statuses in statuses table for tenant 0499be73-c0c1-48c5-bd54-db287c323c25
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+Created AD to M365 project template for tenant 0499be73-c0c1-48c5-bd54-db287c323c25
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+Seeded built-in asset types for tenant 0499be73-c0c1-48c5-bd54-db287c323c25
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+[co-managed onboarding permissions] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+[co-managed onboarding permissions] 1/1 tenant 7e44cbba-ad93-423e-9876-132f9717e49f (co_managed): +145 permissions, ~0 descriptions, +276 grants, 0 unknown permissions and 0 extra grants preserved
+[co-managed onboarding permissions] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+[co-managed onboarding role grants] catalog v1-e3060ae34a6150f9: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+[co-managed onboarding role grants] 1/1 tenant 7e44cbba-ad93-423e-9876-132f9717e49f (co_managed): +0 default-role grants
+[co-managed onboarding role grants] complete at catalog v1-e3060ae34a6150f9: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+Created default project task statuses in statuses table for tenant 7e44cbba-ad93-423e-9876-132f9717e49f
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+Created AD to M365 project template for tenant 7e44cbba-ad93-423e-9876-132f9717e49f
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+Seeded built-in asset types for tenant 7e44cbba-ad93-423e-9876-132f9717e49f
+
+ ❯ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1468 tests | 2 failed | 1465 skipped) 4535ms 215 MB heap used
+   ↓ co-managed bootstrap against the complete installed schema > creates only customer-owned operational defaults and an invitation, without an MSP login or subscription copy
+   ↓ co-managed bootstrap against the complete installed schema > recovers repeated worker delivery with exactly one workspace, self-client, board, and administrator invitation
+   ↓ co-managed bootstrap against the complete installed schema > resumes a setup that failed in its final step, renewing an invitation that expired meanwhile
+   ↓ co-managed bootstrap against the complete installed schema > reports a pending co-managed administrator as claiming their email everywhere else
+   ↓ co-managed bootstrap against the complete installed schema > refuses an unreserved co-managed bootstrap through the ordinary tenant factory
+   ↓ co-managed bootstrap against the complete installed schema > delivers only to the customer admin, retries an undelivered invitation, and never returns its token
+   ↓ co-managed bootstrap against the complete installed schema > does not send an invitation for a cancelled relationship
+   ↓ customer-owned co-management acceptance > atomically activates seats and records the approved scope, including concurrent retries
+   ↓ customer-owned co-management acceptance > accepts escalation-only access without silently granting board oversight
+   ↓ customer-owned co-management acceptance > denies the sponsor, sibling customers, and a guessed relationship identity
+   ↓ customer-owned co-management acceptance > rechecks permissions and active internal identity instead of trusting an earlier review
+   ↓ customer-owned co-management acceptance > rejects stale revisions and edited scopes even without a revision advance
+   ↓ customer-owned co-management acceptance > leaves seats reserved when activation is denied during a capacity lapse
+   ↓ customer-owned co-management acceptance > refuses acceptance while the sponsor is suspended for deletion, and accepts once it is restored
+   ↓ customer-owned co-management acceptance > ends every sponsorship before the sponsor is deleted, leaving no customer pointing at it
+   ↓ customer-owned co-management acceptance > serializes acceptance against cancellation so only one may win
+   ↓ co-managed board deletion dependency > blocks deleting a board shared with the MSP until the relationship ends
+   ↓ co-managed board deletion dependency > counts the MSP escalation queue as in use and keeps a pending review readable without it
+   ↓ customer technician allocation admission > serializes concurrent last-seat creates without using MSP licensed_user_count
+   ↓ customer technician allocation admission > reserves invitation capacity against direct creates and concurrent other invitations
+   ↓ customer technician allocation admission > lets another connection reference the customer tenant while an invitation holds the admission lock
+   ↓ customer technician allocation admission > does not charge requesters or expired invitations as technician seats
+   ↓ customer technician allocation admission > requires the original administrator invitation before activation
+   ↓ customer technician allocation admission > blocks growth immediately on lapse, including consuming an already-issued invitation
+   ↓ customer technician allocation admission > serializes reactivation with a new last-seat account and tolerates repeated activation of the winner
+   ↓ customer technician allocation admission > never shrinks below committed seats or evicts users; a concurrent shrink/create cannot oversubscribe
+   ↓ real user service with co-managed allocation admission > creates the initial administrator from its token exactly once, with role and token consumption in the same transaction
+   ↓ real user service with co-managed allocation admission > rolls back the account and keeps the invitation usable if a required account write fails
+   ↓ real user service with co-managed allocation admission > prevents API creation from taking a seat already reserved by another invitation
+   ↓ co-managed directory reactivation > keeps a directory-deactivated user inactive when another technician has taken the available seat
+   ↓ grows an allocation only from available verified capacity and rejects stale resize attempts
+   ↓ transactional operational lifecycle admission > requires acceptance even for an administrator with capacity, then permits operational writes
+   ↓ transactional operational lifecycle admission > allows existing operations during the fixed grace interval but blocks growth immediately
+   ↓ transactional operational lifecycle admission > enforces expiration without a webhook or scheduled job, and permits reads
+   ↓ transactional operational lifecycle admission > renews the original relationship without repeating activation or provisioning
+   ↓ transactional operational lifecycle admission > starts a durable grace on loss of sponsor Pro eligibility with a current seat subscription
+   ↓ transactional operational lifecycle admission > denies ended trust and never treats a missing active allocation as an independent workspace
+   ↓ transactional operational lifecycle admission > rechecks committed license state after waiting for the sponsor lock
+   ↓ transactional operational lifecycle admission > keeps a nested caller transaction intact and rolls back its operational changes
+   ↓ transactional operational lifecycle admission > leaves ordinary PSA operations available and fails closed for nonexistent tenants
+   ↓ ticket API lifecycle admission against PostgreSQL > reports a workspace as awaiting acceptance from bootstrap until the customer accepts
+   ↓ ticket API lifecycle admission against PostgreSQL > refuses a mailbox before acceptance, since a cancelled setup cannot clean one up
+   ↓ ticket API lifecycle admission against PostgreSQL > denies direct ticket, assignment, comment, and bundle mutations before acceptance and after grace
+   ↓ ticket API lifecycle admission against PostgreSQL > creates and edits a canonical ticket during active/grace states, preserves reads after expiry, and returns actionable API errors
+   ↓ durable co-managed email intake pauses > retains pending and expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements
+   ↓ durable co-managed email intake pauses > refunds the claim when grace expires during source fetch and resumes the same inbox exactly once after renewal
+   ↓ durable co-managed email intake pauses > does not release another worker lease or refund a reclaimed attempt, and preserves prior error provenance
+   ↓ co-managed durable intake selection > requires durable intake across installation modes and retains the choice after independent upgrade
+   ↓ co-managed durable intake selection > persists Microsoft, Google, and IMAP pointers while rollout is off even when Redis handoff fails
+   ↓ co-managed durable intake selection > hands an old V1 delivery to durable ingress without running legacy effects or needing a license renewal first
+   ↓ co-managed durable intake selection > dispatches co-managed inboxes to lifecycle deferral while the installation default is off
+   ↓ co-managed durable intake selection > stages already-fetched IMAP source and schedules core processing when rollout is off
+   ↓ co-managed durable intake selection > sweeps retained co-managed inboxes in off and shadow installations
+   ↓ deduplicates co-managed outbox consumers even with installation rollout off
+   ↓ durable co-managed attachments > parks attachments without spending attempts or overwriting failure history and fences reclaimed pause releases
+   ↓ durable co-managed attachments > rolls back documents when expiry wins during upload, refunds the attempt, and resumes exactly once after renewal
+   ↓ preserves ticket assets and documents after lapse and permits their removal and ticket deletion after renewal
+   ↓ canonical material lifecycle admission > guards direct ticket/project material mutations and the ticket API before any material or stock access
+   ↓ canonical material lifecycle admission > retains consumed stock after lapse and reverses it atomically after renewal
+   ↓ co-managed storage lifecycle admission > guards file metadata entry points while preserving read access after expiry
+   ↓ co-managed storage lifecycle admission > cleans rejected buffer/stream uploads and retains no file records or workflow events when expiry wins during transport
+   ↓ co-managed storage lifecycle admission > holds admission through physical deletion, rolls back metadata on provider failure, and publishes only after commit
+   ↓ commits ticket upload records together and publishes only after the attachment is available
+   ↓ inherited operational API mutations > enforces admission on every inherited single and bulk mutation for boards, statuses, and priorities
+   ↓ inherited operational API mutations > supports real configuration edits and bulk operations after renewal without writing missing audit columns
+   ↓ co-managed project API lifecycle admission > denies project, phase, task, checklist, link, and bulk mutations before acceptance and after expiry
+   ↓ co-managed project API lifecycle admission > uses one bulk transaction, rolls back a failed member without events, and resumes after renewal
+   ↓ co-managed project API lifecycle admission > creates a project, phase, and task in a caller transaction and discards events and records on rollback
+   ↓ co-managed canonical project model lifecycle admission > denies every project-model mutation before acceptance and after expiry
+   ↓ co-managed canonical project model lifecycle admission > retains reads during expiry and renews real model writes, status cloning, and cascading deletion
+   ↓ co-managed project action lifecycle admission > denies direct action mutations without changing project rows or publishing events
+   ↓ co-managed project action lifecycle admission > defers creation events through caller rollback and keeps tree reads and CSV exports available after expiry
+   ↓ co-managed task model lifecycle admission > denies every task, checklist, resource, ticket-link, type, and dependency mutation before acceptance and after expiry
+   ↓ co-managed task model lifecycle admission > preserves related records and reads during lapse, rolls back a caller transaction, and resumes mutations after renewal
+   ↓ preserves task configuration and dependencies through lapse and caller rollback, then permits renewal edits
+   ↓ co-managed project ordering recovery > denies all standalone repair and regeneration services before acceptance and after expiry
+   ↓ co-managed project ordering recovery > repairs invalid task and phase keys inside the admitted action transaction without recursive actions
+   ↓ co-managed task action lifecycle and publication > denies task action mutations before acceptance and after expiry without emitting events
+   ↓ co-managed task action lifecycle and publication > publishes only committed tasks and checklists, preserves reads during lapse, and resumes edits after renewal
+   ↓ co-managed project status action lifecycle > denies all status library and mapping mutations before acceptance and after expiry
+   ↓ co-managed project status action lifecycle > preserves mapping reads during expiry and resumes status swaps, phase remapping, and deletion after renewal
+   ↓ co-managed task comments and reactions > denies comment and reaction mutations before acceptance and after expiry
+   ↓ co-managed task comments and reactions > keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal
+   ↓ co-managed project templates and import > denies every template mutation, the application service, and CSV import while inactive
+   ↓ co-managed project templates and import > creates and applies wizard templates atomically, preserves lapse reads, and resumes imports after renewal
+   ↓ keeps client portal task uploads atomic when expiry wins during transport and preserves document reads
+   ↓ admits project status email at send time while retaining previews during pending acceptance and lapse
+   ↓ co-managed KB article API lifecycle > denies every article mutation during pending acceptance and lapse while preserving article and content reads
+   ↓ co-managed KB article API lifecycle > rolls back failed article/document changes, preserves caller transactions, and synchronizes publication visibility after renewal
+   ↓ co-managed shared KB creation and worker admission > keeps direct and UI article creation atomic and defers UI events through caller rollback
+   ↓ co-managed shared KB creation and worker admission > retains pending import content during license pauses and imports the same staged file once after renewal
+   ↓ co-managed KB UI mutation lifecycle > denies edits, publication, deletion, review and feedback while view recording becomes a read-only no-op
+   ↓ co-managed KB UI mutation lifecycle > keeps visibility, review cycles, and publication atomic across rollback and renewal
+   ↓ co-managed KB import staging > admits staging atomically, retains paused source, and only schedules committed batches with stable polling identities
+   ↓ co-managed KB import recovery > exposes pauses without file failures and resumes the retained identities once after renewal
+   ↓ co-managed KB import recovery > keeps discovery and recovery tenant-qualified and paginates without exposing file content
+   ↓ co-managed collaboration policy administration > keeps customer scope customer-owned, validates local resources, and records idempotent revisioned changes
+   ↓ co-managed collaboration policy administration > keeps staff assignments in the MSP, rejects foreign and inactive principals, and permits reductions during a pause
+   ↓ co-managed collaboration policy administration > serializes competing policy revisions and rejects other tenants without leaking the policy
+   ↓ co-managed shared-work authorization boundary > isolates sibling customers and MSP data when all three tickets have the same local identity
+   ↓ co-managed shared-work authorization boundary > intersects live home RBAC, explicit staff assignment, customer scope, and lifecycle without switching identity
+   ↓ co-managed shared-work authorization boundary > rejects revoked, expired, inactive, mismatched, foreign, and unsupported principals before executing a command
+   ↓ co-managed shared-work authorization boundary > requires explicit project grants and current team membership for both projects and their actual tasks
+   ↓ co-managed shared-work authorization boundary > rechecks customer revocation after waiting for the relationship policy lock
+   ↓ co-managed shared-work authorization boundary > applies home bundle restrictions using home IDs and propagates redactions and fail-closed field constraints
+   ↓ co-managed admins cannot configure Teams or telephony through direct actions or EE availability
+   ↓ co-managed admins cannot invoke excluded RMM actions or background engines despite settings permission
+   ↓ authenticated co-managed policy actions > derives targets and principals from home context and exposes only authorized resource options
+   ↓ authenticated co-managed policy actions > paginates home options, excludes inactive staff, and preserves revision retries and read-only revocation
+   ↓ co-managed shared metadata reads > returns an allowlisted canonical ticket with qualified context, stays readable during lapse, and denies revoked scope
+   ↓ co-managed shared metadata reads > redacts canonical source fields and their derived references before returning the response
+   ↓ co-managed shared metadata reads > reads granted project/task metadata with the actual parent and canonical custom status while omitting private and effort fields
+   ↓ co-managed ticket escalation and handback > atomically escalates one canonical ticket, keeps access on handback, and reuses the original work identity on re-escalation
+   ↓ co-managed ticket escalation and handback > rejects changed requests and concurrent stale revisions and rolls all stores back with the caller
+   ↓ co-managed ticket escalation and handback > fails closed on foreign identity, malformed notes, inactive destinations, lifecycle pauses, and revoked sessions
+   ↓ co-managed ticket escalation and handback > respects customer ticket narrowing and uses only a qualified MSP reference for local queue narrowing
+   ↓ co-managed ticket escalation and handback > rechecks session expiry after waiting for the approved destination lock without leaving a grant or work reference
+   ↓ co-managed ticket escalation and handback > rechecks license expiry after waiting for the approved destination lock without leaving a grant or work reference
+   ↓ keeps explicit ticket grant revocation customer-controlled during license pauses and requires a deliberate new escalation to restore it
+   ↓ derives ticket screen capabilities from each live actor and preserves customer revocation during lapse
+   ↓ paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles
+   ↓ discloses the sponsor identity and escalation destination while the relationship is live
+   ↓ withholds current former-sponsor state from retained customer reads after departure
+   ↓ inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused
+   ↓ paginates explicit grants by stable customer ticket identity without counting another customer or revoked grants
+   ↓ admits both ticket update actions and the shared transaction core only during operational write eligibility
+   ↓ publishes ticket transitions only after the owning commit and rolls back close state and audit history together
+   ↓ rejects the legacy ticket edit if its grace deadline passes while waiting for the ticket lock
+   ↓ rejects the optimized ticket edit if its grace deadline passes while waiting for the ticket lock
+   ↓ admits the auto-close transaction before creating its resolution comment and retains system closure behavior
+   ↓ stores foreign ticket activity through an owner-local actor reference with immutable name and organization snapshots
+   ↓ keeps foreign actor references transactional, rejects mixed/local impersonation and other-owner references, and preserves legacy audit rows
+   ↓ distinguishes equal user UUIDs across organizations and retains foreign attribution after source-user deletion
+   ↓ uses the canonical close and reopen paths with qualified audit, event and live attribution for MSP actors
+   ↓ retains close gates and rolls back foreign ticket edits, references, audit and queued publication together
+   ↓ attributes automatically applied checklist templates to the same MSP reference
+   ↓ rejects unsupported foreign routing and bundle propagation without modifying sibling tickets
+   ↓ does not let an actor reference substitute another source user or a missing collaboration context
+   ↓ rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation
+   ↓ keeps historical MSP notification actors separate from a customer user with the same UUID
+   ↓ renders qualified ticket edit/close attribution in immediate email, accumulated email and in-app notifications
+   ↓ carries foreign due-date and response-state changes to notification events without actor bookkeeping fields
+   ↓ edits the canonical shared ticket and returns the same receipt for exact and concurrent retries
+   ↓ rejects conflicting shared field baselines while preserving independent customer edits and snapshotting request inputs
+   ↓ admits only one of two conflicting shared edits based on the same field baseline
+   ↓ rolls back the shared edit receipt and canonical effects with its owning transaction
+   ↓ rejects foreign status/priority choices, incomplete baselines and unsupported edit fields
+   ↓ keeps viewer and lapsed editor reads available while denying edits and choice expansion
+   ↓ paginates customer-valid ticket choices and treats search wildcards literally
+   ↓ loads shared ticket panels and editor capability hints concurrently without lock upgrades
+   ↓ requires both read and update field authority for shared edits and their picklists
+   ↓ denies stale editor reads, choices and receipt replay after the customer revokes its explicit grant
+   ↓ binds edit receipts to the qualified ticket and disables workflow editing for bundle masters
+   ↓ co-managed shared ticket details for the native screen > T004 returns description, requester, client, category, due date and customer assignee to an admitted sponsor
+   ↓ co-managed shared ticket details for the native screen > T004 omits each disclosed field when the sponsor home policy redacts it, never padding it
+   ↓ co-managed shared ticket details for the native screen > T004 denies the details read without a current staff assignment and for non-sponsor tickets
+   ↓ co-managed shared ticket details for the native screen > T005 applies a description edit through the native path with a receipt, preserving customer-owned attributes
+   ↓ co-managed shared ticket details for the native screen > T005 rejects a stale description or category baseline as a conflict without writing
+   ↓ co-managed shared ticket details for the native screen > T005 edits the category within the ticket board, clears the stale subcategory and rejects foreign categories
+   ↓ co-managed shared ticket details for the native screen > T005 hides description and category from editing and options when the home policy redacts them
+   ↓ co-managed shared ticket details for the native screen > T005 refuses attribute rewrites beyond the description on the shared native path
+   ↓ builds working from shared tickets only, never the home tenant native tickets, before queue search, sorting, pagination and counts
+   ↓ filters shared work by the sponsor client before search, counts and pagination
+   ↓ removes handed-back tickets from working while retaining oversight, and removes revoked explicit access from all queue results
+   ↓ excludes unshared tickets and another MSP customer from queue searches and totals
+   ↓ keeps permitted queue reads during license lapse and rejects stale sessions and removed staff assignments
+   ↓ applies MSP client and queue policy projections before counts and never compares customer board UUIDs as local boards
+   ↓ redacts queue fields before search, sorting, state filters and dashboard counts
+   ↓ keeps same-number same-UUID tickets from two customers separate in global ordering and workspace options
+   ↓ rechecks revoked queue scope and session expiry after waiting for lifecycle locks
+   ↓ retains legacy private notes and requires a disclosure command to change co-managed thread visibility
+   ↓ makes native comment model writes atomic and denies them after the co-managed grace period
+   ↓ retains qualified comment snapshots and denies native repairs or forged foreign authorship
+   ↓ stores MSP-private threads under MSP ownership with qualified soft resources and same-thread parent constraints
+   ↓ combines only published customer and home-private conversation content under the three audience rules
+   ↓ paginates one conversation across both stores without losing microsecond timestamps or colliding IDs
+   ↓ uses the stricter root/reply audience, hides private parent IDs and removes deleted bodies from conversation output
+   ↓ retains saved conversation attribution without resolving an MSP user in the customer directory
+   ↓ rechecks conversation grants on every page and retains reads during license lapse without exposing home-private notes after revocation
+   ↓ applies conversation body and author redactions before returning content or pagination cursors
+   ↓ keeps private note commands and retry receipts in the MSP store without changing customer history
+   ↓ makes private edits and tombstones revision-safe while exact retries retain their original receipts
+   ↓ rejects private note source/store/parent forgery and edits of another author without widening visibility
+   ↓ serializes concurrent private note edits and rolls back comments together with their private receipts
+   ↓ denies private commands after license lapse or live grant revocation, including receipt replay
+   ↓ requires both read and write content scope for private notes and denies viewer contributions
+   ↓ rechecks the actual session after waiting for a private thread lock before applying content
+   ↓ creates canonical customer-owned public/shared IT comments with qualified MSP actors and inherited reply audiences
+   ↓ keeps customer-private and legacy notes private and rejects unpublished, deleted or inconsistent reply branches
+   ↓ binds shared comment receipts to immutable requests and rolls back content, thread counts and attribution together
+   ↓ rejects forged shared comment targets, implicit audience changes and mixed attribution before canonical insertion
+   ↓ denies shared comment creation and replay after read/write scope loss, license lapse or grant revocation
+   ↓ rechecks shared comment session authority after waiting on its root thread without leaving a reply or receipt
+   ↓ revalidates published collaboration comment events against current audience, body and saved attribution before delivery
+   ↓ delivers qualified comment names to customer recipients without colliding author IDs or internal portal mentions
+   ↓ signals customer live comment refresh after commit with qualified identity and no content, but never on rollback or receipt replay
+   ↓ commits shared comment response state, qualified activity and receipts before publishing production events exactly once
+   ↓ rolls back all production comment state and effects with the owning transaction and respects disabled response tracking
+   ↓ publishes distinct shared IT and customer-private workflow audiences without changing response state or fabricating local MSP IDs
+   ↓ does not use public comment side effects to mutate a restricted response-state field
+   ↓ filters portal bodies and author enumeration by the published root audience, including inconsistent legacy replies
+   ↓ redacts retained portal tombstone bodies and hidden parent IDs while preserving ticket and board authorization
+   ↓ admits background recipients under their own home authority without a browser session or mutation capability
+   ↓ applies recipient-specific home bundle scope and redactions while retaining reads during lapse and rechecking revoked grants
+   ↓ retains recipient identity, membership and resource grant locks through the delivery callback
+   ↓ loads current shared comment content for independent MSP recipients with qualified author self-suppression
+   ↓ excludes private, unpublished and deleted notification content and respects the recipient content and author redactions
+   ↓ holds comment audience and body locks through delivery and reads current content again on retry
+   ↓ fans out only to authorized MSP routing users with qualified per-channel retry identities
+   ↓ rechecks routing between candidate discovery and delivery and does not treat remaining staff access as assignment
+   ↓ continues independent recipient delivery after a channel failure and surfaces failures for retry without widening revoked access
+   ↓ qualifies production comment event identities by owner when different tenants reuse the same operation UUID
+   ↓ persists co-managed notifications and disabled receipts using recipient locale, priority and current content
+   ↓ creates exactly one in-app notification per qualified recipient under concurrent retries and rolls back outer transactions
+   ↓ leaves no receipt after template failure and suppresses internal, revoked and private deliveries before storage
+   ↓ revalidates stored notification content and recipient read restrictions instead of returning cached text
+   ↓ binds stored notification reads to the receipt recipient, source, thread and current audience
+   ↓ rechecks the interactive session after waiting for a stored notification lock
+   ↓ filters actual inbox pages and all counts before pagination, and rerenders detail/read responses with current shared content
+   ↓ applies inbox field redactions to rendered text and counts and rejects API override access
+   ↓ does not let removed notification metadata bypass receipt-based inbox classification
+   ↓ revalidates queued shared deliveries and replaces cached content while retaining qualified routing
+   ↓ suppresses receipt-backed queued delivery with stripped metadata, wrong recipients or changed audiences
+   ↓ holds shared source authority until asynchronous notification delivery finishes
+   ↓ delivers current ordinary notification rows and suppresses deleted or forged shared rows
+   ↓ rechecks routing for queued delivery while preserving an authorized historical inbox read
+   ↓ guards the actual Redis broadcaster and asynchronous post-creation hooks with current shared authority
+   ↓ connects normal comment events to MSP in-app receipts and emits creation effects only after committed first delivery
+   ↓ rolls back MSP notification receipts and effects with a failed inbound outbox completion, then recovers once
+   ↓ propagates failed ordinary-event MSP fanout for retry without duplicating recipients already committed
+   ↓ atomically queues all notification channels and recovers missed immediate effects with independent retry state
+   ↓ does not duplicate a channel when immediate delivery and recovery workers overlap
+   ↓ suppresses queued channels on revoked access and never treats a damaged shared queue entry as native content
+   ↓ recovers an uncertain external acceptance with the same notification identity without resending successful channels
+   ↓ caps retryable attempts, isolates terminal channel failures and backfills legacy receipts idempotently
+   ↓ recovers committed channels through the scheduled server job handler without requiring the original event
+   ↓ honors preferences changed after queue creation without hiding the already authorized inbox history
+   ↓ issues notification signal tokens only for a current bound home session and caps them at its expiry
+   ↓ binds the actual notification live-token route to its browser session and refuses API overrides
+   ↓ does not issue a notification signal token if the session expires while waiting for a home identity lock
+   ↓ reauthorizes notification activity rows before pagination and totals and keeps API targets from borrowing a browser session
+   ↓ excludes shared receipts and malformed shared metadata from client notification activities without hiding ordinary notices
+   ↓ edits and deletes own qualified comments with exact-version retries, preserved audiences and metadata-only committed effects
+   ↓ rejects other authors, forged stores, implicit disclosure and revoked authority while allowing customer-owned private edits
+   ↓ rolls back comment edits, receipts, activities and publication with the owning transaction
+   ↓ rechecks shared edit authority after a thread lock wait and leaves no receipt or effects when the session expires
+   ↓ derives conversation write audiences from actual content policy and preserves read-only conversation access
+   ↓ preserves canonical rich documents through create, inherited replies, exact edit retries and current conversation reads
+   ↓ keeps rich private notes and edits exclusively in the MSP store and snapshots documents before awaiting authority
+   ↓ uploads qualified conversation attachments once under concurrent retries without creating generic downloadable files
+   ↓ inherits private attachment audiences from their actual home or customer comment and denies forged stores and threads
+   ↓ keeps interrupted attachment uploads pending and hidden, snapshots bytes, and retries the same immutable object
+   ↓ revalidates attachment read scope, deleted parents and live grants before reaching storage
+   ↓ keeps attachment transport expiry pending, permits an exact renewed retry and retains reads during license lapse
+   ↓ retains attachment access on surviving replies after root deletion while excluding unpublished and deleted parent content
+   ↓ uses the production attachment provider adapter and leaves incomplete provider acknowledgements unpublished
+   ↓ derives attachment upload controls from actual qualified authorship, content redactions and lifecycle
+   ↓ publishes a drafted message and every prepared attachment atomically through the production comment adapter
+   ↓ keeps draft attachments hidden if an unrelated request creates their future message ID
+   ↓ retains exact draft content and manifests, rejects changed bytes and competing actors, and recovers incomplete uploads
+   ↓ keeps private draft messages and files in the correct organization and inherits reply audiences
+   ↓ rolls draft publication and native effects back with the owner and rejects publication after scope loss or license lapse
+   ↓ rejects changed draft audiences before publication and refuses damaged published receipts
+   ↓ rejects stale displayed reply audiences before draft reservation or text creation and retains exact constrained retries
+   ↓ serves requester-facing files through actual portal identity, never shared IT, private or forged references
+   ↓ retains customer portal file access after sponsor revocation, lapse and departure while applying current comment visibility
+   ↓ enforces current portal board, client, role, user and contact access before opening file storage
+   ↓ keeps staged files invisible to requesters until publication and rejects corrupted bytes or session expiry during download
+   ↓ retains requester identity, RBAC, board visibility and audience locks through file transport
+   ↓ rechecks requester session expiry after comment lock waits before opening storage
+   ↓ cancels an author draft idempotently, hides files immediately and keeps tombstones after scrubbing its bytes and content
+   ↓ expires idle drafts and standalone pending uploads while retaining fresh work and every published file
+   ↓ retries failed or lost delete acknowledgements at the same path and rejects corrupted cleanup paths without blocking other files
+   ↓ allows authors to discard their own drafts after grant loss and lapse without granting access to live content
+   ↓ serializes cancellation after an in-flight upload and never publishes or resurrects its completed object
+   ↓ cleans only the owning store and invokes the production scheduled handler with idempotent provider deletion
+   ↓ rechecks draft session expiry after cleanup lock contention before uploading any bytes
+   ↓ removes a published attachment idempotently without changing its message and purges only the selected object
+   ↓ revokes requester file access on removal while retaining published draft receipts and preventing upload resurrection
+   ↓ removes private attachments only as their author in their owning organization
+   ↓ rolls attachment removal back with its caller and rejects staged-file removal through a colliding comment
+   ↓ requires current write authority for attachment removal and retains file reads during license lapse
+   ↓ rechecks session expiry after an attachment removal lock wait before marking the file discarded
+   ↓ discloses a customer-owned thread and its files atomically with confirmed scope, attribution and exact retry
+   ↓ rejects stale disclosure confirmation after new replies, attachment changes and conflicting operation reuse
+   ↓ requires the thread author and explicit confirmation, blocks pending uploads and preserves caller rollback
+   ↓ retains audience admission after grant loss, license lapse and session expiry behind a thread lock
+   ↓ keeps published draft files attached across disclosure and rejects old-audience staged replies
+   ↓ transfers a confirmed MSP-private thread and files atomically with historical authors and empty tombstones
+   ↓ resumes a partial private-thread copy at the same reserved path without publishing an incomplete customer thread
+   ↓ rejects a changed private source after staging and cleans only abandoned destination objects with retry history
+   ↓ rolls final private-thread publication back without repeating committed file copies
+   ↓ checks source checksums and session expiry before sending private bytes into customer storage
+   ↓ removes a disclosed attachment from its customer-owned path while preserving original private history
+   ↓ retries abandoned private-transfer deletion after lost acknowledgements and isolates corrupted paths
+   ↓ denies private disclosure counts and transfers when home policy redacts the source store
+   ↓ rejects a colliding private-transfer destination without overwriting an existing customer conversation
+   ↓ recovers co-managed event outbox publication failures with current content and stable strict transport identities
+   ↓ commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback
+   ↓ cancels delayed co-managed event outbox message bodies when the source becomes private
+   ↓ cancels delayed co-managed event outbox message bodies when the source becomes deleted
+   ↓ retries co-managed event outbox lost acknowledgements, isolates damaged rows and prevents concurrent delivery
+   ↓ retains metadata-only co-managed event outbox invalidations after source deletion and rejects changed event identities
+   ↓ holds current source visibility locks through co-managed event outbox transport and recovers after the sender loses its acknowledgement
+   ↓ declares co-managed consumer obligations before publication and rolls transactional effects back with completion failure
+   ↓ recovers co-managed consumers that never saw Redis and cancels replay after source restriction without rerunning completed siblings
+   ↓ commits actual co-managed search indexing with its consumer receipt and applies metadata-only deletion once
+   ↓ rolls actual co-managed in-app consumers back when completion fails and emits channels only after a successful retry
+   ↓ routes co-managed consumer recovery through the actual job with isolated targets and skips unpublished work before its batch limit
+   ↓ does not consume foreign or mismatched co-managed event identities and rolls caller transactions back without completing work
+   ↓ queues qualified co-managed email recipients without content and resumes only unfinished recipients with current email and body
+   ↓ suppresses queued co-managed email after the recipient becomes private
+   ↓ suppresses queued co-managed email after the recipient becomes revoked
+   ↓ suppresses queued co-managed email after the recipient becomes unassigned
+   ↓ suppresses queued co-managed email after the recipient becomes inactive
+   ↓ suppresses queued co-managed email after the recipient becomes opted-out
+   ↓ holds co-managed email authority through transport, retries a lost acknowledgement with its stable ID and retains terminal history
+   ↓ connects co-managed email discovery to its own consumer and recovers recipient failures through the production job
+   ↓ reads customer-owned notification audiences without an MSP grant or an interactive recipient session
+   ↓ retains customer notification reads after relationship departure, capacity lapse and PSA upgrade
+   ↓ denies customer notification recipients with current no_role authority
+   ↓ denies customer notification recipients with current inactive authority
+   ↓ denies customer notification recipients with current portal authority
+   ↓ denies customer notification recipients with current suspended authority
+   ↓ denies customer notification recipients with current foreign_tenant authority
+   ↓ rechecks customer notification body, publication and root audience and suppresses only the qualified author
+   ↓ applies the customer recipient bundle scope and field redactions to current notification content
+   ↓ holds customer recipient and source locks through the awaited notification adapter
+   ↓ queues customer technician recipients by stable identity and retries only unfinished current recipients
+   ↓ suppresses queued customer email after current reassigned changes
+   ↓ suppresses queued customer email after current inactive changes
+   ↓ suppresses queued customer email after current no_role changes
+   ↓ suppresses queued customer email after current audience changes
+   ↓ suppresses queued customer email after current deleted changes
+   ↓ suppresses queued customer email after current opted_out changes
+   ↓ retains customer email delivery after departure and upgrade and preserves locks and retry exhaustion
+   ↓ recovers actual customer email discovery and scheduled delivery without resending completed native siblings
+   ↓ backfills only unpublished customer email work, preserves completed rollout history and refuses rollback
+   ↓ discovers additional customer ticket resources and rechecks their current membership without granting read permission
+   ↓ suppresses close-paired customer comments both before discovery and before a queued send
+   ↓ rolls customer email discovery and completion back with its caller and sends only after owning commit
+   ↓ admits an email-only current requester without a portal account and reloads the same contact address and content
+   ↓ never redirects an old requester obligation to a replacement contact even when they share the same address
+   ↓ binds requester fallback mail to the current unique default location and cancels it when contact mail becomes available
+   ↓ does not use fallback email to bypass a requester with inactive_contact restrictions
+   ↓ does not use fallback email to bypass a requester with inactive_client restrictions
+   ↓ does not use fallback email to bypass a requester with invalid_address restrictions
+   ↓ does not use fallback email to bypass a requester with wrong_client restrictions
+   ↓ does not use fallback email to bypass a requester with invisible_board restrictions
+   ↓ restricts requester email to current published public agent responses and suppresses self and close-paired mail
+   ↓ preserves requester ownership after MSP revocation and departure while retaining current visibility and source locks
+   ↓ rejects foreign and malformed requester email identities without borrowing an MSP session
+   ↓ issues stable requester reply tokens per delivery and address and preserves identity across retries
+   ↓ authorizes requester replies only under their current qualified identity and owns all callback mutations
+   ↓ rejects a requester reply token after auth_missing without invoking the reply writer
+   ↓ rejects a requester reply token after auth_unaligned without invoking the reply writer
+   ↓ rejects a requester reply token after sender_changed without invoking the reply writer
+   ↓ rejects a requester reply token after address_changed without invoking the reply writer
+   ↓ rejects a requester reply token after contact_changed without invoking the reply writer
+   ↓ rejects a requester reply token after private without invoking the reply writer
+   ↓ rejects a requester reply token after expired without invoking the reply writer
+   ↓ rejects a requester reply token after revoked without invoking the reply writer
+   ↓ retains requester reply source and recipient locks through the writer and preserves ownership after PSA upgrade
+   ↓ rechecks requester token expiry after waiting for the canonical thread lock
+   ↓ rejects conflicting requester token identity reuse and preserves retained token history on migration replay
+   ↓ blocks requester reply writes after the sponsorship grace period while leaving token history available
+   ↓ binds fallback requester reply tokens to the selected active client location without creating a user
+   ↓ rolls requester reply writes back if the token expires while the writer is awaiting work
+   ↓ rejects foreign-owner, legacy and malformed requester reply tokens instead of treating them as another principal
+   ↓ commits requester email tokens before transport and lets concurrent queue workers complete a recipient once
+   ↓ reloads requester email content and address on retries with address-bound tokens and a stable Message-ID
+   ↓ suppresses queued requester email after inactive_contact without issuing a token
+   ↓ suppresses queued requester email after inactive_client without issuing a token
+   ↓ suppresses queued requester email after private_thread without issuing a token
+   ↓ suppresses queued requester email after deleted_comment without issuing a token
+   ↓ suppresses queued requester email after notifications_disabled without issuing a token
+   ↓ suppresses queued requester email after subtype_disabled without issuing a token
+   ↓ suppresses queued requester email after category_disabled without issuing a token
+   ↓ retains the first requester identity on event replay and does not reroute an old delivery to a new default location
+   ↓ keeps requester email token, source and identity locks through transport and preserves retry exhaustion after departure
+   ↓ does not resurrect requester email tokens after expires_at during a retry
+   ↓ does not resurrect requester email tokens after revoked_at during a retry
+   ↓ rolls back requester email discovery with its owning transaction and requires a root recovery connection
+   ↓ rechecks requester email address changes between token commit and delivery
+   ↓ rechecks requester email audience changes between token commit and delivery
+   ↓ rechecks requester email revocation changes between token commit and delivery
+   ↓ rechecks requester email preferences changes between token commit and delivery
+   ↓ processes an actual qualified requester email reply atomically in its canonical thread with durable effects and replay
+   ↓ quarantines actual requester email after sender rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after authentication rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after contact rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after private rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after revoked rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after expired rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after unknown_token rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after malformed_token rejection without native matching or new-ticket side effects
+   ↓ quarantines actual requester email after case_variant rejection without native matching or new-ticket side effects
+   ↓ rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer
+   ↓ retries actual requester email writer failures without quarantining valid authority or duplicating the eventual reply
+   ↓ applies requester email reopen policy inside the admitted transaction and destination scope
+   ↓ applies requester email cutoff policy inside the admitted transaction and destination scope
+   ↓ applies requester email hidden_destination policy inside the admitted transaction and destination scope
+   ↓ applies requester email foreign_rule_client policy inside the admitted transaction and destination scope
+   ↓ applies requester email rate_limited policy inside the admitted transaction and destination scope
+   ↓ applies requester email automated policy inside the admitted transaction and destination scope
+   ↓ keeps a default-location requester reply customer-authored without resolving the address to a privileged user
+   ↓ retains requester email for retry when its worker lacks the required admission adapter
+   ↓ defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+   ↓ admits a requester reply using its HTML attribute token marker without native fallback
+   ↓ admits a requester reply using its HTML comment token marker without native fallback
+   ↓ skips HTML-only requester mail containing just a token, markup and non-content without creating a reply
+   ↓ discovers production requester mail once, recovers it through the scheduled job and accepts a reply using its committed token
+   ↓ rolls requester discovery and after-commit delivery back with an enclosing transaction, then recovers once
+   ↓ preserves native requester delivery for published rollout history and enrolls only unpublished work
+   ↓ moves primary requester delivery out of the native subscriber without bypassing the co-managed watcher authority boundary
+   ↓ issues stable customer technician tokens without granting an interactive identity and binds each sent address
+   ↓ admits customer technician replies to the canonical requester thread using current local authority
+   ↓ admits customer technician replies to the canonical shared_it thread using current local authority
+   ↓ admits customer technician replies to the canonical organization_private thread using current local authority
+   ↓ rejects customer technician reply after sender changes without calling the writer
+   ↓ rejects customer technician reply after authentication changes without calling the writer
+   ↓ rejects customer technician reply after inactive changes without calling the writer
+   ↓ rejects customer technician reply after portal changes without calling the writer
+   ↓ rejects customer technician reply after no_role changes without calling the writer
+   ↓ rejects customer technician reply after no_update changes without calling the writer
+   ↓ rejects customer technician reply after suspended changes without calling the writer
+   ↓ rejects customer technician reply after audience changes without calling the writer
+   ↓ rejects customer technician reply after deleted changes without calling the writer
+   ↓ rejects customer technician reply after unpublished changes without calling the writer
+   ↓ rejects customer technician reply after expired changes without calling the writer
+   ↓ rejects customer technician reply after revoked changes without calling the writer
+   ↓ rejects customer technician reply after foreign_tenant changes without calling the writer
+   ↓ rolls back late customer technician reply rejection to a savepoint even when its enclosing inbox transaction catches the error
+   ↓ holds customer technician token, source and identity locks through reply writes and rolls back writer failure
+   ↓ keeps customer technician token issuance transactional, refuses identity reuse and preserves revoked token history
+   ↓ enforces current update_scope bundle policy on customer technician reply tokens
+   ↓ enforces current update_redaction bundle policy on customer technician reply tokens
+   ↓ enforces current read_redaction bundle policy on customer technician reply tokens
+   ↓ blocks customer technician reply writes after grace or departure and restores owner authority after independent PSA upgrade
+   ↓ rechecks customer technician token expiry after a canonical thread lock wait
+   ↓ rolls back customer technician writes when token expiry occurs while the writer awaits work
+   ↓ rejects malformed and requester tokens at the customer technician boundary
+   ↓ defers customer technician reply effects until its root transaction commits
+   ↓ defers customer technician reply effects until its outer transaction commits
+   ↓ discards customer technician reply hooks after savepoint rollback
+   ↓ discards customer technician reply hooks after outer rollback
+   ↓ processes actual technician email in its canonical requester audience with durable effects and qualified authorship
+   ↓ processes actual technician email in its canonical shared_it audience with durable effects and qualified authorship
+   ↓ processes actual technician email in its canonical organization_private audience with durable effects and qualified authorship
+   ↓ quarantines actual technician email after sender rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after spf_only rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after missing_auth rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after no_update rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after inactive rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after disclosed rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after deleted rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after malformed rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after case_variant rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after revoked rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after expired rejection with no native fallback or side effects
+   ↓ quarantines actual technician email after unknown_token rejection with no native fallback or side effects
+   ↓ rolls actual technician comment and outbox writes back before quarantining a late token rejection
+   ↓ retains technician email artifacts outside native portal-visible processing without spending retry attempts
+   ↓ preserves requester audience and qualified identity when a technician reply passes the closed-ticket cutoff
+   ↓ preserves shared_it audience and qualified identity when a technician reply passes the closed-ticket cutoff
+   ↓ preserves organization_private audience and qualified identity when a technician reply passes the closed-ticket cutoff
+   ↓ quarantines technician cutoff replies that fail create_permission admission without creating a ticket
+   ↓ quarantines technician cutoff replies that fail foreign_client admission without creating a ticket
+   ↓ quarantines technician cutoff replies that fail destination_scope admission without creating a ticket
+   ↓ applies technician reopen policy without changing a private comment into a requester response
+   ↓ applies technician automated policy without changing a private comment into a requester response
+   ↓ applies technician rate_limited policy without changing a private comment into a requester response
+   ↓ retries a transient technician reply writer failure and commits only one eventual reply
+   ↓ processes a technician HTML-only reply using its attribute token marker
+   ↓ processes a technician HTML-only reply using its comment token marker
+   ↓ retains technician mail for retry if a durable worker has no qualified admission adapter
+   ↓ rejects conflicting explicit comment audience and visibility or a different parent audience before persisting mail content
+   ↓ retains technician reply receipts independently of editable metadata and expired credentials
+   ↓ rolls technician canonical writes back when durable MIME identity disagrees
+   ↓ materializes technician MIME files only in their admitted requester conversation and retains MIME separately
+   ↓ materializes technician MIME files only in their admitted shared_it conversation and retains MIME separately
+   ↓ materializes technician MIME files only in their admitted organization_private conversation and retains MIME separately
+   ↓ retains technician MIME artifacts after current deleted authority fails
+   ↓ retains technician MIME artifacts after current disclosed authority fails
+   ↓ retains technician MIME artifacts after current inactive authority fails
+   ↓ retains technician MIME artifacts after current no_update authority fails
+   ↓ retains technician MIME artifacts after current missing_receipt authority fails
+   ↓ retains technician MIME artifacts after current changed_actor authority fails
+   ↓ retains technician MIME artifacts after current changed_source authority fails
+   ↓ retries technician artifact object acknowledgement loss at the same path without duplicating canonical effects
+   ↓ materializes accepted technician files after token deletion and editable metadata removal
+   ↓ rolls back technician file publication if artifact completion loses its fence after upload
+   ↓ does not publish technician artifact bytes after the retained claim expires during transport
+   ↓ materializes one selected embedded image without processing sibling artifacts
+   ↓ keeps receipt and source policy locks throughout technician artifact transport
+   ↓ defers technician artifacts on lapse and resumes retained customer ownership after an independent PSA upgrade
+   ↓ commits outgoing technician requester tokens before transport and admits their actual durable inbox replies
+   ↓ commits outgoing technician shared_it tokens before transport and admits their actual durable inbox replies
+   ↓ commits outgoing technician organization_private tokens before transport and admits their actual durable inbox replies
+   ↓ reuses outgoing technician tokens on acknowledgement retries and creates a distinct address-bound token after address changes
+   ↓ rechecks outgoing technician address between committed preparation and delivery
+   ↓ rechecks outgoing technician audience between committed preparation and delivery
+   ↓ rechecks outgoing technician revocation between committed preparation and delivery
+   ↓ rechecks outgoing technician expiry between committed preparation and delivery
+   ↓ rechecks outgoing technician preferences between committed preparation and delivery
+   ↓ rechecks outgoing technician reassigned between committed preparation and delivery
+   ↓ rechecks outgoing technician deleted between committed preparation and delivery
+   ↓ rechecks outgoing technician inactive between committed preparation and delivery
+   ↓ reuses committed technician tokens after SMTP acceptance loses its delivery transaction
+   ↓ publishes inbound requester conversation events only after inbox commit with current content and durable consumers
+   ↓ publishes inbound shared_it conversation events only after inbox commit with current content and durable consumers
+   ↓ publishes inbound organization_private conversation events only after inbox commit with current content and durable consumers
+   ↓ recovers inbound conversation publication from current content after a lost publish acknowledgement
+   ↓ cancels undelivered inbound conversation content after deleted changes and closes its recovery obligations
+   ↓ cancels undelivered inbound conversation content after audience changes and closes its recovery obligations
+   ↓ preserves initial inbound internal-only delivery even when excluded consumer rows are replayed
+   ↓ retries co-managed inbox comments when the conversation-retention adapter is absent without native fallback
+   ↓ keeps ordinary PSA inbox comment events in their native outbox
+   ↓ retains native api comment delivery atomically and recovers the current body
+   ↓ retains native generic comment delivery atomically and recovers the current body
+   ↓ retains native optimized comment delivery atomically and recovers the current body
+   ↓ retains native simple comment delivery atomically and recovers the current body
+   ↓ keeps native api internal roots organization-private and delivers only after commit
+   ↓ keeps native generic internal roots organization-private and delivers only after commit
+   ↓ keeps native optimized internal roots organization-private and delivers only after commit
+   ↓ keeps native simple internal roots organization-private and delivers only after commit
+   ↓ rolls back native api comments when durable event retention fails
+   ↓ rolls back native generic comments when durable event retention fails
+   ↓ rolls back native optimized comments when durable event retention fails
+   ↓ rolls back native simple comments when durable event retention fails
+   ↓ retains native api edit invalidations without either old or new bodies
+   ↓ retains native generic edit invalidations without either old or new bodies
+   ↓ retains native deletion invalidation before removing a leaf and recovers it after source removal
+   ↓ refuses a native deletion invalidation that neither removes its source nor carries a tombstone
+   ↓ rolls back native generic comment and earlier intents if a later workflow intent fails
+   ↓ rolls back native optimized comment and earlier intents if a later workflow intent fails
+   ↓ rolls back native simple comment and earlier intents if a later workflow intent fails
+   ↓ rolls back native edit when its invalidation cannot be retained
+   ↓ rolls back native delete when its invalidation cannot be retained
+   ↓ publishes a scheduled co-managed comment once with atomic state, workflow and notification intent
+   ↓ serializes duplicate scheduled co-managed publication workers without duplicate events
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: inactive_author
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: missing_role
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: private_audience
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: client_author
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: deleted_source
+   ↓ retains a scheduled co-managed comment without publication when current authority changes: lapsed_license
+   ↓ rolls scheduled state and earlier response intent back when comment intent cannot commit
+   ↓ recovers a scheduled comment after license restoration without re-creating the original queue job
+   ↓ recovers scheduled notification transport from the current body after the workspace becomes read-only
+   ↓ cancels old scheduled content during legacy handoff when its source is deleted
+   ↓ cancels old scheduled content during legacy handoff when its source is restricted
+   ↓ continues scheduled maintenance past denied authors instead of starving later due comments
+   ↓ retains scheduled author, role and source locks until publication authority completes
+   ↓ preserves ordinary PSA scheduled publication and stable native retries
+   ↓ applies scheduled publication field authority for body
+   ↓ applies scheduled publication field authority for response
+   ↓ applies scheduled publication field authority for response_disabled
+   ↓ retains workflow model comments under canonical requester audience and recovers current content
+   ↓ retains workflow model comments under canonical shared_it audience and recovers current content
+   ↓ retains workflow model comments under canonical organization_private audience and recovers current content
+   ↓ rolls back workflow model comments when current admission fails: inactive_actor
+   ↓ rolls back workflow model comments when current admission fails: missing_role
+   ↓ rolls back workflow model comments when current admission fails: missing_run
+   ↓ rolls back workflow model comments when current admission fails: cancelled_run
+   ↓ rolls back workflow model comments when current admission fails: expired_lease
+   ↓ rolls back workflow model comments when current admission fails: missing_version
+   ↓ rolls back workflow model comments when current admission fails: lapsed_license
+   ↓ rolls back workflow model comments when current admission fails: missing_composition
+   ↓ executes workflow business comments with the exact published version actor and owning commit
+   ↓ rolls back model workflow comments if durable intent insertion fails
+   ↓ rolls back business workflow comments if durable intent insertion fails
+   ↓ rolls back email workflow comments if durable intent insertion fails
+   ↓ retains the native ticket model adapter intent in its owning transaction
+   ↓ denies workflow comment side effects hidden by current comments.note field policy
+   ↓ denies workflow comment side effects hidden by current response_state field policy
+   ↓ creates email workflow ticket and initial comment in one transaction (retention failure=false)
+   ↓ creates email workflow ticket and initial comment in one transaction (retention failure=true)
+   ↓ rejects a workflow comment whose internal author differs from the executing version actor
+   ↓ commits scheduled comment reschedule before touching the queue
+   ↓ commits scheduled comment cancel before touching the queue
+   ↓ denies both schedule commands under current inactive_user authority without queue effects
+   ↓ denies both schedule commands under current missing_role authority without queue effects
+   ↓ denies both schedule commands under current expired_session authority without queue effects
+   ↓ denies both schedule commands under current revoked_session authority without queue effects
+   ↓ denies both schedule commands under current api_override authority without queue effects
+   ↓ denies both schedule commands under current lapsed_license authority without queue effects
+   ↓ rolls back scheduled comment reschedule without changing queue state when audit insertion fails
+   ↓ rolls back scheduled comment cancel without changing queue state when audit insertion fails
+   ↓ cancels a newly queued stale schedule when cancellation commits while the queue is responding
+   ↓ recovers a rescheduled co-managed source after both queue operations fail
+   ↓ admits new scheduled comments under the current browser identity (expired=false)
+   ↓ admits new scheduled comments under the current browser identity (expired=true)
+   ↓ allows a currently authorized technician to cancel a departed authors scheduled comment
+   ↓ denies schedule commands narrowed by the current scope bundle policy
+   ↓ denies schedule commands narrowed by the current body bundle policy
+   ↓ denies schedule commands narrowed by the current schedule bundle policy
+   ↓ allows cancellation but denies rescheduling beneath a deleted conversation root
+   ↓ allows cancellation but denies rescheduling beneath a unpublished conversation root
+   ↓ lets both organizations edit one canonical task and retains foreign attribution without copied users or assignments
+   ↓ serializes competing shared task edits and rejects stale baselines or reused operation IDs
+   ↓ denies shared task mutations under current revoked_project authority
+   ↓ denies shared task mutations under current viewer_staff authority
+   ↓ denies shared task mutations under current read_only_grant authority
+   ↓ denies shared task mutations under current inactive_actor authority
+   ↓ denies shared task mutations under current expired_session authority
+   ↓ denies shared task mutations under current lapsed_license authority
+   ↓ rejects shared task status mappings from a different customer phase
+   ↓ rolls back the canonical task and foreign attribution when its receipt cannot commit
+   ↓ pages shared project tasks without copying assignments, and loses access immediately on unsharing
+   ↓ uses phase-specific task statuses instead of project fallback statuses when an override exists
+   ↓ applies customer bundle field redactions to shared task reads and edits
+   ↓ applies sponsor bundle field redactions to shared task reads and edits
+   ↓ preserves explicit audit ownership across foreign connection context and retains legacy context fallback
+   ↓ shows qualified task change history with immutable names and excludes unrelated audit records
+   ↓ pages task history using database timestamp precision without duplicates or hidden-change counts
+   ↓ redacts task history fields and derived authors using current customer bundle authority
+   ↓ redacts task history fields and derived authors using current sponsor bundle authority
+   ↓ keeps task history readable during license lapse and denies revoked or expired readers
+   ↓ omits the task history and its pagination metadata when the history field is hidden
+   ↓ assigns MSP task participation without changing native customer assignments and retains withdrawal history
+   ↓ rejects MSP task assignment for current inactive_assignee constraints
+   ↓ rejects MSP task assignment for current viewer constraints
+   ↓ rejects MSP task assignment for current no_staff constraints
+   ↓ rejects MSP task assignment for current no_project_permission constraints
+   ↓ rejects MSP task assignment for current unshared constraints
+   ↓ rejects MSP task assignment for current read_only_project constraints
+   ↓ rejects MSP task assignment for current foreign_tenant constraints
+   ↓ rejects MSP task assignment for current lapsed constraints
+   ↓ rejects MSP task assignment for current expired_editor constraints
+   ↓ serializes customer and MSP task assignments and rejects stale or reused operations
+   ↓ rolls back task assignment, history and actor attribution when its receipt fails
+   ↓ offers only assigned collaboration teams with an eligible current member
+   ↓ uses a proposed qualified task assignment for assigned-work-only candidate policy
+   ↓ redacts customer task assignment state, history and choices under current field policy
+   ↓ redacts sponsor task assignment state, history and choices under current field policy
+   ↓ allows customer withdrawal after project unsharing while retaining the MSP participation record
+   ↓ combines native and qualified shared tasks before queue sorting, filtering and pagination
+   ↓ keeps unassigned shared tasks in oversight and removes withdrawn or unshared tasks from working
+   ↓ lets customers reach their own canonical task queue without MSP or unrelated customer rows
+   ↓ applies assigned-work-only policy and current staff/session authority before task queue counts
+   ↓ filters task queues by personal resources and current team assignments
+   ↓ redacts task queue search, status counts, assignment filters and workspace labels before pagination
+   ↓ does not expose stale project status fallback after a phase-specific override exists
+   ↓ keeps two customers with identical task identities distinct in one MSP queue
+   ↓ task attachments retain qualified audiences, retry identity and independent MSP archive bytes
+   ↓ task attachments survive encrypted customer export and native restore without the MSP private store
+   ↓ task attachments preserve files on surviving replies and reject removed comments or changed audiences
+   ↓ task attachments reject customer body redaction and preserve failed-upload retry reservations
+   ↓ task attachments reject sponsor body redaction and preserve failed-upload retry reservations
+   ↓ task conversations preserve canonical ownership, separate private stores, and durable foreign authorship
+   ↓ task conversations treat legacy is_internal=false notes as private
+   ↓ task conversations treat legacy is_internal=true notes as private
+   ↓ task conversations inherit reply audiences and reject implicit roots, changed audiences, and wrong task references
+   ↓ task conversations make retries stable, serialize revisions, and never let either organization edit the other author
+   ↓ task conversations preserve existing replies after root deletion and reject new replies through a surviving child
+   ↓ task conversations preserve MSP private retry and own-author rules without accepting ticket commands for tasks
+   ↓ task conversations recheck revoked_project authority for writes and successful retries
+   ↓ task conversations recheck viewer_staff authority for writes and successful retries
+   ↓ task conversations recheck read_only_grant authority for writes and successful retries
+   ↓ task conversations recheck inactive_actor authority for writes and successful retries
+   ↓ task conversations recheck expired_session authority for writes and successful retries
+   ↓ task conversations recheck lapsed_license authority for writes and successful retries
+   ↓ task conversations honor customer body masks and retain independent private-store boundaries
+   ↓ task conversations honor sponsor body masks and retain independent private-store boundaries
+   ↓ task conversations roll back content, foreign attribution, and thread metadata when their receipt fails
+   ↓ task conversations page both stores with microsecond cursors and duplicate IDs in a non-UTC connection
+   ↓ task conversations reject inconsistent stored audiences and retain timestamp instants on non-UTC writes
+   ↓ task conversations migration is repeatable and refuses to erase retained attribution
+   ↓ task conversations apply author masks to derived fields in both stores
+   ↓ task conversations apply revision masks to derived fields in both stores
+   ↓ task conversations apply conversation masks to derived fields in both stores
+   ↓ task conversations roll back a write when its browser session expires after the body is stored
+   ↓ native task comments retain private audiences, immutable local names, revision checks, and deleted history
+   ↓ native task comments show shared attribution but cannot silently reply to or overwrite shared contributions
+   ↓ native task comments enforce expired_session on bodies, counts, reactions and writes
+   ↓ native task comments enforce revoked_session on bodies, counts, reactions and writes
+   ↓ native task comments enforce api_override on bodies, counts, reactions and writes
+   ↓ native task comments enforce wrong_session_user on bodies, counts, reactions and writes
+   ↓ native task comments enforce missing_project_role on bodies, counts, reactions and writes
+   ↓ native task comments apply conversation masks to body/count and reaction projections
+   ↓ native task comments apply author masks to body/count and reaction projections
+   ↓ native task comments reject mixed batches that contain a task outside current project scope
+   ↓ native task comments remain locally readable after trust ends while mutations remain blocked
+   ↓ native task comments reject portal identities before returning bodies or reaction identities
+   ↓ native task comments cannot overwrite another customer technician author
+   ↓ native task comments roll back bodies and queued events when the session expires during a write
+   ↓ native task comments snapshot command and batch inputs before awaiting their connection
+   ↓ task events retain metadata-only qualified intent and consumer work atomically with each canonical revision
+   ↓ task events roll back the comment, thread, receipts and attribution when intent retention fails
+   ↓ task events cancel stale creates but preserve metadata invalidations after audience restriction or deletion
+   ↓ task events replay stable identities after transport loss and recover incomplete consumers
+   ↓ task events update actual search state and cannot resurrect deleted comments through delayed edits or backfills
+   ↓ task events migration supports rolling ticket producers and refuses loss of retained task history
+   ↓ task events recover native project publications through the actual maintenance handler after transport failure
+   ↓ task events roll native comments and legacy notification hooks back if canonical event retention fails
+   ↓ task events reject cached content and mismatched resource identities instead of publishing a corrupted intent
+   ↓ project search admits the current parent policy before full results, typeahead, counts and pagination
+   ↓ project search removes masked bodies from matching, snippets, scores and counts while retaining visible names
+   ↓ project search masks cached titles and subtitles using project_name and task_name before text matching
+   ↓ project search masks cached titles and subtitles using projectName and values.task_name before text matching
+   ↓ project search uses current sources and suppresses stale or deleted task-comment bodies without waiting for indexing
+   ↓ project search enforces current expired_session for full search and typeahead
+   ↓ project search enforces current revoked_session for full search and typeahead
+   ↓ project search enforces current inactive_user for full search and typeahead
+   ↓ project search enforces current missing_role for full search and typeahead
+   ↓ project API search retains the actual key and applies key-specific bundle narrowing
+   ↓ project search action and typeahead bind the actual browser session and reject override authority
+   ↓ project search follows current client scope even when cached parent ACLs have not been reindexed
+   ↓ project search suppresses rolling task-comment entries without source revision evidence
+   ↓ project search rechecks session expiry after producing the admitted result
+   ↓ project search retains customer-owned history after separation and applies policy after a PSA upgrade
+   ↓ task conversation actions write through the canonical outbox and keep customer and MSP-private stores separate
+   ↓ task conversation actions reject expired_session without reading or retaining a mutation
+   ↓ task conversation actions reject revoked_session without reading or retaining a mutation
+   ↓ task conversation actions reject api_override without reading or retaining a mutation
+   ↓ task conversation actions reject wrong_session_user without reading or retaining a mutation
+   ↓ task conversation actions preserve exact retry receipts and report stale edits as conflicts
+   ↓ task conversation actions retain recoverable publication after transport failure and retry its original event ID
+   ↓ task conversation actions suppress replies beneath deleted customer-private roots while retaining child history
+   ↓ task conversation actions suppress replies beneath deleted msp-private roots while retaining child history
+   ↓ task conversation actions retain read-only history after license expiry and reject further submissions
+   ↓ task conversation actions recheck session expiry after assembling the screen and roll back the expired read
+   ↓ task notifications persist qualified customer/MSP receipts and derive current content for every delivery channel
+   ↓ task notifications keep customer-private content local and suppress the actual qualified author
+   ↓ task notification reads and queued delivery honor current scope authority without cached fallback
+   ↓ task notification reads and queued delivery honor current role authority without cached fallback
+   ↓ task notification reads and queued delivery honor current staff authority without cached fallback
+   ↓ task notification reads and queued delivery honor current assignment authority without cached fallback
+   ↓ task notification reads and queued delivery honor current inactive authority without cached fallback
+   ↓ task notification reads and queued delivery honor current body_mask authority without cached fallback
+   ↓ task notification reads and queued delivery honor current deleted authority without cached fallback
+   ↓ task notification reads and queued delivery honor current private authority without cached fallback
+   ↓ task notification reads retain customer ownership after separation and resist stripped metadata
+   ↓ task notification subscriber reconstructs retained intent, deduplicates concurrent consumption, and emits only committed current content
+   ↓ task notification consumer rolls back both tenant effects on completion failure and retries the same receipts once
+   ↓ task notification subscriber suppresses native cached comment and mention handlers for retained customer ownership
+   ↓ task notification migration backfills pending obligations without replaying old native alerts and protects retained receipts
+   ↓ task notification inbox filters legacy cached notices and denied rows before pagination and counts, including after an upgrade
+   ↓ task notifications deduplicate direct, team, and additional task resources while requiring current parent project permission
+   ↓ task notification preferences suppress creation and later delivery independently of authorized inbox history
+   ↓ task notification delivery holds current customer recipient authority through transport and rejects revocation on the next attempt
+   ↓ task notification owner reads reject expiry after assembling content and roll back callback work
+   ↓ task email queues qualified identities for both organizations and retries current content/address with a stable message ID
+   ↓ task email keeps private customer notes local and excludes qualified authors
+   ↓ task email rejects current scope changes before sending cached work
+   ↓ task email rejects current role changes before sending cached work
+   ↓ task email rejects current staff changes before sending cached work
+   ↓ task email rejects current assignment changes before sending cached work
+   ↓ task email rejects current inactive changes before sending cached work
+   ↓ task email rejects current deleted changes before sending cached work
+   ↓ task email rejects current private changes before sending cached work
+   ↓ task email rejects current preferences changes before sending cached work
+   ↓ task email retains customer-owned delivery after separation while terminating queued MSP delivery
+   ↓ task email migration preserves rolling ticket writers, enrolls only pending task events, and refuses retained task loss
+   ↓ task email discovery commits both organizations before transport and recovers failures through the actual maintenance handler
+   ↓ task email consumer rolls discovery and effects back when completion fails
+   ↓ task email suppresses legacy native events and cached event-email retries for retained customer ownership
+   ↓ task email applies current conversation field policy before transport
+   ↓ task email applies current author field policy before transport
+   ↓ task email applies current values.task_name field policy before transport
+   ↓ task email retains source and recipient locks through SMTP and recovers an uncertain provider acknowledgement
+   ↓ operational time stores customer effort without services or contracts and contributes actual task minutes
+   ↓ operational time storage rejects commercial billable_duration even through legacy writes
+   ↓ operational time storage rejects commercial service_id even through legacy writes
+   ↓ operational time storage rejects commercial contract_line_id even through legacy writes
+   ↓ operational time storage rejects commercial tax_rate_id even through legacy writes
+   ↓ operational time storage rejects commercial tax_region even through legacy writes
+   ↓ operational time storage rejects commercial invoiced even through legacy writes
+   ↓ operational time keeps its non-invoiceable identity after separation and paid PSA upgrade
+   ↓ operational time policy retains lifecycle and product locks through mutation and rejects license expiry
+   ↓ operational time migration preserves history on repeat and refuses destructive rollback
+   ↓ operational time migration refuses pre-existing billing evidence instead of rewriting commercial minutes
+   ↓ operational time fields reject explicit pricing and preserve actual effort inputs
+   ↓ operational time does not lose effort when concurrent entries update the same task total
+   ↓ operational time moves recalculate both affected task totals without duplicating effort
+   × qualified time launch resolves customer-owned project_task to native operational work 125ms
+     → This shared resource is not available for the requested operation.
+   × qualified time launch resolves customer-owned ticket to native operational work 820ms
+     → This shared resource is not available for the requested operation.
+   ↓ qualified customer time launch rejects invalid relationship authority
+   ↓ qualified customer time launch rejects invalid source authority
+   ↓ qualified customer time launch rejects invalid session authority
+   ↓ qualified customer time launch rejects invalid time-permission authority
+   ↓ native operational time saves and edits service-free effort without changing task assignments
+   ↓ native operational time rejects commercial selection service_id before writing
+   ↓ native operational time rejects commercial selection contract_line_id before writing
+   ↓ native operational time rejects commercial selection tax_rate_id before writing
+   ↓ native operational time rejects commercial selection tax_region before writing
+   ↓ native operational time cannot reopen submitted sheets, impersonate an owner or accept a foreign source
+   ↓ native operational time rejects stale sessions, API overrides and missing local time permission
+   ↓ native operational time rolls back entry, effort and events when the session expires at the final admission
+   ↓ native operational time retains its mode after upgrade and applies the commercial requirement to new PSA effort
+   ↓ native operational time applies project masks to returned labels without hiding independent time notes
+   ↓ native operational time rejects saves outside the current project bundle and preserves the previous entry
+   ↓ native operational time moves one entry between tasks without duplicating effort and rejects an invalid period
+   ↓ native operational time supports general effort without a fabricated work record
+   ↓ native operational time cached search evidence cannot bypass the current work and private-note boundary
+   ↓ native operational time saves ticket effort without assigning the ticket
+   ↓ native operational time leaves new paid PSA entries on the ordinary service-backed save path
+   ↓ native operational time checks actual schedule ownership and supports local interaction effort
+   ↓ operational time API creates and edits service-free entries with actual duration and private source projections
+   ↓ operational time API cannot substitute a browser identity, unknown key or foreign key for its credential
+   ↓ operational time API applies key-specific work restrictions independently of the same user browser grants
+   ↓ operational time API rolls automatic sheets back with rejected commercial fields or source authority
+   ↓ operational time API rolls entry, task total, automatic sheet and events back on key expiry at commit admission
+   ↓ operational time API serializes overlapping creates and automatic sheet allocation for one user
+   ↓ operational time API keeps historical mode after PSA upgrade and still requires a service for new commercial work
+   ↓ operational time API rejects invalid duration, submitted sheets and key-specific time mutation denial
+   ↓ operational time API applies current source masks before returning work-item detail
+   ↓ operational time API connection binding preserves ordinary commercial PSA creation and details
+   ↓ operational time API reports license read-only admission as forbidden without leaving work
+   ↓ operational time API bulk controllers retain the verified key through native create and update dispatch
+   ↓ native timers keep active clocks outside time entries and stop once into completed operational effort
+   ↓ native timers serialize concurrent starts and stops without duplicate clocks, entries or events
+   ↓ native timers preserve original operational mode through separation and paid PSA upgrade
+   ↓ native timers reject foreign or revoked credentials and reread current work scope at stop
+   ↓ native timers retain active clocks for reading after license expiry but do not complete new effort
+   ↓ native timers roll completion, task totals, automatic sheets and receipt back together on final key expiry
+   ↓ native timers keep completion receipts immutable and do not recreate deleted completed effort
+   ↓ native timers preserve the start timezone and retry an omitted end without creating new effort
+   ↓ native timers reject invalid stops and submitted sheets without losing the active clock
+   ↓ native timers apply current note masks to active clocks and completed receipts and deny full-response edits
+   ↓ native timers require an owned service for ordinary PSA clocks and complete commercial effort
+   ↓ native timers mask optional fields equally on first completion and replay
+   ↓ native timer cancellation releases only the named clock after source scope is lost and leaves newer clocks intact on retry
+   ↓ native timer cancellation remains available after license expiry but requires a current owned credential
+   ↓ native timer cancellation cannot remove another user clock or completed effort receipts
+   ↓ native timer cancellation and stop serialize to one final outcome without orphaned effort
+   ↓ native timer cancellation controller forwards the verified credential and exact path identity
+   ↓ native time detail reads return actual operational duration through browser and API without billing enrichment
+   ↓ native time detail reads enforce current key scope independently from the browser session and mask stored notes
+   ↓ native time detail reads retain history after lapse, approval and upgrade while rejecting invalid browser identity
+   ↓ native time detail reads deny a current source outside local bundle scope and do not expose masked interval identity
+   ↓ native time detail reads recheck credential expiry after waiting for the actual work lock
+   ↓ native time detail reads mask financial metadata without altering stored operational effort
+   ↓ native time detail reads preserve permitted manager access to a deactivated technician history
+   ↓ native timesheet collections return operational intervals and their admitted change request history
+   ↓ native timesheet collections exclude out-of-scope work and its review comments from both browser readers
+   ↓ native timesheet collections mask notes and review history without exposing their state or count
+   ↓ native timesheet collections reject stale browser credentials and foreign or unpermitted sheets
+   ↓ native timesheet collections preserve general-time identity and remain readable after entitlement expiry
+   ↓ native timesheet collections do not upgrade shared sheet locks during concurrent post-upgrade reads
+   ↓ native timesheet collections reject the whole response when credentials expire during a source lock wait
+   ↓ native time deletion removes browser effort and review comments atomically with task totals
+   ↓ native time deletion removes api effort and review comments atomically with task totals
+   ↓ native time deletion preserves timer receipts and prevents retry from recreating deleted effort
+   ↓ native time deletion requires actual key scope and editable sheet and entry state
+   ↓ native time deletion permits authorized removal of an entry with hidden notes without returning them
+   ↓ native time deletion rolls effort, review comments, task totals and events back on final key expiry
+   ↓ native time deletion serializes retries and rejects writes after license expiry
+   ↓ native time deletion refuses operational billing evidence without changing allocations or balances
+   ↓ native time deletion reverses commercial post-upgrade allocations and rolls them back with a failed deletion
+   ↓ native time deletion retains the acting manager separately from a deactivated entry owner
+   ↓ hour-block entry serialization credits concurrent reversals only once
+   ↓ hour-block entry serialization uses persisted mode, client and duration and rejects repeat burns
+   ↓ hour-block entry serialization preserves balances when delete wins against the other command
+   ↓ hour-block entry serialization preserves balances when reconcile wins against the other command
+   ↓ hour-block entry serialization skips time invoiced during a reconciliation lock wait
+   ↓ native time API collections count elapsed operational effort across list search statistics and exports
+   ↓ native time API collections apply source scope before paging counts and aggregation
+   ↓ native time API collections cannot infer masked notes or billing from search filters exports or statistics
+   ↓ native time API collections honor all search array values and actual interval duration filters
+   ↓ native time API collections reject the whole result when a key expires during a source wait
+   ↓ native time review retains browser feedback and sheet state without publishing private text
+   ↓ native time review retains api feedback and sheet state without publishing private text
+   ↓ native time review checks actual approval mutations including not-self and managed subject rules
+   ↓ native time review respects API-key scope and masked review fields before reporting state
+   ↓ native time review rolls approval feedback and events back on final credential expiry
+   ↓ native time review rejects draft approval and lapsed writes and serializes repeated approvals
+   ↓ native time sheet commands support submission review approval and explicit reversal with private audit text
+   ↓ native time sheet commands let technicians submit and preserve approved entries on a returned sheet
+   ↓ native time sheet commands cannot act on a whole sheet with an excluded source or forged approver
+   ↓ native time sheet commands validate bulk members before committing and approve all admitted sheets atomically
+   ↓ native time sheet commands roll back entries and sheet state when the session expires at commit admission
+   ↓ native time sheet commands refuse reversal when any entry has been invoiced after PSA upgrade
+   ↓ native time sheet details return actual visible effort and comments with authenticated authorship
+   ↓ native time sheet details omit excluded effort and withhold comments about partially visible sheets
+   ↓ native time sheet details respect field masks for notes, sheet totals, periods and free-text comments
+   ↓ native time sheet details retain manager attribution and remain readable during write expiry
+   ↓ native time sheet details roll back a new comment when its browser session expires at final admission
+   ↓ native time sheet lists share detail projections across own all approval and period views
+   ↓ native time sheet lists exclude unmanaged owners and keep incomplete global removal counts unknown
+   ↓ native time sheet lists compute period effort only from visible work and withhold partial-sheet comments and removal counts
+   ↓ native time sheet lists preserve field masks in employee labels and period metrics
+   ↓ native time sheet lists include unopened periods without fabricating a backing sheet
+   ↓ native time sheet lists reject the whole collection when the key expires during a nested source wait
+   ↓ native time sheet lifecycle serializes technician opening and grants project managers matching approval defaults
+   ↓ native time sheet lifecycle deletes only admitted empty drafts and clears their private child records
+   ↓ native time sheet lifecycle keeps existing history readable during lapse but blocks new sheets and removal
+   ↓ native time sheet lifecycle rolls create and its child changes back on final session expiry
+   ↓ native time sheet lifecycle rolls delete and its child changes back on final session expiry
+   ↓ native time sheet lifecycle rechecks emptiness after a concurrent entry insert commits
+   ↓ native time sheet lifecycle applies creation permission to automatic API sheets while allowing existing sheets
+   ↓ native time sheet lifecycle keeps a customer workspace on the co-managed path through an empty sheet
+   ↓ customer sheet API returns scoped operational summaries and authentic private comment DTOs
+   ↓ customer sheet API submits reviews and reverses real entries while storing feedback privately
+   ↓ customer sheet API omits hidden source effort and forbids whole-sheet commands over excluded entries
+   ↓ customer sheet API rolls status feedback and events back when its actual key expires
+   ↓ customer sheet API honors metric and comment aliases and keeps history readable after write expiry
+   ↓ customer sheet edits persist notes and serialize explicit creation without changing an existing sheet
+   ↓ customer sheet edits use real workflow permissions and reject arbitrary approval assignments
+   ↓ customer sheet edits hide whole-sheet notes under partial source visibility and reject blind replacements
+   ↓ customer sheet edits honor create and update masks and block writes after entitlement expiry
+   ↓ customer sheet edits roll notes creation and workflow events back on final key expiry
+   ↓ customer sheet reporting computes visible statistics and exports all pages with filters and grouping
+   ↓ customer sheet reporting exports safe CSV and real grouped XLSX with requested private detail only
+   ↓ customer sheet reporting preserves masked totals and withholds free text across every export format
+   ↓ customer time periods share calendar views and authorized CRUD across native and API surfaces
+   ↓ customer time periods serialize overlap checks with background model writes
+   ↓ customer time periods refuse to alter used periods and preserve per-item native removal
+   ↓ customer time periods generate contiguous full periods and roll back overlapping batches
+   ↓ customer time periods use actual key permission and retain readable history after write expiry
+   ↓ customer time periods roll back calendar insertion when its key expires before commit
+   ↓ customer time periods admit native settings generation before reading its configuration and include an exact end boundary
+   ↓ customer period settings normalize legacy and native API contracts and retain compatible active schedules
+   ↓ customer period settings serialize conflicting creates without deactivating existing schedules
+   ↓ customer period settings require current manage permission and remain readable after write expiry
+   ↓ customer period settings apply actual key bundle scope independently of the browser session
+   ↓ customer period settings roll changes back when the retained key expires after mutation
+   ↓ customer period jobs serialize duplicate execution and read the current stored settings
+   ↓ customer period jobs reject forged queue identity completed jobs and human job records
+   ↓ customer period jobs skip expired entitlement suspended tenants and inactive configuration
+   ↓ customer period jobs roll back generated dates when their retained job changes before final admission
+   ↓ customer period jobs roll back generated dates if the sponsor becomes read-only during the run
+   ↓ the nightly maintenance run creates periods in one admitted transaction and skips a read-only sponsor
+   ↓ the nightly maintenance run rolls back generated periods if the sponsor becomes read-only during the run
+   ↓ customer period jobs and native generation share semi-monthly and seasonal annual boundaries
+   ↓ customer schedule reads share private detail projections and actual work titles across native and API
+   ↓ customer schedule reads require actual assignment and current source permission without time-entry permission
+   ↓ customer schedule reads retain key-specific bundle masks independently of browser authority
+   ↓ customer schedule reads retain lapse history and reject missing credentials or suspended workspaces
+   ↓ customer schedule reads reject the whole collection when its key expires while retaining a work root
+   ↓ customer schedule calendar retains the first occurrence exceptions holidays and private Busy projection
+   ↓ customer schedule calendar includes spanning events and overlapping occurrences with exclusive range ends
+   ↓ customer schedule calendar filters actual assignments sources and recurrence field masks before disclosure
+   ↓ customer schedule commands create edit and delete actual API entries without leaking event content
+   ↓ customer schedule commands retain own-calendar permission and enforce actual write bundle rules
+   ↓ customer schedule commands validate current assignments partial dates recurrence and retained time dependencies
+   ↓ customer schedule commands respect current source scope and field masks without blind replacement
+   ↓ customer schedule commands roll back writes assignments and events when the actual key expires before commit
+   ↓ customer schedule commands protect active clocks and reject mutations after entitlement lapse
+   ↓ native schedule commands share current authority and ordinary create edit delete projections
+   ↓ native schedule commands edit one actual occurrence while preserving its siblings and explicit clears
+   ↓ native schedule commands split future occurrences without restarting their count or duration
+   ↓ native schedule commands update all occurrences from a virtual ID while retaining the original series anchor
+   ↓ native schedule commands cancel single future and all scopes without dropping the retained master early
+   ↓ native schedule commands reject forged excluded and out-of-scope virtual occurrences
+   ↓ native schedule commands roll series children assignments and events back on final session expiry
+   ↓ native schedule commands preserve recorded time when cancelling an occurrence and refuse destruction of its master
+   ↓ customer schedule relations move request wall-clock dates and queue meeting updates in the same command
+   ↓ customer schedule relations cancel linked requests meetings and conflicts atomically while retaining provider IDs
+   ↓ customer schedule relations retain request-only provider identity before clearing live join fields
+   ↓ customer schedule relations enforce canonical request binding and cannot approve pending requests through calendar edits
+   ↓ customer schedule relations roll request meeting intents and conflict cleanup back on final key expiry
+   ↓ customer schedule meeting sync sends only committed provider identity and clock fields and clears confirmed intent
+   ↓ customer schedule meeting sync retains failures with bounded backoff and replays provider deletion idempotently
+   ↓ customer schedule meeting sync serializes duplicate workers and rejects foreign stale or inconsistent operations
+   ↓ customer schedule meeting sync defers suspended and read-only workspaces without dropping pending operations
+   ↓ customer schedule meeting sync sweep uses the retained consumer and a successful replay does not call the provider twice
+   ↓ customer schedule meeting sync retains the actual operation through provider execution and leaves subsequent edits pending
+   ↓ customer appointment authority applies the same actual technician scope to list and detail
+   ↓ customer appointment authority filters projected fields and keeps API-key masks separate from native sessions
+   ↓ customer appointment authority declines approved bookings with atomic request meeting and conflict cleanup
+   ↓ customer appointment authority honors current configured approvers while rejecting unapproved technicians
+   ↓ customer appointment authority rolls decline back on final credential expiry and defers writes during lapse
+   ↓ customer appointment rescheduling keeps requester wall-clock calendar and meeting intent consistent
+   ↓ customer appointment rescheduling supports pending requests without approving them and rejects impossible local times
+   ↓ customer appointment rescheduling rolls back request calendar and meeting updates when final credentials expire
+   ↓ customer appointment approval retains pending calendar identity and requester-local time without exposing internal notes
+   ↓ customer appointment approval creates one actual allocation for an unlinked request and honors UTC form overrides
+   ↓ customer appointment approval requires current approver scope active assignees and unmasked fields
+   ↓ customer appointment association preserves canonical appointment identity and permits later rescheduling
+   ↓ customer appointment association rejects cross-client links and repairs only its actual legacy ticket allocation
+   ↓ customer appointment approval and association roll back assignments and bindings on final credential expiry
+   ↓ customer meeting creation preparation reserves one immutable disclosure without approving or exposing credentials
+   ↓ customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation
+   ↓ customer meeting creation preparation rolls back its reservation when credentials expire before commit
+   ↓ customer meeting creation execution attaches one actual event and approves its retained allocation atomically
+   ↓ customer meeting creation execution keeps lost-response cleanup separate from explicit approval without a meeting
+   ↓ customer meeting creation execution preserves the provider receipt when the original credential expires before attachment
+   ↓ customer meeting creation recovery attaches an interrupted attempt only under its still-current captured authority
+   ↓ customer meeting creation recovery retracts a changed disclosure instead of approving stale intent
+   ↓ customer meeting creation UI approval uses the durable provider identity and admitted recipient payload
+   ↓ customer meeting creation recovery preserves narrow cleanup after credential revocation source removal and suspension
+   ↓ customer meeting creation recovery keeps an ambiguous absent event pending without reissuing creation
+   ↓ customer meeting creation recovery serializes duplicate cleanup workers against the actual operation
+   ↓ customer approved meeting generation uses actual calendar times and all assignees through the native action
+   ↓ customer approved meeting generation reuses only an undisclosed failed placeholder and repairs its exact legacy allocation
+   ↓ customer approved meeting generation rejects existing provider evidence and unrelated schedule bindings before creation
+   ↓ customer approved meeting generation honors current approvers and API-key field masks before disclosing participants
+   ↓ customer approved meeting generation keeps approval intact on provider failure and permits a fresh attempt after cleanup
+   ↓ customer approved meeting generation recovery attaches current intent without changing approval metadata
+   ↓ customer approved meeting generation recovery cleans an event when its retained allocation changes
+   ↓ customer approved meeting generation rolls attachment back on final credential expiry while retaining compensation evidence
+   ↓ customer approved meeting generation leaves the appointment unchanged when Teams is unavailable and still requires current admission
+   ↓ customer meeting artifact reads project only admitted metadata and download through retained document content
+   ↓ customer meeting artifact reads enforce the actual appointment calendar binding and private assignees
+   ↓ customer meeting artifact reads reject masked appointment content and generic transcript document escapes
+   ↓ customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials
+   ↓ customer meeting artifact HTTP transcript download uses its owner and bypasses neither scope nor content-type controls
+   ↓ customer meeting artifact document actions retain owner scope instead of relying on broad document permission
+   ↓ customer meeting artifact document admission rejects masked transcript bytes and preserves read access during product lapse
+   ↓ customer meeting artifact API authenticates the actual key through both download URLs without trusting tenant headers or cookies
+   ↓ customer meeting artifact API rejects invalid empty expired and exhausted keys without browser fallback
+   ↓ customer meeting artifact API applies key-specific document narrowing even when the same browser user can read the transcript
+   ↓ customer meeting artifact API rechecks revocation after initial key validation before delivering content
+   ↓ customer meeting artifact API cannot use a sponsoring MSP key to select customer content with a tenant header
+   ↓ customer interaction meeting reads use the same admitted projection in page recent entity and dedicated native actions
+   ↓ customer interaction meeting reads hide masked text from search totals and meeting enrichment
+   ↓ customer interaction meeting reads require both owners and the private calendar allocation
+   ↓ customer interaction meeting reads omit inaccessible related labels and validate an empty entity parent
+   ↓ customer interaction meeting reads filter out other owners before paginating and counting
+   ↓ customer interaction meeting reads reject expired credentials after waiting for an actual source lock
+   ↓ customer interaction edits persist only writable fields and return the admitted meeting projection from the native action
+   ↓ customer interaction edits cannot reveal a private appointment meeting through their mutation response
+   ↓ customer interaction edits enforce changed-field scope while allowing unrelated masked fields to remain private
+   ↓ customer interaction edits preserve ownership and timing of linked meetings and reject invalid local fields
+   ↓ customer interaction edits support standalone reparenting only when both old and proposed record scopes admit it
+   ↓ customer interaction edits roll back on final credential expiry and reject read-only lifecycle writes
+   ↓ customer interaction lifecycle creates and deletes an admitted local interaction through native actions without accepting forged relationships
+   ↓ customer interaction lifecycle resolves a contact client and rejects mismatched parents and inactive owners
+   ↓ customer interaction lifecycle keeps linked meetings and transcript documents when deletion is requested
+   ↓ customer interaction lifecycle intersects API field scope and rejects revoked keys for creation and deletion
+   ↓ customer interaction lifecycle rolls back insertion and deletion when credentials expire at the final check
+   ↓ consolidated ticket export returns every matching shared row in global order regardless of page controls and never native tickets
+   ↓ consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation
+   ↓ consolidated ticket export remains available during license lapse but rejects expired sessions
+   ↓ bulk handback retains individual authorization and receipts while returning mixed outcomes without copying tickets
+   ↓ bulk handback rejects masked handoff fields and checks read permission as well as update
+   ↓ bulk handback returns read-only and per-item invalid results without applying writes
+   ↓ bulk handback rolls back an individual handoff if its retained session expires before commit
+   ↓ T021 signal counts equal exactly the rows their authorized filters return and working never contains native tickets
+   ↓ T021 handed-back tickets and a viewer without a staff assignment contribute no signal
+   ↓ T021 a redacted driving field excludes the row from its signal and the count follows the filter
+   ↓ T021 revoked and ended relationships contribute nothing to options, rows or signal counts, and a second customer with the same ticket id stays isolated
+   ↓ T021 signal counts keep two customer workspaces with the same ticket number and id isolated
+   ↓ T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options
+   ↓ T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out
+   ↓ T014 bulk handback: one receipt per success, stale and forbidden items reported per item, exact retry replays, and working/oversight are re-queried
+   ↓ shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry
+   ↓ shared ticket assignment offers only staffed teams with an active eligible member
+   ↓ shared ticket assignment serializes competing changes and rejects stale operation reuse
+   ↓ shared ticket assignment hides read-masked assignment values and rejects expired editors
+   ↓ shared ticket assignment rolls back routing revision attribution and receipt on expiry at commit
+   ↓ shared ticket assignment requires collaboration scope and honors a retained board grant after explicit revocation
+   ↓ pre-handoff assignment lets the customer assign visible collaborative work without starting escalation
+   ↓ pre-handoff assignment lets the sponsor assign visible collaborative work without starting escalation
+   ↓ pre-handoff assignment preserves its identity through actual escalation and clears working assignment on handback
+   ↓ pre-handoff assignment does not preserve live access after its board grant is removed or manufacture an explicit grant
+   ↓ pre-handoff assignment requires collaborative board sharing before any routing record is created
+   ↓ pre-handoff assignment serializes initial creation across both organizations
+   ↓ pre-handoff assignment is excluded from working counts when assignment visibility is masked
+   ↓ pre-handoff assignment rolls back new work routing and receipts on final credential expiry
+   ↓ organization SLA durable clock > deduplicates concurrent starts and handoffs, keeps customer SLA fields unchanged, and retains exact receipts
+   ↓ organization SLA durable clock > qualifies source identity and owning tenant even when obligation UUIDs collide
+   ↓ organization SLA durable clock > rolls the clock and event receipt back together and rejects out-of-order events
+   ↓ organization SLA durable clock > replays migration safely, refuses history loss, and rejects mismatched clock identities
+   ↓ handoff SLA starts with actual escalation, resumes the original MSP target and leaves the customer timeline intact
+   ↓ handoff SLA rejects missing mapping atomically without inventing a fallback
+   ↓ handoff SLA rejects missing policy atomically without inventing a fallback
+   ↓ handoff SLA rejects missing target atomically without inventing a fallback
+   ↓ handoff SLA priority configuration requires the actual sponsor administrator and current revision/session
+   ↓ handoff SLA uses the MSP default policy through the existing precedence
+   ↓ handoff SLA uses the MSP board policy through the existing precedence
+   ↓ handoff SLA uses the MSP client policy through the existing precedence
+   ↓ handoff SLA configuration blocks suspended workspaces and license-lapsed mutations
+   ↓ handoff SLA and responsibility both roll back when the initiating session expires at the final receipt
+   ↓ MSP SLA response counts the first actual requester reply, not customer or MSP-private notes
+   ↓ MSP SLA response counts the first actual shared_it reply, not customer or MSP-private notes
+   ↓ MSP SLA response while handed back records the paused elapsed time without restarting responsibility
+   ↓ MSP SLA response and published comment roll back together if the author expires at the final receipt
+   ↓ MSP SLA resolution closes during handback when customer closes the canonical ticket
+   ↓ MSP SLA resolution closes during handback when msp closes the canonical ticket
+   ↓ MSP SLA resolution preserves the frozen obligation after all ticket visibility is revoked
+   ↓ MSP SLA resolution rolls back with canonical close validation and transaction failures
+   ↓ MSP SLA reopen creates a new obligation only for a genuine reopening while MSP remains responsible
+   ↓ MSP SLA reopen under customer responsibility waits for a fresh escalation
+   ↓ MSP SLA reopen rolls back on missing setup and leaves the closed obligation intact
+   ↓ MSP SLA native legacy customer close/reopen actions update the independent obligation
+   ↓ MSP SLA native optimized customer close/reopen actions update the independent obligation
+   ↓ MSP SLA shared edit checks the initiating session after its final close receipt
+   ↓ MSP SLA observation records one due breach under concurrent workers and leaves customer SLA fields intact
+   ↓ MSP SLA observation does not advance revoked work
+   ↓ MSP SLA observation does not advance handback work
+   ↓ MSP SLA observation does not advance terminated work
+   ↓ MSP SLA observation does not advance suspended work
+   ↓ MSP SLA observation does not advance read-only work
+   ↓ MSP SLA observation does not advance wrong-owner work
+   ↓ MSP SLA observation does not advance wrong-obligation work
+   ↓ MSP SLA observation keyset scan reaches due work beyond a skipped historical candidate
+   ↓ MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration
+   ↓ MSP SLA display distinguishes pre-escalation from unavailable historical timing and retains paused outcomes during lapse
+   ↓ MSP SLA display obeys sla source redaction
+   ↓ MSP SLA display obeys tickets.sla_response_at source redaction
+   ↓ MSP SLA display obeys work source redaction
+   ↓ MSP SLA display obeys fields.priority.name source redaction
+   ↓ MSP SLA display obeys tickets.response_state source redaction
+   ↓ MSP SLA display rejects revoked foreign readers and shows the customer only the retained paused result
+   ↓ MSP SLA threshold scan captures warning crossings before the due date once across workers
+   ↓ MSP SLA threshold capture retains all missed warnings and breaches with immutable source configuration
+   ↓ MSP SLA threshold capture rolls back with the source transaction and deduplicates exact retries
+   ↓ MSP SLA threshold capture catches handback crossings without later paused or completed targets gaining new notices
+   ↓ MSP SLA threshold migration replays safely and refuses retained history loss
+   ↓ MSP SLA threshold capture commits a late first reply and its breach together before any timer run
+   ↓ MSP SLA notices create one in-app receipt and durable channel tasks under concurrent retries
+   ↓ MSP SLA notices use the current MSP assignee and stop after removal
+   ↓ MSP SLA notices use the current MSP board-manager and stop after removal
+   ↓ MSP SLA notices use the current MSP escalation-manager and stop after removal
+   ↓ MSP SLA delivery denies revoked notices without cached fallback
+   ↓ MSP SLA delivery denies metadata notices without cached fallback
+   ↓ MSP SLA delivery denies threshold-disabled notices without cached fallback
+   ↓ MSP SLA delivery denies inactive notices without cached fallback
+   ↓ MSP SLA inbox uses fresh redacted content, qualified counts and actual browser authority
+   ↓ MSP SLA notices apply title redaction at delivery time
+   ↓ MSP SLA notices apply sla redaction at delivery time
+   ↓ MSP SLA notices apply work redaction at delivery time
+   ↓ MSP SLA notices apply response_state redaction at delivery time
+   ↓ MSP SLA notice storage and delivery tasks roll back with the caller, then recover once
+   ↓ MSP SLA notices suppress obsolete warning delivery once the target is breached
+   ↓ MSP SLA email retries with a stable Message-ID and fresh recipient/content, then delivers once under concurrent workers
+   ↓ MSP SLA email skips a queued recipient after revoked changes
+   ↓ MSP SLA email skips a queued recipient after unassigned changes
+   ↓ MSP SLA email skips a queued recipient after preference changes
+   ↓ MSP SLA email skips a queued recipient after tenant-settings changes
+   ↓ MSP SLA email skips a queued recipient after inactive changes
+   ↓ MSP SLA email skips a queued recipient after field-redaction changes
+   ↓ MSP SLA email records permanent provider failure without repeated sending
+   ↓ MSP SLA email records exhausted provider failure without repeated sending
+   ↓ MSP SLA email retry migration replays safely and refuses to discard retained delivery state
+   ↓ MSP SLA email warning uses current remaining time without rewriting its captured crossing
+   ↓ MSP SLA awaiting-client pause composes with handback and preserves elapsed time and breaches
+   ↓ MSP SLA awaiting-client initial escalation respects msp-pause-disabled independently
+   ↓ MSP SLA awaiting-client initial escalation respects msp-tracking-disabled independently
+   ↓ MSP SLA awaiting-client initial escalation respects customer-tracking-disabled independently
+   ↓ MSP SLA awaiting-client initial escalation respects customer-pause-disabled independently
+   ↓ MSP SLA awaiting-client does not expose new response state after revoked
+   ↓ MSP SLA awaiting-client does not expose new response state after terminated
+   ↓ MSP SLA awaiting-client does not expose new response state after suspended
+   ↓ MSP SLA awaiting-client does not expose new response state after read-only
+   ↓ MSP SLA awaiting-client follows native legacy response-state edits atomically
+   ↓ MSP SLA awaiting-client follows native optimized response-state edits atomically
+   ↓ MSP SLA awaiting-client records the actual public MSP response before pausing and rolls back with the source
+   ↓ MSP SLA awaiting-client re-escalation preserves the pause until an actual response-state change
+   ↓ MSP SLA awaiting-client reopening starts a paused new generation at zero elapsed
+   ↓ MSP SLA awaiting-client follows scheduled customer publication without inventing an MSP first response
+   ↓ MSP SLA reply adapters pause on native generic public comments and ignore private notes
+   ↓ MSP SLA reply adapters pause on native optimized public comments and ignore private notes
+   ↓ MSP SLA reply adapters resume after an actual qualified requester email and retain replay identity
+   ↓ MSP SLA reply adapters apply actual customer email requester audience without an MSP response
+   ↓ MSP SLA reply adapters apply actual customer email shared_it audience without an MSP response
+   ↓ MSP SLA reply adapters apply actual customer email organization_private audience without an MSP response
+   ↓ MSP SLA reply adapters resume through the actual requester portal and close/reopen independently
+   ↓ MSP SLA reply adapters block read-only portal reply without changing source or MSP history
+   ↓ MSP SLA reply adapters block read-only portal status without changing source or MSP history
+   ↓ MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation
+   ↓ MSP SLA ticket API missing reopen setup rolls back the canonical row and retained clock
+   ↓ MSP SLA ticket API keeps revoked private response and closure changes outside retained MSP history
+   ↓ MSP SLA ticket API source failures roll back both the response state and its pause event
+   ↓ MSP SLA bundle child reply reopens its actual master board with one new obligation
+   ↓ MSP SLA bundle child reply does not restart handed-back master obligations
+   ↓ MSP SLA bundle child reply does not restart revoked master obligations
+   ↓ MSP SLA bundle child reply missing reopen setup rolls back the master and child comment together
+   ↓ MSP SLA bundle child reply concurrent siblings create only one genuine reopen generation
+   ↓ MSP SLA bundle propagation requires an explicit propagation choice before touching a child
+   ↓ MSP SLA bundle propagation declining propagation moves the master alone and leaves every child untouched
+   ↓ MSP SLA bundle propagation closes and reopens each child with its own obligation and closure fields
+   ↓ MSP SLA bundle propagation missing child reopen mapping rolls back the master and all child state
+   ↓ MSP SLA bundle propagation leaves revoked child history frozen while customer IT closes the canonical child
+   ↓ MSP SLA bundle propagation rejects a foreign-board status before committing any ticket or obligation
+   ↓ MSP SLA bundle propagation open-to-open validates child board ownership (foreign board: false)
+   ↓ MSP SLA bundle propagation open-to-open validates child board ownership (foreign board: true)
+   ↓ MSP SLA bundle propagation enforces child close gates and rolls back the completed master
+   ↓ MSP SLA bundle propagation preserves additional resources when a child assignee is promoted
+   ↓ MSP SLA workflow updates apply canonical response, close and reopen transitions under the executing version
+   ↓ MSP SLA workflow updates reject inactive_actor before mutating canonical work
+   ↓ MSP SLA workflow updates reject missing_role before mutating canonical work
+   ↓ MSP SLA workflow updates reject cancelled_run before mutating canonical work
+   ↓ MSP SLA workflow updates reject expired_lease before mutating canonical work
+   ↓ MSP SLA workflow updates reject missing_version before mutating canonical work
+   ↓ MSP SLA workflow updates reject lapsed_license before mutating canonical work
+   ↓ MSP SLA workflow updates reject missing_composition before mutating canonical work
+   ↓ MSP SLA workflow updates roll back canonical reopen on missing MSP setup
+   ↓ MSP SLA workflow updates roll back source, clock and audit when the run expires during the writer
+   ↓ MSP SLA workflow updates reject hidden response_state mutation or returned data
+   ↓ MSP SLA workflow updates reject hidden priority.name mutation or returned data
+   ↓ co-managed workflow assignment retains actual user targets, resources and no-op state without resetting SLA
+   ↓ co-managed workflow assignment retains actual team targets, resources and no-op state without resetting SLA
+   ↓ co-managed workflow assignment retains actual queue targets, resources and no-op state without resetting SLA
+   ↓ co-managed workflow assignment rejects expired_lease before changing the ticket
+   ↓ co-managed workflow assignment rejects missing_role before changing the ticket
+   ↓ co-managed workflow assignment rejects read_only before changing the ticket
+   ↓ co-managed workflow assignment rejects missing_composition before changing the ticket
+   ↓ co-managed workflow assignment rolls back the ticket, resources and audit after late lease expiry
+   ↓ co-managed workflow assignment retains its optional public comment exactly once on a no-op retry
+   ↓ co-managed workflow assignment applies action-specific read fields for assigned_to
+   ↓ co-managed workflow assignment applies action-specific read fields for priority.name
+   ↓ co-managed workflow close commits canonical closure and one MSP resolution before durable requester delivery
+   ↓ co-managed workflow close rejects expired_lease without closure, SLA, audit or email intents
+   ↓ co-managed workflow close rejects missing_role without closure, SLA, audit or email intents
+   ↓ co-managed workflow close rejects missing_composition without closure, SLA, audit or email intents
+   ↓ co-managed workflow close rejects lapsed_license without closure, SLA, audit or email intents
+   ↓ co-managed workflow close rolls back an enqueued email on final lease failure
+   ↓ co-managed workflow close email suppresses current requester_changed delivery
+   ↓ co-managed workflow close email suppresses current contact_inactive delivery
+   ↓ co-managed workflow close email suppresses current board_hidden delivery
+   ↓ co-managed workflow close email suppresses current author_revoked delivery
+   ↓ co-managed workflow close email suppresses current reopened delivery
+   ↓ co-managed workflow close email suppresses current cancelled delivery
+   ↓ co-managed workflow close email suppresses current notifications_disabled delivery
+   ↓ co-managed workflow close email retries with stable identity and reloads current address and escaped template data
+   ↓ co-managed workflow close rejects hidden attributes.resolution_code source fields before queuing a message
+   ↓ co-managed workflow close rejects hidden response_state source fields before queuing a message
+   ↓ co-managed workflow close rejects hidden contact_name_id source fields before queuing a message
+   ↓ co-managed workflow close email concurrent recovery sends one committed command once
+   ↓ co-managed workflow close without notification needs no requester and queues no email
+   ✓ qualified time launch keeps foreign work on the MSP commercial reference path  498ms
+   ↓ MSP time billing work registers one qualified source and keeps customer work outside the MSP invoice loader
+   ↓ MSP time billing work retains admitted evidence after revocation without allowing another live registration
+   ↓ MSP time billing work rejects missing local time permission and wrong relationship before capture
+   ↓ MSP time billing work applies current field scope to captured descriptions
+   ↓ MSP time billing work reaches the existing catalog charge engine with retained customer provenance
+   ↓ MSP time billing work supports shared tasks without assigning an MSP project billing identity
+   ↓ MSP time billing work keeps native ticket and task UUID collisions distinct in normalized billing joins
+   ↓ MSP shared time save uses the existing writer and reads its own commercial effort without a copied ticket
+   ↓ MSP timesheet work items include shared references once and retain admitted evidence after revocation
+   ↓ MSP shared time save retains existing effort after revocation and blocks fresh contributions
+   ↓ MSP shared time save rechecks the session before committing source evidence and time
+   ↓ MSP shared time save admits actual API credentials and preserves qualified work on updates and reads
+   ↓ MSP shared time save applies current home financial field restrictions to writes and reads
+   ↓ MSP shared time review preserves the native approval transitions and invoiced evidence
+   ↓ MSP shared time deletion retains the source reference and prevents deleting submitted effort
+   ↓ native time sheet lifecycle opens a sponsor empty sheet natively and hands the same sheet back once shared effort lands in it
+   ↓ native time sheet lifecycle leaves an MSP workspace holding no shared effort entirely on its native path
+   ↓ native time sheet lifecycle keeps refusing an unauthorized delegate once a sponsor falls through to the native path
+   ↓ MSP shared timers retain running effort after revocation and stop exactly once into owned time
+   ↓ MSP shared timers require current home credentials and financial visibility through completion
+   ↓ MSP shared timer references retain local integrity and cannot be removed by migration rollback
+   ↓ shared time UI actions register the current browser and resolve only the MSP billing client
+   ↓ shared time UI actions reject API overrides and redact current local client fields
+   ↓ shared time billing uses the same current contract selection for manual API and timer saves
+   ↓ shared time billing rejects foreign or inapplicable explicit contracts and services before writing effort
+   ↓ shared time billing applies weighted bucket draws and reverses API edits and deletion
+   ↓ shared time billing allocates and reverses prepaid hours through native API updates and deletion
+   ↓ shared time billing uses the MSP profile to resolve parallel contracts and excludes inactive lines
+   ↓ shared effort totals count completed customer and MSP time without exposing private billing or approval details
+   ↓ shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals
+   ↓ shared effort totals retain customer-owned effort after termination while MSP reads and customer writes stay closed
+   ↓ shared effort totals respect source field restrictions ["time_entries.notes","time_entries.approval_status","billing"]
+   ↓ shared effort totals respect source field restrictions ["effort_totals.mspMinutes"]
+   ↓ shared effort totals respect source field restrictions ["actual_hours"]
+   ↓ shared effort totals roll up actual project tasks without using cached hours or colliding ticket IDs
+   ↓ native task effort action binds customer work to the current browser and denies forged identity and API overrides
+   ↓ shared effort totals follow task moves between actual projects and retain customer totals when the project grant ends
+   ↓ relationship closure by customer finalizes evidence before revocation and releases capacity exactly once under concurrent retries
+   ↓ relationship closure by sponsor finalizes evidence before revocation and releases capacity exactly once under concurrent retries
+   ↓ relationship closure rolls back evidence capacity and trust on archive_failure
+   ↓ relationship closure rolls back evidence capacity and trust on late_session_expiry
+   ↓ relationship closure requires current administrator authority but remains available after license grace expires
+   ↓ relationship closure pauses the existing MSP SLA at the archive cutoff and blocks later observation
+   ↓ participation evidence retains explicit handoff history through revocation and source deletion without private ticket fields
+   ↓ a repeated handback operation converges to one retained handoff, one evidence row and the first receipt
+   ↓ participation evidence excludes oversight and customer-only work until the MSP actually contributes
+   ↓ participation evidence records an MSP task assignment and its withdrawal without copying private descriptions
+   ↓ participation evidence rolls back with the canonical task when the writer expires after capture
+   ↓ time participation evidence requires a completed entry and native timer retries retain one proof
+   ↓ time participation evidence preserves first attribution through edits renames and deletion without private timesheet fields
+   ↓ time participation evidence records both qualified work identities when existing time moves through the API
+   ↓ time participation evidence can finish retained MSP clocks after revocation without reading newly private customer content
+   ↓ time participation evidence rolls back with a native save when the current writer expires after capture
+   ↓ conversation participation retains only shared task revisions after actual MSP contribution
+   ↓ conversation participation stops new capture after unsharing and never refreshes a replayed event
+   ↓ conversation participation rolls back the canonical task mutation when capture fails
+   ↓ conversation participation uses actual ticket authors and excludes private roots and publication bodies
+   ↓ archive files retain authorized bytes before customer deletion and drain without reopening customer storage
+   ↓ archive files exclude private, unpublished and newly unshared uploads and capture drafts only at publication
+   ↓ archive files roll back publication on corrupt source bytes and retain staging across storage failure
+   ↓ archive reads retain qualified shared history after customer source deletion without restoring live access
+   ↓ archive reads enforce current MSP client scope and field restrictions on history authors and files
+   ↓ archive reads deliver pending and stored bytes with integrity and final session checks
+   ↓ archive reads download route binds the actual MSP session and returns non-cacheable attachment bytes
+   ↓ MSP-private archive retains actual task revisions and tombstones without publishing customer history
+   ↓ MSP-private archive captures published draft files and keeps private and shared policies independent
+   ↓ MSP-private archive capture rolls back with a private writer that expires after retaining evidence
+   ↓ sharing reduction archives legacy ticket history before revocation without copying hidden content or replaying capture
+   ↓ sharing reduction snapshots project history only after MSP participation and rolls back with failed scope changes
+   ↓ sharing reduction archives board-only visibility using the persisted policy operation
+   ↓ audience reduction retains only the changed shared thread and its legacy files before hiding it
+   ↓ audience reduction rolls back captured history when the confirmed disclosure fails
+   ↓ source move retention captures board-shared history in the native ticket writer before losing its grant
+   ↓ source move retention preserves project history during a native task move and rolls back on failure
+   ↓ source move retention preserves project history during a native phase move and rolls back on failure
+   ↓ archive manifest seals qualified evidence and pending files at closure and survives storage completion and source deletion
+   ↓ archive manifest failure rolls back final history capture and relationship closure
+   ↓ closure private history captures legacy MSP notes and files after unsharing without reopening customer content
+   ↓ closure private history keeps historical authors and empty tombstones for unshared tasks and rolls back with closure
+   ↓ work snapshot retains only shared metadata after participation and applies current source-field restrictions after deletion
+   ↓ work snapshot captures ticket context before grant removal and does not refresh newly private metadata
+   ↓ archive finalizer composes legacy handoffs shared conversations private history and work context before sealing closure
+   ↓ archive finalizer discovers legacy MSP task audits while enforcing current sharing=true
+   ↓ archive finalizer discovers legacy MSP task audits while enforcing current sharing=false
+   ↓ archive finalizer captures completed owned time but not unused time-reference registration
+   ↓ tenant license state uses real signed tenant binding without changing MSP licensing or co-managed capacity
+   ↓ tenant license state rejects unbound foreign expired and invalid signatures and rolls activation back
+   ↓ tenant license state does not revive an expired independent PSA license from a valid installation license
+   ↓ PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants
+   ↓ independent PSA upgrade atomically converts an active customer with its own license and closes live trust exactly once
+   ↓ independent PSA upgrade after departure preserves the original seal and never reopens or recaptures customer sources
+   ↓ independent PSA upgrade rejects MSP actors and missing or insufficient customer entitlement and rolls final write failure back
+   ↓ tenant license controls bind browser activation to the customer and never expose or mutate installation licensing
+   ↓ tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback
+   ↓ session tier resolution uses the customer entitlement through sign-in and upgrade in the async auth configuration
+   ↓ session tier resolution uses the customer entitlement through sign-in and upgrade in the sync auth configuration
+   ↓ hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation
+   ↓ hosted PSA upgrade rejects unpaid or foreign provider state and rechecks local billing and session after provider reads
+   ↓ public PSA upgrade binds the browser customer and worker to current authority and refreshes the completed state
+   ↓ independent hosted checkout recovers a lost response and a paid webhook after the browser closes without changing MSP billing or converting early
+   ↓ independent hosted checkout refuses foreign payment ownership and rolls billing imports back when final reconciliation fails
+   ↓ independent hosted checkout cancellation before payment reconciliation releases the pending purchase without ending sponsorship
+   ↓ independent payment recovery retains asynchronous failure and resumes safely after a lost cancellation response
+   ↓ independent payment recovery refuses cancellation when the initial invoice has since been paid
+   ↓ independent billing portal binds paid seat confirmation to its own subscription and current customer authority
+   ↓ portable vault export retains customer metadata and audited usable secrets after departure without MSP private data
+   ↓ portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work
+   ↓ portable workspace core preserves local identity relationships and saved authors while excluding authentication and live trust
+   ↓ portable workspace core requires current customer directory permissions and rejects revoked or MSP sessions
+   ↓ portable work export preserves customer and shared ticket history while excluding MSP private notes and transport metadata
+   ↓ portable work export preserves project structure and task audiences and rejects missing current work permission
+   ↓ portable document export stages real native and legacy bytes with document versions and KB content under a private lease
+   ↓ portable document export removes staged bytes on short streams, final session revocation and foreign storage paths
+   ↓ portable conversation export preserves published customer/shared files after departure without MSP private or pending uploads
+   ↓ portable workspace coordinator binds actual private and shared conversation files to authenticated package records
+   ↓ portable conversation export verifies stored checksums and removes staged files after parent access or path changes
+   ↓ portable operational export preserves own time review schedules and SLA configuration without commercial or live dispatch bindings
+   ↓ portable operational export rejects another employee private appointment and missing current permissions or session
+   ↓ portable operational export retains canonical schedules against concurrent privacy changes
+   ↓ portable operational export retains canonical schedules against concurrent assignment changes
+   ↓ portable operational export retains canonical time entries against concurrent work-source changes
+   ↓ portable asset export preserves actual inventory relationships after departure without provider or commercial bindings
+   ↓ portable asset export rejects actual MSP and revoked sessions, native record redactions and missing asset read permission
+   ↓ public departure by customer retains an archive and releases seats once using the reviewed relationship
+   ↓ public departure by sponsor retains an archive and releases seats once using the reviewed relationship
+   ↓ public departure rejects foreign provisioning selectors and rolls back closure if archive sealing fails
+   ↓ public departure browser actions derive customer authority and reject API override or mismatched tracked identity
+   ↓ portable coordinated snapshot gives independently authorized record collectors one cutoff and rejects expired or forged capabilities
+   ↓ portable coordinated snapshot still performs document delivery checks against current source and current authority
+   ↓ self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers
+   ↓ portable workflow export preserves authored definitions versions and tenant forms after departure without runtime or secret-provider state
+   ↓ portable workflow export enforces current customer sessions native export permission and definition redactions
+   ↓ portable workflow business history rejects task field redaction and foreign task-history parents
+   ↓ portable engagement export retains customer bookings availability and meeting metadata without provider credentials or commercial prices
+   ↓ portable engagement export denies private meeting ownership and current settings permission or session loss
+   ↓ portable engagement export rejects a meeting changed after capture before native retention
+   ↓ portable engagement export reconstructs task-only services and their standard type under actual project admission
+   ↓ portable workspace graph validates cross-section identities and rejects dangling author service and configuration references
+   ↓ portable supplemental files capture actual artifact-only bytes and deduplicate by document file identity
+   ↓ portable supplemental files dispose truncated streams and reject foreign paths before provider access
+   ↓ portable supplemental files reject revoked private meeting access and changed document coverage after staging
+   ↓ portable remote meeting files capture real bounded Graph response streams from retained original identities only
+   ↓ portable remote meeting files reject missing provider receipt and oversized or truncated responses without retained output
+   ↓ portable remote meeting files reject current provider configuration or session changes after the response stream
+   ↓ portable workspace coordinator seals all sections at one cutoff and delivers under fresh native locks without provider work
+   ↓ portable workspace coordinator rejects source changes after staging and revoked sessions before any delivery callback
+   ↓ portable workspace prepared download rejects an expired staging lease before opening a transaction
+   ↓ portable export browser handler streams after releasing database locks and rejects revoked or foreign requests
+   ↓ portable workspace restore inserts actual files records and usable vault into a new suspended tenant atomically
+   ↓ portable workspace coordinator removes all staged files after a later credential provider failure and disposes abandoned packages
+   ↓ portable installation restore authenticates owner authority and converges retries without replacing tenants
+   ↓ portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging
+   ↓ shared time profile selects only the current MSP client and preserves null/default and retry semantics
+   ↓ shared time profile changes preserve approved and invoiced entries while native contract selection uses the new default
+   ↓ shared time profile rejects local customer callers, stale trust and private home client policy
+   ↓ shared time profile serializes competing defaults and rolls back a change if final authority expires
+   ↓ shared time profile supports canonical project tasks without modifying customer billing or native assignment
+   ↓ shared stopwatch starts on the work reference, logs through the shared save, and lists the entry for that work item
+   ↓ shared stopwatch cannot be redirected: a native clock never logs shared time and a shared clock never logs another item
+   ↓ shared stopwatch admission denies users without current technician staff assignment, revoked grants and API-key overrides
+   ↓ shared stopwatch start is refused for API credentials and after the customer revokes the grant, but the open clock survives for pause and discard
+   ↓ shared time list returns only admitted entries and counts the rest as hidden, never as content
+   ↓ initial administrator invitation recovery > does not renew or deliver an expired initial invitation when active users and pending invitations fill its allocation
+   ↓ initial administrator invitation recovery > accepts the replacement token through the real user service exactly once and rejects the old link
+   ↓ initial administrator invitation recovery > renews a successfully delivered expired invitation once and uses the same workspace allocation and workflow identity
+   ↓ initial administrator invitation recovery > resends a live invitation with the same link and a fresh 24 hours
+   ↓ initial administrator invitation recovery > retains the replacement token through failed delivery and does not require new pool capacity
+   ↓ initial administrator invitation recovery > rejects foreign sessions, revoked home roles, expired sessions and altered invitation scope without changing the token
+   ↓ initial administrator invitation recovery > does not reset a consumed invitation or an existing administrator before acceptance
+   ↓ initial administrator invitation recovery > serializes delivery acknowledgment with a concurrent retry so a completed send cannot acknowledge a different token
+   ↓ initial administrator invitation recovery > sends with no retaining transaction open, so the mail path can still take its own locks
+   ↓ initial administrator invitation recovery > drops a completed send acknowledgment when a replacement token took its place mid-flight
+   ↓ initial administrator invitation recovery > drops a failed send acknowledgment when a replacement token took its place mid-flight
+   ↓ shared invoice journey persists qualified MSP and native effort once under concurrent generation and retries
+   ↓ shared invoice journey reconciles approved MSP effort into a later contract and claims its native recurring period once
+   ↓ shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion
+   ↓ co-managed management policy > intersects client and board policy before setup labels, search and selected-client fallback
+   ↓ co-managed management policy > filters status before pagination and foreign lifecycle reads, retaining only authorized operation identities
+   ↓ co-managed management policy > denies starts, retries and allocation changes outside current home policy before reserving or invoking a command
+   ↓ co-managed management policy > retains home policy through authorized resize and distinguishes read access from per-operation management
+   ↓ co-managed management policy > hides restricted labels and identities, treats search wildcards literally and fails closed on unsupported constraints
+   ↓ co-managed management policy > retains published rules during commands and observes revocation before the next operation
+   ↓ co-managed management policy > offers to resend a delivered invitation before it expires, until the administrator has an account
+   ↓ co-managed management policy > reports expired invitation recovery without exposing the token or offering reset after account creation
+   ↓ co-managed client target and read contracts > resolves an authorized sponsor-client selector to its exact relationship and reports admission-consistent usage
+   ↓ co-managed client target and read contracts > shows the setup state on the client view while acceptance is pending, including cleanup progress
+   ↓ co-managed client target and read contracts > denies foreign clients and forged or mismatched relationship selections without leaking labels
+   ↓ co-managed client target and read contracts > requires an explicit selection for multiple current relationships and retains ended history
+   ↓ co-managed client target and read contracts > returns an authorized, searchable cross-client overview without hidden candidate counts
+   ↓ co-managed client target and read contracts > maps a legacy operation to its authorized client and rejects a conflicting client selector
+   ↓ co-managed client target and read contracts > keeps client Enable single-setup by resuming the current operation under different operation IDs
+   ↓ co-managed client target and read contracts > reports changed details for a client with a current setup instead of silently re-running the original
+   ↓ co-managed client target and read contracts > rejects a client or escalation board deactivated since the form loaded with a correctable code
+   ↓ routing notifications persist canonical escalation and handback obligations with qualified local destinations and exact retry
+   ↓ routing notifications create one assignment notice and one email with stable retry identity and no customer mail
+   ↓ routing notifications skip delayed delivery when recipient becomes unassigned
+   ↓ routing notifications skip delayed delivery when recipient becomes revoked
+   ↓ routing notifications skip delayed delivery when recipient becomes inactive
+   ↓ routing notifications skip delayed delivery when recipient becomes denied
+   ↓ routing notifications never deliver cached content with forged metadata or a removed routing receipt
+   ↓ routing notifications honor terminal disabled preferences and recipient team removal
+   ↓ routing notifications rebuild field-redacted content and suppress hidden routing state
+   ↓ routing notification obligations roll back with their canonical handoff transaction
+   ↓ requester task conversation shows only explicit requester threads and persists idempotent portal replies with durable events
+   ↓ requester task conversation denies current company authority before content or transport
+   ↓ requester task conversation denies current project authority before content or transport
+   ↓ requester task conversation denies current visibility authority before content or transport
+   ↓ requester task conversation denies current role authority before content or transport
+   ↓ requester task conversation denies current session authority before content or transport
+   ↓ requester task conversation denies current contact authority before content or transport
+   ↓ requester task conversation preserves local history and inherited file bytes after relationship termination
+   ↓ requester task conversation pages before returning private counts and rejects replies to a deleted root
+   ↓ delegated administration edits only approved board/profile fields with exact retries and qualified attribution
+   ↓ delegated administration rejects proxies, credential changes, administrator targets and sponsor grant expansion
+   ↓ delegated invitation resend preserves approved customer identity and terms, and retries delivery without disclosing tokens
+   ↓ delegated administration rechecks revoked grants, home bundles and sessions and permits security reduction during lapse
+   ↓ delegated administration discovery follows exact team grants and current membership without management-directory access
+   ↓ delegated invitation admission rejects expired invitations, changed role terms and exhausted customer seats
+   ↓ delegated invitation serializes concurrent retries and customer revocation through delivery
+   ↓ delegated invitation pins role terms against concurrent permission expansion until delivery commits
+   ↓ delegated administration snapshots actor, target and command before waiting for lifecycle locks
+   ↓ delegated administration keeps approval identities immutable and supports a fresh approval after revocation
+   ↓ delegated administration option search paginates only authorized display fields and admitted principals
+   ↓ co-managed provisioning cleanup > cancels a queued workspace without creating it and acknowledges capacity release exactly once
+   ↓ co-managed provisioning cleanup > cleans the real bootstrapped defaults and invitation while retaining the MSP, siblings and reservation tombstone
+   ↓ co-managed provisioning cleanup > rolls back data deletion and retains seats on failure, then resumes the same operation
+   ↓ co-managed provisioning cleanup > records retryable cleanup failure for unknown tenant data instead of releasing its reservation
+   ↓ co-managed provisioning cleanup > cancels after the initial administrator signs up but before acceptance, deleting the account with the workspace
+   ↓ co-managed provisioning cleanup > serializes first signup against cancellation so a cancelled workspace cannot be claimed
+   ↓ co-managed provisioning cleanup > refuses signup once cancellation was requested
+   ↓ co-managed provisioning cleanup > rejects a foreign sponsor, missing cancellation request and accepted relationship before deleting rows
+   ↓ requester task email subscriber durably delivers public MSP comments to the project contact without ticket reply tokens
+   ↓ requester task email includes current thread participants but excludes unrelated client users and the author
+   ↓ requester task email suppresses delayed delivery after private changes
+   ↓ requester task email suppresses delayed delivery after deleted changes
+   ↓ requester task email suppresses delayed delivery after project_hidden changes
+   ↓ requester task email suppresses delayed delivery after role changes
+   ↓ requester task email suppresses delayed delivery after contact changes
+   ↓ requester task email suppresses delayed delivery after company changes
+   ↓ requester task email suppresses delayed delivery after user_inactive changes
+   ↓ requester task email suppresses delayed delivery after retargeted changes
+   ↓ requester task email never enrolls private threads and keeps local public delivery after relationship departure
+   ↓ requester task email retries with stable identity and reloaded current content without duplicate concurrent sends
+   ↓ task thread disclosure preserves canonical identities and files, bumps revisions and emits metadata-only task invalidations
+   ↓ task thread disclosure requires the root author and a current full snapshot, including pending attachments
+   ↓ task thread private disclosure copies posted files with historical authors and tombstones and retries one canonical publication
+   ↓ task thread private disclosure resumes failed byte transfer and cleans only abandoned task disclosure objects
+   ↓ task thread private disclosure refuses corrupted bytes and forged transfer paths without canonical publication
+   ↓ task thread disclosure removes MSP live visibility while preserving prior participation and attachment history
+   ↓ task thread private disclosure rechecks the session after transport before publishing any customer content
+   ↓ archive boundary paginates authorized work without hidden-only pages or candidate counts
+   ↓ archive boundary paginates history after private-source and time-entry policy admission
+   ↓ archive boundary downloads task bytes through the qualified route and rejects ambiguous parent identities
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned project_task to native operational work
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > qualified time launch resolves customer-owned ticket to native operational work
+CoManagedSharedWorkError: This shared resource is not available for the requested operation.
+ ❯ deny ../packages/co-managed/src/sharedWork.ts:28:32
+     26|   redactedFields: readonly string[];
+     27| }
+     28| function deny(): never { throw new CoManagedSharedWorkError(); }
+       |                                ^
+     29| 
+     30| /** Only trusted delivery adapters construct this server-side recipien…
+ ❯ withCoManagedSharedPrincipal ../packages/co-managed/src/sharedWork.ts:76:88
+ ❯ withCoManagedSharedWork ../packages/co-managed/src/sharedWork.ts:49:10
+ ❯ registerCoManagedTimeWorkReference ../packages/co-managed/src/timeWorkReference.ts:14:10
+ ❯ resolveCoManagedTimeWorkItem ../packages/co-managed/src/timeWorkItem.ts:14:22
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13187:22
+ ❯ withTrackedTaskBrowser ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:12074:9
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13177:11
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13061:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed | 1465 skipped (1468)
+   Start at  14:45:17
+   Duration  12.35s (transform 3.05s, setup 67ms, collect 3.85s, tests 4.53s, environment 0ms, prepare 31ms)
+

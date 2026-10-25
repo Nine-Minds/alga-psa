@@ -1,0 +1,109 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.045
+10-departure-participation-archive-current
+
+2
+00:00:03.045 --> 00:00:04.383
+qa: navigate
+
+3
+00:00:04.383 --> 00:00:07.653
+qa: shared-original-file-bytes
+
+4
+00:00:07.653 --> 00:00:08.803
+qa: navigate
+
+5
+00:00:08.803 --> 00:00:11.515
+qa: MSPprivate-original-file-bytes
+
+6
+00:00:11.515 --> 00:00:12.812
+departureCustomer: navigate
+
+7
+00:00:12.812 --> 00:00:13.427
+departureCustomer: customerprivate-original-file-bytes
+
+8
+00:00:13.427 --> 00:00:15.419
+departureCustomer: customer-cannot-see-MSP-private-body
+
+9
+00:00:15.419 --> 00:00:15.519
+qa: navigate
+
+10
+00:00:15.519 --> 00:00:17.419
+qa: MSP-cannot-see-customer-private-body
+
+11
+00:00:17.419 --> 00:00:18.150
+qa: navigate
+
+12
+00:00:18.150 --> 00:00:18.620
+qa: allocation-released-once-with-purchased-pool-preserved
+
+13
+00:00:18.620 --> 00:00:18.658
+qa: refresh-does-not-repeat-closure-or-seat-release
+
+14
+00:00:18.658 --> 00:00:20.655
+qa: old-live-MSPprivate-file-denied
+
+15
+00:00:20.655 --> 00:00:22.650
+qa: navigate
+
+16
+00:00:22.650 --> 00:00:24.565
+qa: navigate
+
+17
+00:00:24.565 --> 00:00:25.635
+qa: navigate
+
+18
+00:00:25.635 --> 00:00:25.657
+qa: retained-shared-bytes-match
+
+19
+00:00:25.657 --> 00:00:26.680
+qa: retained-MSPprivate-bytes-match
+
+20
+00:00:26.680 --> 00:00:29.005
+10-departure-archive-authority-followup-current
+
+21
+00:00:29.005 --> 00:00:29.721
+viewer: navigate
+
+22
+00:00:29.721 --> 00:00:30.022
+viewer: broad-home-reader-has-organization-owned-retained-read
+
+23
+00:00:30.022 --> 00:00:30.769
+viewer: same-reader-with-unrelated-client-policy-denied-retained-file
+
+24
+00:00:30.769 --> 00:00:33.023
+viewer: restricted-home-policy-also-removes-archive-list-item
+
+25
+00:00:33.023 --> 00:00:33.078
+departureCustomer: navigate
+
+26
+00:00:33.078 --> 00:00:58.080
+departureCustomer: customer-keeps-native-record-and-private-content
+
+27
+00:00:58.080 --> 00:00:59.040
+departureCustomer: customer-former-MSP-SLA-is-closed-or-unavailable

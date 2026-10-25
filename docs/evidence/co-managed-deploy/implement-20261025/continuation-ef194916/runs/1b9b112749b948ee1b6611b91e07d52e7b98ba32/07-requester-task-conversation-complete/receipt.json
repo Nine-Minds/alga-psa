@@ -1,0 +1,22 @@
+{
+  "projectId": "0fb32387-98af-4712-a323-abae6ba2868c",
+  "taskId": "3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+  "publicText": "CM task requester 1792947426265",
+  "privateText": "CM task MSP private 1792947426265",
+  "reply": "CM task requester reply 1792947426265",
+  "fileName": "cm-requester-task-1792947426265.txt",
+  "portalHref": "/api/client-portal/conversation-attachments/d5d6ff09-8533-46a2-bae4-16d3d60fca31?projectId=0fb32387-98af-4712-a323-abae6ba2868c&taskId=3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5&threadId=c8f8b120-86a5-4196-ad10-c7b915d64821&commentId=c8f8b120-86a5-4196-ad10-c7b915d64821",
+  "fileSha256": "bdfe921515e3634adf6d6724e466333efc99235a879c931d871d12d98faf182e",
+  "originalPortalConfig": {
+    "show_tasks": false,
+    "show_phases": false,
+    "show_billing": false,
+    "show_budget_hours": false,
+    "visible_task_fields": [
+      "task_name",
+      "due_date",
+      "status"
+    ],
+    "show_phase_completion": false
+  }
+}

@@ -1,0 +1,105 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.560
+01-onboarding-current-build
+
+2
+00:00:02.560 --> 00:00:03.802
+qa: navigate
+
+3
+00:00:03.802 --> 00:00:05.895
+qa: configured-simulator-capacity-prepared
+
+4
+00:00:05.895 --> 00:00:08.230
+qa: navigate
+
+5
+00:00:08.230 --> 00:00:10.663
+qa: navigate
+
+6
+00:00:10.663 --> 00:00:12.906
+qa: provision-lost-response-was-after-server-execution
+
+7
+00:00:12.906 --> 00:00:13.250
+qa: retry-retains-operation-id
+
+8
+00:00:13.250 --> 00:00:15.330
+qa: one-operation-and-allocation-Cancel
+
+9
+00:00:15.330 --> 00:00:25.520
+qa: navigate
+
+10
+00:00:25.520 --> 00:00:26.554
+qa: cancel-removes-only-unaccepted-workspace
+
+11
+00:00:26.554 --> 00:00:30.619
+qa: cancel-releases-reservation-once
+
+12
+00:00:30.619 --> 00:00:32.939
+qa: navigate
+
+13
+00:00:32.939 --> 00:00:41.388
+qa: navigate
+
+14
+00:00:41.388 --> 00:00:43.549
+qa: one-operation-and-allocation-Accept
+
+15
+00:00:43.549 --> 00:00:45.727
+qa: navigate
+
+16
+00:00:45.727 --> 00:00:47.197
+qa: resend-preserves-workspace-and-allocation
+
+17
+00:00:47.197 --> 00:00:47.900
+qa: invited-admin-selects-exact-customer-tenant
+
+18
+00:00:47.900 --> 00:00:48.068
+qa: deep-native-link-requires-customer-acceptance
+
+19
+00:00:48.068 --> 00:00:50.252
+qa: valid-ordinary-command-denied-before-acceptance
+
+20
+00:00:50.252 --> 00:00:54.575
+qa: navigate
+
+21
+00:00:54.575 --> 00:00:56.681
+qa: navigate
+
+22
+00:00:56.681 --> 00:00:57.560
+qa: navigate
+
+23
+00:00:57.560 --> 00:00:57.965
+01-current-accepted-customer-confirmation
+
+24
+00:00:57.965 --> 00:00:59.925
+acceptedCustomer: fresh-accepted-admin-login-selects-exact-accepted-tenant
+
+25
+00:00:59.925 --> 00:01:00.300
+acceptedCustomer: navigate
+
+26
+00:01:00.300 --> 00:01:01.320
+acceptedCustomer: fresh-accepted-session-retains-native-work-after-reload

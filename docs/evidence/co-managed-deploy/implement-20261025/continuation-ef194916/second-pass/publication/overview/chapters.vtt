@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:27.503
+00-overview-native-layout-boundaries-current
+
+2
+00:00:27.503 --> 00:00:27.526
+qa: navigate
+
+3
+00:00:27.526 --> 00:00:29.601
+qa: overview-client-entry-retains-qualified-customer-context
+
+4
+00:00:29.601 --> 00:00:31.700
+qa: navigate
+
+5
+00:00:31.700 --> 00:00:32.546
+qa: navigate
+
+6
+00:00:32.546 --> 00:00:33.413
+qa: QA-shared-Entry-uses-same-qualified-work
+
+7
+00:00:33.413 --> 00:00:35.820
+qa: QA-shared-Grid-uses-same-qualified-work
+
+8
+00:00:35.820 --> 00:00:36.659
+alice: navigate
+
+9
+00:00:36.659 --> 00:00:37.600
+alice: customer-native-route-keeps-authoritative-ticket

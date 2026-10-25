@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Guides that cannot be accepted without a resource outside this environment. Each entry names the missing resource, where it plugs in, and the one action that unblocks it. Do not retry these guides until the resource exists.",
+  "guides": [
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "missingResources": [
+        {
+          "resource": "A Nine Minds-signed license JWT bound to the sponsor tenant 24ac76c8-df59-4b10-8371-c56222904580 (aud = that tenant, tier 'pro', future exp, co_managed_seats = N), on a self-hosted installation that has a license_state row",
+          "why": "Only public verification keys are in the repository (packages/licensing/src/lib/license-keys.ts); seat capacity is read from claims.co_managed_seats only for a matching aud and tier 'pro' (packages/licensing/src/lib/co-managed-license.ts, co-managed-entitlements.ts).",
+          "unblock": "As the sponsor administrator on the self-hosted installation, open /msp/licenses, paste the signed token into #license-manual-key and click #license-activate-manual-key."
+        },
+        {
+          "resource": "A real Stripe test account with a co-managed seat price, owned by the release owner",
+          "why": "The hosted purchase path uses the Stripe simulator while STRIPE_API_BASE_URL is set (ee/server/src/lib/stripe/stripeApiOverride.ts); real receipts need real Stripe keys.",
+          "unblock": "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_CO_MANAGED_USER_PRICE_ID and MASTER_BILLING_TENANT_ID, unset STRIPE_API_BASE_URL, restart the review app, then buy one seat from the client's seats dialog."
+        }
+      ],
+      "alreadyVerified": "Hosted simulator purchase, allocation, usage floor, lost-response reload and explicit same-operation replay (one receipt; pool 19), recorded on 1b9b112749 / build-1792941614066. Not re-run in this pass, as ordered."
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "missingResources": [
+        {
+          "resource": "A Pro license signed for the restored destination tenant (aud = destination tenant UUID, tier 'pro') on a self-hosted destination with a license_state row; or, for hosted, exactly one active paid PSA Stripe subscription whose metadata.tenant_id is the destination tenant",
+          "why": "Activation checks activateTenantPsaLicense / retainTenantPsaLicense (packages/licensing/src/lib/tenant-license-state.ts) or retainHostedPsaUpgradeCandidate + paidPsaUpgradeFromStripe (packages/licensing/src/lib/hosted-psa-upgrade.ts, ee/server/src/lib/stripe/coManagedIndependentEntitlement.ts); the hosted check reads Stripe directly, so the simulator cannot satisfy it.",
+          "unblock": "From server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant <restored-uuid> --operation-id <retained-uuid> --license-file /abs/pro-license.jwt (hosted: --activate-hosted with the same tenant and operation flags)."
+        }
+      ],
+      "inReachNotBlocked": "Inspecting a current export archive needs no external resource: scripts/restore-portable-workspace.ts --inspect --archive /abs/backup.alga (passphrase from a hidden prompt or --passphrase-stdin) prints sourceTenant, packageId, sha256 and eligible administrators. It was not run in this pass.",
+      "alreadyVerified": "Browser export and the paid-entitlement denial, recorded on 1b9b112749 / build-1792941614066."
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "missingResources": [
+        {
+          "resource": "An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, plus an inbound mailbox the Graph subscription can notify",
+          "why": "Sign-in, mail and directory use real Microsoft endpoints unless MICROSOFT_GRAPH_BASE_URL / MICROSOFT_LOGIN_BASE_URL point at the emulator; production disables the SSO emulator (packages/auth/src/lib/sso/microsoftSsoEmulator.ts). Graph change notifications post to NEXT_PUBLIC_BASE_URL / NEXTAUTH_URL, which must be reachable from the internet.",
+          "unblock": "As the customer administrator open /msp/co-management/providers, choose #provider-credentials-microsoft-tab, click #microsoft-settings-add-profile, fill #microsoft-profile-client-id, #microsoft-profile-tenant-id and #microsoft-profile-client-secret, tick email and msp_sso, and click #microsoft-profile-save."
+        },
+        {
+          "resource": "Directory provisioning (SCIM) enabled for the customer tenant",
+          "why": "The user-provisioning tab is hidden unless the PostHog flag skim-support-feature is on (Enterprise edition).",
+          "unblock": "Enable skim-support-feature for the tenant, then /msp/security-settings?tab=user-provisioning → #create-scim-connection-button."
+        }
+      ],
+      "alreadyVerified": "Isolated provider forms, route boundaries and one actual SMTP-sink requester notification, recorded on 1b9b112749 / build-1792941614066."
+    }
+  ]
+}

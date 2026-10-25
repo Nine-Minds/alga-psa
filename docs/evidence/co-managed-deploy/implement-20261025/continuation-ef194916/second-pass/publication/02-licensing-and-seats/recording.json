@@ -1,0 +1,87 @@
+{
+  "guide": "guides/02-licensing-and-seats.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "blocked-external",
+  "remaining": "Blocked-external: no approved tenant-bound signed test license and isolated self-host installation for signed-capacity/lapse/missing-claim/renewal journeys (T019); approved real Stripe release-owner account/price/receipts remain T018. Hosted simulator purchase, allocation, usage floor, lost-response reload and explicit same-operation replay passed; replay preserved one receipt and the later pool reduction to 19.",
+  "durationSeconds": 18.36,
+  "sha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/recording.json",
+      "name": "02-licensing-hosted-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 12.24,
+      "offsetSeconds": 0,
+      "sha256": "7da59da8ff89d9ca12effcc76186aca1996e3dae980d10745b85d54c8c461f81",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 5
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/recording.json",
+      "name": "02-completed-hosted-operation-replay-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 6.12,
+      "offsetSeconds": 12.24,
+      "sha256": "f3d70b53bc8f9aed3f01c709615d7afcae0c7001d7a734f94f1d157c10991b69",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 3
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "02-licensing-hosted-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 3.318,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.699,
+      "title": "lost-response-executes-one-provider-operation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 5.386,
+      "title": "fresh-reload-reconciles-verified-target",
+      "actor": "qa"
+    },
+    {
+      "seconds": 7.807,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 10.084,
+      "title": "allocation-persists-and-does-not-change-purchased-capacity",
+      "actor": "qa"
+    },
+    {
+      "seconds": 10.252,
+      "title": "below-usage-reduction-is-disabled",
+      "actor": "qa"
+    },
+    {
+      "seconds": 12.24,
+      "title": "02-completed-hosted-operation-replay-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 15.782,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 16.667,
+      "title": "completed-hosted-purchase-same-operation-replay-is-accepted",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

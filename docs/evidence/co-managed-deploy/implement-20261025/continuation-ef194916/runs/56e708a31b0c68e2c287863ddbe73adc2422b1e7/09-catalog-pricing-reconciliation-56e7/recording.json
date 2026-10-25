@@ -1,0 +1,438 @@
+{
+  "scenario": "09-catalog-pricing-reconciliation-56e7",
+  "recordedAt": "2026-10-25T20:23:26.806Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "source-is-approved-commercial-catalog-time-on-shared-work",
+      "passed": true,
+      "at": "2026-10-25T20:23:27.012Z",
+      "data": {
+        "entry": {
+          "entry_id": "ec3c3993-ca33-4dca-b4df-947ef4da2944",
+          "billable_duration": 6,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "contract_line_id": null,
+          "contract_line_unresolved_reason": null,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "service_id": "2ee6f215-feee-4f42-924b-09533a329d47",
+          "service_name": "CM Catalog Support 1792944312315",
+          "default_rate": 12000,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22"
+        },
+        "expectedCents": 1200
+      }
+    },
+    {
+      "id": "reversing-the-profile-drafts-reopens-the-examined-entry",
+      "passed": true,
+      "at": "2026-10-25T20:23:35.288Z",
+      "data": {
+        "reversed": [
+          "INV-000005",
+          "INV-000006"
+        ]
+      }
+    },
+    {
+      "id": "review-lists-uncovered-catalog-time-with-catalog-rate-explanation",
+      "passed": true,
+      "at": "2026-10-25T20:23:39.810Z",
+      "data": {
+        "cardText": "CM Catalog Support 1792944312315\nNot covered by any contract\nTime entry · 6 min · 2026-10-25\n\nNo contract covers this service, so the catalog rate is the only rate available. It will be billed as-is."
+      }
+    },
+    {
+      "id": "uncovered-item-needs-no-catalog-pricing-decision",
+      "passed": true,
+      "at": "2026-10-25T20:23:39.813Z"
+    },
+    {
+      "id": "automatic-invoices-offers-each-catalog-entry-once",
+      "passed": true,
+      "at": "2026-10-25T20:23:49.612Z",
+      "data": {
+        "rows": 2,
+        "example": "\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$12.00"
+      }
+    },
+    {
+      "id": "contracted-and-catalog-time-share-one-invoice-group",
+      "passed": true,
+      "at": "2026-10-25T20:23:49.619Z",
+      "data": {
+        "groupKey": "parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01"
+      }
+    },
+    {
+      "id": "preview-prices-catalog-time-at-catalog-rate",
+      "passed": true,
+      "at": "2026-10-25T20:23:51.299Z",
+      "data": {
+        "line": "CM Catalog Support 1792944312315 0.1 h × $120.00 = $12.00"
+      }
+    },
+    {
+      "id": "preview-keeps-contracted-time-at-its-contract-rate",
+      "passed": true,
+      "at": "2026-10-25T20:23:51.300Z",
+      "data": {
+        "contractedMinutes": 30,
+        "amount": "$60.00"
+      }
+    },
+    {
+      "id": "catalog-time-reconciles-to-the-catalog-rate-and-its-source-entries",
+      "passed": true,
+      "at": "2026-10-25T20:23:54.068Z",
+      "data": {
+        "invoice": {
+          "invoice_id": "b8841459-2dda-4da1-83d0-0bcdfe4da964",
+          "invoice_number": "INV-000012",
+          "status": "draft",
+          "subtotal": 1200,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+        },
+        "examined": {
+          "charges": [
+            {
+              "description": "CM Catalog Support 1792944312315",
+              "quantity": 0.1,
+              "unit_price": 12000,
+              "net_amount": 1200
+            }
+          ],
+          "sources": [
+            "ec3c3993-ca33-4dca-b4df-947ef4da2944"
+          ]
+        },
+        "catalogInvoices": 2,
+        "catalogTotal": 2400
+      }
+    },
+    {
+      "id": "contracted-time-reconciles-to-its-contract-line-and-source-entries",
+      "passed": true,
+      "at": "2026-10-25T20:23:54.068Z",
+      "data": {
+        "contractInvoice": {
+          "invoice_id": "bf46474f-be07-419f-a531-c5f687c5a758",
+          "invoice_number": "INV-000010",
+          "status": "draft",
+          "subtotal": 6000,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+        },
+        "charges": [
+          {
+            "description": "CM Contracted Support 1792944312315",
+            "quantity": 0.25,
+            "unit_price": 12000,
+            "net_amount": 3000
+          },
+          {
+            "description": "CM Contracted Support 1792944312315",
+            "quantity": 0.25,
+            "unit_price": 12000,
+            "net_amount": 3000
+          }
+        ],
+        "sources": [
+          "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+          "9136ae0d-6e74-47a0-9f20-27aac288903f"
+        ]
+      }
+    },
+    {
+      "id": "each-entry-is-invoiced-exactly-once",
+      "passed": true,
+      "at": "2026-10-25T20:23:55.225Z"
+    },
+    {
+      "id": "review-no-longer-lists-the-invoiced-catalog-entry",
+      "passed": true,
+      "at": "2026-10-25T20:24:01.719Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:23:27.012Z",
+      "seconds": 0.206,
+      "title": "source-is-approved-commercial-catalog-time-on-shared-work",
+      "data": {
+        "entry": {
+          "entry_id": "ec3c3993-ca33-4dca-b4df-947ef4da2944",
+          "billable_duration": 6,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "contract_line_id": null,
+          "contract_line_unresolved_reason": null,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "service_id": "2ee6f215-feee-4f42-924b-09533a329d47",
+          "service_name": "CM Catalog Support 1792944312315",
+          "default_rate": 12000,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22"
+        },
+        "expectedCents": 1200
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:27.515Z",
+      "seconds": 0.709,
+      "actor": "qa",
+      "title": "existing-profile-drafts",
+      "data": {
+        "drafts": [
+          {
+            "invoice_id": "fbdce204-f404-4b3d-98e5-57605183ff50",
+            "invoice_number": "INV-000005",
+            "billing_cycle_id": "87874d90-0d8b-4d0a-abde-7936c605c3a5"
+          },
+          {
+            "invoice_id": "ca7be875-e132-4ad5-b6b6-0cdcc3f9f158",
+            "invoice_number": "INV-000006",
+            "billing_cycle_id": "87874d90-0d8b-4d0a-abde-7936c605c3a5"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:32.479Z",
+      "seconds": 5.673,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T20:23:35.288Z",
+      "seconds": 8.482,
+      "actor": "qa",
+      "title": "reversing-the-profile-drafts-reopens-the-examined-entry",
+      "data": {
+        "reversed": [
+          "INV-000005",
+          "INV-000006"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:37.216Z",
+      "seconds": 10.41,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22"
+    },
+    {
+      "at": "2026-10-25T20:23:39.810Z",
+      "seconds": 13.004,
+      "actor": "qa",
+      "title": "review-lists-uncovered-catalog-time-with-catalog-rate-explanation",
+      "data": {
+        "cardText": "CM Catalog Support 1792944312315\nNot covered by any contract\nTime entry · 6 min · 2026-10-25\n\nNo contract covers this service, so the catalog rate is the only rate available. It will be billed as-is."
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:39.813Z",
+      "seconds": 13.007,
+      "actor": "qa",
+      "title": "uncovered-item-needs-no-catalog-pricing-decision"
+    },
+    {
+      "at": "2026-10-25T20:23:41.808Z",
+      "seconds": 15.002,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T20:23:47.575Z",
+      "seconds": 20.769,
+      "actor": "qa",
+      "title": "date-filter-includes-period-ending-nov-1",
+      "data": {
+        "to": "11/01/2026"
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:49.601Z",
+      "seconds": 22.795,
+      "actor": "qa",
+      "title": "eligible-entries",
+      "data": {
+        "contracted": [
+          [
+            "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+            15
+          ],
+          [
+            "9136ae0d-6e74-47a0-9f20-27aac288903f",
+            15
+          ]
+        ],
+        "catalog": [
+          [
+            "22d6acc4-1e3d-4769-bf10-f8668793decd",
+            6
+          ],
+          [
+            "ec3c3993-ca33-4dca-b4df-947ef4da2944",
+            6
+          ]
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:49.612Z",
+      "seconds": 22.806,
+      "actor": "qa",
+      "title": "automatic-invoices-offers-each-catalog-entry-once",
+      "data": {
+        "rows": 2,
+        "example": "\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$12.00"
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:49.619Z",
+      "seconds": 22.813,
+      "actor": "qa",
+      "title": "contracted-and-catalog-time-share-one-invoice-group",
+      "data": {
+        "groupKey": "parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01"
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:51.299Z",
+      "seconds": 24.493,
+      "actor": "qa",
+      "title": "preview-prices-catalog-time-at-catalog-rate",
+      "data": {
+        "line": "CM Catalog Support 1792944312315 0.1 h × $120.00 = $12.00"
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:51.300Z",
+      "seconds": 24.494,
+      "actor": "qa",
+      "title": "preview-keeps-contracted-time-at-its-contract-rate",
+      "data": {
+        "contractedMinutes": 30,
+        "amount": "$60.00"
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:54.068Z",
+      "seconds": 27.262,
+      "actor": "qa",
+      "title": "catalog-time-reconciles-to-the-catalog-rate-and-its-source-entries",
+      "data": {
+        "invoice": {
+          "invoice_id": "b8841459-2dda-4da1-83d0-0bcdfe4da964",
+          "invoice_number": "INV-000012",
+          "status": "draft",
+          "subtotal": 1200,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+        },
+        "examined": {
+          "charges": [
+            {
+              "description": "CM Catalog Support 1792944312315",
+              "quantity": 0.1,
+              "unit_price": 12000,
+              "net_amount": 1200
+            }
+          ],
+          "sources": [
+            "ec3c3993-ca33-4dca-b4df-947ef4da2944"
+          ]
+        },
+        "catalogInvoices": 2,
+        "catalogTotal": 2400
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:54.068Z",
+      "seconds": 27.262,
+      "actor": "qa",
+      "title": "contracted-time-reconciles-to-its-contract-line-and-source-entries",
+      "data": {
+        "contractInvoice": {
+          "invoice_id": "bf46474f-be07-419f-a531-c5f687c5a758",
+          "invoice_number": "INV-000010",
+          "status": "draft",
+          "subtotal": 6000,
+          "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+          "billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3"
+        },
+        "charges": [
+          {
+            "description": "CM Contracted Support 1792944312315",
+            "quantity": 0.25,
+            "unit_price": 12000,
+            "net_amount": 3000
+          },
+          {
+            "description": "CM Contracted Support 1792944312315",
+            "quantity": 0.25,
+            "unit_price": 12000,
+            "net_amount": 3000
+          }
+        ],
+        "sources": [
+          "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+          "9136ae0d-6e74-47a0-9f20-27aac288903f"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:23:55.225Z",
+      "seconds": 28.419,
+      "actor": "qa",
+      "title": "each-entry-is-invoiced-exactly-once"
+    },
+    {
+      "at": "2026-10-25T20:23:57.121Z",
+      "seconds": 30.315,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/b8841459-2dda-4da1-83d0-0bcdfe4da964"
+    },
+    {
+      "at": "2026-10-25T20:23:59.137Z",
+      "seconds": 32.331,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22"
+    },
+    {
+      "at": "2026-10-25T20:24:01.719Z",
+      "seconds": 34.913,
+      "actor": "qa",
+      "title": "review-no-longer-lists-the-invoiced-catalog-entry"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Draft invoice only; nothing finalized or emailed."
+  ],
+  "durationSeconds": 34.76,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

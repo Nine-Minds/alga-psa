@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:07:58.545Z",
+  "guide": "guides/01-onboarding.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/01-onboarding.html",
+  "compositeSha256": "bae09d2178b130587929ff483c152c59545ffc4893f1804d11dedcf015cca97b",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.60606,
+    "duration": 61.32,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "deep-native-link-requires-customer-acceptance",
+    "target": 47.9,
+    "actual": 47.905691,
+    "followingFrame": {
+      "mediaTime": 47.92,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/6260964",
+  "passed": true
+}

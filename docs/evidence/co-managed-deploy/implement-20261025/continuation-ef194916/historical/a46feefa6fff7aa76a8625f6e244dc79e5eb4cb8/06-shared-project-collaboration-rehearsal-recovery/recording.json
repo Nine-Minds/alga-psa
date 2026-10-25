@@ -1,0 +1,156 @@
+{
+  "scenario": "06-shared-project-collaboration-rehearsal-recovery",
+  "recordedAt": "2026-10-25T14:40:09.187Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "customer-project-collaboration-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T14:40:12.351Z"
+    },
+    {
+      "id": "unshared-project-denied",
+      "passed": true,
+      "at": "2026-10-25T14:40:16.255Z"
+    },
+    {
+      "id": "approved-project-lists-two-customer-tasks",
+      "passed": true,
+      "at": "2026-10-25T14:40:18.293Z"
+    },
+    {
+      "id": "shared-task-edit-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T14:40:19.787Z"
+    },
+    {
+      "id": "native-customer-task-shows-MSP-edit",
+      "passed": true,
+      "at": "2026-10-25T14:40:21.682Z"
+    },
+    {
+      "id": "person-assignment-keeps-local-owner",
+      "passed": true,
+      "at": "2026-10-25T14:40:23.526Z"
+    },
+    {
+      "id": "working-assigned-to-me-shows-person-task",
+      "passed": true,
+      "at": "2026-10-25T14:40:25.743Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:40:09.502Z",
+      "seconds": 0.315,
+      "title": "Isolated team prerequisite",
+      "data": {
+        "teamId": "a3701f2e-8830-4fb7-8aac-1c6e0daa8fb3",
+        "teamName": "CM continuation team 1792938798759",
+        "member": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+        "method": "operator SQL fixture; customer scope and sponsor assignment use native product"
+      }
+    },
+    {
+      "at": "2026-10-25T14:40:11.762Z",
+      "seconds": 2.575,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T14:40:12.351Z",
+      "seconds": 3.164,
+      "actor": "alice",
+      "title": "customer-project-collaboration-survives-reload"
+    },
+    {
+      "at": "2026-10-25T14:40:14.341Z",
+      "seconds": 5.154,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T14:40:16.242Z",
+      "seconds": 7.055,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/e956851d-6004-4522-856a-0f5fd3c08494"
+    },
+    {
+      "at": "2026-10-25T14:40:16.255Z",
+      "seconds": 7.068,
+      "actor": "qa",
+      "title": "unshared-project-denied"
+    },
+    {
+      "at": "2026-10-25T14:40:18.284Z",
+      "seconds": 9.097,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/0fb32387-98af-4712-a323-abae6ba2868c"
+    },
+    {
+      "at": "2026-10-25T14:40:18.293Z",
+      "seconds": 9.106,
+      "actor": "qa",
+      "title": "approved-project-lists-two-customer-tasks"
+    },
+    {
+      "at": "2026-10-25T14:40:19.787Z",
+      "seconds": 10.6,
+      "actor": "qa",
+      "title": "shared-task-edit-survives-reload"
+    },
+    {
+      "at": "2026-10-25T14:40:21.682Z",
+      "seconds": 12.495,
+      "actor": "qa",
+      "title": "native-customer-task-shows-MSP-edit"
+    },
+    {
+      "at": "2026-10-25T14:40:23.526Z",
+      "seconds": 14.339,
+      "actor": "qa",
+      "title": "person-assignment-keeps-local-owner"
+    },
+    {
+      "at": "2026-10-25T14:40:25.517Z",
+      "seconds": 16.33,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T14:40:25.743Z",
+      "seconds": 16.556,
+      "actor": "qa",
+      "title": "working-assigned-to-me-shows-person-task"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "team-assignment-persists",
+  "durationSeconds": 21.24,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

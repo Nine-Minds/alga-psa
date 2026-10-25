@@ -1,0 +1,15 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1469 tests | 1461 skipped) 5520ms 208 MB heap used
+   ✓ qualified customer time launch rejects invalid source authority  925ms
+   ✓ qualified time launch keeps foreign work on the MSP commercial reference path  521ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed | 1461 skipped (1469)
+   Start at  14:47:22
+   Duration  13.50s (transform 3.29s, setup 64ms, collect 4.06s, tests 5.52s, environment 0ms, prepare 29ms)
+

@@ -1,0 +1,2 @@
+const rt=require('../../scripts/runtime.cjs');
+(async()=>{const b=await rt.browser();const ctx=await b.newContext();await rt.login(ctx,'alice@whiterabbit.test');const p=await ctx.newPage();await p.goto(rt.origin+'/msp/settings/users');await p.waitForTimeout(2000);console.log(await p.evaluate(()=>({text:document.body.innerText,inputs:[...document.querySelectorAll('input,button,[role=combobox]')].map(e=>({id:e.id,text:e.textContent,value:e.value,tag:e.tagName}))})));await b.close()})().catch(e=>{console.error(e.message);process.exitCode=1});

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Departure and archives · Co-Managed IT</title><meta name="description" content="Departure and archives: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="departure-and-archives">Departure and archives</h1>
+<p>Ending co-management closes live trust between organizations. The customer keeps its workspace and data; the MSP keeps its own commercial records and permitted participation archive.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use a <strong>separate disposable relationship</strong>, with customer and MSP administrators plus a technician who has participated in its shared work. Prepare a shared message/file, an MSP-private message/file, customer-private content and a commercial time entry. Record live links, permitted content, allocation and pool totals.</p>
+<p>The active White Rabbit relationship supports the existing ticket review. Do not end it for this walkthrough. Departure has no simple undo or same-relationship reactivation flow. See <a href="index.html#review-order-and-retained-changes">review order</a>.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>Old sessions or links retaining live access after departure.</li>
+<li>Loss of customer-owned data or MSP commercial evidence.</li>
+<li>The archive exposing customer-private or newly changed customer content.</li>
+<li>Seat allocation being released twice or being confused with subscription cancellation.</li>
+</ul>
+<h2 id="1-record-the-cutoff-baseline">1. Record the cutoff baseline</h2>
+<p>As each side, inspect the disposable shared ticket/task and record its title, latest visible messages and file contents. Confirm private-content separation before departure. Record a commercial time entry and any existing permitted draft/invoice association.</p>
+<p>Open the MSP <a href="http://feature-co-managed-it.localhost:23374/msp/co-managed/archive">Shared work archive</a>. Note the participant&#39;s existing retained work so later results can be distinguished from new retention.</p>
+<h2 id="2-end-the-disposable-relationship">2. End the disposable relationship</h2>
+<p>As its administrator, open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/departure">End co-management</a> and choose the prepared workspace, or use that client&#39;s Co-managed IT section.</p>
+<p>Select <strong>Review departure</strong>. Check the organizations and the effects described in <strong>End this relationship?</strong>. Select <strong>End relationship</strong>, then <strong>Refresh status</strong> and reload the client.</p>
+<p>Expected: <strong>This co-management relationship has ended</strong> appears. The customer&#39;s workspace remains intact; live collaboration closes. If the outcome is unknown, recover the same request or refresh before repeating the operation.</p>
+<h2 id="3-test-the-old-access-paths">3. Test the old access paths</h2>
+<p>As the former MSP technician, refresh the saved shared ticket/task URL, queue, file link and permitted export/list paths. Test from an already-open browser as well as a fresh navigation. As the customer, inspect its native ticket, own SLA outcome and local content.</p>
+<p>Expected: fresh live cross-organization reads/writes/downloads are denied. The customer keeps access to its own records, export and independent upgrade; the former MSP&#39;s live SLA/effort fields become unavailable where appropriate. Merely hiding a navigation item is insufficient.</p>
+<p>For prepared queued notifications or mail, confirm delivery workers do not send newly unauthorized content after cutoff. This requires worker/recipient evidence beyond the page walkthrough.</p>
+<h2 id="4-read-only-retained-evidence">4. Read only retained evidence</h2>
+<p>As the authorized MSP participant, open <strong>Shared work archive</strong>, select the retained ticket/task and inspect <strong>Retained history</strong> and <strong>Retained files</strong>. Download the prepared retained file and compare its bytes. Check qualified author organization and handoff/time history.</p>
+<p>As the customer, make a permitted post-departure local change. Refresh the MSP archive. Expected: retained evidence reflects what the MSP was authorized to retain; it does not track the customer&#39;s new live state or reveal customer-private notes/files. An unrelated MSP principal must not acquire archive access just by knowing a retained file link.</p>
+<h2 id="5-reconcile-seats-and-commercial-continuity">5. Reconcile seats and commercial continuity</h2>
+<p>Refresh the sponsor overview and customer history. Compare allocations and availability with the recorded baseline, then refresh again.</p>
+<p>Expected: the relationship allocation returns to the pool once. Departure does not cancel the sponsor&#39;s paid pool subscription. MSP commercial time and authorized invoice/archive evidence remain, and neither organization is deleted.</p>
+<h2 id="pass-criteria-and-retained-state">Pass criteria and retained state</h2>
+<p>Pass when live trust closes on every tested path, customer data and permitted MSP evidence survive, and capacity reconciles once. Retain the ended relationship as a departure fixture. Customer deletion and license-lapse recovery need separate operator-prepared lifecycle tests; this guide does not delete a tenant or simulate elapsed time.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedDeparture.tsx">Departure screen</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/relationshipClosure.ts">Relationship closure</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedArchive.tsx">Archive UI</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/archiveReads.ts">Archive authorization and reads</a></li>
+</ul>
+<section class="walkthrough-recording" id="10-departure-and-archives-recording" data-recording-status="complete" aria-labelledby="10-departure-and-archives-recording-title">
+<h2 id="10-departure-and-archives-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:58:02.818Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>Fresh disposable relationship closed through product with seat release and sealed archive, then customer read-only workspace and MSP archive read. It had no shared participation; retained bodies/files and invoices after closure are not verified here.</li></ul>
+<video controls preload="metadata" aria-label="guides/10-departure-and-archives.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt" default></video>
+<label for="10-departure-and-archives-chapters">Chapters</label><select id="10-departure-and-archives-chapters"><option value="0">10 c04 departure</option><option value="8.719">Disposable relationship ended after reload</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("10-departure-and-archives-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

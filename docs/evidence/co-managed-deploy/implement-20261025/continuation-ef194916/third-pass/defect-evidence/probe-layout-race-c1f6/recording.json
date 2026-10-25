@@ -1,0 +1,60 @@
+{
+  "scenario": "probe-layout-race-c1f6",
+  "recordedAt": "2026-10-25T17:51:24.420Z",
+  "runtime": {
+    "sourceRevision": "c1f6d91f1b3b92508b6938875f1f652de9a323b2",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c1f6d91f1b3b92508b6938875f1f652de9a323b2",
+    "buildId": "build-1792949080119"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T17:51:26.833Z",
+      "seconds": 2.413,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T17:51:46.766Z",
+      "seconds": 22.346,
+      "actor": "qa",
+      "title": "saved-Grid-then-immediate-Entry",
+      "data": {
+        "series": "1.0:false 1.5:false 2.0:true 2.5:true 3.0:true 3.5:true 4.1:true 4.6:true 5.1:true 5.6:true 6.1:true 6.6:true 7.1:true 7.6:true 8.1:true 8.6:true 9.1:true 9.6:true 10.1:true 10.6:true 11.1:true 11.6:true 12.1:true 12.6:true"
+      }
+    },
+    {
+      "at": "2026-10-25T17:51:48.801Z",
+      "seconds": 24.381,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T17:52:08.966Z",
+      "seconds": 44.546,
+      "actor": "qa",
+      "title": "saved-Entry-then-immediate-Entry",
+      "data": {
+        "series": "1.0:false 1.5:false 2.0:false 2.5:false 3.0:false 3.5:false 4.0:false 4.5:false 5.0:false 5.5:false 6.0:false 6.5:false 7.0:false 7.5:false 8.0:false 8.5:false 9.0:false 9.5:false 10.1:false 10.6:false 11.1:false 11.6:false 12.1:false 12.6:false"
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "diagnostic probe"
+  ],
+  "durationSeconds": 44.48,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

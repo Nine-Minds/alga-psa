@@ -1,0 +1,99 @@
+{
+  "scenario": "11-post-departure-export-upgrade-boundary-current",
+  "recordedAt": "2026-10-25T16:36:00.326Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "short-passphrase-blocked-by-export-form",
+      "passed": true,
+      "at": "2026-10-25T16:36:02.759Z"
+    },
+    {
+      "id": "actual-encrypted-archive-downloaded-after-departure",
+      "passed": true,
+      "at": "2026-10-25T16:36:03.796Z",
+      "data": {
+        "bytes": 153572,
+        "sha256": "1ad684f9d98f981244930903c7a71b73d4056711b30b1ade04a9028a66ef8d05",
+        "suggestedFilename": "alga-workspace-576004e1-44b8-4c05-ba37-33fbc90a05f7.alga-backup",
+        "storage": "private operator directory; encrypted archive is not public review media"
+      }
+    },
+    {
+      "id": "customer-export-remains-available-after-reload",
+      "passed": true,
+      "at": "2026-10-25T16:36:04.829Z"
+    },
+    {
+      "id": "sponsor-entitlement-does-not-enable-customer-upgrade",
+      "passed": true,
+      "at": "2026-10-25T16:36:06.758Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:36:02.674Z",
+      "seconds": 2.348,
+      "actor": "exportCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management/export"
+    },
+    {
+      "at": "2026-10-25T16:36:02.759Z",
+      "seconds": 2.433,
+      "actor": "exportCustomer",
+      "title": "short-passphrase-blocked-by-export-form"
+    },
+    {
+      "at": "2026-10-25T16:36:03.796Z",
+      "seconds": 3.47,
+      "actor": "exportCustomer",
+      "title": "actual-encrypted-archive-downloaded-after-departure",
+      "data": {
+        "bytes": 153572,
+        "sha256": "1ad684f9d98f981244930903c7a71b73d4056711b30b1ade04a9028a66ef8d05",
+        "suggestedFilename": "alga-workspace-576004e1-44b8-4c05-ba37-33fbc90a05f7.alga-backup",
+        "storage": "private operator directory; encrypted archive is not public review media"
+      }
+    },
+    {
+      "at": "2026-10-25T16:36:04.829Z",
+      "seconds": 4.503,
+      "actor": "exportCustomer",
+      "title": "customer-export-remains-available-after-reload"
+    },
+    {
+      "at": "2026-10-25T16:36:06.742Z",
+      "seconds": 6.417,
+      "actor": "exportCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management/upgrade"
+    },
+    {
+      "at": "2026-10-25T16:36:06.758Z",
+      "seconds": 6.432,
+      "actor": "exportCustomer",
+      "title": "sponsor-entitlement-does-not-enable-customer-upgrade"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Current post-departure encrypted browser download, passphrase validation and independent upgrade entitlement denial only. Current archive content inspection, isolated destination restore/entitlement/activation/native login/files/credential recovery and completed same-workspace paid upgrade remain unverified. No approved tenant-bound destination license or prepared destination paid subscription is supplied. Historical suspended restore remains historical."
+  ],
+  "durationSeconds": 7.4,
+  "actors": [
+    {
+      "name": "exportCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

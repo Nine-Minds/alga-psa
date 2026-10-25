@@ -1,0 +1,191 @@
+{
+  "guide": "guides/04-delegated-administration.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 56.4,
+  "sha256": "6910eb6d774d675b6d0792a5cfd25376e5b19711a752bda475cfd44f3f49323d",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/recording.json",
+      "name": "04-delegation-board-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 14.76,
+      "offsetSeconds": 0,
+      "sha256": "93ca4169d731b04444a8d9e4dd7c09b37cc69583d3c5e743e635a4c947e4e3d4",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 6
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/recording.json",
+      "name": "04-delegation-board-current / msp-video",
+      "kind": "secondary actual concurrent browser camera",
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "durationSeconds": 9.24,
+      "offsetSeconds": 14.76,
+      "sha256": "37d7f9f49c2a881e3fcaa86beff6a6359c295b36af4b63d9167c68fb24f557cf",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/msp-video/12f9e14f9154e5cdeeee38671d80a684.webm"
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/recording.json",
+      "name": "04-delegation-complete-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 32.4,
+      "offsetSeconds": 24,
+      "sha256": "b88eaab03b7fd60dc0909dee05781f98d2e0af961d9e51d1a42f8aebab6e62c9",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 11
+    }
+  ],
+  "excluded": [
+    {
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/msp-video/b4a4718ab09b7fa2917c7f0eb7d38bbd.webm",
+      "reason": "File timestamp is outside this recorded scenario; retained as historical input, excluded from current composite."
+    }
+  ],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "04-delegation-board-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.303,
+      "title": "Prerequisite setup: disposable empty board created using customer defaults"
+    },
+    {
+      "seconds": 3.131,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 5.66,
+      "title": "new-approval-targets-exact-record",
+      "actor": "alice"
+    },
+    {
+      "seconds": 11.193,
+      "title": "approved-msp-board-edit-persists",
+      "actor": "alice"
+    },
+    {
+      "seconds": 11.386,
+      "title": "unapproved-board-has-no-new-delegation",
+      "actor": "alice"
+    },
+    {
+      "seconds": 13.372,
+      "title": "customer-revocation-recorded",
+      "actor": "alice"
+    },
+    {
+      "seconds": 13.741,
+      "title": "stale-msp-editor-refuses-after-revocation",
+      "actor": "alice"
+    },
+    {
+      "seconds": 14.105,
+      "title": "revoked-grant-not-offered-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 14.76,
+      "title": "04-delegation-board-current / msp-video",
+      "kind": "secondary actual concurrent browser camera"
+    },
+    {
+      "seconds": 24,
+      "title": "04-delegation-complete-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 24.081,
+      "title": "served-build-matches-current-candidate"
+    },
+    {
+      "seconds": 26.377,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 29.155,
+      "title": "customer-approves-one-nonadministrator-profile",
+      "actor": "alice"
+    },
+    {
+      "seconds": 29.968,
+      "title": "administrator-profile-is-not-eligible",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 33.981,
+      "title": "delegated-profile-persists-after-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 36.173,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 38.087,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 40.238,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 42.372,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 44.318,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 48.442,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 49.336,
+      "title": "resend-preserves-invitation-terms",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.974000000000004,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 55.120999999999995,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 55.455,
+      "title": "review-approvals-revoked-profile-restored",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

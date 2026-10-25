@@ -1,0 +1,409 @@
+{
+  "guide": "guides/03-access-policies.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 125.04,
+  "sha256": "ae926b10d3e5e131eae6ab200f39a8077cf5b6c03fdf13f45e9a729fe084daec",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/recording.json",
+      "name": "03-scope-team-independent-grants-current-ready",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 54.08,
+      "offsetSeconds": 0,
+      "sha256": "04a6c59cac51f7363fbd902fc0aa389b2db1b5f341788ce74730248c9b73c3ac",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 12
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/recording.json",
+      "name": "03-field-masks-api-stale-file-export-current-confirmed",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 34.44,
+      "offsetSeconds": 54.08,
+      "sha256": "8f4a56dc25b6f8eac42bf9f49ef06824689e3be18d833f3b96de65ef935b48c5",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 20
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/recording.json",
+      "name": "03-viewer-current-build",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 29.56,
+      "offsetSeconds": 88.52,
+      "sha256": "fad9f5a7383d739571ebb74b5d6040e3f73e2b35763c980f8ea6c14eeba0cf3e",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/walkthrough.webm",
+      "originalScenarioStatus": "failed",
+      "assertions": 0
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/recording.json",
+      "name": "03-viewer-layout-parity-complete",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 6.96,
+      "offsetSeconds": 118.08,
+      "sha256": "cb1a5459f55ff9debb2ec13c1ffc11cbc0ab6052d797f33ed49f58f0f18dadd0",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 17
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "03-scope-team-independent-grants-current-ready",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.449,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 2.674,
+      "title": "Preparation: prior explicit grant revoked before full rerun",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 4.792,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 5.544,
+      "title": "sponsor-technician-assignment-persists",
+      "actor": "qa"
+    },
+    {
+      "seconds": 7.628,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 8.175,
+      "title": "escalation-only-mode-persists",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 10.108,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 12.109,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 14.455,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 16.926,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 16.972,
+      "title": "escalation-opens-only-qualified-ticket",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.956,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.041,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 25.176,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 25.226,
+      "title": "board-view-opens-un-escalated-oversight-without-write",
+      "actor": "qa"
+    },
+    {
+      "seconds": 27.264,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 29.76,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.81,
+      "title": "independent-board-grant-retains-read-after-explicit-revocation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.862,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 34.928,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 35.015,
+      "title": "customer-board-collaboration-enables-technician",
+      "actor": "qa"
+    },
+    {
+      "seconds": 40.825,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 42.874,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 45.999,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 46.594,
+      "title": "Operator prerequisite: candidate becomes a member of the prepared team",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 48.608,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 48.702,
+      "title": "current-team-membership-intersects-approved-board-and-local-permission",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 50.751,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 53.025,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 53.125,
+      "title": "team-view-restricts-collaborative-board-to-readonly",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 54.08,
+      "title": "03-field-masks-api-stale-file-export-current-confirmed",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 56.425,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 58.76,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 58.792,
+      "title": "assigned-team-member-downloads-exact-allowed-file-bytes",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 59.161,
+      "title": "customer-native-API-positive-control-reads-own-ticket",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 59.345,
+      "title": "customer-native-API-updates-own-authoritative-ticket",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 59.519,
+      "title": "customer-native-API-restores-review-title",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 59.576,
+      "title": "MSP-native-API-does-not-resolve-bare-customer-ID",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 59.739,
+      "title": "MSP-native-API-cannot-write-foreign-ticket",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 61.998999999999995,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 62.518,
+      "title": "qualified-action-positive-control-updates-exact-customer-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 64.804,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 67.166,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 67.375,
+      "title": "view-team-denied-same-valid-qualified-write-command",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 68.767,
+      "title": "home-field-policy-redacts-shared-title-and-derived-display",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 70.785,
+      "title": "navigate",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 71.799,
+      "title": "masked-title-cannot-be-used-to-discover-a-queue-result",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 72.151,
+      "title": "home-file-mask-revokes-copied-download-while-grant-stays-active",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 72.314,
+      "title": "restored-home-policy-readmits-original-file-with-same-bytes",
+      "actor": "scopeTeamUser"
+    },
+    {
+      "seconds": 74.339,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 76.383,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 76.86099999999999,
+      "title": "last-board-grant-removed-after-reload",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 76.904,
+      "title": "copied-file-link-denied-after-last-independent-grant-is-removed",
+      "actor": "qa"
+    },
+    {
+      "seconds": 77.146,
+      "title": "previously-valid-qualified-write-denied-after-grant-removal",
+      "actor": "qa"
+    },
+    {
+      "seconds": 79.085,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 81.051,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 82.087,
+      "title": "fresh-export-with-previous-filter-does-not-leak-revoked-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 84.118,
+      "title": "navigate",
+      "actor": "scopeCustomer"
+    },
+    {
+      "seconds": 87.155,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 87.31299999999999,
+      "title": "original-customer-board-restored-and-temporary-team-scope-removed",
+      "actor": "qa"
+    },
+    {
+      "seconds": 88.52,
+      "title": "03-viewer-current-build",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 90.88199999999999,
+      "title": "navigate",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 118.08,
+      "title": "03-viewer-layout-parity-complete",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 121.001,
+      "title": "navigate",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 121.968,
+      "title": "Entry-category-is-disabled",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 123.036,
+      "title": "Entry-readonly-survives-reload",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 123.365,
+      "title": "Grid-category-is-disabled",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 124.25999999999999,
+      "title": "Grid-readonly-survives-reload",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 124.788,
+      "title": "viewer-layout-checks-leave-ticket-unchanged",
+      "actor": "viewer"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

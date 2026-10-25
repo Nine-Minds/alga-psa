@@ -1,0 +1,230 @@
+{
+  "scenario": "06-shared-project-collaboration-56e7",
+  "recordedAt": "2026-10-25T20:30:07.785Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "customer-project-collaboration-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T20:30:12.076Z"
+    },
+    {
+      "id": "unshared-project-denied",
+      "passed": true,
+      "at": "2026-10-25T20:30:17.101Z"
+    },
+    {
+      "id": "approved-project-lists-two-customer-tasks",
+      "passed": true,
+      "at": "2026-10-25T20:30:19.133Z"
+    },
+    {
+      "id": "shared-task-edit-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T20:30:22.222Z"
+    },
+    {
+      "id": "native-customer-task-shows-MSP-edit",
+      "passed": true,
+      "at": "2026-10-25T20:30:24.253Z"
+    },
+    {
+      "id": "person-assignment-keeps-local-owner",
+      "passed": true,
+      "at": "2026-10-25T20:30:26.054Z"
+    },
+    {
+      "id": "working-assigned-to-me-shows-person-task",
+      "passed": true,
+      "at": "2026-10-25T20:30:28.207Z"
+    },
+    {
+      "id": "team-assignment-persists",
+      "passed": true,
+      "at": "2026-10-25T20:30:30.651Z"
+    },
+    {
+      "id": "my-teams-filter-shows-team-assigned-task",
+      "passed": true,
+      "at": "2026-10-25T20:30:32.793Z"
+    },
+    {
+      "id": "oversight-retains-qualified-team-task",
+      "passed": true,
+      "at": "2026-10-25T20:30:32.919Z"
+    },
+    {
+      "id": "removing-MSP-assignment-preserves-customer-owner",
+      "passed": true,
+      "at": "2026-10-25T20:30:34.613Z"
+    },
+    {
+      "id": "stale-MSP-save-cannot-overwrite-customer",
+      "passed": true,
+      "at": "2026-10-25T20:30:36.490Z"
+    },
+    {
+      "id": "qualified-history-retains-both-organizations",
+      "passed": true,
+      "at": "2026-10-25T20:30:37.782Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:30:08.157Z",
+      "seconds": 0.372,
+      "title": "Isolated team prerequisite",
+      "data": {
+        "teamId": "e2c5a239-2ea6-4a0f-90f7-6cf23a3bd75b",
+        "teamName": "CM continuation team 1792960208000",
+        "member": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+        "method": "operator SQL fixture; customer scope and sponsor assignment use native product"
+      }
+    },
+    {
+      "at": "2026-10-25T20:30:10.480Z",
+      "seconds": 2.695,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T20:30:12.076Z",
+      "seconds": 4.291,
+      "actor": "alice",
+      "title": "customer-project-collaboration-survives-reload"
+    },
+    {
+      "at": "2026-10-25T20:30:14.059Z",
+      "seconds": 6.274,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T20:30:17.089Z",
+      "seconds": 9.304,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/7ae5128c-c6d6-4984-aa01-72d8316b4024"
+    },
+    {
+      "at": "2026-10-25T20:30:17.101Z",
+      "seconds": 9.316,
+      "actor": "qa",
+      "title": "unshared-project-denied"
+    },
+    {
+      "at": "2026-10-25T20:30:19.123Z",
+      "seconds": 11.338,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3211261f-80a6-45bf-8665-127527a814f0"
+    },
+    {
+      "at": "2026-10-25T20:30:19.133Z",
+      "seconds": 11.348,
+      "actor": "qa",
+      "title": "approved-project-lists-two-customer-tasks"
+    },
+    {
+      "at": "2026-10-25T20:30:22.222Z",
+      "seconds": 14.437,
+      "actor": "qa",
+      "title": "shared-task-edit-survives-reload"
+    },
+    {
+      "at": "2026-10-25T20:30:24.253Z",
+      "seconds": 16.468,
+      "actor": "qa",
+      "title": "native-customer-task-shows-MSP-edit"
+    },
+    {
+      "at": "2026-10-25T20:30:26.054Z",
+      "seconds": 18.269,
+      "actor": "qa",
+      "title": "person-assignment-keeps-local-owner"
+    },
+    {
+      "at": "2026-10-25T20:30:27.966Z",
+      "seconds": 20.181,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T20:30:28.207Z",
+      "seconds": 20.422,
+      "actor": "qa",
+      "title": "working-assigned-to-me-shows-person-task"
+    },
+    {
+      "at": "2026-10-25T20:30:30.651Z",
+      "seconds": 22.866,
+      "actor": "qa",
+      "title": "team-assignment-persists"
+    },
+    {
+      "at": "2026-10-25T20:30:32.551Z",
+      "seconds": 24.766,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T20:30:32.793Z",
+      "seconds": 25.008,
+      "actor": "qa",
+      "title": "my-teams-filter-shows-team-assigned-task"
+    },
+    {
+      "at": "2026-10-25T20:30:32.919Z",
+      "seconds": 25.134,
+      "actor": "qa",
+      "title": "oversight-retains-qualified-team-task"
+    },
+    {
+      "at": "2026-10-25T20:30:34.613Z",
+      "seconds": 26.828,
+      "actor": "qa",
+      "title": "removing-MSP-assignment-preserves-customer-owner"
+    },
+    {
+      "at": "2026-10-25T20:30:36.490Z",
+      "seconds": 28.705,
+      "actor": "qa",
+      "title": "stale-MSP-save-cannot-overwrite-customer"
+    },
+    {
+      "at": "2026-10-25T20:30:37.782Z",
+      "seconds": 29.997,
+      "actor": "qa",
+      "title": "qualified-history-retains-both-organizations"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Project creation is a separate native recording. Task effort, conversation/file bytes and fresh read denial after project revocation remain required."
+  ],
+  "durationSeconds": 30.92,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

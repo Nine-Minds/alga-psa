@@ -1,0 +1,314 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nProject task\n\nWhite Rabbit IT · CM continuation project 1792938628367 · Acceptance phase\n\nTask name\nStatus\nTo Do\nSelect...\nTo Do\nIn Progress\nDone\nDue date\nSave access\nReload current access\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nLog time\nMSP assignment\n\nOz · CM continuation team 1792938798759\n\nAssign to\nTeam\nAssignee\nCM continuation team 1792938798759 · Oz\nAssign\nRemove MSP assignmentReload current access\nConversation\nReload current state\nNew message\n\nNo messages are visible yet.\n\nChange history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 10:34 AM\nMSP assignment\nOz · CM continuation team 1792938798759\nQA Tester · Oz\nOct 25, 2026, 10:34 AM\nMSP assignment\nOz · QA Tester\nQA Tester · Oz\nOct 25, 2026, 10:34 AM\nTask name\nCM continuation task 1 1792938628367 MSP edit\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-name",
+      "text": "",
+      "value": "CM continuation task 1 1792938628367 MSP edit",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-status",
+      "text": "To Do",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select...To DoIn ProgressDone",
+      "value": "81f80ce4-da9b-4970-9f6f-68bc1981488a",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-due",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-save",
+      "text": "Save access",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-effort-refresh-1f98df77-cd15-44c2-8f4d-42ff52d01e84-project_task-d07b5183-f423-4cef-8df3-d27a7e1619dd",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-log-time",
+      "text": "Log time",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-kind",
+      "text": "Team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-person",
+      "text": "CM continuation team 1792938798759 · Oz",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-save",
+      "text": "Assign",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-clear",
+      "text": "Remove MSP assignment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-refresh",
+      "text": "Reload current state",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-new",
+      "text": "New message",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-newer",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-older",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

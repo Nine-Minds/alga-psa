@@ -1,0 +1,50 @@
+{
+  "customer": "1abff734-2991-44be-ad9f-78d6837f11be",
+  "relationship": "037abc3e-b5e6-4555-afa0-a32ede2695d7",
+  "client": "f742dc37-1d61-4529-b8b0-1ba29323684c",
+  "ticket": "16d12d97-1a2a-4e39-8575-5d2600259f06",
+  "title": "CM calendar SLA 1792960702618",
+  "policy": "a48c7b55-f5f7-42fb-b37b-ca6ff3730619",
+  "schedule": "c3589f6a-f6b7-4f7d-929a-ed11fbbd0d5b",
+  "threshold": "bd59fb5d-c089-4287-9349-8d79a08701f5",
+  "entries": [
+    {
+      "day": 0,
+      "start": "00:00:00",
+      "end": "23:59:00"
+    },
+    {
+      "day": 1,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    },
+    {
+      "day": 2,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    },
+    {
+      "day": 3,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    },
+    {
+      "day": 4,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    },
+    {
+      "day": 5,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    },
+    {
+      "day": 6,
+      "start": "09:00:00",
+      "end": "17:00:00"
+    }
+  ],
+  "oldPolicy": "",
+  "oldMap": "",
+  "setup": "Operator prerequisite creates an isolated calendar, client override, threshold and un-escalated ticket. Policy mapping, staff/work assignment and escalation use native UI."
+}

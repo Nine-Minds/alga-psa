@@ -1,0 +1,276 @@
+{
+  "scenario": "09-billing-capture-rehearsal-confirmed",
+  "recordedAt": "2026-10-25T15:26:27.438Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [
+    {
+      "id": "qualified-work-billing-profile-persists",
+      "passed": true,
+      "at": "2026-10-25T15:26:33.146Z",
+      "data": {
+        "profileId": "25f62551-6f09-4a3e-b975-43525c00aaff",
+        "taskId": "d07b5183-f423-4cef-8df3-d27a7e1619dd"
+      }
+    },
+    {
+      "id": "recovered-existing-contracted-without-another-save",
+      "passed": true,
+      "at": "2026-10-25T15:26:35.433Z",
+      "data": {
+        "entryId": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d"
+      }
+    },
+    {
+      "id": "contracted-time-is-commercial-owned-and-qualified",
+      "passed": true,
+      "at": "2026-10-25T15:26:35.433Z",
+      "data": {
+        "entry": {
+          "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+          "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+          "work_item_type": "co_managed",
+          "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+          "billing_mode": "commercial",
+          "billable_duration": 15,
+          "service_id": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+          "contract_line_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+          "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "notes": "CM billing 1792941874918 contracted"
+        }
+      }
+    },
+    {
+      "id": "contracted-service-routes-to-exact-line",
+      "passed": true,
+      "at": "2026-10-25T15:26:35.433Z"
+    },
+    {
+      "id": "catalog-time-is-commercial-owned-and-qualified",
+      "passed": true,
+      "at": "2026-10-25T15:26:38.762Z",
+      "data": {
+        "entry": {
+          "entry_id": "fd35a828-a9c2-409d-9ce6-adecff95e2dc",
+          "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+          "work_item_type": "co_managed",
+          "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+          "billing_mode": "commercial",
+          "billable_duration": 6,
+          "service_id": "6707cbdf-f85e-405c-b60b-4cd5c17a2bc8",
+          "contract_line_id": null,
+          "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "notes": "CM billing 1792941874918 catalog"
+        }
+      }
+    },
+    {
+      "id": "catalog-service-does-not-claim-custom-contract",
+      "passed": true,
+      "at": "2026-10-25T15:26:38.762Z"
+    },
+    {
+      "id": "native-timesheet-shows-2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+      "passed": true,
+      "at": "2026-10-25T15:26:40.786Z"
+    },
+    {
+      "id": "native-timesheet-shows-fd35a828-a9c2-409d-9ce6-adecff95e2dc",
+      "passed": true,
+      "at": "2026-10-25T15:26:40.789Z"
+    },
+    {
+      "id": "isolated-sheet-has-two-exact-review-entries",
+      "passed": true,
+      "at": "2026-10-25T15:26:40.949Z"
+    },
+    {
+      "id": "separate-approver-approved-both-qualified-entries",
+      "passed": true,
+      "at": "2026-10-25T15:26:43.760Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:26:27.484Z",
+      "seconds": 0.046,
+      "title": "Operator prerequisite: isolated technician and approval team",
+      "data": {
+        "userId": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+        "email": "cm.billing.1792941874918@cmreview.test",
+        "teamId": "54a57136-5e4e-41c1-a6f1-5368f2342b01",
+        "approver": "QA Tester",
+        "method": "SQL fixture; relationship assignment, capture, submit, approval and invoicing use native UI"
+      }
+    },
+    {
+      "at": "2026-10-25T15:26:29.797Z",
+      "seconds": 2.359,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:26:31.770Z",
+      "seconds": 4.332,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd"
+    },
+    {
+      "at": "2026-10-25T15:26:33.146Z",
+      "seconds": 5.708,
+      "actor": "qa",
+      "title": "qualified-work-billing-profile-persists",
+      "data": {
+        "profileId": "25f62551-6f09-4a3e-b975-43525c00aaff",
+        "taskId": "d07b5183-f423-4cef-8df3-d27a7e1619dd"
+      }
+    },
+    {
+      "at": "2026-10-25T15:26:35.375Z",
+      "seconds": 7.937,
+      "actor": "billingTech",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/86dee19d-135d-4286-a178-da3c6e31aade"
+    },
+    {
+      "at": "2026-10-25T15:26:35.433Z",
+      "seconds": 7.995,
+      "actor": "billingTech",
+      "title": "recovered-existing-contracted-without-another-save",
+      "data": {
+        "entryId": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d"
+      }
+    },
+    {
+      "at": "2026-10-25T15:26:35.433Z",
+      "seconds": 7.995,
+      "actor": "billingTech",
+      "title": "contracted-time-is-commercial-owned-and-qualified",
+      "data": {
+        "entry": {
+          "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+          "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+          "work_item_type": "co_managed",
+          "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+          "billing_mode": "commercial",
+          "billable_duration": 15,
+          "service_id": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+          "contract_line_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+          "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "notes": "CM billing 1792941874918 contracted"
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T15:26:35.433Z",
+      "seconds": 7.995,
+      "actor": "billingTech",
+      "title": "contracted-service-routes-to-exact-line"
+    },
+    {
+      "at": "2026-10-25T15:26:37.509Z",
+      "seconds": 10.071,
+      "actor": "billingTech",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd"
+    },
+    {
+      "at": "2026-10-25T15:26:38.762Z",
+      "seconds": 11.324,
+      "actor": "billingTech",
+      "title": "catalog-time-is-commercial-owned-and-qualified",
+      "data": {
+        "entry": {
+          "entry_id": "fd35a828-a9c2-409d-9ce6-adecff95e2dc",
+          "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+          "work_item_type": "co_managed",
+          "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+          "billing_mode": "commercial",
+          "billable_duration": 6,
+          "service_id": "6707cbdf-f85e-405c-b60b-4cd5c17a2bc8",
+          "contract_line_id": null,
+          "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+          "notes": "CM billing 1792941874918 catalog"
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T15:26:38.762Z",
+      "seconds": 11.324,
+      "actor": "billingTech",
+      "title": "catalog-service-does-not-claim-custom-contract"
+    },
+    {
+      "at": "2026-10-25T15:26:40.745Z",
+      "seconds": 13.307,
+      "actor": "billingTech",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/86dee19d-135d-4286-a178-da3c6e31aade"
+    },
+    {
+      "at": "2026-10-25T15:26:40.786Z",
+      "seconds": 13.348,
+      "actor": "billingTech",
+      "title": "native-timesheet-shows-2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d"
+    },
+    {
+      "at": "2026-10-25T15:26:40.789Z",
+      "seconds": 13.351,
+      "actor": "billingTech",
+      "title": "native-timesheet-shows-fd35a828-a9c2-409d-9ce6-adecff95e2dc"
+    },
+    {
+      "at": "2026-10-25T15:26:40.949Z",
+      "seconds": 13.511,
+      "actor": "billingTech",
+      "title": "isolated-sheet-has-two-exact-review-entries"
+    },
+    {
+      "at": "2026-10-25T15:26:43.231Z",
+      "seconds": 15.793,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-25T15:26:43.760Z",
+      "seconds": 16.322,
+      "actor": "qa",
+      "title": "separate-approver-approved-both-qualified-entries"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Billing capture, source routing and approval segment. Invoice generation, customer effort and stopwatch are separate required segments."
+  ],
+  "durationSeconds": 17.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "billingTech",
+      "email": "cm.billing.1792941874918@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "customer": "791752cb-ce46-4a52-8fa2-8aa9b4df0aa8",
+  "providerConfigurationSaved": false,
+  "approvedProviderBindingAvailable": false,
+  "callback": "not executed",
+  "directory": "not executed",
+  "inbound": "not executed",
+  "revocationReplay": "not executed",
+  "outbound": [
+    {
+      "recipient": "cm.requester.1792939134918@cmreview.test",
+      "subject": "New comment on a ticket",
+      "bodySha256": "d649bd77d10f6eaf3fa0c1d46370d87cf533a230859325d123a9fbacb4c7700a",
+      "publicMessage": "CM conversation 1792943905070 requester",
+      "privateBodiesExcluded": true,
+      "provider": "configured SMTP sink"
+    }
+  ]
+}

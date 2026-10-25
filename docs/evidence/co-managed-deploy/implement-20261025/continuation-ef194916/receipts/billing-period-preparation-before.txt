@@ -1,0 +1,22 @@
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+Error: Transform failed with 3 errors:
+/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/sync-billing.ts:10:1: ERROR: Top-level await is currently not supported with the "cjs" output format
+/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/sync-billing.ts:11:12: ERROR: Top-level await is currently not supported with the "cjs" output format
+/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/sync-billing.ts:14:9: ERROR: Top-level await is currently not supported with the "cjs" output format
+    at failureErrorWithLog (/home/robert/alga-copies/feature-co-managed-it/node_modules/esbuild/lib/main.js:1467:15)
+    at /home/robert/alga-copies/feature-co-managed-it/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/home/robert/alga-copies/feature-co-managed-it/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/home/robert/alga-copies/feature-co-managed-it/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/home/robert/alga-copies/feature-co-managed-it/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23) {
+  name: 'TransformError'
+}
+
+Node.js v22.18.0

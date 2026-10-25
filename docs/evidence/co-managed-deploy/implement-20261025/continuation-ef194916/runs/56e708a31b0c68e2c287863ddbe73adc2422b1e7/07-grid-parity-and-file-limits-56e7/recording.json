@@ -1,0 +1,224 @@
+{
+  "scenario": "07-grid-parity-and-file-limits-56e7",
+  "recordedAt": "2026-10-25T20:13:11.389Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "QA-Grid-shows-requester-and-MSP-private",
+      "passed": true,
+      "at": "2026-10-25T20:13:15.678Z"
+    },
+    {
+      "id": "QA-Grid-hides-customer-private",
+      "passed": true,
+      "at": "2026-10-25T20:13:15.679Z"
+    },
+    {
+      "id": "Alice-Grid-shows-requester-and-customer-private",
+      "passed": true,
+      "at": "2026-10-25T20:13:19.823Z"
+    },
+    {
+      "id": "Alice-Grid-hides-MSP-private",
+      "passed": true,
+      "at": "2026-10-25T20:13:19.824Z"
+    },
+    {
+      "id": "twenty-one-files-reported-before-publication",
+      "passed": true,
+      "at": "2026-10-25T20:13:22.984Z",
+      "data": {
+        "help": "Up to 20 files, 19 MiB each. Files are shared with this message’s audience.",
+        "alert": "Remove files that exceed the size limit or file count before sending."
+      }
+    },
+    {
+      "id": "over-limit-send-persists-nothing-and-keeps-draft",
+      "passed": true,
+      "at": "2026-10-25T20:13:26.191Z",
+      "data": {
+        "stored": 0
+      }
+    },
+    {
+      "id": "removing-one-file-clears-the-count-error",
+      "passed": true,
+      "at": "2026-10-25T20:13:26.242Z"
+    },
+    {
+      "id": "oversize-file-reported-before-publication",
+      "passed": true,
+      "at": "2026-10-25T20:13:28.794Z",
+      "data": {
+        "alert": "Remove files that exceed the size limit or file count before sending."
+      }
+    },
+    {
+      "id": "every-offered-audience-states-attachment-availability",
+      "passed": true,
+      "at": "2026-10-25T20:13:30.984Z",
+      "data": {
+        "audiences": {
+          "Requester and IT teams": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          },
+          "Shared IT teams": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          },
+          "My organization only": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "probe-left-no-message",
+      "passed": true,
+      "at": "2026-10-25T20:13:32.358Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:13:14.082Z",
+      "seconds": 2.693,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:15.678Z",
+      "seconds": 4.289,
+      "actor": "qa",
+      "title": "QA-Grid-shows-requester-and-MSP-private"
+    },
+    {
+      "at": "2026-10-25T20:13:15.679Z",
+      "seconds": 4.29,
+      "actor": "qa",
+      "title": "QA-Grid-hides-customer-private"
+    },
+    {
+      "at": "2026-10-25T20:13:17.761Z",
+      "seconds": 6.372,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:19.823Z",
+      "seconds": 8.434,
+      "actor": "alice",
+      "title": "Alice-Grid-shows-requester-and-customer-private"
+    },
+    {
+      "at": "2026-10-25T20:13:19.824Z",
+      "seconds": 8.435,
+      "actor": "alice",
+      "title": "Alice-Grid-hides-MSP-private"
+    },
+    {
+      "at": "2026-10-25T20:13:21.902Z",
+      "seconds": 10.513,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:22.856Z",
+      "seconds": 11.467,
+      "actor": "qa",
+      "title": "limits-help",
+      "data": {
+        "help": "Up to 20 files, 19 MiB each. Files are shared with this message’s audience."
+      }
+    },
+    {
+      "at": "2026-10-25T20:13:22.984Z",
+      "seconds": 11.595,
+      "actor": "qa",
+      "title": "twenty-one-files-reported-before-publication",
+      "data": {
+        "help": "Up to 20 files, 19 MiB each. Files are shared with this message’s audience.",
+        "alert": "Remove files that exceed the size limit or file count before sending."
+      }
+    },
+    {
+      "at": "2026-10-25T20:13:26.191Z",
+      "seconds": 14.802,
+      "actor": "qa",
+      "title": "over-limit-send-persists-nothing-and-keeps-draft",
+      "data": {
+        "stored": 0
+      }
+    },
+    {
+      "at": "2026-10-25T20:13:26.242Z",
+      "seconds": 14.853,
+      "actor": "qa",
+      "title": "removing-one-file-clears-the-count-error"
+    },
+    {
+      "at": "2026-10-25T20:13:28.794Z",
+      "seconds": 17.405,
+      "actor": "qa",
+      "title": "oversize-file-reported-before-publication",
+      "data": {
+        "alert": "Remove files that exceed the size limit or file count before sending."
+      }
+    },
+    {
+      "at": "2026-10-25T20:13:30.984Z",
+      "seconds": 19.595,
+      "actor": "qa",
+      "title": "every-offered-audience-states-attachment-availability",
+      "data": {
+        "audiences": {
+          "Requester and IT teams": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          },
+          "Shared IT teams": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          },
+          "My organization only": {
+            "pickerOffered": true,
+            "unavailableAlert": 0
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:13:32.358Z",
+      "seconds": 20.969,
+      "actor": "qa",
+      "title": "probe-left-no-message"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 21.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

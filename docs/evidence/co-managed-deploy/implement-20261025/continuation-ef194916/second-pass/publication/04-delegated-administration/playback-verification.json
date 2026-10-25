@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:05.086Z",
+  "guide": "guides/04-delegated-administration.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/04-delegated-administration.html",
+  "compositeSha256": "6910eb6d774d675b6d0792a5cfd25376e5b19711a752bda475cfd44f3f49323d",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.607356,
+    "duration": 56.4,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegated-administration/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "navigate",
+    "target": 36.173,
+    "actual": 36.194572,
+    "followingFrame": {
+      "mediaTime": 36.2,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/6407753",
+  "passed": true
+}

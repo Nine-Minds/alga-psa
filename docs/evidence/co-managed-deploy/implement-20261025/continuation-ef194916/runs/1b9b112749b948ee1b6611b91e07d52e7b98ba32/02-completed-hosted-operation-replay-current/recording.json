@@ -1,0 +1,87 @@
+{
+  "scenario": "02-completed-hosted-operation-replay-current",
+  "recordedAt": "2026-10-25T17:04:46.144Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "completed-hosted-purchase-same-operation-replay-is-accepted",
+      "passed": true,
+      "at": "2026-10-25T17:04:50.571Z",
+      "data": {
+        "status": 200,
+        "operationId": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+        "originalTarget": 21
+      }
+    },
+    {
+      "id": "old-operation-replay-does-not-revert-later-pool-reduction",
+      "passed": true,
+      "at": "2026-10-25T17:04:52.099Z",
+      "data": {
+        "capacityBefore": 19,
+        "capacityAfter": 19
+      }
+    },
+    {
+      "id": "same-operation-has-one-unchanged-provider-receipt",
+      "passed": true,
+      "at": "2026-10-25T17:04:52.268Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T17:04:49.686Z",
+      "seconds": 3.542,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T17:04:50.571Z",
+      "seconds": 4.427,
+      "actor": "qa",
+      "title": "completed-hosted-purchase-same-operation-replay-is-accepted",
+      "data": {
+        "status": 200,
+        "operationId": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+        "originalTarget": 21
+      }
+    },
+    {
+      "at": "2026-10-25T17:04:52.099Z",
+      "seconds": 5.955,
+      "actor": "qa",
+      "title": "old-operation-replay-does-not-revert-later-pool-reduction",
+      "data": {
+        "capacityBefore": 19,
+        "capacityAfter": 19
+      }
+    },
+    {
+      "at": "2026-10-25T17:04:52.268Z",
+      "seconds": 6.124,
+      "actor": "qa",
+      "title": "same-operation-has-one-unchanged-provider-receipt"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Hosted simulator idempotent replay only. Real Stripe release-owner acceptance and signed self-host lifecycle remain blocked-external."
+  ],
+  "durationSeconds": 6.12,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

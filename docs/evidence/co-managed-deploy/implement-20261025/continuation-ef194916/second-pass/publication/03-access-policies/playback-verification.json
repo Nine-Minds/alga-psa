@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:02.818Z",
+  "guide": "guides/03-access-policies.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/03-access-policies.html",
+  "compositeSha256": "ae926b10d3e5e131eae6ab200f39a8077cf5b6c03fdf13f45e9a729fe084daec",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606455,
+    "duration": 125.04,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-access-policies/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "home-field-policy-redacts-shared-title-and-derived-display",
+    "target": 68.767,
+    "actual": 68.798024,
+    "followingFrame": {
+      "mediaTime": 68.8,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/12368379",
+  "passed": true
+}

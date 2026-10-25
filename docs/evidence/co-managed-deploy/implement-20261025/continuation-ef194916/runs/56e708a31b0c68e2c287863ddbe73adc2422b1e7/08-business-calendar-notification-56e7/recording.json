@@ -1,0 +1,183 @@
+{
+  "scenario": "08-business-calendar-notification-56e7",
+  "recordedAt": "2026-10-25T20:38:22.559Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "business-calendar-response-due-is-one-working-minute",
+      "passed": true,
+      "at": "2026-10-25T20:38:33.866Z",
+      "data": {
+        "actual": "2026-10-25T20:39:33.607Z",
+        "expected": "2026-10-25T20:39:33.607Z"
+      }
+    },
+    {
+      "id": "business-calendar-resolution-skips-closed-hours",
+      "passed": true,
+      "at": "2026-10-25T20:38:33.866Z",
+      "data": {
+        "actual": "2026-10-28T14:39:33.607Z",
+        "expected": "2026-10-28T14:39:33.607Z",
+        "targetMinutes": 1500
+      }
+    },
+    {
+      "id": "MSP-local-assignee-is-actual-notification-recipient",
+      "passed": true,
+      "at": "2026-10-25T20:38:36.344Z"
+    },
+    {
+      "id": "actual-breach-mail-routes-only-to-assigned-MSP-user",
+      "passed": true,
+      "at": "2026-10-25T20:40:05.783Z",
+      "data": {
+        "mailCount": 1,
+        "recipients": [
+          {
+            "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+            "channel": "email",
+            "status": "delivered"
+          },
+          {
+            "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+            "channel": "in_app",
+            "status": "created"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:38:26.374Z",
+      "seconds": 3.815,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f742dc37-1d61-4529-b8b0-1ba29323684c?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T20:38:28.327Z",
+      "seconds": 5.768,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=38299219-4af3-469e-befe-ec3d8a31a149"
+    },
+    {
+      "at": "2026-10-25T20:38:33.429Z",
+      "seconds": 10.87,
+      "actor": "calendarCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/16d12d97-1a2a-4e39-8575-5d2600259f06"
+    },
+    {
+      "at": "2026-10-25T20:38:33.866Z",
+      "seconds": 11.307,
+      "actor": "calendarCustomer",
+      "title": "business-calendar-response-due-is-one-working-minute",
+      "data": {
+        "actual": "2026-10-25T20:39:33.607Z",
+        "expected": "2026-10-25T20:39:33.607Z"
+      }
+    },
+    {
+      "at": "2026-10-25T20:38:33.866Z",
+      "seconds": 11.307,
+      "actor": "calendarCustomer",
+      "title": "business-calendar-resolution-skips-closed-hours",
+      "data": {
+        "actual": "2026-10-28T14:39:33.607Z",
+        "expected": "2026-10-28T14:39:33.607Z",
+        "targetMinutes": 1500
+      }
+    },
+    {
+      "at": "2026-10-25T20:38:35.888Z",
+      "seconds": 13.329,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1abff734-2991-44be-ad9f-78d6837f11be/037abc3e-b5e6-4555-afa0-a32ede2695d7/16d12d97-1a2a-4e39-8575-5d2600259f06"
+    },
+    {
+      "at": "2026-10-25T20:38:36.344Z",
+      "seconds": 13.785,
+      "actor": "qa",
+      "title": "MSP-local-assignee-is-actual-notification-recipient"
+    },
+    {
+      "at": "2026-10-25T20:38:36.390Z",
+      "seconds": 13.831,
+      "actor": "qa",
+      "title": "Wait for real one-minute deadline and configured delivery worker",
+      "data": {
+        "dueAt": "2026-10-25T20:39:33.607Z",
+        "expectedRecipient": "qa@emeraldcity.oz",
+        "unrelatedRecipients": "Customer administrator/requester and unassigned MSP staff must not receive this private obligation"
+      }
+    },
+    {
+      "at": "2026-10-25T20:40:05.783Z",
+      "seconds": 103.224,
+      "actor": "qa",
+      "title": "actual-breach-mail-routes-only-to-assigned-MSP-user",
+      "data": {
+        "mailCount": 1,
+        "recipients": [
+          {
+            "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+            "channel": "email",
+            "status": "delivered"
+          },
+          {
+            "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+            "channel": "in_app",
+            "status": "created"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:40:08.416Z",
+      "seconds": 105.857,
+      "actor": "departedCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T20:40:35.451Z",
+      "seconds": 132.892,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=38299219-4af3-469e-befe-ec3d8a31a149"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#co-ticket-history-open') to be visible\n",
+  "durationSeconds": 135.12,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "calendarCustomer",
+      "email": "desk.accept.1792960463141@cmreview.test",
+      "tenant": "1abff734-2991-44be-ad9f-78d6837f11be"
+    },
+    {
+      "name": "departedCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

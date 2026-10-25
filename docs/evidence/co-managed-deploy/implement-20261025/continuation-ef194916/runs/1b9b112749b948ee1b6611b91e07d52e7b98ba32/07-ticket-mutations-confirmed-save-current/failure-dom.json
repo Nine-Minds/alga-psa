@@ -1,0 +1,860 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n← Back to\nTickets\n#000003\nAwaiting Client\nCreated Internally\nGrid\nEntry\nCM requester conversation 1792939250877\n\nCreated 10/25/2026, 10:40 AM (about 2 hours ago)\n\nUpdated 10/25/2026, 10:40 AM (about 2 hours ago)\n\nCM requester conversation 1792939250877\nStatus\nOpen\nAssigned To\nNot assigned\nBoard\nService Desk\nCategory\nSelect category\nPriority\nHigh\nResponse State\nAwaiting Client\nDue Date\nDescription\n\nDisposable requester audience and file acceptance ticket\n\nResolve and close\nCancel\nSave Changes\nComments\nAdd Comment\nAll Comments (8)\nClient (2)\nInternal (6)\nResolution (0)\nNewest first\nQT\n\nQA Tester (Oz)\n\nShared IT teams\n\nOct 25, 2026, 11:58 AM (Edited)\n\n[deleted]\n4 replies\nCollapse\nShow 1 earlier reply\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\n\nOct 25, 2026, 12:08 PM\n\nCM conversation 1792943905070 customer reply\n\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\n\nOct 25, 2026, 12:14 PM\n\nCM conversation 1792943905070 customer reply 1792944842908\n\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\n\nOct 25, 2026, 12:17 PM\n\nCM conversation 1792943905070 customer reply 1792945067967\n\nQT\n\nQA Tester\n\nRequester and IT teams\nRequester and IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:58 AM\n\nCM conversation 1792943905070 requester\n\nAttachments\ncm-requester-1792943905070.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:58 AM\n\nCM conversation 1792943905070 msp-private\n\nAttachments\ncm-msp-private-1792943905070.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:38 AM\n\nCM conversation 1792942712645 shared\n\nAttachments\ncm-shared-1792942712645.txt\nRemove\nAttach file\n2 replies\nCollapse\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\n\nOct 25, 2026, 11:47 AM\n\nCM conversation 1792942712645 customer reply\n\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\n\nOct 25, 2026, 11:54 AM\n\nCM conversation 1792942712645 refresh probe 1792943639645\n\nQT\n\nQA Tester\n\nRequester and IT teams\nRequester and IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:38 AM\n\nCM conversation 1792942712645 requester\n\nAttachments\ncm-requester-1792942712645.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:38 AM\n\nCM conversation 1792942712645 msp-private\n\nAttachments\ncm-msp-private-1792942712645.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:14 AM\n\nCM conversation 1792941243760 shared\n\nAttachments\ncm-shared-1792941243760.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 10:49 AM\n\nCM conversation 1792939796574 shared\n\nAttachments\ncm-shared-1792939796574.txt\nRemove\nAttach file\nTime Entry\n00:00:00\nWork description\nAdd Time Entry\nLogged Time\n0 hrs\n\nNo time has been logged on this ticket yet.\n\nContact Info\nContact\nCR\n\nConversation Requester\n\nCreated By\n\nN/A\n\nCreated\n\n10/25/2026, 10:40 AM\n\nClient\nWR\n\nWhite Rabbit IT\n\nContact Phone\n\nN/A\n\nContact Email\n\nN/A\n\nAgent team\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nStarts at escalation\n\nMSP assignment\nNot assigned to the MSP\nChange",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_t_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "← Back toTickets ",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-grid",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-entry",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_c5_",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-and-team-picker-trigger",
+      "text": "Not assigned",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_ca_",
+      "text": "Service Desk",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Select category",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_cf_",
+      "text": "High",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_ci_",
+      "text": "Awaiting Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-info-due-date-picker",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-resolve-and-close-button",
+      "text": "Resolve and close",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-cancel-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-save-changes-btn",
+      "text": "Save Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-show-comment-editor-btn",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_d6_-trigger-0",
+      "text": "All Comments (8)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_d6_-trigger-1",
+      "text": "Client (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_d6_-trigger-2",
+      "text": "Internal (6)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_d6_-trigger-3",
+      "text": "Resolution (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-toggle-order-btn",
+      "text": "Newest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Collapse",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show 1 earlier reply",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-333c3a9b-63db-4ef6-91df-9d27683e0bda-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-333c3a9b-63db-4ef6-91df-9d27683e0bda-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-8e85632c-4ab1-4950-9cee-ecd1730eb3bd-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-8e85632c-4ab1-4950-9cee-ecd1730eb3bd-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-da48ee32-d22c-4965-a9b7-e5beef27afa4-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-da48ee32-d22c-4965-a9b7-e5beef27afa4-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cf012854-777a-45e0-8124-30aa4eb18226-audience-select",
+      "text": "Requester and IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-cf012854-777a-45e0-8124-30aa4eb18226-3ae0640c-09ae-4fc8-86cd-575f09a1d84d-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-cf012854-777a-45e0-8124-30aa4eb18226-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "0aafdf9f-eac6-4476-b2d1-aa765df87ddf-audience-select",
+      "text": "My organization only",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-24ac76c8-df59-4b10-8371-c56222904580-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-090747a6-ef08-492c-ac74-9b91b3db64ed-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-24ac76c8-df59-4b10-8371-c56222904580-0aafdf9f-eac6-4476-b2d1-aa765df87ddf-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "2ccef21e-733c-4e09-a86a-ba5ce158ce2f-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-207addd9-f652-410f-ab12-f1a22f1e4aca-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-2ccef21e-733c-4e09-a86a-ba5ce158ce2f-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Collapse",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-918c56f5-7c98-46ac-befa-1c68f5d4b6e5-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-918c56f5-7c98-46ac-befa-1c68f5d4b6e5-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-20d3bdd5-fc99-4139-a5db-ded6872f8a42-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-20d3bdd5-fc99-4139-a5db-ded6872f8a42-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "8728906a-85c5-48f4-b561-f99979ae62c9-audience-select",
+      "text": "Requester and IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-8728906a-85c5-48f4-b561-f99979ae62c9-e3cbfdf1-1b21-4b66-83b5-9d563b0eb815-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-8728906a-85c5-48f4-b561-f99979ae62c9-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "65c7aa3e-828b-406f-a2b8-a98bee9406f6-audience-select",
+      "text": "My organization only",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-65c7aa3e-828b-406f-a2b8-a98bee9406f6-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-65c7aa3e-828b-406f-a2b8-a98bee9406f6-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-65c7aa3e-828b-406f-a2b8-a98bee9406f6-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-65c7aa3e-828b-406f-a2b8-a98bee9406f6-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-24ac76c8-df59-4b10-8371-c56222904580-65c7aa3e-828b-406f-a2b8-a98bee9406f6-f8aa4950-642c-4c70-b3f5-80f1ed1dce7d-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-24ac76c8-df59-4b10-8371-c56222904580-65c7aa3e-828b-406f-a2b8-a98bee9406f6-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "c90586a1-fb9e-4916-9939-5b071c039b38-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c90586a1-fb9e-4916-9939-5b071c039b38-8c68bb3d-aca4-4ca1-94e7-c0cd129f2574-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c90586a1-fb9e-4916-9939-5b071c039b38-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "5e8da3be-47ef-4f80-919d-b5f58bde5537-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-5e8da3be-47ef-4f80-919d-b5f58bde5537-d1ef5df9-25f5-43f2-a239-68fb54d2d63d-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-1f98df77-cd15-44c2-8f4d-42ff52d01e84-5e8da3be-47ef-4f80-919d-b5f58bde5537-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-time-entry-toggle",
+      "text": "Time Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-timer-stopwatch-start",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-properties-timer-stopwatch-description",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-add-time-entry-btn",
+      "text": "Add Time Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-contact-info-toggle",
+      "text": "Contact Info",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-toggle-contact-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-show-client-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-agent-team-toggle",
+      "text": "Agent team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-history-open",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-assignment-change",
+      "text": "Change",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "scenario": "07-uncertain-response-recovery-blocker",
+  "recordedAt": "2026-10-25T16:56:36.367Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "observed-unknown-response-closes-the-native-composer",
+      "passed": true,
+      "at": "2026-10-25T16:56:42.399Z",
+      "data": {
+        "persistedMessages": 1,
+        "operationId": "7b30f325-49ec-4383-957e-0cc6922953d3"
+      }
+    },
+    {
+      "id": "observed-reopening-has-cleared-the-original-compose-text",
+      "passed": true,
+      "at": "2026-10-25T16:56:42.701Z",
+      "data": {
+        "reopenedText": "\n",
+        "persistedMessages": 1
+      }
+    },
+    {
+      "id": "published-file-is-complete-despite-unknown-acknowledgment",
+      "passed": true,
+      "at": "2026-10-25T16:56:42.799Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:56:39.075Z",
+      "seconds": 2.708,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:56:42.399Z",
+      "seconds": 6.032,
+      "actor": "qa",
+      "title": "observed-unknown-response-closes-the-native-composer",
+      "data": {
+        "persistedMessages": 1,
+        "operationId": "7b30f325-49ec-4383-957e-0cc6922953d3"
+      }
+    },
+    {
+      "at": "2026-10-25T16:56:42.702Z",
+      "seconds": 6.335,
+      "actor": "qa",
+      "title": "observed-reopening-has-cleared-the-original-compose-text",
+      "data": {
+        "reopenedText": "\n",
+        "persistedMessages": 1
+      }
+    },
+    {
+      "at": "2026-10-25T16:56:42.799Z",
+      "seconds": 6.432,
+      "actor": "qa",
+      "title": "published-file-is-complete-despite-unknown-acknowledgment"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Product bug: unknown-response comment submission closes/clears the native composer although the server persisted the message and complete file; same-intent recovery cannot be accepted. No product fix or duplicate resend was made in this evidence pass."
+  ],
+  "durationSeconds": 7.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

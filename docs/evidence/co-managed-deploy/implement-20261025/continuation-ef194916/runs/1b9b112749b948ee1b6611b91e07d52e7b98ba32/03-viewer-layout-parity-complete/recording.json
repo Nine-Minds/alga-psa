@@ -1,0 +1,223 @@
+{
+  "scenario": "03-viewer-layout-parity-complete",
+  "recordedAt": "2026-10-25T16:52:17.392Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "Entry-category-is-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.280Z"
+    },
+    {
+      "id": "Entry-Open-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.285Z"
+    },
+    {
+      "id": "Entry-High-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.289Z"
+    },
+    {
+      "id": "Entry-Service Desk-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.293Z"
+    },
+    {
+      "id": "Entry-has-no-description-edit",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.295Z"
+    },
+    {
+      "id": "Entry-offers-no-writable-composer",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.297Z"
+    },
+    {
+      "id": "Entry-offers-no-save-action",
+      "passed": true,
+      "at": "2026-10-25T16:52:21.297Z"
+    },
+    {
+      "id": "Entry-readonly-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.348Z"
+    },
+    {
+      "id": "Grid-category-is-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.677Z"
+    },
+    {
+      "id": "Grid-Open-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.684Z"
+    },
+    {
+      "id": "Grid-High-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.688Z"
+    },
+    {
+      "id": "Grid-Service Desk-is-readable-and-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.694Z"
+    },
+    {
+      "id": "Grid-has-no-description-edit",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.698Z"
+    },
+    {
+      "id": "Grid-offers-no-writable-composer",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.701Z"
+    },
+    {
+      "id": "Grid-offers-no-save-action",
+      "passed": true,
+      "at": "2026-10-25T16:52:22.702Z"
+    },
+    {
+      "id": "Grid-readonly-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T16:52:23.572Z"
+    },
+    {
+      "id": "viewer-layout-checks-leave-ticket-unchanged",
+      "passed": true,
+      "at": "2026-10-25T16:52:24.100Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:52:20.313Z",
+      "seconds": 2.921,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T16:52:21.280Z",
+      "seconds": 3.888,
+      "actor": "viewer",
+      "title": "Entry-category-is-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:21.285Z",
+      "seconds": 3.893,
+      "actor": "viewer",
+      "title": "Entry-Open-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:21.289Z",
+      "seconds": 3.897,
+      "actor": "viewer",
+      "title": "Entry-High-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:21.293Z",
+      "seconds": 3.901,
+      "actor": "viewer",
+      "title": "Entry-Service Desk-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:21.295Z",
+      "seconds": 3.903,
+      "actor": "viewer",
+      "title": "Entry-has-no-description-edit"
+    },
+    {
+      "at": "2026-10-25T16:52:21.297Z",
+      "seconds": 3.905,
+      "actor": "viewer",
+      "title": "Entry-offers-no-writable-composer"
+    },
+    {
+      "at": "2026-10-25T16:52:21.297Z",
+      "seconds": 3.905,
+      "actor": "viewer",
+      "title": "Entry-offers-no-save-action"
+    },
+    {
+      "at": "2026-10-25T16:52:22.348Z",
+      "seconds": 4.956,
+      "actor": "viewer",
+      "title": "Entry-readonly-survives-reload"
+    },
+    {
+      "at": "2026-10-25T16:52:22.677Z",
+      "seconds": 5.285,
+      "actor": "viewer",
+      "title": "Grid-category-is-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:22.684Z",
+      "seconds": 5.292,
+      "actor": "viewer",
+      "title": "Grid-Open-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:22.688Z",
+      "seconds": 5.296,
+      "actor": "viewer",
+      "title": "Grid-High-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:22.694Z",
+      "seconds": 5.302,
+      "actor": "viewer",
+      "title": "Grid-Service Desk-is-readable-and-disabled"
+    },
+    {
+      "at": "2026-10-25T16:52:22.698Z",
+      "seconds": 5.306,
+      "actor": "viewer",
+      "title": "Grid-has-no-description-edit"
+    },
+    {
+      "at": "2026-10-25T16:52:22.701Z",
+      "seconds": 5.309,
+      "actor": "viewer",
+      "title": "Grid-offers-no-writable-composer"
+    },
+    {
+      "at": "2026-10-25T16:52:22.702Z",
+      "seconds": 5.31,
+      "actor": "viewer",
+      "title": "Grid-offers-no-save-action"
+    },
+    {
+      "at": "2026-10-25T16:52:23.572Z",
+      "seconds": 6.18,
+      "actor": "viewer",
+      "title": "Grid-readonly-survives-reload"
+    },
+    {
+      "at": "2026-10-25T16:52:24.100Z",
+      "seconds": 6.708,
+      "actor": "viewer",
+      "title": "viewer-layout-checks-leave-ticket-unchanged"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Scope, field-mask/API and stale-revocation matrices are recorded in the earlier current-build access segments; project scope and revocation in current guide 06."
+  ],
+  "durationSeconds": 6.96,
+  "actors": [
+    {
+      "name": "viewer",
+      "email": "noassign@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "native-comment-unknown-response-clears-composer",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "guide": "guides/07-conversations-and-files.html",
+  "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "operationId": "7b30f325-49ec-4383-957e-0cc6922953d3",
+  "persistedMessages": 1,
+  "message": "CM uncertain recovery defect 1792947399720",
+  "fileName": "cm-uncertain-1792947399720.txt",
+  "reopenedEditorText": "\n",
+  "actual": "Unknown-outcome toast plus closed composer; reopening loses submitted text. The UI cannot recover the same immutable intent without reconstructing it.",
+  "expected": "Retain composer content and prepared files until the same operation is confirmed.",
+  "suspectedBoundary": "TicketDetailsContainer.handleAddComment catches an action error without rejecting; TicketDetails.handleAddNewComment treats its resolved callback as success and clears input.",
+  "notAttempted": "No duplicate send was attempted after losing text."
+}

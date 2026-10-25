@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access policies · Co-Managed IT</title><meta name="description" content="Access policies: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="access-policies">Access policies</h1>
+<p>The customer approves what can be shared. The MSP assigns its own staff within that scope. Local permissions still apply to both sides.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use Alice or another customer administrator for customer scope, and a permitted MSP administrator for staff assignments. QA can exercise the technician result; the viewer account provides a read-only comparison. Open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management">Co-managed access</a> as the customer and the client&#39;s <strong>Co-managed IT</strong> view as the MSP.</p>
+<p>Use a disposable board and ticket for revocation checks. Record original access before changing it. See <a href="index.html#fixtures">fixture identities</a>. Existing approval of a board can preserve access even after one explicit ticket grant is revoked.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>Staff seeing customer work outside customer-approved scope.</li>
+<li>View-only staff gaining write capability.</li>
+<li>Revoked access surviving through an old URL, export or download.</li>
+<li>Confusing one removed grant with removal of every independent grant.</li>
+</ul>
+<h2 id="1-customer-controls-board-and-project-scope">1. Customer controls board and project scope</h2>
+<ol>
+<li>As the customer, inspect <strong>Proposed ticket access</strong> and <strong>Boards/Projects</strong> in <strong>Co-managed access</strong>.</li>
+<li>Search for the disposable board, select it, <strong>Add</strong> it, and choose <strong>View</strong> or <strong>Collaborate</strong>.</li>
+<li>Select <strong>Save access</strong>, then reload. Confirm the same board and access level are stored.</li>
+<li>In <strong>Escalated tickets only</strong> mode, confirm an un-escalated ticket outside independent board grants is unavailable to the MSP; escalate it through its native customer ticket and check again.</li>
+</ol>
+<p>Expected: board oversight and escalation-only access produce different permitted sets. Project access is configured separately. Adding a staff assignment on the MSP side cannot expand the customer&#39;s scope.</p>
+<h2 id="2-msp-assigns-its-own-people">2. MSP assigns its own people</h2>
+<p>In the MSP client&#39;s Co-managed IT view, use <strong>Staff</strong> or <strong>Teams</strong> to add an eligible local principal, choose the offered access and save. Reload and sign in as that principal.</p>
+<p>Expected: access is the intersection of customer approval, MSP assignment, and local permissions. A customer-private note stays private even for an assigned technician. An unassigned principal must not gain access solely because it knows the ticket URL.</p>
+<h2 id="3-compare-a-viewer-with-a-technician">3. Compare a viewer with a technician</h2>
+<p>Open the same permitted shared ticket as QA, then as <code>noassign@emeraldcity.oz</code>. In Entry, the viewer&#39;s Category picker stays disabled, the saved status remains readable, and no save bar offers edits. Attempt the same check in Grid. Reload after a technician edit to verify the persisted value.</p>
+<p>Expected: both layouts enforce the same authority. Category creation and Tags are absent from shared tickets; customer-local and native MSP controls remain available under their own permissions.</p>
+<h2 id="4-revoke-the-right-grant">4. Revoke the right grant</h2>
+<p>As the customer, open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/ticket-access">Individual ticket access</a>. Select <strong>Revoke ticket access</strong>, supply the required handoff note and confirm. Reopen the page to confirm the grant is gone. Refresh the old ticket URL and a previously captured attachment link as the MSP.</p>
+<p>Expected: access disappears if that was the only qualifying grant. If an approved board still grants access, remove that independent grant on the disposable fixture before concluding revocation failed. Removing scope must also remove it from fresh lists and exports.</p>
+<h2 id="field-visibility-limits">Field visibility limits</h2>
+<p>Shared reads redact fields through the sponsor home policy. These guides do not establish a dedicated UI for configuring every visible field. Verify an operator-prepared restricted policy through the shared screen rather than assuming a field-settings dialog exists.</p>
+<h2 id="pass-criteria-and-recovery">Pass criteria and recovery</h2>
+<p>Pass when each principal sees and changes only permitted work, with revocation effective on fresh reads. Restore reversible test scope and assignments from the recorded baseline. Restore sharing through normal customer controls; do not edit tenant identifiers or copy a broader session.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedPolicyPanel.tsx">Access editor</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedExplicitTicketGrantsPanel.tsx">Individual-ticket grants</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/policy.ts">Policy enforcement</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/sharedWorkRead.ts">Shared field redaction</a></li>
+</ul>
+<section class="walkthrough-recording" id="03-access-policies-recording" data-recording-status="complete" aria-labelledby="03-access-policies-recording-title">
+<h2 id="03-access-policies-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:44:06.546Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>Customer board scope persistence/restoration verified. Independent ticket grants can preserve access; this is not a full revocation or viewer matrix.</li><li>Existing View grant read-only UI checked. Actual forged update/API replay, teams, stale browser recovery, and every note field mask remain separate unverified cases.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li></ul>
+<video controls preload="metadata" aria-label="guides/03-access-policies.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.vtt" default></video>
+<label for="03-access-policies-chapters">Chapters</label><select id="03-access-policies-chapters"><option value="0">03 access policies final</option><option value="7.768">Customer board View scope saved and reloaded</option><option value="10.335">Restored approved Collaborate scope</option><option value="15.517">MSP staff assignment view</option><option value="16.44">03 viewer source boundaries</option><option value="21.773">Scoped View technician reads permitted ticket without writable composer</option><option value="26.998">Fresh Alice normal login still selects original after another isolated restore</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("03-access-policies-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

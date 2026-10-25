@@ -1,0 +1,61 @@
+{
+  "guide": "guides/12-customer-integrations.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "blocked-external",
+  "remaining": "Blocked-external: no approved isolated application/directory/inbound binding for configuration, OAuth callback/tenant linking, directory provisioning, inbound/replay and provider revocation. Current isolated provider forms, route boundaries and one actual SMTP-sink requester notification passed. No identity or inbound acceptance is inferred from simulator health.",
+  "durationSeconds": 7.84,
+  "sha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/recording.json",
+      "name": "12-provider-boundaries-and-outbound-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 7.84,
+      "offsetSeconds": 0,
+      "sha256": "5451375e49f7d0ce042275b531f3d3f3a1a98eb808472d2df4bd8ff185eaa8cf",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 6
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "12-provider-boundaries-and-outbound-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.432,
+      "title": "provider-session-is-isolated-customer-not-sponsor",
+      "actor": "isolatedCustomerAdmin"
+    },
+    {
+      "seconds": 2.349,
+      "title": "navigate",
+      "actor": "isolatedCustomerAdmin"
+    },
+    {
+      "seconds": 2.548,
+      "title": "customer-provider-workbench-has-provider-specific-forms",
+      "actor": "isolatedCustomerAdmin"
+    },
+    {
+      "seconds": 2.644,
+      "title": "provider-back-link-returns-to-native-customer-email-settings",
+      "actor": "isolatedCustomerAdmin"
+    },
+    {
+      "seconds": 4.849,
+      "title": "navigate",
+      "actor": "isolatedCustomerAdmin"
+    },
+    {
+      "seconds": 6.841,
+      "title": "navigate",
+      "actor": "requesterMailRecipient"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

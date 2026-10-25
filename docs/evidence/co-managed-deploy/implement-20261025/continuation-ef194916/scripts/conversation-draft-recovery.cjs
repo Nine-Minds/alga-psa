@@ -1,0 +1,60 @@
+// Guide 07: compose -> publish whose response is lost after the server executed it ->
+// composer stays open with the same draft and staged file -> retry with the same
+// operation (no duplicate) -> confirmation closes the composer -> an ordinary publish
+// also closes it.
+const {scenario,ids,origin,sql,until,reviewDist}=require('./runtime.cjs'),fs=require('fs');
+const f=require('../07-ticket-audiences-files-current/fixtures.json');
+const route='/msp/co-management/tickets/'+ids.customer+'/'+ids.relationship+'/'+f.ticketId;
+const UNKNOWN='We could not confirm whether the message was saved. Retry to check the same request.';
+(async()=>{const r=await scenario(process.env.CM_SCENARIO||'07-composer-draft-recovery-current',async({page,ctx,actor,go,check,mark,shot,inspect,dir})=>{
+  await actor('qa');await go(route);
+  await page.getByRole('button',{name:'Entry',exact:true}).click();
+  const open=page.locator('#ticket-details-conversation-show-comment-editor-btn'),send=page.locator('#ticket-details-conversation-add-comment-btn'),editor=()=>page.locator('[contenteditable=true]').last();
+  await open.waitFor();await open.click();await send.waitFor();
+  await page.locator('#ticket-details-conversation-audience-select').click();
+  await page.getByRole('option',{name:'Shared IT teams',exact:true}).click();
+  const stamp=Date.now(),text='CM draft recovery '+stamp,fileName='cm-draft-recovery-'+stamp+'.txt',bytes=Buffer.from(text+'\n');
+  await editor().fill(text);
+  await page.locator('#co-shared-comment-files').setInputFiles({name:fileName,mimeType:'text/plain',buffer:bytes});
+  await page.getByText(fileName,{exact:false}).first().waitFor();
+  await shot('01-composed-with-file');await mark('composed',{text,fileName});
+  const manifest=JSON.parse(fs.readFileSync('/home/robert/alga-copies/feature-co-managed-it/server/'+reviewDist+'/server/server-reference-manifest.json'));
+  const action=Object.entries(manifest.node).find(([,v])=>v.exportedName==='publishCoManagedConversationDraftAction')[0];
+  const publishes=[];let dropped=false;
+  await page.route('**/*',async rt=>{const req=rt.request();if(req.headers()['next-action']===action){publishes.push(JSON.parse(req.postData())[1]);if(!dropped){const resp=await rt.fetch();await resp.body();dropped=true;await rt.abort('connectionreset');return}}await rt.continue()});
+  const count=t=>Number(sql(`select count(*) from comments where tenant='${ids.customer}' and ticket_id='${f.ticketId}' and publish_state='published' and note::text like '%${t}%'`));
+  await send.click();
+  await until(()=>dropped,'server-executed publish response dropped');
+  await until(()=>count(text)===1,'exactly one stored message after the lost response');
+  await page.getByText(UNKNOWN,{exact:false}).first().waitFor();
+  await page.waitForTimeout(1200);
+  const draftText=await editor().innerText();
+  await check('unknown-outcome-surfaced-and-composer-stays-open',await send.count()===1&&await send.isVisible(),{toast:UNKNOWN,persistedMessages:count(text),operationId:publishes[0].operationId});
+  await check('draft-text-retained-after-unknown-outcome',draftText.includes(text),{editorText:draftText});
+  await check('staged-file-retained-after-unknown-outcome',await page.getByText(fileName,{exact:false}).first().isVisible(),{fileName});
+  await shot('02-unknown-outcome-draft-retained');await inspect('02-unknown-outcome-dom');
+  await page.waitForTimeout(1500);
+  await send.click();
+  await until(async()=>await send.count()===0,'retry confirmation closes the composer');
+  await check('retry-reused-the-same-operation',publishes.length===2&&publishes[1].operationId===publishes[0].operationId,{operations:publishes.map(p=>p.operationId)});
+  await check('retry-created-no-duplicate-message',count(text)===1,{persistedMessages:count(text)});
+  await check('confirmed-retry-closes-the-composer',await open.isVisible());
+  const link=page.getByRole('link',{name:fileName,exact:true});await link.waitFor();
+  const resp=await ctx.request.get(origin+await link.getAttribute('href'));
+  await check('published-file-bytes-complete',resp.ok()&&(await resp.body()).equals(bytes),{fileName});
+  await check('thread-shows-the-message-once',await page.getByText(text,{exact:true}).count()===1);
+  await shot('03-retry-confirmed-composer-closed');
+  await page.unrouteAll({behavior:'wait'});
+  await open.click();await send.waitFor();
+  const reopened=await editor().innerText();
+  await check('reopened-composer-is-empty-after-confirmation',!reopened.includes(text),{editorText:reopened});
+  const normal='CM ordinary publish '+stamp;await editor().fill(normal);await shot('04-ordinary-composed');
+  await send.click();
+  await until(async()=>await send.count()===0,'ordinary publish closes the composer');
+  await until(()=>count(normal)===1,'ordinary message stored once');
+  await page.getByText(normal,{exact:true}).first().waitFor();
+  await check('ordinary-publish-confirmed-and-closed',count(normal)===1&&await open.isVisible(),{persistedMessages:count(normal)});
+  await shot('05-ordinary-confirmed');
+  fs.writeFileSync(dir+'/outcome.json',JSON.stringify({guide:'guides/07-conversations-and-files.html',ticketId:f.ticketId,message:text,fileName,operationId:publishes[0].operationId,publishRequests:publishes.length,ordinaryMessage:normal,supersedes:'07-uncertain-response-recovery-blocker'},null,2));
+  return {status:'passed',limitations:[]};
+});if(r.scenarioStatus==='failed')process.exitCode=1;})();

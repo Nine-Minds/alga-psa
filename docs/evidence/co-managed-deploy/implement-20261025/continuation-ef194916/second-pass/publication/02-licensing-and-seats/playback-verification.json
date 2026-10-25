@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:00.258Z",
+  "guide": "guides/02-licensing-and-seats.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/02-licensing-and-seats.html",
+  "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.605192,
+    "duration": 18.36,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "below-usage-reduction-is-disabled",
+    "target": 10.252,
+    "actual": 10.260341,
+    "followingFrame": {
+      "mediaTime": 10.28,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/2229001",
+  "passed": true
+}

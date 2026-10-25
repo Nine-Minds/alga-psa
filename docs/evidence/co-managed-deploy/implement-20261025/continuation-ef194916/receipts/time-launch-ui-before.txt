@@ -1,0 +1,551 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792939509125"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ❯ |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx (11 tests | 6 failed) 60099ms 41 MB heap used
+   ✓ hides shared time UI and avoids preparation when the flag is unavailable: {"enabled":false} 1ms
+   ✓ hides shared time UI and avoids preparation when the flag is unavailable: {} 2ms
+   ✓ hides shared time UI and avoids preparation when the flag is unavailable: {"enabled":true,"loading":true} 2ms
+   ✓ hides shared time UI and avoids preparation when the flag is unavailable: {"enabled":true,"error":{}} 1ms
+   × opens the normal form using the qualified resource and its local time identity 10006ms
+     → Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ reports denied registration without opening or preparing a time form 7ms
+   × opens customer-owned ticket with the server-admitted native identity 10047ms
+     → Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   × opens customer-owned project_task with the server-admitted native identity 10008ms
+     → Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   × discards late preparation after qualified navigation and clears an open form on access loss 10006ms
+     → expected "spy" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"space-y-2"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+          [33mid[39m=[32m"co-shared-log-time"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mcoManaged.time.log[0m
+        [36m</button>[39m
+        [36m<p[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0mcoManaged.time.unavailable[0m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+   × unmounts an open form when the release flag is disabled 10009ms
+     → Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   × refreshes effort only after the form reports a completed save on the mounted work screen 10008ms
+     → Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > opens the normal form using the qualified resource and its local time identity
+TestingLibraryElementError: Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/test/unit/product/coManagedTimeEntry.test.tsx:30:33
+     28| });
+     29| it('opens the normal form using the qualified resource and its local t…
+     30|   mount(); open(); await screen.findByRole('dialog');
+       |                                 ^
+     31|   expect(mocks.register).toHaveBeenCalledWith(resource);
+     32|   expect(mocks.prepare).toHaveBeenCalledWith({ workItemType: 'co_manag…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > opens customer-owned ticket with the server-admitted native identity
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > opens customer-owned project_task with the server-admitted native identity
+TestingLibraryElementError: Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/test/unit/product/coManagedTimeEntry.test.tsx:42:33
+     40| it.each(['ticket', 'project_task'])('opens customer-owned %s with the …
+     41|   mocks.register.mockResolvedValue({ workItemType, workItemId: 'owned-…
+     42|   mount(); open(); await screen.findByRole('dialog');
+       |                                 ^
+     43|   expect(mocks.prepare).toHaveBeenCalledWith({ workItemType, workItemI…
+     44| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > discards late preparation after qualified navigation and clears an open form on access loss
+AssertionError: expected "spy" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"space-y-2"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+          [33mid[39m=[32m"co-shared-log-time"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mcoManaged.time.log[0m
+        [36m</button>[39m
+        [36m<p[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [0mcoManaged.time.unavailable[0m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ src/test/unit/product/coManagedTimeEntry.test.tsx:47:75
+     45| it('discards late preparation after qualified navigation and clears an…
+     46|   let resolve!: (value: any) => void; mocks.prepare.mockReturnValueOnc…
+     47|   const view = mount(); open(); await waitFor(() => expect(mocks.prepa…
+       |                                                                           ^
+     48|   view.rerender(<CoManagedTimeEntry resource={{ ...resource, tenant: '…
+     49|   await act(async () => resolve(prepared)); expect(screen.queryByRole(…
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > unmounts an open form when the release flag is disabled
+TestingLibraryElementError: Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/test/unit/product/coManagedTimeEntry.test.tsx:55:46
+     53| });
+     54| it('unmounts an open form when the release flag is disabled', async ()…
+     55|   const view = mount(); open(); await screen.findByRole('dialog'); moc…
+       |                                              ^
+     56|   view.rerender(<CoManagedTimeEntry resource={resource} canWrite />); …
+     57| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx > refreshes effort only after the form reports a completed save on the mounted work screen
+TestingLibraryElementError: Unable to find role="dialog"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2"[39m
+    [36m>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-10 py-2 px-4 group"[39m
+        [33mid[39m=[32m"co-shared-log-time"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mcoManaged.time.log[0m
+      [36m</button>[39m
+      [36m<p[39m
+        [33mrole[39m=[32m"alert"[39m
+      [36m>[39m
+        [0mcoManaged.time.unavailable[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/test/unit/product/coManagedTimeEntry.test.tsx:60:24
+     58| it('refreshes effort only after the form reports a completed save on t…
+     59|   const onSaved = vi.fn(), view = render(<CoManagedTimeEntry resource=…
+     60|   open(); await screen.findByRole('dialog'); const complete = mocks.di…
+       |                        ^
+     61|   expect(onSaved).not.toHaveBeenCalled();
+     62|   act(() => complete()); expect(onSaved).toHaveBeenCalledTimes(1); exp…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 5 passed (11)
+   Start at  14:45:09
+   Duration  64.30s (transform 100ms, setup 129ms, collect 84ms, tests 60.10s, environment 216ms, prepare 28ms)
+

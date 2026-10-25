@@ -1,0 +1,20 @@
+node:internal/modules/cjs/loader:1401
+  const err = new Error(`Cannot find module '${request}'`);
+              ^
+
+Error: Cannot find module '/home/robert/alga-copies/feature-co-managed-it/node_modules/@alga-psa/event-schemas/dist/index.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1401:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1390:15)
+    at resolveExports (node:internal/modules/cjs/loader:646:14)
+    at Function._findPath (node:internal/modules/cjs/loader:713:31)
+    at node:internal/modules/cjs/loader:1351:27
+    at nextResolveSimple (/home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+    at /home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+    at /home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+    at resolveTsPaths (/home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+    at /home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102 {
+  code: 'MODULE_NOT_FOUND',
+  path: '/home/robert/alga-copies/feature-co-managed-it/node_modules/@alga-psa/event-schemas'
+}
+
+Node.js v22.18.0

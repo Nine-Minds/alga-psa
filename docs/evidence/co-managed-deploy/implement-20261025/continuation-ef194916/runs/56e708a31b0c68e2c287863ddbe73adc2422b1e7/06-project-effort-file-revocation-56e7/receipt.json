@@ -1,0 +1,39 @@
+{
+  "taskId": "56c745d9-271c-4703-b393-f4c02bffea95",
+  "projectId": "3211261f-80a6-45bf-8665-127527a814f0",
+  "entries": [
+    {
+      "entry_id": "23268b64-1408-4ae2-8033-2fa3610ec284",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+      "billing_mode": "operational",
+      "billable_duration": 0,
+      "service_id": null,
+      "contract_line_id": null,
+      "work_item_type": "project_task",
+      "work_item_id": "56c745d9-271c-4703-b393-f4c02bffea95",
+      "co_managed_work_reference_id": null,
+      "minutes": 6
+    },
+    {
+      "entry_id": "d1f85ac6-b8df-4a98-9659-47401c883042",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "billing_mode": "commercial",
+      "billable_duration": 12,
+      "service_id": "5313da86-1055-4a3d-a998-2a72bf37e564",
+      "contract_line_id": null,
+      "work_item_type": "co_managed",
+      "work_item_id": "0b24bee3-d787-46d0-bfab-ea5650b8f235",
+      "co_managed_work_reference_id": "0b24bee3-d787-46d0-bfab-ea5650b8f235",
+      "minutes": 12
+    }
+  ],
+  "fileName": "cm-task-1792960238989.txt",
+  "fileSha256": "083b36d85c8f72cc4748f5aa3830a293536b90f5bab34b4eb52206d37aca51c2",
+  "filePath": "/api/co-management/attachments/ad77bdfc-11ac-43bb-a2a8-2d34cbdf18fa?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&taskId=56c745d9-271c-4703-b393-f4c02bffea95&storeTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&threadId=57c3cb89-074d-4453-a49d-8b029f27cc97&commentId=57c3cb89-074d-4453-a49d-8b029f27cc97",
+  "finalProjectGrant": "revoked",
+  "expectedMinutes": {
+    "customer": 6,
+    "msp": 12,
+    "combined": 18
+  }
+}

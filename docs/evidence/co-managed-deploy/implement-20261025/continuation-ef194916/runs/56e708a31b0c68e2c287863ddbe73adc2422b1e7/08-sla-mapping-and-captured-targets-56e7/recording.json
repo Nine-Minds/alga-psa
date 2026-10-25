@@ -1,0 +1,67 @@
+{
+  "scenario": "08-sla-mapping-and-captured-targets-56e7",
+  "recordedAt": "2026-10-25T20:32:49.779Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "priority-mapping-persists-through-product-and-reload",
+      "passed": true,
+      "at": "2026-10-25T20:32:54.143Z"
+    },
+    {
+      "id": "mapping-edit-does-not-rewrite-existing-obligation",
+      "passed": true,
+      "at": "2026-10-25T20:32:54.285Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:32:52.453Z",
+      "seconds": 2.674,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T20:32:54.143Z",
+      "seconds": 4.364,
+      "actor": "qa",
+      "title": "priority-mapping-persists-through-product-and-reload"
+    },
+    {
+      "at": "2026-10-25T20:32:54.285Z",
+      "seconds": 4.506,
+      "actor": "qa",
+      "title": "mapping-edit-does-not-rewrite-existing-obligation"
+    },
+    {
+      "at": "2026-10-25T20:32:54.417Z",
+      "seconds": 4.638,
+      "actor": "qa",
+      "title": "Temporary mapping retained for next bulk/SLA fixture escalations",
+      "data": {
+        "restoreTo": "Not mapped"
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Mapping persistence and captured-target immutability verified. High→P1 temporary mapping awaits restoration after subsequent fixture escalation. New differing targets, notification recipients, and departure clock cutoff still need execution."
+  ],
+  "durationSeconds": 5.4,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

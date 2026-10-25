@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delegated administration · Co-Managed IT</title><meta name="description" content="Delegated administration: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="delegated-administration">Delegated administration</h1>
+<p>A customer can approve one MSP technician or team to perform a specific operation on a specific customer record. This does not grant general administration.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use a customer administrator, a customer-approved MSP technician/team, and a disposable customer board. Open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/administration">Delegated administration</a>; select a workspace if a directory appears. MSP administrators can also reach this section through the client&#39;s Co-managed IT view. See <a href="index.html#fixtures">accounts</a>.</p>
+<p>Prepare a non-administrator customer user and an existing customer-created invitation only if reviewing those operations. This guide is source-grounded; delegation was not freshly demonstrated in the latest ticket correction.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>A narrow approval becoming general customer administration.</li>
+<li>An approval applied to the wrong record or technician.</li>
+<li>A revoked approval remaining usable in an open editor.</li>
+<li>Invitation resend changing the customer&#39;s intended recipient or role.</li>
+</ul>
+<h2 id="1-approve-one-board-operation">1. Approve one board operation</h2>
+<ol>
+<li>As the customer, find <strong>Approve a specific administration task</strong>.</li>
+<li>Select <strong>Assigned MSP technician or team</strong>, <strong>Operation → Edit board display settings</strong>, and the disposable <strong>Customer record</strong>.</li>
+<li>Check the approval summary and select <strong>Approve task</strong> (<code>co-delegation-approve</code>).</li>
+<li>Refresh access and confirm the approval names the intended principal and board.</li>
+</ol>
+<p>Expected: approval covers that board and operation only. Unassigned staff and unrelated records are not newly authorized.</p>
+<h2 id="2-perform-only-the-approved-change">2. Perform only the approved change</h2>
+<p>Sign in as the approved MSP principal and open the same administration entry. Change the disposable board&#39;s <strong>Description</strong> with a unique review suffix and select <strong>Save changes</strong>. Refresh access, then sign in as the customer and inspect the board&#39;s normal settings.</p>
+<p>Expected: the customer sees the persisted description. Offered fields are board name, description and live-ticket-timer setting. This approval does not expose role grants, unrestricted users or arbitrary board configuration. Restore the original description through the approved editor and reload.</p>
+<h2 id="3-prove-revocation-closes-an-open-editor">3. Prove revocation closes an open editor</h2>
+<p>Leave the MSP editor open. In the customer session, select <strong>Revoke access</strong> for this approval and refresh. Return to the old MSP editor and attempt another harmless description change, then refresh it.</p>
+<p>Expected: the stale editor cannot save; the customer&#39;s record remains unchanged. The record becomes unavailable or the approval disappears. A new approval is required for future work; retrying a revoked approval must not revive it.</p>
+<h2 id="4-review-the-other-bounded-operations">4. Review the other bounded operations</h2>
+<p>For <strong>Edit a non-administrator profile</strong>, approve one eligible user. Change a permitted name or time-zone field, save, and confirm as the customer after reload. An administrator profile must not become an eligible target through this operation.</p>
+<p>For <strong>Resend a customer-created invitation</strong>, approve one unexpired invitation and inspect its recipient, role and expiry. As the MSP principal, select <strong>Resend approved invitation</strong>. Compare the delivered message and customer invitation record.</p>
+<p>Expected: resend retains the customer-created recipient, role, setup link and expiry; it does not extend or replace them. Record delivery through the controlled mailbox rather than treating a successful request as proof.</p>
+<h2 id="pass-criteria-and-retained-state">Pass criteria and retained state</h2>
+<p>Pass when the approved operation persists on the approved record, other targets remain unavailable, and revocation blocks the old editor. Revoke test approvals after restoring reversible fields. Preserve sent-invitation evidence and note its unchanged expiry. Recover uncertain commands through <strong>Retry same request</strong> before making another change.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedDelegatedAdministration.tsx">Delegated administration screen</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/delegatedAdministration.ts">Allowed operations and admission</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/public/locales/en/features/co-management-delegation.json">English screen labels</a></li>
+</ul>
+<section class="walkthrough-recording" id="04-delegated-administration-recording" data-recording-status="complete" aria-labelledby="04-delegated-administration-recording-title">
+<h2 id="04-delegated-administration-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:44:45.784Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>Existing customer-approved board grant used; no existing approval was revoked. New-grant revocation/user/invitation operations remain unexecuted.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li></ul>
+<video controls preload="metadata" aria-label="guides/04-delegated-administration.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt" default></video>
+<label for="04-delegated-administration-chapters">Chapters</label><select id="04-delegated-administration-chapters"><option value="0">04 delegated administration</option><option value="7.96">Bounded board change persisted</option><option value="10.755">Restored original board description</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("04-delegated-administration-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

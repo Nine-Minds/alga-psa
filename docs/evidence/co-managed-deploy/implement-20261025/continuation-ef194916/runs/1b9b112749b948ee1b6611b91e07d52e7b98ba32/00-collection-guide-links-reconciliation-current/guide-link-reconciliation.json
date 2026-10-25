@@ -1,0 +1,154 @@
+{
+  "checkedAt": "2026-10-25T16:38:48.810Z",
+  "guides": [
+    {
+      "guide": "guides/01-onboarding.html",
+      "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+      "title": "Customer onboarding",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding-current-build/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+      "title": "Licensing and seats",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Hosted simulator purchase, server-executed lost-response reload recovery, allocation and usage floor passed. No same-operation explicit replay assertion or real Stripe receipt. Isolated self-host signed-license shortfall, lapse, missing claim, renewal and UI-off journeys remain unexecuted; no approved tenant-bound signed test license/isolated installation is available in this packet. T018 and T019 remain blocked-external for the release-owner portions only.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+      "title": "Access policies",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Current scope/team/independent-grant, field mask, API and stale-file/export revocation segments passed (32 assertions). Viewer Entry/Grid recheck stopped because the recorded Category heading/combobox selector was absent in Entry; remaining viewer layout parity is unverified, not an established product defect. Project intersection evidence remains in guide 06 rather than a complete guide-03 matrix.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+      "title": "Delegated administration",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+      "title": "Ticket queue operations",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+      "title": "Projects and tasks",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+      "title": "Conversations and files",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Remaining conversation lifecycle scenario is unverified: explicit attachment removal, whole-thread audience transfer/restriction, uncertain-response recovery and requester task conversation. The accepted mutation segment proves persisted reply/edit/tombstone and stale root-file denial, then stops at an automation selector timeout for Remove; no product defect was established. No further variants will be added in this pass.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "url": "http://127.0.0.1:8874/guides/08-sla.html",
+      "title": "SLA configuration",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Two actual UI escalations captured different isolated targets (30/60 and 45/90 minutes); a mapping edit left the first clock unchanged and handback paused only MSP responsibility. Existing mapping and isolated client override were restored. Business-hours arithmetic, actual breach notifications/recipient routing, CE/EE parity and departure clock cutoff are not yet accepted.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-mapping-and-captured-targets/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-mapping-restored-current-build/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-fresh-targets-pause-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+      "title": "Time approval and billing",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Current native capture and separate approval passed; INV-000004 is a real retained $30 draft from exactly one 15-minute commercial entry at $120/hour. Both organizations reconcile 6 operational +21 commercial=27 minutes, with private notes separated. Stopwatch start/stop/save and catalog-pricing acknowledgement/invoice reconciliation remain unverified. The 6-minute catalog entry is approved with no contract line, not invoiced. No invoice finalized or emailed.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+      "title": "Departure and archives",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Disposable relationship 20b527f2 ended normally; capacity released once, old live reads/files denied, retained shared/MSP-private bytes match, customer-private content excluded and customer native data retained. Client-restricted local reader gets archive 404. The initial broad local viewer was authorized for organization-owned retained evidence; its failed deny assertion is preserved and corrected by the follow-up, not labelled a product bug. Relationship-specific commercial/invoice continuity, post-cutoff archive immutability and queued-notification suppression remain unverified.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-participation-archive-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-archive-authority-followup-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+      "title": "Export, restore and independence",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Current post-departure encrypted browser download, passphrase validation and independent upgrade entitlement denial only. Current archive content inspection, isolated destination restore/entitlement/activation/native login/files/credential recovery and completed same-workspace paid upgrade remain unverified. No approved tenant-bound destination license or prepared destination paid subscription is supplied. Historical suspended restore remains historical.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+      "title": "Customer-owned integrations",
+      "httpStatus": 200,
+      "currentAcceptance": "partial",
+      "remaining": "Current isolated provider forms, customer-owned session, return navigation, catalog boundary and one actual SMTP-sink requester notification verified. Provider configuration save/redaction, real application OAuth callback/tenant linking, directory provisioning, inbound reply/attachment/replay and provider revocation remain unexecuted: no approved isolated application/directory/inbound binding has been supplied. This is unfinished integration preparation, not an additional external waiver; production SSO safeguards were not changed.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/walkthrough.webm"
+      ]
+    }
+  ],
+  "coveredGuides": 4,
+  "partialGuides": 10,
+  "reviewReady": false,
+  "meaning": "Link navigation passed; it does not accept the linked scenarios or relabel historical media."
+}

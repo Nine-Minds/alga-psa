@@ -1,0 +1,21 @@
+{
+  "request": {
+    "operationId": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+    "quantity": 21
+  },
+  "before": {
+    "operation_id": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+    "quantity": 21,
+    "state": "completed",
+    "provider_reference": "sub_79ce301ef"
+  },
+  "after": {
+    "operation_id": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+    "quantity": 21,
+    "state": "completed",
+    "provider_reference": "sub_79ce301ef"
+  },
+  "capacity": 19,
+  "protocolStatus": 200,
+  "provider": "configured simulator"
+}

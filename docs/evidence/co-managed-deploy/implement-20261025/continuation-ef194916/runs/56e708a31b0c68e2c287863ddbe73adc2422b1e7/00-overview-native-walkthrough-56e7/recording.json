@@ -1,0 +1,341 @@
+{
+  "scenario": "00-overview-native-walkthrough-56e7",
+  "recordedAt": "2026-10-25T20:21:26.480Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "customer-admin-creates-board-category-natively",
+      "passed": true,
+      "at": "2026-10-25T20:21:29.891Z",
+      "data": {
+        "categoryId": "aa4d19ad-a845-4777-b60b-24a3b3e6a56f",
+        "board": "Service Desk"
+      }
+    },
+    {
+      "id": "msp-status-priority-category-persist-on-customer-ticket",
+      "passed": true,
+      "at": "2026-10-25T20:21:37.210Z",
+      "data": {
+        "after": {
+          "title": "SMOKE callout count change 142333",
+          "status_id": "19e9d021-f700-4898-bcf9-644dd28202de",
+          "priority_id": "681bdee1-cd5c-4b78-95d1-0b7095a7f3f6",
+          "category_id": "aa4d19ad-a845-4777-b60b-24a3b3e6a56f",
+          "assigned_to": null,
+          "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac"
+        }
+      }
+    },
+    {
+      "id": "msp-edits-render-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:21:37.221Z"
+    },
+    {
+      "id": "msp-assignment-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:21:47.048Z"
+    },
+    {
+      "id": "customer-owned-assignee-board-contact-client-are-read-only-for-msp",
+      "passed": true,
+      "at": "2026-10-25T20:21:47.955Z"
+    },
+    {
+      "id": "customer-only-actions-and-sections-are-absent-for-msp",
+      "passed": true,
+      "at": "2026-10-25T20:21:47.961Z",
+      "data": {
+        "checked": [
+          "ticket-details-delete-ticket-button",
+          "ticket-details-duplicate-ticket-button",
+          "ticket-details-quick-invoice-button",
+          "ticket-materials-card",
+          "ticket-details-documents-section",
+          "credentials-screen-new",
+          "ticket-details-properties-watch-list-toggle",
+          "ticket-details-checklist-section-toggle",
+          "co-ticket-revoke"
+        ],
+        "present": []
+      }
+    },
+    {
+      "id": "grid-shows-same-edited-values",
+      "passed": true,
+      "at": "2026-10-25T20:21:49.859Z"
+    },
+    {
+      "id": "grid-keeps-customer-owned-assignee-read-only",
+      "passed": true,
+      "at": "2026-10-25T20:21:50.599Z",
+      "data": {
+        "visiblePickers": 0,
+        "enabledPickers": 0
+      }
+    },
+    {
+      "id": "customer-native-ticket-shows-msp-edits-and-assignment",
+      "passed": true,
+      "at": "2026-10-25T20:21:53.608Z"
+    },
+    {
+      "id": "customer-assigns-its-own-technician-natively",
+      "passed": true,
+      "at": "2026-10-25T20:21:54.429Z"
+    },
+    {
+      "id": "msp-sees-customer-assignee",
+      "passed": true,
+      "at": "2026-10-25T20:21:58.421Z"
+    },
+    {
+      "id": "msp-cannot-see-customer-private-note",
+      "passed": true,
+      "at": "2026-10-25T20:21:58.422Z"
+    },
+    {
+      "id": "viewer-sees-values-with-every-field-read-only",
+      "passed": true,
+      "at": "2026-10-25T20:22:01.785Z"
+    },
+    {
+      "id": "review-ticket-restored",
+      "passed": true,
+      "at": "2026-10-25T20:22:21.644Z",
+      "data": {
+        "restored": {
+          "title": "SMOKE callout count change 142333",
+          "status_id": "e3160800-8887-4b16-8a92-36e5e0a3b3c4",
+          "priority_id": "efe3f052-d7db-4430-9e18-573c3373fa03",
+          "category_id": "defeaa60-ef9b-40a6-be42-f145af3223a8",
+          "assigned_to": null,
+          "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:21:27.185Z",
+      "seconds": 0.705,
+      "title": "baseline",
+      "data": {
+        "title": "SMOKE callout count change 142333",
+        "status_id": "e3160800-8887-4b16-8a92-36e5e0a3b3c4",
+        "priority_id": "efe3f052-d7db-4430-9e18-573c3373fa03",
+        "category_id": "defeaa60-ef9b-40a6-be42-f145af3223a8",
+        "assigned_to": null,
+        "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac",
+        "status": "Open",
+        "priority": "High",
+        "category": "SMOKE customer cat 20261016",
+        "board": "Service Desk"
+      }
+    },
+    {
+      "at": "2026-10-25T20:21:29.455Z",
+      "seconds": 2.975,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing&section=categories"
+    },
+    {
+      "at": "2026-10-25T20:21:29.891Z",
+      "seconds": 3.411,
+      "actor": "alice",
+      "title": "customer-admin-creates-board-category-natively",
+      "data": {
+        "categoryId": "aa4d19ad-a845-4777-b60b-24a3b3e6a56f",
+        "board": "Service Desk"
+      }
+    },
+    {
+      "at": "2026-10-25T20:21:32.047Z",
+      "seconds": 5.567,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:21:37.210Z",
+      "seconds": 10.73,
+      "actor": "qa",
+      "title": "msp-status-priority-category-persist-on-customer-ticket",
+      "data": {
+        "after": {
+          "title": "SMOKE callout count change 142333",
+          "status_id": "19e9d021-f700-4898-bcf9-644dd28202de",
+          "priority_id": "681bdee1-cd5c-4b78-95d1-0b7095a7f3f6",
+          "category_id": "aa4d19ad-a845-4777-b60b-24a3b3e6a56f",
+          "assigned_to": null,
+          "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac"
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:21:37.221Z",
+      "seconds": 10.741,
+      "actor": "qa",
+      "title": "msp-edits-render-after-reload"
+    },
+    {
+      "at": "2026-10-25T20:21:47.048Z",
+      "seconds": 20.568,
+      "actor": "qa",
+      "title": "msp-assignment-persists-after-reload"
+    },
+    {
+      "at": "2026-10-25T20:21:47.955Z",
+      "seconds": 21.475,
+      "actor": "qa",
+      "title": "customer-owned-assignee-board-contact-client-are-read-only-for-msp"
+    },
+    {
+      "at": "2026-10-25T20:21:47.961Z",
+      "seconds": 21.481,
+      "actor": "qa",
+      "title": "customer-only-actions-and-sections-are-absent-for-msp",
+      "data": {
+        "checked": [
+          "ticket-details-delete-ticket-button",
+          "ticket-details-duplicate-ticket-button",
+          "ticket-details-quick-invoice-button",
+          "ticket-materials-card",
+          "ticket-details-documents-section",
+          "credentials-screen-new",
+          "ticket-details-properties-watch-list-toggle",
+          "ticket-details-checklist-section-toggle",
+          "co-ticket-revoke"
+        ],
+        "present": []
+      }
+    },
+    {
+      "at": "2026-10-25T20:21:49.859Z",
+      "seconds": 23.379,
+      "actor": "qa",
+      "title": "grid-shows-same-edited-values"
+    },
+    {
+      "at": "2026-10-25T20:21:50.599Z",
+      "seconds": 24.119,
+      "actor": "qa",
+      "title": "grid-keeps-customer-owned-assignee-read-only",
+      "data": {
+        "visiblePickers": 0,
+        "enabledPickers": 0
+      }
+    },
+    {
+      "at": "2026-10-25T20:21:52.746Z",
+      "seconds": 26.266,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:21:53.608Z",
+      "seconds": 27.128,
+      "actor": "alice",
+      "title": "customer-native-ticket-shows-msp-edits-and-assignment"
+    },
+    {
+      "at": "2026-10-25T20:21:54.429Z",
+      "seconds": 27.949,
+      "actor": "alice",
+      "title": "customer-assigns-its-own-technician-natively"
+    },
+    {
+      "at": "2026-10-25T20:21:57.214Z",
+      "seconds": 30.734,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:21:58.421Z",
+      "seconds": 31.941,
+      "actor": "qa",
+      "title": "msp-sees-customer-assignee"
+    },
+    {
+      "at": "2026-10-25T20:21:58.422Z",
+      "seconds": 31.942,
+      "actor": "qa",
+      "title": "msp-cannot-see-customer-private-note"
+    },
+    {
+      "at": "2026-10-25T20:22:00.725Z",
+      "seconds": 34.245,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:22:01.785Z",
+      "seconds": 35.305,
+      "actor": "viewer",
+      "title": "viewer-sees-values-with-every-field-read-only"
+    },
+    {
+      "at": "2026-10-25T20:22:03.892Z",
+      "seconds": 37.412,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:22:07.259Z",
+      "seconds": 40.779,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:22:21.644Z",
+      "seconds": 55.164,
+      "actor": "qa",
+      "title": "review-ticket-restored",
+      "data": {
+        "restored": {
+          "title": "SMOKE callout count change 142333",
+          "status_id": "e3160800-8887-4b16-8a92-36e5e0a3b3c4",
+          "priority_id": "efe3f052-d7db-4430-9e18-573c3373fa03",
+          "category_id": "defeaa60-ef9b-40a6-be42-f145af3223a8",
+          "assigned_to": null,
+          "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac"
+        }
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 56.04,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "viewer",
+      "email": "noassign@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "scenario": "06-native-project-creation-56e7",
+  "recordedAt": "2026-10-25T20:29:39.172Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "served-build-matches-recorded-candidate",
+      "passed": true,
+      "at": "2026-10-25T20:29:39.269Z",
+      "data": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      }
+    },
+    {
+      "id": "native-customer-project-created",
+      "passed": true,
+      "at": "2026-10-25T20:29:44.202Z",
+      "data": {
+        "projectId": "3211261f-80a6-45bf-8665-127527a814f0",
+        "name": "CM continuation project 1792960179710"
+      }
+    },
+    {
+      "id": "native-task-1-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:29:58.449Z",
+      "data": {
+        "taskId": "56c745d9-271c-4703-b393-f4c02bffea95",
+        "taskName": "CM continuation task 1 1792960179710"
+      }
+    },
+    {
+      "id": "native-task-2-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:30:01.412Z",
+      "data": {
+        "taskId": "b46bc95e-3bf9-4b54-88b4-e9d3a6eaabea",
+        "taskName": "CM continuation task 2 1792960179710"
+      }
+    },
+    {
+      "id": "unshared-native-project-created",
+      "passed": true,
+      "at": "2026-10-25T20:30:05.942Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:29:39.269Z",
+      "seconds": 0.097,
+      "title": "served-build-matches-recorded-candidate",
+      "data": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      }
+    },
+    {
+      "at": "2026-10-25T20:29:41.645Z",
+      "seconds": 2.473,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-25T20:29:44.201Z",
+      "seconds": 5.029,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/3211261f-80a6-45bf-8665-127527a814f0"
+    },
+    {
+      "at": "2026-10-25T20:29:44.202Z",
+      "seconds": 5.03,
+      "actor": "alice",
+      "title": "native-customer-project-created",
+      "data": {
+        "projectId": "3211261f-80a6-45bf-8665-127527a814f0",
+        "name": "CM continuation project 1792960179710"
+      }
+    },
+    {
+      "at": "2026-10-25T20:29:58.449Z",
+      "seconds": 19.277,
+      "actor": "alice",
+      "title": "native-task-1-persists-after-reload",
+      "data": {
+        "taskId": "56c745d9-271c-4703-b393-f4c02bffea95",
+        "taskName": "CM continuation task 1 1792960179710"
+      }
+    },
+    {
+      "at": "2026-10-25T20:30:01.412Z",
+      "seconds": 22.24,
+      "actor": "alice",
+      "title": "native-task-2-persists-after-reload",
+      "data": {
+        "taskId": "b46bc95e-3bf9-4b54-88b4-e9d3a6eaabea",
+        "taskName": "CM continuation task 2 1792960179710"
+      }
+    },
+    {
+      "at": "2026-10-25T20:30:03.399Z",
+      "seconds": 24.227,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-25T20:30:05.941Z",
+      "seconds": 26.769,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/7ae5128c-c6d6-4984-aa01-72d8316b4024"
+    },
+    {
+      "at": "2026-10-25T20:30:05.942Z",
+      "seconds": 26.77,
+      "actor": "alice",
+      "title": "unshared-native-project-created"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Native project/phase/two-task creation only. Shared collaboration, team queues, effort and revocation require separate acceptance."
+  ],
+  "durationSeconds": 27.52,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

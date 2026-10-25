@@ -1,0 +1,439 @@
+{
+  "scenario": "08-sla-fresh-targets-pause-current",
+  "recordedAt": "2026-10-25T16:31:27.358Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "visibility-alone-does-not-create-MSP-obligation",
+      "passed": true,
+      "at": "2026-10-25T16:31:28.813Z"
+    },
+    {
+      "id": "fresh-escalation-captures-isolated-P1-targets",
+      "passed": true,
+      "at": "2026-10-25T16:31:35.756Z",
+      "data": {
+        "clock": {
+          "ticket_id": "d752f251-369d-41de-b167-5e24b7bed410",
+          "obligation_id": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+          "priority_id": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "d752f251-369d-41de-b167-5e24b7bed410",
+              "obligationId": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": "2026-10-25T17:01:35.485Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 30,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:35.485Z",
+            "observedAt": "2026-10-25T16:31:35.485Z",
+            "resolution": {
+              "dueAt": "2026-10-25T17:31:35.485Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 60,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [],
+            "elapsedMilliseconds": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "mapping-edit-keeps-old-captured-targets",
+      "passed": true,
+      "at": "2026-10-25T16:31:39.738Z"
+    },
+    {
+      "id": "fresh-second-escalation-captures-different-targets",
+      "passed": true,
+      "at": "2026-10-25T16:31:42.128Z",
+      "data": {
+        "clock": {
+          "ticket_id": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+          "obligation_id": "888d7953-6575-41f9-9743-8fed36b6dc32",
+          "priority_id": "266c6f0a-a71d-47eb-8976-334ce2cd0608",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+              "obligationId": "888d7953-6575-41f9-9743-8fed36b6dc32",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": "2026-10-25T17:16:41.943Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 45,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:41.943Z",
+            "observedAt": "2026-10-25T16:31:41.943Z",
+            "resolution": {
+              "dueAt": "2026-10-25T18:01:41.943Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 90,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [],
+            "elapsedMilliseconds": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "handback-adds-customer-responsibility-pause",
+      "passed": true,
+      "at": "2026-10-25T16:31:44.561Z",
+      "data": {
+        "clock": {
+          "ticket_id": "d752f251-369d-41de-b167-5e24b7bed410",
+          "obligation_id": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+          "priority_id": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "d752f251-369d-41de-b167-5e24b7bed410",
+              "obligationId": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": null,
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 30,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:35.485Z",
+            "observedAt": "2026-10-25T16:31:44.351Z",
+            "resolution": {
+              "dueAt": null,
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 60,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [
+              "customer_responsible"
+            ],
+            "elapsedMilliseconds": 8866
+          }
+        }
+      }
+    },
+    {
+      "id": "isolated-client-policy-override-restored",
+      "passed": true,
+      "at": "2026-10-25T16:31:48.378Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:31:28.670Z",
+      "seconds": 1.312,
+      "title": "Isolated SLA prerequisite",
+      "data": {
+        "policyId": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+        "tickets": [
+          "d752f251-369d-41de-b167-5e24b7bed410",
+          "e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+        ],
+        "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+        "relationship": "4f999745-cbd0-453e-905a-9a5b0210bbb0",
+        "operation": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+        "oldPolicy": "",
+        "oldMap": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+        "setup": "Operator SQL creates only isolated policy/client override and un-escalated tickets; mappings and responsibility use actual UI"
+      }
+    },
+    {
+      "at": "2026-10-25T16:31:28.813Z",
+      "seconds": 1.455,
+      "title": "visibility-alone-does-not-create-MSP-obligation"
+    },
+    {
+      "at": "2026-10-25T16:31:31.114Z",
+      "seconds": 3.756,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T16:31:35.330Z",
+      "seconds": 7.972,
+      "actor": "slaCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/d752f251-369d-41de-b167-5e24b7bed410"
+    },
+    {
+      "at": "2026-10-25T16:31:35.756Z",
+      "seconds": 8.398,
+      "actor": "slaCustomer",
+      "title": "fresh-escalation-captures-isolated-P1-targets",
+      "data": {
+        "clock": {
+          "ticket_id": "d752f251-369d-41de-b167-5e24b7bed410",
+          "obligation_id": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+          "priority_id": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "d752f251-369d-41de-b167-5e24b7bed410",
+              "obligationId": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": "2026-10-25T17:01:35.485Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 30,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:35.485Z",
+            "observedAt": "2026-10-25T16:31:35.485Z",
+            "resolution": {
+              "dueAt": "2026-10-25T17:31:35.485Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 60,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [],
+            "elapsedMilliseconds": 0
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T16:31:37.732Z",
+      "seconds": 10.374,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T16:31:39.738Z",
+      "seconds": 12.38,
+      "actor": "qa",
+      "title": "mapping-edit-keeps-old-captured-targets"
+    },
+    {
+      "at": "2026-10-25T16:31:41.786Z",
+      "seconds": 14.428,
+      "actor": "slaCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:31:42.128Z",
+      "seconds": 14.77,
+      "actor": "slaCustomer",
+      "title": "fresh-second-escalation-captures-different-targets",
+      "data": {
+        "clock": {
+          "ticket_id": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+          "obligation_id": "888d7953-6575-41f9-9743-8fed36b6dc32",
+          "priority_id": "266c6f0a-a71d-47eb-8976-334ce2cd0608",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+              "obligationId": "888d7953-6575-41f9-9743-8fed36b6dc32",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": "2026-10-25T17:16:41.943Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 45,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:41.943Z",
+            "observedAt": "2026-10-25T16:31:41.943Z",
+            "resolution": {
+              "dueAt": "2026-10-25T18:01:41.943Z",
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 90,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [],
+            "elapsedMilliseconds": 0
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T16:31:44.134Z",
+      "seconds": 16.776,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/d752f251-369d-41de-b167-5e24b7bed410"
+    },
+    {
+      "at": "2026-10-25T16:31:44.561Z",
+      "seconds": 17.203,
+      "actor": "qa",
+      "title": "handback-adds-customer-responsibility-pause",
+      "data": {
+        "clock": {
+          "ticket_id": "d752f251-369d-41de-b167-5e24b7bed410",
+          "obligation_id": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+          "priority_id": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+          "sla_policy_id": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+          "clock": {
+            "identity": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "ticketId": "d752f251-369d-41de-b167-5e24b7bed410",
+              "obligationId": "e05d36d9-d0d9-4c00-ba31-a60672f44ead",
+              "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+            },
+            "response": {
+              "dueAt": null,
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 30,
+              "completedElapsedMilliseconds": null
+            },
+            "schedule": {
+              "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+              "entries": [],
+              "is_24x7": true,
+              "holidays": [],
+              "timezone": "UTC",
+              "is_default": false,
+              "schedule_id": "24x7",
+              "schedule_name": "24x7"
+            },
+            "startedAt": "2026-10-25T16:31:35.485Z",
+            "observedAt": "2026-10-25T16:31:44.351Z",
+            "resolution": {
+              "dueAt": null,
+              "breached": false,
+              "breachedAt": null,
+              "completedAt": null,
+              "targetMinutes": 60,
+              "completedElapsedMilliseconds": null
+            },
+            "pauseReasons": [
+              "customer_responsible"
+            ],
+            "elapsedMilliseconds": 8866
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T16:31:46.788Z",
+      "seconds": 19.43,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T16:31:48.378Z",
+      "seconds": 21.02,
+      "actor": "qa",
+      "title": "isolated-client-policy-override-restored"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Actual differing captured targets, mapping immutability and handback pause segment. Business-time arithmetic, actual breach notification recipients, CE/EE parity and departure cutoff remain unverified. Isolated captured policies/tickets are retained; sponsor default policy was not changed."
+  ],
+  "durationSeconds": 21.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "slaCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.395
+09-billing-native-line-save-preparation
+
+2
+00:00:02.395 --> 00:00:02.620
+qa: navigate
+
+3
+00:00:02.620 --> 00:00:03.640
+qa: Isolated hourly line saved through native UI
+
+4
+00:00:03.640 --> 00:00:03.822
+09-billing-capture-current
+
+5
+00:00:03.822 --> 00:00:06.077
+Operator prerequisite: isolated technician and approval team
+
+6
+00:00:06.077 --> 00:00:09.109
+qa: navigate
+
+7
+00:00:09.109 --> 00:00:10.360
+qa: navigate
+
+8
+00:00:10.360 --> 00:00:12.790
+qa: qualified-work-billing-profile-persists
+
+9
+00:00:12.790 --> 00:00:13.981
+billingTech: navigate
+
+10
+00:00:13.981 --> 00:00:16.042
+billingTech: contracted-time-is-commercial-owned-and-qualified
+
+11
+00:00:16.042 --> 00:00:17.214
+billingTech: navigate
+
+12
+00:00:17.214 --> 00:00:19.257
+billingTech: catalog-time-is-commercial-owned-and-qualified
+
+13
+00:00:19.257 --> 00:00:19.317
+billingTech: navigate
+
+14
+00:00:19.317 --> 00:00:19.464
+billingTech: native-timesheet-shows-7fc0b76c-f887-4a63-88bb-89b3341a37ea
+
+15
+00:00:19.464 --> 00:00:21.700
+billingTech: isolated-sheet-has-two-exact-review-entries
+
+16
+00:00:21.700 --> 00:00:22.227
+qa: navigate
+
+17
+00:00:22.227 --> 00:00:23.160
+qa: separate-approver-approved-both-qualified-entries
+
+18
+00:00:23.160 --> 00:00:25.542
+09-billing-invoice-current
+
+19
+00:00:25.542 --> 00:00:25.973
+qa: navigate
+
+20
+00:00:25.973 --> 00:00:26.813
+qa: isolated-preview-reconciles-15-minutes-at-120-per-hour
+
+21
+00:00:26.813 --> 00:00:26.961
+qa: draft-invoice-keeps-MSP-client-profile-and-amount
+
+22
+00:00:26.961 --> 00:00:27.093
+qa: invoice-links-exact-commercial-entry-once
+
+23
+00:00:27.093 --> 00:00:29.031
+qa: customer-operational-time-is-not-a-source
+
+24
+00:00:29.031 --> 00:00:30.000
+qa: navigate
+
+25
+00:00:30.000 --> 00:00:32.403
+09-operational-commercial-effort-current
+
+26
+00:00:32.403 --> 00:00:32.973
+alice: navigate
+
+27
+00:00:32.973 --> 00:00:34.902
+alice: customer-six-minutes-have-no-commercial-routing
+
+28
+00:00:34.902 --> 00:00:36.938
+alice: navigate
+
+29
+00:00:36.938 --> 00:00:37.880
+qa: navigate
+
+30
+00:00:37.880 --> 00:00:41.315
+09-native-stopwatch-start-stop-save-current
+
+31
+00:00:41.315 --> 00:00:45.027
+qa: navigate
+
+32
+00:00:45.027 --> 00:00:49.400
+stopwatchTech: navigate
+
+33
+00:00:49.400 --> 00:00:50.421
+stopwatchTech: native-stop-prefills-one-billable-minute-from-short-real-span
+
+34
+00:00:50.421 --> 00:00:50.563
+stopwatchTech: stopwatch-save-creates-one-qualified-commercial-minute
+
+35
+00:00:50.563 --> 00:00:53.890
+stopwatchTech: stopwatch-session-is-logged-and-no-open-timer-remains
+
+36
+00:00:53.890 --> 00:01:01.040
+qa: navigate

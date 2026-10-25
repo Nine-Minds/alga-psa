@@ -1,0 +1,58 @@
+{
+  "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "title": "CM requester conversation 1792939250877",
+  "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+  "requesterUserId": "5c078e8f-1985-4c39-babc-0d38350973a7",
+  "contactId": "b934eff4-d983-4930-8e38-eb6a23a9fe12",
+  "requesterEmail": "cm.requester.1792939134918@cmreview.test",
+  "prefix": "CM conversation 1792959081141",
+  "messages": [
+    {
+      "key": "shared",
+      "text": "CM conversation 1792959081141 shared",
+      "who": "qa"
+    },
+    {
+      "key": "msp-private",
+      "text": "CM conversation 1792959081141 msp-private",
+      "who": "qa"
+    },
+    {
+      "key": "customer-private",
+      "text": "CM conversation 1792959081141 customer-private",
+      "who": "alice"
+    },
+    {
+      "key": "requester",
+      "text": "CM conversation 1792959081141 requester",
+      "who": "qa"
+    }
+  ],
+  "files": [
+    {
+      "key": "shared",
+      "fileName": "cm-shared-1792959081141.txt",
+      "href": "/api/co-management/attachments/a5189307-4f23-4add-9d3e-2563379a980a?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&storeTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&threadId=4ea257ce-1672-4408-b6af-a41fe78d5e81&commentId=4ea257ce-1672-4408-b6af-a41fe78d5e81",
+      "sha256": "88c2483b938fe2cf43578f08faad494c146ae95c949ab7789b7d4bcbc2cc9717"
+    },
+    {
+      "key": "msp-private",
+      "fileName": "cm-msp-private-1792959081141.txt",
+      "href": "/api/co-management/attachments/a881d946-1583-4b3d-9ead-c47fe9a3b23f?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&storeTenant=24ac76c8-df59-4b10-8371-c56222904580&threadId=d237865a-572a-4e68-ae7e-4a4df9d9e552&commentId=d237865a-572a-4e68-ae7e-4a4df9d9e552",
+      "sha256": "e957e06c323e0dd1f22c600a4a4e56fa7c283121ea9a76df8f7aa61b6b45a126"
+    },
+    {
+      "key": "customer-private",
+      "fileName": "cm-customer-private-1792959081141.txt",
+      "href": "/api/co-management/attachments/b9bd2f43-42da-4b09-a1b0-f47330962db3?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&storeTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&threadId=b9087d42-8709-4175-927f-2a115f3efcea&commentId=b9087d42-8709-4175-927f-2a115f3efcea",
+      "sha256": "991e97ca8d283447eebdacfb835826bc01ded69ad879de209b076e6ba5ea4350"
+    },
+    {
+      "key": "requester",
+      "fileName": "cm-requester-1792959081141.txt",
+      "href": "/api/co-management/attachments/8665b8ff-9a07-4009-9f8f-91b79b057743?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&storeTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&threadId=c69fb4fd-ae04-40cd-acff-68c6f2dd737e&commentId=c69fb4fd-ae04-40cd-acff-68c6f2dd737e",
+      "sha256": "67183721b8d1cb6e982fed4cbc23c4582e7fa47b1d03025755a28f49f091a12d"
+    }
+  ]
+}

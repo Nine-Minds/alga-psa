@@ -1,0 +1,313 @@
+{
+  "scenario": "10-departure-participation-archive-current",
+  "recordedAt": "2026-10-25T16:33:35.093Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "shared-original-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:33:39.476Z"
+    },
+    {
+      "id": "MSPprivate-original-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:33:43.895Z"
+    },
+    {
+      "id": "customerprivate-original-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:33:47.905Z"
+    },
+    {
+      "id": "customer-cannot-see-MSP-private-body",
+      "passed": true,
+      "at": "2026-10-25T16:33:48.520Z"
+    },
+    {
+      "id": "MSP-cannot-see-customer-private-body",
+      "passed": true,
+      "at": "2026-10-25T16:33:50.612Z"
+    },
+    {
+      "id": "allocation-released-once-with-purchased-pool-preserved",
+      "passed": true,
+      "at": "2026-10-25T16:33:53.243Z",
+      "data": {
+        "before": {
+          "capacity": 19,
+          "allocation": {
+            "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+            "seats": 1,
+            "state": "active",
+            "released_at": null
+          }
+        },
+        "after": {
+          "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-25T16:33:52.663+00:00"
+        },
+        "capacity": 19
+      }
+    },
+    {
+      "id": "refresh-does-not-repeat-closure-or-seat-release",
+      "passed": true,
+      "at": "2026-10-25T16:33:53.713Z"
+    },
+    {
+      "id": "old-live-shared-file-denied",
+      "passed": true,
+      "at": "2026-10-25T16:33:53.730Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-live-MSPprivate-file-denied",
+      "passed": true,
+      "at": "2026-10-25T16:33:53.750Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-live-customerprivate-file-denied",
+      "passed": true,
+      "at": "2026-10-25T16:33:53.766Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-shared-detail-no-longer-exposes-live-ticket",
+      "passed": true,
+      "at": "2026-10-25T16:33:55.758Z"
+    },
+    {
+      "id": "fresh-customer-queue-hides-ended-work",
+      "passed": true,
+      "at": "2026-10-25T16:33:57.753Z"
+    },
+    {
+      "id": "retained-shared-bytes-match",
+      "passed": true,
+      "at": "2026-10-25T16:34:00.727Z"
+    },
+    {
+      "id": "retained-MSPprivate-bytes-match",
+      "passed": true,
+      "at": "2026-10-25T16:34:00.750Z"
+    },
+    {
+      "id": "archive-excludes-customer-private-body-and-file",
+      "passed": true,
+      "at": "2026-10-25T16:34:00.754Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:33:38.138Z",
+      "seconds": 3.045,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:33:39.476Z",
+      "seconds": 4.383,
+      "actor": "qa",
+      "title": "shared-original-file-bytes"
+    },
+    {
+      "at": "2026-10-25T16:33:42.746Z",
+      "seconds": 7.653,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:33:43.896Z",
+      "seconds": 8.803,
+      "actor": "qa",
+      "title": "MSPprivate-original-file-bytes"
+    },
+    {
+      "at": "2026-10-25T16:33:46.608Z",
+      "seconds": 11.515,
+      "actor": "departureCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:33:47.905Z",
+      "seconds": 12.812,
+      "actor": "departureCustomer",
+      "title": "customerprivate-original-file-bytes"
+    },
+    {
+      "at": "2026-10-25T16:33:48.520Z",
+      "seconds": 13.427,
+      "actor": "departureCustomer",
+      "title": "customer-cannot-see-MSP-private-body"
+    },
+    {
+      "at": "2026-10-25T16:33:50.512Z",
+      "seconds": 15.419,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:33:50.612Z",
+      "seconds": 15.519,
+      "actor": "qa",
+      "title": "MSP-cannot-see-customer-private-body"
+    },
+    {
+      "at": "2026-10-25T16:33:52.512Z",
+      "seconds": 17.419,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/departure?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T16:33:53.243Z",
+      "seconds": 18.15,
+      "actor": "qa",
+      "title": "allocation-released-once-with-purchased-pool-preserved",
+      "data": {
+        "before": {
+          "capacity": 19,
+          "allocation": {
+            "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+            "seats": 1,
+            "state": "active",
+            "released_at": null
+          }
+        },
+        "after": {
+          "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-25T16:33:52.663+00:00"
+        },
+        "capacity": 19
+      }
+    },
+    {
+      "at": "2026-10-25T16:33:53.713Z",
+      "seconds": 18.62,
+      "actor": "qa",
+      "title": "refresh-does-not-repeat-closure-or-seat-release"
+    },
+    {
+      "at": "2026-10-25T16:33:53.730Z",
+      "seconds": 18.637,
+      "actor": "qa",
+      "title": "old-live-shared-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:33:53.751Z",
+      "seconds": 18.658,
+      "actor": "qa",
+      "title": "old-live-MSPprivate-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:33:53.766Z",
+      "seconds": 18.673,
+      "actor": "qa",
+      "title": "old-live-customerprivate-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:33:55.748Z",
+      "seconds": 20.655,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T16:33:55.758Z",
+      "seconds": 20.665,
+      "actor": "qa",
+      "title": "old-shared-detail-no-longer-exposes-live-ticket"
+    },
+    {
+      "at": "2026-10-25T16:33:57.742Z",
+      "seconds": 22.65,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=oversight&workspace=20b527f2-8631-4fe7-a744-dc20883a0c5a&searchQuery=CM%20cutoff%201792946015139"
+    },
+    {
+      "at": "2026-10-25T16:33:57.753Z",
+      "seconds": 22.66,
+      "actor": "qa",
+      "title": "fresh-customer-queue-hides-ended-work"
+    },
+    {
+      "at": "2026-10-25T16:33:59.658Z",
+      "seconds": 24.565,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-25T16:34:00.728Z",
+      "seconds": 25.635,
+      "actor": "qa",
+      "title": "retained-shared-bytes-match"
+    },
+    {
+      "at": "2026-10-25T16:34:00.750Z",
+      "seconds": 25.657,
+      "actor": "qa",
+      "title": "retained-MSPprivate-bytes-match"
+    },
+    {
+      "at": "2026-10-25T16:34:00.754Z",
+      "seconds": 25.661,
+      "actor": "qa",
+      "title": "archive-excludes-customer-private-body-and-file"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "unrelated-MSP-viewer-denied-retained-file",
+  "durationSeconds": 26.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "departureCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    },
+    {
+      "name": "viewer",
+      "email": "noassign@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T20:43:43.304Z",
+  "guide": "index.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/index.html",
+  "publicUrl": "http://100.82.172.57:8874/index.html",
+  "compositeSha256": "e15ba6c8bd8e994a12643ac278bd0ae6d71bb1a78ea8402ca929d6544978fbe8",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606754,
+    "duration": 93.76,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/overview/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "navigate",
+    "target": 63.986,
+    "actual": 63.994413,
+    "followingFrame": {
+      "mediaTime": 64,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/9225299",
+  "passed": true
+}

@@ -1,0 +1,337 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.170
+07-composer-draft-recovery-56e7
+
+2
+00:00:03.170 --> 00:00:04.931
+qa: navigate
+
+3
+00:00:04.931 --> 00:00:11.003
+qa: composed
+
+4
+00:00:11.003 --> 00:00:11.038
+qa: unknown-outcome-surfaced-and-composer-stays-open
+
+5
+00:00:11.038 --> 00:00:13.262
+qa: staged-file-retained-after-unknown-outcome
+
+6
+00:00:13.262 --> 00:00:13.552
+qa: retry-reused-the-same-operation
+
+7
+00:00:13.552 --> 00:00:13.600
+qa: retry-created-no-duplicate-message
+
+8
+00:00:13.600 --> 00:00:13.846
+qa: published-file-bytes-complete
+
+9
+00:00:13.846 --> 00:00:15.129
+qa: reopened-composer-is-empty-after-confirmation
+
+10
+00:00:15.129 --> 00:00:15.920
+qa: ordinary-publish-confirmed-and-closed
+
+11
+00:00:15.920 --> 00:00:18.404
+07-ticket-audiences-files-56e7
+
+12
+00:00:18.404 --> 00:00:24.728
+qa: navigate
+
+13
+00:00:24.728 --> 00:00:28.410
+qa: qa-shared-publication-file-bytes
+
+14
+00:00:28.410 --> 00:00:28.512
+alice: navigate
+
+15
+00:00:28.512 --> 00:00:31.676
+alice: customer-native-ticket-renders-authorized-shared-attachment
+
+16
+00:00:31.676 --> 00:00:36.782
+qa: navigate
+
+17
+00:00:36.782 --> 00:00:40.180
+qa: qa-msp-private-publication-file-bytes
+
+18
+00:00:40.180 --> 00:00:43.663
+alice: navigate
+
+19
+00:00:43.663 --> 00:00:46.810
+alice: alice-customer-private-publication-file-bytes
+
+20
+00:00:46.810 --> 00:00:52.469
+qa: navigate
+
+21
+00:00:52.469 --> 00:00:55.857
+qa: qa-requester-publication-file-bytes
+
+22
+00:00:55.857 --> 00:00:56.709
+qa: navigate
+
+23
+00:00:56.709 --> 00:00:56.753
+qa: qa-permitted-shared-bytes
+
+24
+00:00:56.753 --> 00:00:56.782
+qa: qa-permitted-requester-bytes
+
+25
+00:00:56.782 --> 00:00:56.809
+qa: qa-permitted-msp-private-bytes
+
+26
+00:00:56.809 --> 00:00:58.832
+qa: qa-copied-other-private-file-link-denied
+
+27
+00:00:58.832 --> 00:00:59.080
+alice: navigate
+
+28
+00:00:59.080 --> 00:00:59.111
+alice: alice-permitted-shared-bytes
+
+29
+00:00:59.111 --> 00:00:59.147
+alice: alice-permitted-requester-bytes
+
+30
+00:00:59.147 --> 00:01:01.240
+alice: alice-permitted-customer-private-bytes
+
+31
+00:01:01.240 --> 00:01:01.277
+requester: navigate
+
+32
+00:01:01.277 --> 00:01:02.120
+requester: requester-downloads-public-file-bytes
+
+33
+00:01:02.120 --> 00:01:04.813
+07-grid-parity-and-file-limits-56e7
+
+34
+00:01:04.813 --> 00:01:06.409
+qa: navigate
+
+35
+00:01:06.409 --> 00:01:08.492
+qa: QA-Grid-shows-requester-and-MSP-private
+
+36
+00:01:08.492 --> 00:01:10.554
+alice: navigate
+
+37
+00:01:10.554 --> 00:01:12.633
+alice: Alice-Grid-shows-requester-and-customer-private
+
+38
+00:01:12.633 --> 00:01:13.587
+qa: navigate
+
+39
+00:01:13.587 --> 00:01:13.715
+qa: limits-help
+
+40
+00:01:13.715 --> 00:01:16.922
+qa: twenty-one-files-reported-before-publication
+
+41
+00:01:16.922 --> 00:01:16.973
+qa: over-limit-send-persists-nothing-and-keeps-draft
+
+42
+00:01:16.973 --> 00:01:19.525
+qa: removing-one-file-clears-the-count-error
+
+43
+00:01:19.525 --> 00:01:21.715
+qa: oversize-file-reported-before-publication
+
+44
+00:01:21.715 --> 00:01:23.089
+qa: every-offered-audience-states-attachment-availability
+
+45
+00:01:23.089 --> 00:01:23.800
+qa: probe-left-no-message
+
+46
+00:01:23.800 --> 00:01:26.349
+07-ticket-mutations-disclosure-recovery-56e7
+
+47
+00:01:26.349 --> 00:01:29.829
+alice: navigate
+
+48
+00:01:29.829 --> 00:01:32.064
+alice: customer-reply-persists-on-MSP-root
+
+49
+00:01:32.064 --> 00:01:32.669
+qa: navigate
+
+50
+00:01:32.669 --> 00:01:37.273
+qa: MSP-sees-customer-reply-with-author-organization
+
+51
+00:01:37.273 --> 00:01:38.632
+alice: navigate
+
+52
+00:01:38.632 --> 00:01:40.653
+alice: eligible-author-edit-propagates-to-customer-with-reply-retained
+
+53
+00:01:40.653 --> 00:01:45.102
+qa: navigate
+
+54
+00:01:45.102 --> 00:01:47.289
+qa: deleted-root-is-tombstoned-and-customer-reply-survives
+
+55
+00:01:47.289 --> 00:01:48.305
+qa: navigate
+
+56
+00:01:48.305 --> 00:01:50.323
+qa: qa-deleted-root-file-link-denied
+
+57
+00:01:50.323 --> 00:01:52.238
+alice: navigate
+
+58
+00:01:52.238 --> 00:01:54.245
+alice: alice-deleted-root-file-link-denied
+
+59
+00:01:54.245 --> 00:01:59.112
+qa: navigate
+
+60
+00:01:59.112 --> 00:02:01.127
+qa: explicit-file-removal-denies-old-link
+
+61
+00:02:01.127 --> 00:02:11.250
+qa: navigate
+
+62
+00:02:11.250 --> 00:02:14.757
+qa: navigate
+
+63
+00:02:14.757 --> 00:02:15.438
+qa: whole-private-thread-preview-counts-root-reply-and-file
+
+64
+00:02:15.438 --> 00:02:17.467
+qa: MSP-private-original-is-retained-readonly
+
+65
+00:02:17.467 --> 00:02:19.183
+alice: navigate
+
+66
+00:02:19.183 --> 00:02:21.228
+alice: customer-receives-entire-disclosed-thread-and-matching-file
+
+67
+00:02:21.228 --> 00:02:21.263
+requester: navigate
+
+68
+00:02:21.263 --> 00:02:23.353
+requester: requester-receives-disclosed-reply-and-file-bytes
+
+69
+00:02:23.353 --> 00:02:28.824
+qa: navigate
+
+70
+00:02:28.824 --> 00:02:29.154
+requester: navigate
+
+71
+00:02:29.154 --> 00:02:31.263
+requester: whole-thread-restriction-revokes-requester-message-reply-and-copied-file
+
+72
+00:02:31.263 --> 00:02:38.267
+qa: navigate
+
+73
+00:02:38.267 --> 00:02:43.337
+qa: lost-publication-response-recovers-one-message-with-same-operation
+
+74
+00:02:43.337 --> 00:02:44.160
+qa: recovered-publication-has-complete-byte-exact-file-after-reload
+
+75
+00:02:44.160 --> 00:02:47.444
+07-requester-task-conversation-56e7
+
+76
+00:02:47.444 --> 00:02:48.797
+alice: navigate
+
+77
+00:02:48.797 --> 00:02:50.816
+alice: customer-native-project-setting-enables-requester-tasks
+
+78
+00:02:50.816 --> 00:02:54.554
+qa: navigate
+
+79
+00:02:54.554 --> 00:02:54.590
+requester: navigate
+
+80
+00:02:54.590 --> 00:02:55.620
+requester: requester-task-downloads-exact-public-file-bytes
+
+81
+00:02:55.620 --> 00:02:57.715
+requester: requester-task-reply-persists-through-portal-reload
+
+82
+00:02:57.715 --> 00:02:59.700
+qa: navigate
+
+83
+00:02:59.700 --> 00:03:01.400
+alice: navigate
+
+84
+00:03:01.400 --> 00:03:01.920
+requester: restored-task-visibility-revokes-copied-requester-file-link

@@ -1,0 +1,357 @@
+{
+  "guide": "guides/08-sla.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "Mapping persistence, captured-target immutability, restored mapping, fresh differing targets and handback pause, business-calendar arithmetic and an actual breach mail routed only to the assigned MSP user. The business-calendar recording ends with a harness timeout on an absent post-departure history control after its four assertions passed; the departure clock cutoff is verified in 10-departure-c-cutoff-56e7 (cutoff adds the customer_responsible pause, no resolution deadline, no former MSP clock on the customer ticket). CE/EE release parity remains unverified in the requirement ledger.",
+  "durationSeconds": 288.88,
+  "sha256": "ac37df50f78669a3bc425e71baaedad30216f3cf67e600959cb470555b3f121a",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/recording.json",
+      "name": "08-sla-mapping-and-captured-targets-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 5.4,
+      "offsetSeconds": 0,
+      "sha256": "ed053ba2f7ba6af7af7c609ceac03099eb628c8416bd5bffb10597170def34e8",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 2
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/recording.json",
+      "name": "08-mapping-restored-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 4.88,
+      "offsetSeconds": 5.4,
+      "sha256": "622943560cb11e14fc8ab6868dddfd2e2150769f9596a5421a3983c8cce08877",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 1
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/recording.json",
+      "name": "08-sla-fresh-targets-pause-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 22.28,
+      "offsetSeconds": 10.280000000000001,
+      "sha256": "5b16622b929b4dac6d9b05e848fae8ed50bc8121f2e55d0f2de90bd8578d6376",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 6
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/recording.json",
+      "name": "08-business-calendar-notification-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 135.12,
+      "offsetSeconds": 32.56,
+      "sha256": "798a89f534254df212f26f189c7e0bdf02b05da63a4f64c6028ad5a0841e92e5",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/walkthrough.webm",
+      "originalScenarioStatus": "failed",
+      "assertions": 4
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json",
+      "name": "10-departure-c-cutoff-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 121.2,
+      "offsetSeconds": 167.68,
+      "sha256": "7036dec7cc145e433a85f3d7f27c0dd43660e50f039457eb27a3ef8b97e4080d",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 21
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "08-sla-mapping-and-captured-targets-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.674,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.364,
+      "title": "priority-mapping-persists-through-product-and-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.506,
+      "title": "mapping-edit-does-not-rewrite-existing-obligation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.638,
+      "title": "Temporary mapping retained for next bulk/SLA fixture escalations",
+      "actor": "qa"
+    },
+    {
+      "seconds": 5.4,
+      "title": "08-mapping-restored-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 7.757000000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 9.393,
+      "title": "temporary-high-priority-mapping-restored-through-product",
+      "actor": "qa"
+    },
+    {
+      "seconds": 10.280000000000001,
+      "title": "08-sla-fresh-targets-pause-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 11.186000000000002,
+      "title": "Isolated SLA prerequisite"
+    },
+    {
+      "seconds": 11.32,
+      "title": "visibility-alone-does-not-create-MSP-obligation"
+    },
+    {
+      "seconds": 13.611,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.005000000000003,
+      "title": "navigate",
+      "actor": "slaCustomer"
+    },
+    {
+      "seconds": 18.491,
+      "title": "fresh-escalation-captures-isolated-P1-targets",
+      "actor": "slaCustomer"
+    },
+    {
+      "seconds": 20.447000000000003,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 22.547,
+      "title": "mapping-edit-keeps-old-captured-targets",
+      "actor": "qa"
+    },
+    {
+      "seconds": 24.543,
+      "title": "navigate",
+      "actor": "slaCustomer"
+    },
+    {
+      "seconds": 24.924,
+      "title": "fresh-second-escalation-captures-different-targets",
+      "actor": "slaCustomer"
+    },
+    {
+      "seconds": 26.954,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 27.392,
+      "title": "handback-adds-customer-responsibility-pause",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.53,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.281000000000006,
+      "title": "isolated-client-policy-override-restored",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.56,
+      "title": "08-business-calendar-notification-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 36.375,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 38.328,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 43.43,
+      "title": "navigate",
+      "actor": "calendarCustomer"
+    },
+    {
+      "seconds": 43.867000000000004,
+      "title": "business-calendar-response-due-is-one-working-minute",
+      "actor": "calendarCustomer"
+    },
+    {
+      "seconds": 45.889,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.345,
+      "title": "MSP-local-assignee-is-actual-notification-recipient",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.391000000000005,
+      "title": "Wait for real one-minute deadline and configured delivery worker",
+      "actor": "qa"
+    },
+    {
+      "seconds": 135.784,
+      "title": "actual-breach-mail-routes-only-to-assigned-MSP-user",
+      "actor": "qa"
+    },
+    {
+      "seconds": 138.417,
+      "title": "navigate",
+      "actor": "departedCustomer"
+    },
+    {
+      "seconds": 165.452,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 167.68,
+      "title": "10-departure-c-cutoff-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 168.597,
+      "title": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation"
+    },
+    {
+      "seconds": 170.877,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 171.679,
+      "title": "allocation-released-once-and-paid-pool-unchanged",
+      "actor": "qa"
+    },
+    {
+      "seconds": 171.81400000000002,
+      "title": "msp-sla-clock-is-held-by-the-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 172.46800000000002,
+      "title": "refresh-repeats-neither-closure-nor-release",
+      "actor": "qa"
+    },
+    {
+      "seconds": 252.125,
+      "title": "queued-delivery-is-skipped-not-sent-after-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 252.441,
+      "title": "old-live-shared-file-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 254.412,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 254.741,
+      "title": "archive-sealed-at-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 256.636,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 259.022,
+      "title": "retained-shared-bytes-match",
+      "actor": "qa"
+    },
+    {
+      "seconds": 259.208,
+      "title": "archive-retains-the-msp-time-evidence",
+      "actor": "qa"
+    },
+    {
+      "seconds": 261.339,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 263.957,
+      "title": "customer-workspace-offers-no-changes-after-departure",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 265.849,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 268.491,
+      "title": "archive-and-seal-unchanged-after-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 268.791,
+      "title": "commercial-entries-survive-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 270.733,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 270.895,
+      "title": "pre-cutoff-draft-still-opens-with-its-line",
+      "actor": "qa"
+    },
+    {
+      "seconds": 272.26,
+      "title": "pre-cutoff-draft-reversed-after-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 274.275,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 284.401,
+      "title": "msp-bills-retained-commercial-time-after-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 286.411,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 287.966,
+      "title": "customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock",
+      "actor": "departAdmin"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

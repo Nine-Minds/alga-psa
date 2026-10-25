@@ -1,0 +1,25 @@
+{
+  "service": {
+    "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "name": "review-build-prep-customer-files",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-customer-files:21",
+    "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-customer-files bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/prepare-customer-files.sh",
+    "status": "concluded",
+    "createdAt": "2026-10-25T15:19:46.056Z",
+    "createdBy": "Implement",
+    "lastHealth": {
+      "status": "running",
+      "checkedAt": "2026-10-25T15:30:11.626Z"
+    },
+    "operation": {
+      "id": "aadf7c25-bf32-495f-91ac-0fc669ad2349",
+      "expiresAt": "2026-10-25T15:36:44.597Z"
+    },
+    "concludedAt": "2026-10-25T15:34:44.703Z",
+    "concludedBy": "Implement",
+    "concludedReason": "Prepared customer file-publication build 1b9b112749 passed typecheck and production compilation"
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "guide": "guides/09-time-and-billing.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "partial",
+  "remaining": "Native stopwatch start/stop/prefill/save now passed with one logged session and one commercial minute. Existing exact contract routing, separate approval, INV-000004 (0 from 15 minutes) and 6+21 minute operational/commercial reconciliation remain verified. Catalog-pricing acknowledgement and catalog invoice reconciliation remain in reach and unverified; the approved six-minute catalog entry is not invoiced.",
+  "durationSeconds": 61.04,
+  "sha256": "15069440543968000578d2a397e411b451402f33e8d13d3fa24711d5fab9888b",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/recording.json",
+      "name": "09-billing-native-line-save-preparation",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 3.64,
+      "offsetSeconds": 0,
+      "sha256": "c95ed81c4dba02c3763a3742c2dec02b28d2264f20d1d0f7e1485331b8c179c4",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/walkthrough.webm",
+      "originalScenarioStatus": "preparation",
+      "assertions": 1
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/recording.json",
+      "name": "09-billing-capture-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 19.52,
+      "offsetSeconds": 3.64,
+      "sha256": "24ad20201a01790065d4509ad9a234945289529557aa36418255cdd10b990b8f",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 9
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/recording.json",
+      "name": "09-billing-invoice-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 6.84,
+      "offsetSeconds": 23.16,
+      "sha256": "d5b0ff1f2e96ebd98e5e383856502d759fb6a4011f8e894e08144c666417be8d",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 4
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/recording.json",
+      "name": "09-operational-commercial-effort-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 7.88,
+      "offsetSeconds": 30,
+      "sha256": "117dcf89b99d2b6e41518be3b44bcf33cd89bb76b01b547984d1e43cce24eba9",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 5
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-native-stopwatch-start-stop-save-current/recording.json",
+      "name": "09-native-stopwatch-start-stop-save-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 23.16,
+      "offsetSeconds": 37.88,
+      "sha256": "d7b6412b0355a4568d037d4bcece21b7b6e4672f40965ab0b11421a8d348ab13",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-native-stopwatch-start-stop-save-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 3
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "09-billing-native-line-save-preparation",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.395,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 2.62,
+      "title": "Isolated hourly line saved through native UI",
+      "actor": "qa"
+    },
+    {
+      "seconds": 3.64,
+      "title": "09-billing-capture-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 3.822,
+      "title": "Operator prerequisite: isolated technician and approval team"
+    },
+    {
+      "seconds": 6.077,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 9.109,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 10.36,
+      "title": "qualified-work-billing-profile-persists",
+      "actor": "qa"
+    },
+    {
+      "seconds": 12.790000000000001,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 13.981,
+      "title": "contracted-time-is-commercial-owned-and-qualified",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 16.041999999999998,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 17.214,
+      "title": "catalog-time-is-commercial-owned-and-qualified",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 19.257,
+      "title": "navigate",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 19.317,
+      "title": "native-timesheet-shows-7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 19.464,
+      "title": "isolated-sheet-has-two-exact-review-entries",
+      "actor": "billingTech"
+    },
+    {
+      "seconds": 21.7,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 22.227,
+      "title": "separate-approver-approved-both-qualified-entries",
+      "actor": "qa"
+    },
+    {
+      "seconds": 23.16,
+      "title": "09-billing-invoice-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 25.542,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 25.973,
+      "title": "isolated-preview-reconciles-15-minutes-at-120-per-hour",
+      "actor": "qa"
+    },
+    {
+      "seconds": 26.813,
+      "title": "draft-invoice-keeps-MSP-client-profile-and-amount",
+      "actor": "qa"
+    },
+    {
+      "seconds": 26.961,
+      "title": "invoice-links-exact-commercial-entry-once",
+      "actor": "qa"
+    },
+    {
+      "seconds": 27.093,
+      "title": "customer-operational-time-is-not-a-source",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.031,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30,
+      "title": "09-operational-commercial-effort-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 32.403,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.973,
+      "title": "customer-six-minutes-have-no-commercial-routing",
+      "actor": "alice"
+    },
+    {
+      "seconds": 34.902,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 36.938,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 37.88,
+      "title": "09-native-stopwatch-start-stop-save-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 41.315000000000005,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 45.027,
+      "title": "navigate",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 49.400000000000006,
+      "title": "native-stop-prefills-one-billable-minute-from-short-real-span",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 50.42100000000001,
+      "title": "stopwatch-save-creates-one-qualified-commercial-minute",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 50.563,
+      "title": "stopwatch-session-is-logged-and-no-open-timer-remains",
+      "actor": "stopwatchTech"
+    },
+    {
+      "seconds": 53.89,
+      "title": "navigate",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

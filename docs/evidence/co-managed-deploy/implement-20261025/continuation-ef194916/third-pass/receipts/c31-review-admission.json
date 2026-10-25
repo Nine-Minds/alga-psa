@@ -1,0 +1,20 @@
+{
+  "service": {
+    "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "name": "review-app",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:25",
+    "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "command": "CARD_SERVICE_STARTUP_GRACE=3600 CARD_SERVICE_PROBE_TIMEOUT=30 PORT=23374 CO_MANAGED_REVIEW_DIST=.next-review-final-c31dc3 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-app --health http://127.0.0.1:23374/api/health bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh",
+    "readiness": {
+      "port": 23374,
+      "path": "/api/health"
+    },
+    "status": "live",
+    "createdAt": "2026-10-25T18:31:14.997Z",
+    "createdBy": "Implement"
+  },
+  "created": true,
+  "readinessUrl": "http://127.0.0.1:23374/api/health"
+}

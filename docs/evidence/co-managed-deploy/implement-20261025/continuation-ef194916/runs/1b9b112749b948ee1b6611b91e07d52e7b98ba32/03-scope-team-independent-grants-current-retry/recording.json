@@ -1,0 +1,108 @@
+{
+  "scenario": "03-scope-team-independent-grants-current-retry",
+  "recordedAt": "2026-10-25T15:39:45.217Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "sponsor-technician-assignment-persists",
+      "passed": true,
+      "at": "2026-10-25T15:39:48.947Z"
+    },
+    {
+      "id": "escalation-only-mode-persists",
+      "passed": true,
+      "at": "2026-10-25T15:39:51.457Z"
+    },
+    {
+      "id": "assigned-technician-cannot-expand-customer-scope",
+      "passed": true,
+      "at": "2026-10-25T15:39:53.389Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:39:47.688Z",
+      "seconds": 2.471,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:39:48.947Z",
+      "seconds": 3.73,
+      "actor": "qa",
+      "title": "sponsor-technician-assignment-persists"
+    },
+    {
+      "at": "2026-10-25T15:39:50.915Z",
+      "seconds": 5.698,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:39:51.457Z",
+      "seconds": 6.24,
+      "actor": "scopeCustomer",
+      "title": "escalation-only-mode-persists"
+    },
+    {
+      "at": "2026-10-25T15:39:53.376Z",
+      "seconds": 8.159,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:39:53.389Z",
+      "seconds": 8.172,
+      "actor": "qa",
+      "title": "assigned-technician-cannot-expand-customer-scope"
+    },
+    {
+      "at": "2026-10-25T15:39:55.400Z",
+      "seconds": 10.183,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T15:39:57.766Z",
+      "seconds": 12.549,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:40:01.679Z",
+      "seconds": 16.462,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('CM access 1792942366365 0', { exact: true }).first() to be visible\u001b[22m\n\u001b[2m    55 × locator resolved to hidden <h1 class=\"text-lg font-bold truncate transition-all duration-200 opacity-0 max-h-0 overflow-hidden\">CM access 1792942366365 0</h1>\u001b[22m\n",
+  "durationSeconds": 42.48,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "scopeCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

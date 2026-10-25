@@ -1,0 +1,14 @@
+[
+  {
+    "name": "createCoManagedTicketCommentAction",
+    "status": 200,
+    "codes": [],
+    "hasNewReply": false
+  },
+  {
+    "name": "findCommentsByTicketId",
+    "status": 200,
+    "codes": [],
+    "hasNewReply": true
+  }
+]

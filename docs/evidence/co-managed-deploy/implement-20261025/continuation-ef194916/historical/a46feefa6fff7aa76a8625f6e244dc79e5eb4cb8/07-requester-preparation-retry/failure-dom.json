@@ -1,0 +1,188 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/users",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nUsers\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nUsers\nUser Management\n\nManage client portal users and their access\n\nMSP\nClient Portal\nActive Users\nSelect Client\nCopy Portal Login Link\nCreate New Client Portal User\nFirst Name *\nLast Name *\nEmail *\n\ncmreview.test is reserved for documentation and testing.\n\nDismiss\nClient (optional)\nSelect Client\nPrimary Role\nAdmin\nExisting Contact (optional)\nSelect contact to invite\nPassword (Leave blank to send invitation)\nNo password required — we will send a portal invitation for the user to set it.\nSend Portal Invitation\nCancel\nFirst Name\n\t\nLast Name\n\t\nEmail\n\t\nRole\n\t\nLast Login\n\t\nActions",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-view-btn",
+      "text": "MSP",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-view-btn",
+      "text": "Client Portal",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_r_",
+      "text": "Active Users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-management-client-filter-trigger",
+      "text": "Select Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-client-portal-link-users-button",
+      "text": "Copy Portal Login Link",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "first-name",
+      "text": "",
+      "value": "Conversation",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "last-name",
+      "text": "",
+      "value": "Requester",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email",
+      "text": "",
+      "value": "cm.requester.1792939082152@cmreview.test",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "field-warning-r3p-dismiss",
+      "text": "Dismiss",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "new-user-client-picker-trigger",
+      "text": "Select Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_3s_",
+      "text": "Admin",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "new-user-contact-picker",
+      "text": "Select contact to invite",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "password",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "show-password-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "submit-new-client-user-btn",
+      "text": "Send Portal Invitation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-new-client-user-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

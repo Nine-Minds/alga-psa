@@ -1,0 +1,120 @@
+{
+  "scenario": "04-delegation-board-current",
+  "recordedAt": "2026-10-25T15:38:32.566Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "new-approval-targets-exact-record",
+      "passed": true,
+      "at": "2026-10-25T15:38:38.226Z",
+      "data": {
+        "grantId": "9e9c0295-e5f9-4cb4-aec5-a7f2c30ce722",
+        "boardId": "e59ebdb2-e1f4-4a87-8265-91fd201f7ad6"
+      }
+    },
+    {
+      "id": "approved-msp-board-edit-persists",
+      "passed": true,
+      "at": "2026-10-25T15:38:43.759Z"
+    },
+    {
+      "id": "unapproved-board-has-no-new-delegation",
+      "passed": true,
+      "at": "2026-10-25T15:38:43.952Z"
+    },
+    {
+      "id": "customer-revocation-recorded",
+      "passed": true,
+      "at": "2026-10-25T15:38:45.938Z"
+    },
+    {
+      "id": "stale-msp-editor-refuses-after-revocation",
+      "passed": true,
+      "at": "2026-10-25T15:38:46.307Z"
+    },
+    {
+      "id": "revoked-grant-not-offered-after-reload",
+      "passed": true,
+      "at": "2026-10-25T15:38:46.671Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:38:32.869Z",
+      "seconds": 0.303,
+      "title": "Prerequisite setup: disposable empty board created using customer defaults",
+      "data": {
+        "boardId": "e59ebdb2-e1f4-4a87-8265-91fd201f7ad6",
+        "name": "CM DESK delegated 1792942710384",
+        "method": "SQL setup only; approval and mutations tested through product UI"
+      }
+    },
+    {
+      "at": "2026-10-25T15:38:35.697Z",
+      "seconds": 3.131,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T15:38:38.226Z",
+      "seconds": 5.66,
+      "actor": "alice",
+      "title": "new-approval-targets-exact-record",
+      "data": {
+        "grantId": "9e9c0295-e5f9-4cb4-aec5-a7f2c30ce722",
+        "boardId": "e59ebdb2-e1f4-4a87-8265-91fd201f7ad6"
+      }
+    },
+    {
+      "at": "2026-10-25T15:38:43.759Z",
+      "seconds": 11.193,
+      "actor": "alice",
+      "title": "approved-msp-board-edit-persists"
+    },
+    {
+      "at": "2026-10-25T15:38:43.952Z",
+      "seconds": 11.386,
+      "actor": "alice",
+      "title": "unapproved-board-has-no-new-delegation"
+    },
+    {
+      "at": "2026-10-25T15:38:45.938Z",
+      "seconds": 13.372,
+      "actor": "alice",
+      "title": "customer-revocation-recorded"
+    },
+    {
+      "at": "2026-10-25T15:38:46.307Z",
+      "seconds": 13.741,
+      "actor": "alice",
+      "title": "stale-msp-editor-refuses-after-revocation"
+    },
+    {
+      "at": "2026-10-25T15:38:46.671Z",
+      "seconds": 14.105,
+      "actor": "alice",
+      "title": "revoked-grant-not-offered-after-reload"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Board approval, exact target save, restoration, and stale-editor revocation passed. Nonadministrator profile and customer-created invitation resend still require their own executed UI checks."
+  ],
+  "durationSeconds": 14.76,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/msp-video/12f9e14f9154e5cdeeee38671d80a684.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/walkthrough.webm'

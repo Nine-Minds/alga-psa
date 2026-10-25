@@ -1,0 +1,10 @@
+{
+  "guide": "guides/07-conversations-and-files.html",
+  "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "message": "CM draft recovery 1792959069902",
+  "fileName": "cm-draft-recovery-1792959069902.txt",
+  "operationId": "0e6e5589-65e0-4a8b-9852-90d655c98fd0",
+  "publishRequests": 2,
+  "ordinaryMessage": "CM ordinary publish 1792959069902",
+  "supersedes": "07-uncertain-response-recovery-blocker"
+}

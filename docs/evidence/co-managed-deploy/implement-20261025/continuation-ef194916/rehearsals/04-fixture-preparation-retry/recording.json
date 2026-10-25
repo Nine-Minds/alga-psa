@@ -1,0 +1,83 @@
+{
+  "scenario": "04-fixture-preparation-retry",
+  "recordedAt": "2026-10-25T14:28:08.757Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "preparation-customer-created-user-and-invitation-persisted",
+      "passed": true,
+      "at": "2026-10-25T14:28:29.174Z",
+      "data": {
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b",
+        "invitationId": "24396cbd-528d-40ef-81f1-8dcf518c8d1e",
+        "provider": "controlled SMTP sink; configured Stripe simulator capacity; preparation on predecessor build"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:28:11.088Z",
+      "seconds": 2.331,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T14:28:14.930Z",
+      "seconds": 6.173,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T14:28:18.678Z",
+      "seconds": 9.921,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-25T14:28:23.390Z",
+      "seconds": 14.634,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-25T14:28:29.174Z",
+      "seconds": 20.417,
+      "actor": "alice",
+      "title": "preparation-customer-created-user-and-invitation-persisted",
+      "data": {
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b",
+        "invitationId": "24396cbd-528d-40ef-81f1-8dcf518c8d1e",
+        "provider": "controlled SMTP sink; configured Stripe simulator capacity; preparation on predecessor build"
+      }
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Fixture preparation only; fresh current-build delegation acceptance remains required."
+  ],
+  "durationSeconds": 21.4,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

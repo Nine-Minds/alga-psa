@@ -1,0 +1,454 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/projects",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Projects\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nProject task queues\nProjects\nCreate from Template\nAdd Project\nActive projects\nAll open statuses\nSelect Client\nFilter by contact\nAll managers\nFilter by deadline\nFilter\nDefault view\n3 columns hidden.\nShow all\nNumber\n\t\nProject Name\n\t\nClient\n\t\nContact\n\t\nStatus\n\t\nDeadline\n\t\nActions\n\n\nPROJECT0001\n\t\nCM Lead customer project 20261025\n\t\nWR\nWhite Rabbit IT\n\t\nNo Contact\n\t\nNot Started\n\t\nN/A\n\t\nOpen menu\nAdd New Project\nStatus *\nNot Started\nSelect Status\nNot Started\nIn Progress\nOn Hold\nCompleted\nCancelled\nClient *\nSelect Client\nContact\nSelect Contact\nProject Manager\nSelect Assignee\nBudgeted Hours\nDefault Service (for time entries)\nNo service\nSelect default service\nNo service\n\nUsed for time entries on this project when neither the task nor its phase sets a service.\n\nStart Date\nEnd Date\nTask Statuses *\nCustomize\nTo Do\nIn Progress\nDone\nTags\nClient Portal Visibility\nCancel\nCreate Project\nActive Clients\nAll Types\nWR\nWhite Rabbit IT\ncompany\nAdd new client",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-from-template-button",
+      "text": "Create from Template",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-project-button",
+      "text": "Add Project",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_r_",
+      "text": "Active projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-status-filter",
+      "text": "All open statuses",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-client-filter-trigger",
+      "text": "Select Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-contact-filter",
+      "text": "Filter by contact",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "account-manager-picker-trigger",
+      "text": "All managers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-deadline-filter",
+      "text": "Filter by deadline",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-filter-trigger",
+      "text": "Filter",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "clear-all-filters-button",
+      "text": "Reset",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "projects-view-picker-trigger",
+      "text": "Default view",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "White Rabbit IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-actions-943acf31-95f4-47b0-8818-9de8977e5abd",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_48_",
+      "text": "Not Started",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select StatusNot StartedIn ProgressOn HoldCompletedCancelled",
+      "value": "34397187-4805-4157-9fdb-5922c6208c16",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-picker-trigger",
+      "text": "Select Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contact-picker",
+      "text": "Select Contact",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "account-manager-picker-trigger",
+      "text": "Select Assignee",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "budgeted_hours",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "project-quick-add-service-select",
+      "text": "No service",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select default serviceNo service",
+      "value": "__SELECT_EMPTY__",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "dialog-dialog-datePicker-_r_4k_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "dialog-dialog-datePicker-_r_4m_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customize-statuses-button",
+      "text": "Customize",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-project-tags-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Client Portal Visibility",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-button",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-button",
+      "text": "Create Project",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-picker-state-filter",
+      "text": "Active Clients",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-picker-type-filter",
+      "text": "All Types",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-picker-option-36453258-9552-4ff8-a04e-06bc32ebfe14",
+      "text": "WRWhite Rabbit ITcompany",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-picker-add-new-btn",
+      "text": "Add new client",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

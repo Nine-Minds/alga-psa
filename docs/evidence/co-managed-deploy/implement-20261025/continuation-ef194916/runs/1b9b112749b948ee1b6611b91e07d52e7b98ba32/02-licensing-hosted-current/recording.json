@@ -1,0 +1,117 @@
+{
+  "scenario": "02-licensing-hosted-current",
+  "recordedAt": "2026-10-25T16:29:07.260Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "lost-response-executes-one-provider-operation",
+      "passed": true,
+      "at": "2026-10-25T16:29:11.959Z",
+      "data": {
+        "original": 19,
+        "target": 21,
+        "operationId": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+        "provider": "configured simulator; not real Stripe"
+      }
+    },
+    {
+      "id": "fresh-reload-reconciles-verified-target",
+      "passed": true,
+      "at": "2026-10-25T16:29:12.646Z"
+    },
+    {
+      "id": "allocation-persists-and-does-not-change-purchased-capacity",
+      "passed": true,
+      "at": "2026-10-25T16:29:17.344Z"
+    },
+    {
+      "id": "below-usage-reduction-is-disabled",
+      "passed": true,
+      "at": "2026-10-25T16:29:17.512Z"
+    },
+    {
+      "id": "original-purchased-capacity-restored",
+      "passed": true,
+      "at": "2026-10-25T16:29:20.255Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:29:10.578Z",
+      "seconds": 3.318,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T16:29:11.959Z",
+      "seconds": 4.699,
+      "actor": "qa",
+      "title": "lost-response-executes-one-provider-operation",
+      "data": {
+        "original": 19,
+        "target": 21,
+        "operationId": "33862ed9-2575-44e2-a447-bf14bf8bf20d",
+        "provider": "configured simulator; not real Stripe"
+      }
+    },
+    {
+      "at": "2026-10-25T16:29:12.646Z",
+      "seconds": 5.386,
+      "actor": "qa",
+      "title": "fresh-reload-reconciles-verified-target"
+    },
+    {
+      "at": "2026-10-25T16:29:15.067Z",
+      "seconds": 7.807,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T16:29:17.344Z",
+      "seconds": 10.084,
+      "actor": "qa",
+      "title": "allocation-persists-and-does-not-change-purchased-capacity"
+    },
+    {
+      "at": "2026-10-25T16:29:17.512Z",
+      "seconds": 10.252,
+      "actor": "qa",
+      "title": "below-usage-reduction-is-disabled"
+    },
+    {
+      "at": "2026-10-25T16:29:19.670Z",
+      "seconds": 12.41,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-25T16:29:20.255Z",
+      "seconds": 12.995,
+      "actor": "qa",
+      "title": "original-purchased-capacity-restored"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Hosted simulator purchase, server-executed lost-response reload recovery, allocation and usage floor passed. No same-operation explicit replay assertion or real Stripe receipt. Isolated self-host signed-license shortfall, lapse, missing claim, renewal and UI-off journeys remain unexecuted; no approved tenant-bound signed test license/isolated installation is available in this packet. T018 and T019 remain blocked-external for the release-owner portions only."
+  ],
+  "durationSeconds": 12.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

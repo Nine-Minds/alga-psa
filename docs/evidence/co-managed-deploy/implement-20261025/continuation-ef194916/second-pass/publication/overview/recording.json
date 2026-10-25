@@ -1,0 +1,71 @@
+{
+  "guide": "index.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "partial",
+  "remaining": "Current overview entry, native MSP desk, shared Entry/Grid and authoritative customer ticket navigation recorded. Full edits/assignment/category/stopwatch and all native privacy/field controls are not completed here.  Child guides retain their own acceptance results.",
+  "durationSeconds": 37.6,
+  "sha256": "6325cdc3561eb21ba459f773f8431bb4afda7d518f7c7bdc4bb7ccbec2fe9dab",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-overview-native-layout-boundaries-current/recording.json",
+      "name": "00-overview-native-layout-boundaries-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 37.6,
+      "offsetSeconds": 0,
+      "sha256": "c3a63e6b4f8acd05c0bd6cd7523de2d550d74747c19649f572da6a8da809947b",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-overview-native-layout-boundaries-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 5
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "00-overview-native-layout-boundaries-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 27.503,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 27.526,
+      "title": "overview-client-entry-retains-qualified-customer-context",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.601,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.7,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.546,
+      "title": "QA-shared-Entry-uses-same-qualified-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 33.413,
+      "title": "QA-shared-Grid-uses-same-qualified-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 35.82,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 36.659,
+      "title": "customer-native-route-keeps-authoritative-ticket",
+      "actor": "alice"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

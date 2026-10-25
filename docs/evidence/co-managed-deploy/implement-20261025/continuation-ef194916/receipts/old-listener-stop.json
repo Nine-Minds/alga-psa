@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-25T15:10:02.048520+00:00",
+  "pid": 3292641,
+  "startTicks": "308207639",
+  "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+  "signal": "SIGTERM",
+  "reason": "Verified old listener survived concluded review-app; normal replacement admitted"
+}

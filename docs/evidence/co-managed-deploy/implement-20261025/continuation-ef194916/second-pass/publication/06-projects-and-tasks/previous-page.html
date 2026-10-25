@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Projects and tasks · Co-Managed IT</title><meta name="description" content="Projects and tasks: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="projects-and-tasks">Projects and tasks</h1>
+<p>Customer projects can be shared separately from ticket boards. MSP task assignment, task editing, history and effort operate on qualified customer records.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>The October 17 fixture catalog reports <strong>no customer projects</strong>. Prepare a disposable customer project, phase and at least two tasks through the customer&#39;s normal <a href="http://feature-co-managed-it.localhost:23374/msp/projects">Projects</a> screen. Record their links and original values. Do not reuse September project/task links.</p>
+<p>Use a customer administrator to approve project access and an MSP administrator to assign an eligible technician/team. Use QA only after that authority is established. See <a href="03-access-policies.html">Access policies</a> and <a href="index.html#fixtures">fixture identities</a>.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>Access to an entire customer project through an unrelated ticket grant.</li>
+<li>MSP task assignment overwriting customer-local assignment.</li>
+<li>An edit changing the wrong task or silently overwriting newer work.</li>
+<li>Shared task effort disappearing or becoming customer commercial billing.</li>
+</ul>
+<h2 id="1-share-only-the-prepared-project">1. Share only the prepared project</h2>
+<p>As the customer, open <strong>Co-managed access → Projects</strong>, search for the disposable project, add it with <strong>Collaborate</strong>, and <strong>Save access</strong>. Reload. As the MSP, assign the intended staff/team within that customer-approved project scope.</p>
+<p>Open <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/tasks">Project task queues</a>. Compare the working and oversight views and assignment filters such as <strong>Assigned to me</strong> and <strong>Assigned to my teams</strong>. Follow an actual task link from the queue or approved project list.</p>
+<p>Expected: the project grant controls which customer tasks are reachable. A different unshared project remains unavailable. Shared detail links retain the customer and relationship identity.</p>
+<h2 id="2-persist-a-task-edit-with-attribution">2. Persist a task edit with attribution</h2>
+<p>Open a prepared task. In its editor, change <strong>Task name</strong>, select an offered <strong>Status</strong>, or change <strong>Due date</strong>, then <strong>Save access</strong> (the shared save label). Use only fields offered as editable. Reload the task and inspect <strong>Change history</strong>; then open the customer&#39;s native task screen.</p>
+<p>Expected: both organizations see the same permitted values after reload. History records the change with qualified author attribution. Restore reversible values with another ordinary save; history should remain.</p>
+<h2 id="3-separate-msp-assignment-from-local-ownership">3. Separate MSP assignment from local ownership</h2>
+<p>In <strong>MSP assignment</strong>, choose <strong>Assign to → Technician</strong> or <strong>Team</strong>, choose an eligible assignee and select <strong>Assign</strong>. Reload and compare the working queue. Use <strong>Remove MSP assignment</strong>, reload, and compare again.</p>
+<p>Expected: MSP assignment changes the MSP&#39;s task routing without replacing customer-local assignment. Only eligible assigned principals are offered. An arbitrary MSP user does not gain project access through assignment alone.</p>
+<h2 id="4-detect-stale-work-and-revoked-access">4. Detect stale work and revoked access</h2>
+<p>Open the same task in both organizations. Save a customer change, then try to save an older conflicting MSP edit. Use <strong>Discard changes and reload</strong> when offered.</p>
+<p>Expected: the older editor reports the task changed and reloads current values rather than overwriting them. For the disposable project, remove its customer grant and save. Refresh the old task URL and queue as the MSP: fresh access must close, including conversation and file reads.</p>
+<h2 id="5-compare-effort-and-conversations">5. Compare effort and conversations</h2>
+<p>While the grant is active, use <strong>Log time</strong> on the shared task and inspect effort after reload. Review task messages and audience separation using <a href="07-conversations-and-files.html">Conversations and files</a>. Check that project totals include the task&#39;s recorded effort without counting it twice.</p>
+<h2 id="pass-criteria-and-recovery">Pass criteria and recovery</h2>
+<p>Pass when scope, edits, assignment, history and effort refer to the same customer-owned task, and revocation closes fresh reads. Record new project/task links for future review. Restore scope and assignments only if this fixture will be reused; preserve task history and recorded time.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedProjectTasks.tsx">Project tasks and qualified links</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedProjectTaskEditor.tsx">Task editor</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedProjectTaskAssignment.tsx">MSP task assignment</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/projectTaskEditing.ts">Task edit enforcement</a></li>
+</ul>
+<section class="walkthrough-recording" id="06-projects-and-tasks-recording" data-recording-status="complete" aria-labelledby="06-projects-and-tasks-recording-title">
+<h2 id="06-projects-and-tasks-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:46:02.371Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>locator.click: Timeout 18000ms exceeded.
+Call log:
+[2m  - waiting for getByRole(&#39;option&#39;, { name: &#39;CM Lead customer project 20261025-C04&#39;, exact: true })[22m
+</li><li>Continuation restores the reversible scope change from the failed-label recording; it does not turn that failed recording into a complete scenario.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li><li>The initial restore selector was obsolete; separate product continuation restored Collaborate and reloaded. No active project grant was left revoked.</li></ul>
+<video controls preload="metadata" aria-label="guides/06-projects-and-tasks.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt" default></video>
+<label for="06-projects-and-tasks-chapters">Chapters</label><select id="06-projects-and-tasks-chapters"><option value="0">06 task edit revocation</option><option value="7.365">Qualified MSP task edit after reload</option><option value="8.508">Restored original task name</option><option value="15.23">Customer project grant revoked</option><option value="20.291">Formerly authorized task now denied</option><option value="44.92">06 project grant recovery</option><option value="54.818">Restored original project Collaborate scope after stale-label automation error</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("06-projects-and-tasks-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

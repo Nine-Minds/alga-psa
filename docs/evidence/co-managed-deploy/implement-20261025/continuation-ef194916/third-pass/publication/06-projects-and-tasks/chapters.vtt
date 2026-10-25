@@ -1,0 +1,185 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.097
+06-native-project-creation-56e7
+
+2
+00:00:00.097 --> 00:00:02.473
+served-build-matches-recorded-candidate
+
+3
+00:00:02.473 --> 00:00:05.029
+alice: navigate
+
+4
+00:00:05.029 --> 00:00:19.277
+alice: navigate
+
+5
+00:00:19.277 --> 00:00:22.240
+alice: native-task-1-persists-after-reload
+
+6
+00:00:22.240 --> 00:00:24.227
+alice: native-task-2-persists-after-reload
+
+7
+00:00:24.227 --> 00:00:26.769
+alice: navigate
+
+8
+00:00:26.769 --> 00:00:27.520
+alice: navigate
+
+9
+00:00:27.520 --> 00:00:27.892
+06-shared-project-collaboration-56e7
+
+10
+00:00:27.892 --> 00:00:30.215
+Isolated team prerequisite
+
+11
+00:00:30.215 --> 00:00:31.811
+alice: navigate
+
+12
+00:00:31.811 --> 00:00:33.794
+alice: customer-project-collaboration-survives-reload
+
+13
+00:00:33.794 --> 00:00:36.824
+qa: navigate
+
+14
+00:00:36.824 --> 00:00:38.858
+qa: navigate
+
+15
+00:00:38.858 --> 00:00:41.957
+qa: navigate
+
+16
+00:00:41.957 --> 00:00:43.988
+qa: shared-task-edit-survives-reload
+
+17
+00:00:43.988 --> 00:00:45.789
+qa: native-customer-task-shows-MSP-edit
+
+18
+00:00:45.789 --> 00:00:47.701
+qa: person-assignment-keeps-local-owner
+
+19
+00:00:47.701 --> 00:00:47.942
+qa: navigate
+
+20
+00:00:47.942 --> 00:00:50.386
+qa: working-assigned-to-me-shows-person-task
+
+21
+00:00:50.386 --> 00:00:52.286
+qa: team-assignment-persists
+
+22
+00:00:52.286 --> 00:00:52.528
+qa: navigate
+
+23
+00:00:52.528 --> 00:00:52.654
+qa: my-teams-filter-shows-team-assigned-task
+
+24
+00:00:52.654 --> 00:00:54.348
+qa: oversight-retains-qualified-team-task
+
+25
+00:00:54.348 --> 00:00:56.225
+qa: removing-MSP-assignment-preserves-customer-owner
+
+26
+00:00:56.225 --> 00:00:57.517
+qa: stale-MSP-save-cannot-overwrite-customer
+
+27
+00:00:57.517 --> 00:00:58.440
+qa: qualified-history-retains-both-organizations
+
+28
+00:00:58.440 --> 00:01:00.805
+06-project-effort-file-revocation-56e7
+
+29
+00:01:00.805 --> 00:01:01.538
+alice: navigate
+
+30
+00:01:01.538 --> 00:01:03.862
+alice: alice-time-qualified-on-same-authoritative-task
+
+31
+00:01:03.862 --> 00:01:05.260
+qa: navigate
+
+32
+00:01:05.260 --> 00:01:07.518
+qa: qa-time-qualified-on-same-authoritative-task
+
+33
+00:01:07.518 --> 00:01:09.514
+qa: navigate
+
+34
+00:01:09.514 --> 00:01:11.477
+alice: navigate
+
+35
+00:01:11.477 --> 00:01:13.401
+qa: navigate
+
+36
+00:01:13.401 --> 00:01:14.629
+qa: navigate
+
+37
+00:01:14.629 --> 00:01:16.513
+qa: MSP-task-attachment-byte-content-matches
+
+38
+00:01:16.513 --> 00:01:16.547
+alice: navigate
+
+39
+00:01:16.547 --> 00:01:18.562
+alice: customer-task-message-and-file-bytes-match
+
+40
+00:01:18.562 --> 00:01:18.897
+alice: navigate
+
+41
+00:01:18.897 --> 00:01:18.929
+alice: customer-project-grant-removed-after-reload
+
+42
+00:01:18.929 --> 00:01:20.861
+qa: copied-task-file-link-denied-after-project-revocation
+
+43
+00:01:20.861 --> 00:01:23.393
+qa: navigate
+
+44
+00:01:23.393 --> 00:01:23.653
+qa: navigate
+
+45
+00:01:23.653 --> 00:01:25.607
+qa: revoked-task-absent-from-fresh-queue
+
+46
+00:01:25.607 --> 00:01:26.080
+alice: navigate

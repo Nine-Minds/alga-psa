@@ -1,0 +1,69 @@
+{
+  "scenario": "06-shared-project-collaboration-current",
+  "recordedAt": "2026-10-25T15:16:27.208Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [
+    {
+      "id": "customer-project-collaboration-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T15:16:33.444Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:16:27.642Z",
+      "seconds": 0.434,
+      "title": "Isolated team prerequisite",
+      "data": {
+        "teamId": "1f18977f-02a6-47a0-b536-bed69621fdc5",
+        "teamName": "CM continuation team 1792941387498",
+        "member": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+        "method": "operator SQL fixture; customer scope and sponsor assignment use native product"
+      }
+    },
+    {
+      "at": "2026-10-25T15:16:29.969Z",
+      "seconds": 2.761,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:16:33.444Z",
+      "seconds": 6.236,
+      "actor": "alice",
+      "title": "customer-project-collaboration-survives-reload"
+    },
+    {
+      "at": "2026-10-25T15:16:35.610Z",
+      "seconds": 8.402,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out team assignment committed false",
+  "durationSeconds": 67.24,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

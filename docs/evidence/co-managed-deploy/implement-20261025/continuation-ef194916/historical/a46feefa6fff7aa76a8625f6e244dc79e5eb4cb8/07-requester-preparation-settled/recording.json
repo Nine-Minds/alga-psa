@@ -1,0 +1,55 @@
+{
+  "scenario": "07-requester-preparation-settled",
+  "recordedAt": "2026-10-25T14:38:50.236Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "requester-created-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-25T14:38:57.101Z",
+      "data": {
+        "userId": "5c078e8f-1985-4c39-babc-0d38350973a7",
+        "contactId": "b934eff4-d983-4930-8e38-eb6a23a9fe12"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:38:52.574Z",
+      "seconds": 2.338,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-25T14:38:57.101Z",
+      "seconds": 6.865,
+      "actor": "alice",
+      "title": "requester-created-in-customer-tenant",
+      "data": {
+        "userId": "5c078e8f-1985-4c39-babc-0d38350973a7",
+        "contactId": "b934eff4-d983-4930-8e38-eb6a23a9fe12"
+      }
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Requester fixture setup only; no conversation visibility acceptance."
+  ],
+  "durationSeconds": 7.8,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

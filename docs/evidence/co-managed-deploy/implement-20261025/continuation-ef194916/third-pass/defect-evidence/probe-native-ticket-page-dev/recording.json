@@ -1,0 +1,70 @@
+{
+  "scenario": "probe-native-ticket-page-dev",
+  "recordedAt": "2026-10-25T19:46:24.949Z",
+  "runtime": {
+    "sourceRevision": "dev-worktree",
+    "origin": "http://feature-co-managed-it.localhost:3374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "dev-worktree",
+    "buildId": "<html"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T19:46:34.054Z",
+      "seconds": 9.105,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T19:46:42.084Z",
+      "seconds": 17.135,
+      "actor": "alice",
+      "title": "alice-active",
+      "data": {
+        "crashed": false,
+        "hasTitle": true,
+        "editTitle": 1
+      }
+    },
+    {
+      "at": "2026-10-25T19:46:45.948Z",
+      "seconds": 20.999,
+      "actor": "ended",
+      "title": "navigate",
+      "data": "/msp/tickets/2785d10c-5a9f-42f3-9495-ba557b11e1ce"
+    },
+    {
+      "at": "2026-10-25T19:46:57.005Z",
+      "seconds": 32.056,
+      "actor": "ended",
+      "title": "ended-customer",
+      "data": {
+        "crashed": false,
+        "editTitleEnabled": false,
+        "save": 0,
+        "timeErr": false
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "dev probe"
+  ],
+  "durationSeconds": 33,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "ended",
+      "email": "depart.admin.1792954374803@cmreview.test",
+      "tenant": "1725ae28-ec4c-401a-97d4-0537c3056281"
+    }
+  ]
+}

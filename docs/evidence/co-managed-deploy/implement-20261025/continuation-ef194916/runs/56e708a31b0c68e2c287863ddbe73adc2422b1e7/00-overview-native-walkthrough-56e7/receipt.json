@@ -1,0 +1,29 @@
+{
+  "ticket": "cfff4242-7962-4100-a54c-687eaa540500",
+  "customer": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "categoryCreated": {
+    "categoryId": "aa4d19ad-a845-4777-b60b-24a3b3e6a56f",
+    "category": "CM overview category 1792959686515"
+  },
+  "baseline": {
+    "title": "SMOKE callout count change 142333",
+    "status_id": "e3160800-8887-4b16-8a92-36e5e0a3b3c4",
+    "priority_id": "efe3f052-d7db-4430-9e18-573c3373fa03",
+    "category_id": "defeaa60-ef9b-40a6-be42-f145af3223a8",
+    "assigned_to": null,
+    "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac",
+    "status": "Open",
+    "priority": "High",
+    "category": "SMOKE customer cat 20261016",
+    "board": "Service Desk"
+  },
+  "restored": {
+    "title": "SMOKE callout count change 142333",
+    "status_id": "e3160800-8887-4b16-8a92-36e5e0a3b3c4",
+    "priority_id": "efe3f052-d7db-4430-9e18-573c3373fa03",
+    "category_id": "defeaa60-ef9b-40a6-be42-f145af3223a8",
+    "assigned_to": null,
+    "board_id": "f3aad7d6-ed55-4df0-9541-042200f919ac"
+  },
+  "privateNote": "CM overview customer-private 1792959686515"
+}

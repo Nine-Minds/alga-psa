@@ -1,0 +1,167 @@
+{
+  "guide": "guides/01-onboarding.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 43.4,
+  "sha256": "f7728d2b16c9fbd0be6542b6b60210c5ef9628139e459f64ca04c230414612ab",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/recording.json",
+      "name": "01-onboarding-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 39.76,
+      "offsetSeconds": 0,
+      "sha256": "6826c7dd377812d8f3a2766570c185d1625b937ccd23d21234bc0b19b5d312f9",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 13
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/recording.json",
+      "name": "01-accepted-customer-confirmation-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 3.64,
+      "offsetSeconds": 39.76,
+      "sha256": "af51bcaf1152a34c361c06b548f9ad3937b31291649139be65a3e155f5cc0a97",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 2
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "01-onboarding-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.465,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 2.875,
+      "title": "configured-simulator-capacity-prepared",
+      "actor": "qa"
+    },
+    {
+      "seconds": 4.896,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 7.164,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 9.642,
+      "title": "provision-lost-response-was-after-server-execution",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.798,
+      "title": "retry-retains-operation-id",
+      "actor": "qa"
+    },
+    {
+      "seconds": 12.094,
+      "title": "one-operation-and-allocation-Cancel",
+      "actor": "qa"
+    },
+    {
+      "seconds": 14.112,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.16,
+      "title": "cancel-removes-only-unaccepted-workspace",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.306,
+      "title": "cancel-releases-reservation-once",
+      "actor": "qa"
+    },
+    {
+      "seconds": 19.648,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.888,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 24.688,
+      "title": "one-operation-and-allocation-Accept",
+      "actor": "qa"
+    },
+    {
+      "seconds": 26.725,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 28.97,
+      "title": "resend-preserves-workspace-and-allocation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.814,
+      "title": "invited-admin-selects-exact-customer-tenant",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.352,
+      "title": "deep-native-link-requires-customer-acceptance",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.54,
+      "title": "valid-ordinary-command-denied-before-acceptance",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.641,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 36.839,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 38.877,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 39.76,
+      "title": "01-accepted-customer-confirmation-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 40.192,
+      "title": "fresh-accepted-admin-login-selects-exact-accepted-tenant",
+      "actor": "acceptedCustomer"
+    },
+    {
+      "seconds": 42.095,
+      "title": "navigate",
+      "actor": "acceptedCustomer"
+    },
+    {
+      "seconds": 42.466,
+      "title": "fresh-accepted-session-retains-native-work-after-reload",
+      "actor": "acceptedCustomer"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

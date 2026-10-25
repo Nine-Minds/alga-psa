@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SLA configuration · Co-Managed IT</title><meta name="description" content="SLA configuration: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="sla-configuration">SLA configuration</h1>
+<p>Customer and MSP SLA obligations are separate. MSP targets are selected when a ticket is escalated, using the customer&#39;s priority mapping and the applicable MSP policy.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use an MSP SLA administrator and a disposable customer ticket. Open the client&#39;s <strong>Co-managed IT → Co-managed SLA priorities</strong> or <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/sla">the SLA page</a> and select the appropriate workspace if prompted. Record existing mappings and policies.</p>
+<p>The ticket-screen walkthrough showed handback pausing the MSP clock. Fresh policy/mapping and breach-notification acceptance were not part of that run. Use a disposable policy to avoid changing existing service commitments.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>An escalation starting without a valid MSP target.</li>
+<li>Customer and MSP clocks being conflated.</li>
+<li>A mapping change rewriting targets already promised on older escalations.</li>
+<li>A departed customer continuing to read the former MSP&#39;s live clock.</li>
+</ul>
+<h2 id="1-configure-and-persist-priority-mapping">1. Configure and persist priority mapping</h2>
+<ol>
+<li>Select <strong>Manage SLA policies</strong> to open <a href="http://feature-co-managed-it.localhost:23374/msp/settings/sla">SLA settings</a>. Confirm the prepared MSP policy has the intended targets and business hours.</li>
+<li>Return to <strong>Co-managed SLA priorities</strong>. For a prepared customer priority, select the intended <strong>MSP priority for …</strong> value.</li>
+<li>Select <strong>Save access</strong>, reload, and compare the saved mapping.</li>
+</ol>
+<p>Expected: each selected customer priority maps to the intended MSP priority. An unmapped or unavailable policy is visible as such; do not infer a valid target merely from a running UI timer.</p>
+<h2 id="2-start-a-new-msp-obligation-on-escalation">2. Start a new MSP obligation on escalation</h2>
+<p>As the customer, open the disposable native ticket, confirm its priority, and choose <strong>Escalate to MSP</strong> with a unique note. Reload both customer and shared MSP views. Inspect the Co-managed section&#39;s customer and MSP SLA displays and handoff history.</p>
+<p>Expected: initial visibility alone does not start the MSP obligation. Escalation selects the applicable client, board or default MSP policy and starts the relevant clock. Customer SLA remains separately identified. If SLA setup is required, record that blocker and complete configuration before retrying the escalation.</p>
+<h2 id="3-keep-existing-targets-stable">3. Keep existing targets stable</h2>
+<p>Record the escalated ticket&#39;s MSP targets. Change the disposable priority mapping or applicable future policy configuration, save and reload the old ticket. Escalate a second disposable ticket to compare the newly selected target.</p>
+<p>Expected: existing clocks retain their captured targets; new escalations use current configuration. Compare timestamps/targets, not just rounded remaining-time labels.</p>
+<h2 id="4-pause-msp-responsibility-without-erasing-history">4. Pause MSP responsibility without erasing history</h2>
+<p>As the MSP, <strong>Return to customer</strong> with a note. Reload both screens and inspect handoff history. If restoring the fixture, have the customer re-escalate through the normal control.</p>
+<p>Expected: the MSP display reflects the responsibility pause and preserves history. The customer clock is not replaced by the MSP clock. Record the resulting targets and transitions; do not assume re-escalation simply resets every SLA measure.</p>
+<h2 id="5-check-lifecycle-and-notifications-on-prepared-fixtures">5. Check lifecycle and notifications on prepared fixtures</h2>
+<p>Use <a href="10-departure-and-archives.html">Departure and archives</a> on a separate relationship. After departure, the customer must retain its own outcome while the former MSP&#39;s live SLA display becomes unavailable.</p>
+<p>Breach and routing email require a short-target test policy and running delivery workers. Capture the intended recipient&#39;s actual notification/mail and verify an unrelated staff member or requester does not receive private obligation details. A clock label alone does not prove notification delivery.</p>
+<h2 id="pass-criteria-and-recovery">Pass criteria and recovery</h2>
+<p>Pass when saved mappings govern new escalations, old targets remain stable, responsibility transitions affect the correct organization, and departure ends live cross-organization reads. Restore reversible mapping changes and retain handoff/notification evidence.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedSlaPolicyPanel.tsx">SLA mapping screen</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/ticketSla.ts">SLA selection and transitions</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/ticketSlaRead.ts">Organization-specific SLA reads</a></li>
+</ul>
+<section class="walkthrough-recording" id="08-sla-recording" data-recording-status="complete" aria-labelledby="08-sla-recording-title">
+<h2 id="08-sla-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:47:37.910Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li><li>Observed separate responsibility clocks and paused state; the route labelled priority mapping resolved client composition, so configuration editing was not verified.</li></ul>
+<video controls preload="metadata" aria-label="guides/08-sla.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt" default></video>
+<label for="08-sla-chapters">Chapters</label><select id="08-sla-chapters"><option value="0">05 customer ticket loop</option><option value="5.113">Sponsor priority mapping</option><option value="26.93">MSP handback and separate clocks</option><option value="37.213">Customer escalation restored</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("08-sla-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

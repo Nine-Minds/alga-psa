@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:20.810Z",
+  "guide": "guides/12-customer-integrations.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/12-customer-integrations.html",
+  "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.605728,
+    "duration": 7.84,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-customer-integrations/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "navigate",
+    "target": 4.849,
+    "actual": 4.862402,
+    "followingFrame": {
+      "mediaTime": 4.88,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/739416",
+  "passed": true
+}

@@ -1,0 +1,212 @@
+{
+  "scenario": "05-current-mixed-recovery-56e7b",
+  "recordedAt": "2026-10-25T20:33:02.671Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "three-disposable-tickets-escalated-through-product",
+      "passed": true,
+      "at": "2026-10-25T20:33:08.962Z"
+    },
+    {
+      "id": "native-list-keeps-native-source",
+      "passed": true,
+      "at": "2026-10-25T20:33:11.034Z"
+    },
+    {
+      "id": "qualified-filter-and-selection-set-survive-reload",
+      "passed": true,
+      "at": "2026-10-25T20:33:14.066Z"
+    },
+    {
+      "id": "full-filtered-export-includes-all-authorized-rows",
+      "passed": true,
+      "at": "2026-10-25T20:33:14.203Z"
+    },
+    {
+      "id": "customer-change-races-stale-selected-revision",
+      "passed": true,
+      "at": "2026-10-25T20:33:16.629Z"
+    },
+    {
+      "id": "reload-offers-explicit-frozen-intent-recovery",
+      "passed": true,
+      "at": "2026-10-25T20:33:19.645Z"
+    },
+    {
+      "id": "mixed-results-distinguish-conflict-return-and-access-denied",
+      "passed": true,
+      "at": "2026-10-25T20:33:19.865Z"
+    },
+    {
+      "id": "recovered-results-panel-is-open-and-focused",
+      "passed": true,
+      "at": "2026-10-25T20:33:19.877Z"
+    },
+    {
+      "id": "lost-response-replay-creates-one-handoff-note",
+      "passed": true,
+      "at": "2026-10-25T20:33:20.015Z"
+    },
+    {
+      "id": "conflicted-item-does-not-receive-bulk-note",
+      "passed": true,
+      "at": "2026-10-25T20:33:20.144Z"
+    },
+    {
+      "id": "oversight-retains-returned-work-without-revoked-ticket-or-duplication",
+      "passed": true,
+      "at": "2026-10-25T20:33:20.720Z"
+    },
+    {
+      "id": "completed-return-requeries-working-membership",
+      "passed": true,
+      "at": "2026-10-25T20:33:21.234Z"
+    },
+    {
+      "id": "customer-native-history-shows-the-successful-shared-note",
+      "passed": true,
+      "at": "2026-10-25T20:33:22.494Z"
+    },
+    {
+      "id": "fixture-responsibility-restored-through-customer-ui",
+      "passed": true,
+      "at": "2026-10-25T20:33:26.981Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:33:08.962Z",
+      "seconds": 6.291,
+      "actor": "alice",
+      "title": "three-disposable-tickets-escalated-through-product"
+    },
+    {
+      "at": "2026-10-25T20:33:11.020Z",
+      "seconds": 8.349,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T20:33:11.034Z",
+      "seconds": 8.363,
+      "actor": "qa",
+      "title": "native-list-keeps-native-source"
+    },
+    {
+      "at": "2026-10-25T20:33:13.019Z",
+      "seconds": 10.348,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer"
+    },
+    {
+      "at": "2026-10-25T20:33:14.066Z",
+      "seconds": 11.395,
+      "actor": "qa",
+      "title": "qualified-filter-and-selection-set-survive-reload"
+    },
+    {
+      "at": "2026-10-25T20:33:14.203Z",
+      "seconds": 11.532,
+      "actor": "qa",
+      "title": "full-filtered-export-includes-all-authorized-rows"
+    },
+    {
+      "at": "2026-10-25T20:33:16.629Z",
+      "seconds": 13.958,
+      "actor": "qa",
+      "title": "customer-change-races-stale-selected-revision"
+    },
+    {
+      "at": "2026-10-25T20:33:18.281Z",
+      "seconds": 15.61,
+      "actor": "qa",
+      "title": "third-selected-explicit-only-grant-revoked",
+      "data": {
+        "ticket": "f9ddf614-0c5a-4ed3-a070-c410ec47f7b7",
+        "responsibility": "customer"
+      }
+    },
+    {
+      "at": "2026-10-25T20:33:19.645Z",
+      "seconds": 16.974,
+      "actor": "qa",
+      "title": "reload-offers-explicit-frozen-intent-recovery"
+    },
+    {
+      "at": "2026-10-25T20:33:19.865Z",
+      "seconds": 17.194,
+      "actor": "qa",
+      "title": "mixed-results-distinguish-conflict-return-and-access-denied"
+    },
+    {
+      "at": "2026-10-25T20:33:19.877Z",
+      "seconds": 17.206,
+      "actor": "qa",
+      "title": "recovered-results-panel-is-open-and-focused"
+    },
+    {
+      "at": "2026-10-25T20:33:20.015Z",
+      "seconds": 17.344,
+      "actor": "qa",
+      "title": "lost-response-replay-creates-one-handoff-note"
+    },
+    {
+      "at": "2026-10-25T20:33:20.144Z",
+      "seconds": 17.473,
+      "actor": "qa",
+      "title": "conflicted-item-does-not-receive-bulk-note"
+    },
+    {
+      "at": "2026-10-25T20:33:20.720Z",
+      "seconds": 18.049,
+      "actor": "qa",
+      "title": "oversight-retains-returned-work-without-revoked-ticket-or-duplication"
+    },
+    {
+      "at": "2026-10-25T20:33:21.234Z",
+      "seconds": 18.563,
+      "actor": "qa",
+      "title": "completed-return-requeries-working-membership"
+    },
+    {
+      "at": "2026-10-25T20:33:22.494Z",
+      "seconds": 19.823,
+      "actor": "qa",
+      "title": "customer-native-history-shows-the-successful-shared-note"
+    },
+    {
+      "at": "2026-10-25T20:33:26.981Z",
+      "seconds": 24.31,
+      "actor": "qa",
+      "title": "fixture-responsibility-restored-through-customer-ui"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Three-ticket selection, native separation, filtered CSV, customer concurrent change, explicit-scope revocation, mixed per-item outcomes and lost-response reload recovery exercised. Queue scope and multi-page export checks run separately."
+  ],
+  "durationSeconds": 25.28,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

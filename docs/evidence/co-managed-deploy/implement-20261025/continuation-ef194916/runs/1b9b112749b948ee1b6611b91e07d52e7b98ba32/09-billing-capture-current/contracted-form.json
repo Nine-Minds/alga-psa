@@ -1,0 +1,398 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nC1\nProject task\n\nWhite Rabbit IT · CM continuation project 1792938628367 · Acceptance phase\n\nTask name\nStatus\nTo Do\nSelect...\nTo Do\nIn Progress\nDone\nDue date\nSave access\nReload current access\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nBilling profile\nCM Acceptance Profile 1792944312315\n\nOnly used when no contract assigns this work to a profile.\n\nLog time\nAdd New Time Entry for CM continuation task 2 1792938628367\nService *\nCM Contracted Support 1792944312315\n\nContract: CM Acceptance Contract 1792944312315\n\nCM Acceptance Contract 1792944312315 - Hourly (Hourly)\n\nDate *\n\nTime sheet: Oct 16, 2026 – Oct 31, 2026 · Draft\n\nStart Time\nEnd Time\nDuration\nh\nm\nBillable\nNotes\nCancel\nSave\nMSP assignment\n\nNot assigned to the MSP\n\nAssign to\nTechnician\nAssignee\nSelect...\nAssign\nReload current access\nConversation\nReload current state\nNew message\n\nNo messages are visible yet.\n\nChange history\nReload current access\n\nNo co-managed task changes to show.\n\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "C1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-name",
+      "text": "",
+      "value": "CM continuation task 2 1792938628367",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-status",
+      "text": "To Do",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select...To DoIn ProgressDone",
+      "value": "81f80ce4-da9b-4970-9f6f-68bc1981488a",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-due",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-save",
+      "text": "Save access",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-effort-refresh-1f98df77-cd15-44c2-8f4d-42ff52d01e84-project_task-3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-time-billing-profile",
+      "text": "CM Acceptance Profile 1792944312315",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-log-time",
+      "text": "Log time",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_25_",
+      "text": "CM Contracted Support 1792944312315",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "datePicker-_r_28_",
+      "text": "",
+      "value": "10/25/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-start-time-0",
+      "text": "",
+      "value": "8:00 AM",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-end-time-0",
+      "text": "",
+      "value": "8:15 AM",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-duration-hours-0",
+      "text": "",
+      "value": "0",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-duration-minutes-0",
+      "text": "",
+      "value": "15",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-billable-duration-0",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-cancel-dialog-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-save-dialog-btn",
+      "text": "Save",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-kind",
+      "text": "Technician",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-person",
+      "text": "Select...",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-save",
+      "text": "Assign",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-refresh",
+      "text": "Reload current state",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-new",
+      "text": "New message",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-newer",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-older",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

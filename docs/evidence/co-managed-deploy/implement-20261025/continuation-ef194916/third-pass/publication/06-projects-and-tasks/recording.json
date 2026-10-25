@@ -1,0 +1,276 @@
+{
+  "guide": "guides/06-projects-and-tasks.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 86.08,
+  "sha256": "c21a3761399dfacc5bfbb0833ef57a226db6799805e3ebc4fcf109acaf8ad2ef",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/recording.json",
+      "name": "06-native-project-creation-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 27.52,
+      "offsetSeconds": 0,
+      "sha256": "5f412f3579522212f8132ab6bc7c8dd43b45f3feaf61918967cf1d67a1ce66de",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 5
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/recording.json",
+      "name": "06-shared-project-collaboration-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 30.92,
+      "offsetSeconds": 27.52,
+      "sha256": "d52331835d6ade471360aa0267edaf67f523f3ad330dbb6cf067276e958a3a64",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 13
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/recording.json",
+      "name": "06-project-effort-file-revocation-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 27.64,
+      "offsetSeconds": 58.44,
+      "sha256": "d558078e19a149c064b8486c74d6f5cecdddaf38aa018ee03cfb1ee27129a895",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 15
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "06-native-project-creation-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.097,
+      "title": "served-build-matches-recorded-candidate"
+    },
+    {
+      "seconds": 2.473,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 5.029,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 19.277,
+      "title": "native-task-1-persists-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 22.24,
+      "title": "native-task-2-persists-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 24.227,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 26.769,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 27.52,
+      "title": "06-shared-project-collaboration-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 27.892,
+      "title": "Isolated team prerequisite"
+    },
+    {
+      "seconds": 30.215,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 31.811,
+      "title": "customer-project-collaboration-survives-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 33.794,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 36.824,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 38.858,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 41.957,
+      "title": "shared-task-edit-survives-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 43.988,
+      "title": "native-customer-task-shows-MSP-edit",
+      "actor": "qa"
+    },
+    {
+      "seconds": 45.789,
+      "title": "person-assignment-keeps-local-owner",
+      "actor": "qa"
+    },
+    {
+      "seconds": 47.701,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 47.942,
+      "title": "working-assigned-to-me-shows-person-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 50.385999999999996,
+      "title": "team-assignment-persists",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.286,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.528,
+      "title": "my-teams-filter-shows-team-assigned-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 52.653999999999996,
+      "title": "oversight-retains-qualified-team-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 54.348,
+      "title": "removing-MSP-assignment-preserves-customer-owner",
+      "actor": "qa"
+    },
+    {
+      "seconds": 56.224999999999994,
+      "title": "stale-MSP-save-cannot-overwrite-customer",
+      "actor": "qa"
+    },
+    {
+      "seconds": 57.516999999999996,
+      "title": "qualified-history-retains-both-organizations",
+      "actor": "qa"
+    },
+    {
+      "seconds": 58.44,
+      "title": "06-project-effort-file-revocation-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 60.805,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 61.538,
+      "title": "alice-time-qualified-on-same-authoritative-task",
+      "actor": "alice"
+    },
+    {
+      "seconds": 63.861999999999995,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 65.25999999999999,
+      "title": "qa-time-qualified-on-same-authoritative-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 67.518,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 69.514,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 71.477,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 73.401,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 74.62899999999999,
+      "title": "MSP-task-attachment-byte-content-matches",
+      "actor": "qa"
+    },
+    {
+      "seconds": 76.513,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 76.547,
+      "title": "customer-task-message-and-file-bytes-match",
+      "actor": "alice"
+    },
+    {
+      "seconds": 78.562,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 78.89699999999999,
+      "title": "customer-project-grant-removed-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 78.929,
+      "title": "copied-task-file-link-denied-after-project-revocation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 80.86099999999999,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 83.393,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 83.65299999999999,
+      "title": "revoked-task-absent-from-fresh-queue",
+      "actor": "qa"
+    },
+    {
+      "seconds": 85.607,
+      "title": "navigate",
+      "actor": "alice"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

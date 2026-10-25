@@ -1,0 +1,99 @@
+{
+  "stamp": 1792959853966,
+  "prefix": "CM DEPART 1792959853966",
+  "capacityBefore": 19,
+  "usedBefore": 18,
+  "clientId": "ff49c96a-143b-4859-9a3f-4a2eac68bec8",
+  "operationId": "b240dca9-0e9e-4225-a91b-3d7879323451",
+  "customer": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+  "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+  "allocationId": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+  "workspace": "CM DEPART 1792959853966 IT",
+  "adminEmail": "depart.admin.1792959853966@cmreview.test",
+  "credentialFile": "departure-1792959853966-credential.json",
+  "qaId": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+  "ticketClient": "CD\nCM DEPART 1792959853966 IT\ncompany",
+  "ticketBoard": "Service Desk",
+  "ticketStatus": "Open",
+  "ticket": "c7c64319-d853-4b83-b774-a846d285aa1f",
+  "ticketTitle": "CM DEPART 1792959853966 shared ticket",
+  "route": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f",
+  "stageA": "10-departure-a-provision-56e7",
+  "files": [
+    {
+      "label": "shared",
+      "fileName": "cm-depart-shared-1792959853966.txt",
+      "href": "/api/co-management/attachments/8731d8c5-f781-481b-893a-76d9b9bb35be?customerTenant=d46de2e8-21a5-424d-8699-f14e07e407a4&relationshipId=38db9e8a-7f42-429c-baae-f0eb813b385b&ticketId=c7c64319-d853-4b83-b774-a846d285aa1f&storeTenant=d46de2e8-21a5-424d-8699-f14e07e407a4&threadId=390a8602-d284-45bb-9e00-96b2a7c081bc&commentId=390a8602-d284-45bb-9e00-96b2a7c081bc",
+      "sha256": "064ddfc1e7713c0801ec81f428f2e2085740ee648b3d7870109af85636314c67",
+      "text": "CM DEPART 1792959853966 shared"
+    },
+    {
+      "label": "MSPprivate",
+      "fileName": "cm-depart-MSPprivate-1792959853966.txt",
+      "href": "/api/co-management/attachments/31ca6c85-c0c4-4465-84c8-d64e1df1959c?customerTenant=d46de2e8-21a5-424d-8699-f14e07e407a4&relationshipId=38db9e8a-7f42-429c-baae-f0eb813b385b&ticketId=c7c64319-d853-4b83-b774-a846d285aa1f&storeTenant=24ac76c8-df59-4b10-8371-c56222904580&threadId=493a58f0-ee47-4ae6-a036-4e70fe4e89d5&commentId=493a58f0-ee47-4ae6-a036-4e70fe4e89d5",
+      "sha256": "6ff03279a2464c881b9763c679c111696f524f9145cc92d607f4adfb94fb0674",
+      "text": "CM DEPART 1792959853966 MSPprivate"
+    },
+    {
+      "label": "customerprivate",
+      "fileName": "cm-depart-customerprivate-1792959853966.txt",
+      "href": "/api/co-management/attachments/ed362bae-2741-46f4-b8c4-486296567d27?customerTenant=d46de2e8-21a5-424d-8699-f14e07e407a4&relationshipId=38db9e8a-7f42-429c-baae-f0eb813b385b&ticketId=c7c64319-d853-4b83-b774-a846d285aa1f&storeTenant=d46de2e8-21a5-424d-8699-f14e07e407a4&threadId=c4b3a9ec-d843-46f9-bd06-81d5f35e79e4&commentId=c4b3a9ec-d843-46f9-bd06-81d5f35e79e4",
+      "sha256": "3aefe74cc5616f21c10f095dc74bc88a25292f52a70a752c5674693326f3f4bb",
+      "text": "CM DEPART 1792959853966 customerprivate"
+    }
+  ],
+  "entries": [
+    {
+      "label": "invoiced-before-cutoff",
+      "minutes": 20,
+      "note": "CM DEPART 1792959853966 commercial invoiced-before-cutoff",
+      "entry_id": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+      "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+      "billable_duration": 20,
+      "billing_mode": "commercial",
+      "work_item_type": "co_managed",
+      "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+      "contract_line_id": null
+    },
+    {
+      "label": "uninvoiced-at-cutoff",
+      "minutes": 10,
+      "note": "CM DEPART 1792959853966 commercial uninvoiced-at-cutoff",
+      "entry_id": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+      "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+      "billable_duration": 10,
+      "billing_mode": "commercial",
+      "work_item_type": "co_managed",
+      "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+      "contract_line_id": null
+    }
+  ],
+  "mailControl": "CM DEPART 1792959853966 mail-control",
+  "techId": "1cbb69f1-0f45-490d-8764-87e939da9c1a",
+  "teamId": "83acdd1d-dacf-4f12-b7d7-85662b65f20a",
+  "techEmail": "cm.depart.tech.1792959853966@cmreview.test",
+  "techName": "CM Depart Tech 1792959853966",
+  "cycles": [
+    {
+      "billing_cycle_id": "9b7495c8-e3fc-434e-a134-f189e2c3cf23",
+      "period_start_date": "2026-10-01T00:00:00+00:00",
+      "period_end_date": "2026-11-01T00:00:00+00:00"
+    }
+  ],
+  "preCutoffInvoice": {
+    "invoice_id": "4dc6985b-e6f1-422a-8471-1f43d9b3c7e0",
+    "invoice_number": "INV-000013",
+    "status": "draft",
+    "subtotal": 4000
+  },
+  "faultArmed": true,
+  "queuedText": "CM DEPART 1792959853966 queued-at-cutoff",
+  "queuedDelivery": {
+    "delivery_key": "co-managed-comment:d46de2e8-21a5-424d-8699-f14e07e407a4:c7c64319-d853-4b83-b774-a846d285aa1f:444c7441-7fd9-4307-a984-7b716c2e08ab:42b60ee4-536c-44b2-aab4-150ea2acfd4c:email:24ac76c8-df59-4b10-8371-c56222904580:5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+    "status": "pending",
+    "attempt_count": 1,
+    "error_code": "email_provider_failed",
+    "next_attempt_at": "2026-10-25T20:27:02.88109+00:00",
+    "comment_id": "444c7441-7fd9-4307-a984-7b716c2e08ab"
+  }
+}

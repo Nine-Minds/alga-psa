@@ -1,0 +1,171 @@
+{
+  "scenario": "06-shared-project-collaboration-rehearsal",
+  "recordedAt": "2026-10-25T14:33:11.113Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "customer-project-collaboration-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T14:33:25.501Z"
+    },
+    {
+      "id": "unshared-project-denied",
+      "passed": true,
+      "at": "2026-10-25T14:34:32.248Z"
+    },
+    {
+      "id": "approved-project-lists-two-customer-tasks",
+      "passed": true,
+      "at": "2026-10-25T14:34:34.272Z"
+    },
+    {
+      "id": "shared-task-edit-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T14:34:36.527Z"
+    },
+    {
+      "id": "native-customer-task-shows-MSP-edit",
+      "passed": true,
+      "at": "2026-10-25T14:34:39.216Z"
+    },
+    {
+      "id": "person-assignment-keeps-local-owner",
+      "passed": true,
+      "at": "2026-10-25T14:34:40.950Z"
+    },
+    {
+      "id": "working-assigned-to-me-shows-person-task",
+      "passed": true,
+      "at": "2026-10-25T14:34:43.067Z"
+    },
+    {
+      "id": "team-assignment-persists",
+      "passed": true,
+      "at": "2026-10-25T14:34:45.575Z"
+    },
+    {
+      "id": "my-teams-filter-shows-team-assigned-task",
+      "passed": true,
+      "at": "2026-10-25T14:34:47.724Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:33:20.081Z",
+      "seconds": 8.968,
+      "title": "Isolated team prerequisite",
+      "data": {
+        "teamId": "a3701f2e-8830-4fb7-8aac-1c6e0daa8fb3",
+        "teamName": "CM continuation team 1792938798759",
+        "member": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+        "method": "operator SQL fixture; customer scope and sponsor assignment use native product"
+      }
+    },
+    {
+      "at": "2026-10-25T14:33:22.666Z",
+      "seconds": 11.553,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T14:33:25.501Z",
+      "seconds": 14.388,
+      "actor": "alice",
+      "title": "customer-project-collaboration-survives-reload"
+    },
+    {
+      "at": "2026-10-25T14:33:27.717Z",
+      "seconds": 16.604,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T14:34:32.200Z",
+      "seconds": 81.087,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/e956851d-6004-4522-856a-0f5fd3c08494"
+    },
+    {
+      "at": "2026-10-25T14:34:32.248Z",
+      "seconds": 81.135,
+      "actor": "qa",
+      "title": "unshared-project-denied"
+    },
+    {
+      "at": "2026-10-25T14:34:34.259Z",
+      "seconds": 83.146,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/0fb32387-98af-4712-a323-abae6ba2868c"
+    },
+    {
+      "at": "2026-10-25T14:34:34.272Z",
+      "seconds": 83.159,
+      "actor": "qa",
+      "title": "approved-project-lists-two-customer-tasks"
+    },
+    {
+      "at": "2026-10-25T14:34:36.527Z",
+      "seconds": 85.414,
+      "actor": "qa",
+      "title": "shared-task-edit-survives-reload"
+    },
+    {
+      "at": "2026-10-25T14:34:39.216Z",
+      "seconds": 88.103,
+      "actor": "qa",
+      "title": "native-customer-task-shows-MSP-edit"
+    },
+    {
+      "at": "2026-10-25T14:34:40.950Z",
+      "seconds": 89.837,
+      "actor": "qa",
+      "title": "person-assignment-keeps-local-owner"
+    },
+    {
+      "at": "2026-10-25T14:34:42.875Z",
+      "seconds": 91.762,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T14:34:43.067Z",
+      "seconds": 91.954,
+      "actor": "qa",
+      "title": "working-assigned-to-me-shows-person-task"
+    },
+    {
+      "at": "2026-10-25T14:34:45.575Z",
+      "seconds": 94.462,
+      "actor": "qa",
+      "title": "team-assignment-persists"
+    },
+    {
+      "at": "2026-10-25T14:34:47.478Z",
+      "seconds": 96.365,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T14:34:47.724Z",
+      "seconds": 96.611,
+      "actor": "qa",
+      "title": "my-teams-filter-shows-team-assigned-task"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": []
+}

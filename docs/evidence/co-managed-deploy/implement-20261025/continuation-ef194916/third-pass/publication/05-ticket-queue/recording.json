@@ -1,0 +1,157 @@
+{
+  "guide": "guides/05-ticket-queue.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 34.88,
+  "sha256": "762d4d17f1ffab403301c07169947ec3e480d5d2d3adff54f7c6bb61e40e75f1",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/recording.json",
+      "name": "05-current-mixed-recovery-56e7b",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 25.28,
+      "offsetSeconds": 0,
+      "sha256": "e1e54aeaaf10ff240892ddad74001d9ed089d1d1fa439b269b77551f497a4ae7",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 14
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/recording.json",
+      "name": "05-current-scope-export-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 9.6,
+      "offsetSeconds": 25.28,
+      "sha256": "07cfcc5265ca76f8efdadaf99fbd75594831f905293e837e689536f821a752af",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 5
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "05-current-mixed-recovery-56e7b",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 6.291,
+      "title": "three-disposable-tickets-escalated-through-product",
+      "actor": "alice"
+    },
+    {
+      "seconds": 8.349,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 10.348,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.395,
+      "title": "qualified-filter-and-selection-set-survive-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 11.532,
+      "title": "full-filtered-export-includes-all-authorized-rows",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.958,
+      "title": "customer-change-races-stale-selected-revision",
+      "actor": "qa"
+    },
+    {
+      "seconds": 15.61,
+      "title": "third-selected-explicit-only-grant-revoked",
+      "actor": "qa"
+    },
+    {
+      "seconds": 16.974,
+      "title": "reload-offers-explicit-frozen-intent-recovery",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.194,
+      "title": "mixed-results-distinguish-conflict-return-and-access-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.344,
+      "title": "lost-response-replay-creates-one-handoff-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.473,
+      "title": "conflicted-item-does-not-receive-bulk-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.049,
+      "title": "oversight-retains-returned-work-without-revoked-ticket-or-duplication",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.563,
+      "title": "completed-return-requeries-working-membership",
+      "actor": "qa"
+    },
+    {
+      "seconds": 19.823,
+      "title": "customer-native-history-shows-the-successful-shared-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 24.31,
+      "title": "fixture-responsibility-restored-through-customer-ui",
+      "actor": "qa"
+    },
+    {
+      "seconds": 25.28,
+      "title": "05-current-scope-export-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 27.608,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.071,
+      "title": "oversight-retains-selected-customer-and-search",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.796,
+      "title": "reload-retains-workspace-status-search-and-sort",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.809,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.962,
+      "title": "one-visible-row-export-includes-all-three-filtered-rows-once",
+      "actor": "qa"
+    },
+    {
+      "seconds": 33.929,
+      "title": "detail-link-retains-customer-and-relationship",
+      "actor": "qa"
+    },
+    {
+      "seconds": 33.976,
+      "title": "product-back-navigation-restores-applied-qualified-scope",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

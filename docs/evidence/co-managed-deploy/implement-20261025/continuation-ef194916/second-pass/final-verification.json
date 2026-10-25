@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-25T17:12:30.432666+00:00",
+  "evidenceRevision": "HEAD",
+  "applicationSourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "HTMLBuildStampMatches": true,
+  "healthStatus": 200,
+  "PID": 43770,
+  "startTicks": "308909484",
+  "observation": "Bounded serving-process evidence, not a long-term memory-stability claim.",
+  "coverage": {
+    "coveredGuides": 7,
+    "partialGuides": 4,
+    "blockedGuides": 3,
+    "playbackVerifiedGuides": 14,
+    "recordingReady": true,
+    "reviewReady": false,
+    "meaning": "Guide outcomes do not substitute for the independently calculated requirement-level readiness gate."
+  },
+  "mediaIntegrity": "All fourteen composite SHA256 values match their published playback receipts; every selected chapter has a decoded frame beyond its target."
+}

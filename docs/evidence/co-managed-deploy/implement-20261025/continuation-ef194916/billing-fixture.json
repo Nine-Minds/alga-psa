@@ -1,0 +1,20 @@
+{
+  "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+  "clientId": "151ce95d-225d-4756-be83-89580d04ef22",
+  "suffix": 1792944312315,
+  "profileId": "a5859741-4347-45ea-9fc4-20138e9875c3",
+  "contractId": "8f95071f-ee8d-4705-a980-391b83b32fbd",
+  "assignmentId": "41239510-de1b-4892-93be-74ec7e500332",
+  "lineId": "a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+  "serviceId": "c7c29168-250e-4294-8d9d-76fee5c4425e",
+  "catalogServiceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+  "configId": "5633847c-47d9-4013-995b-0440945a2cda",
+  "cycleId": "87874d90-0d8b-4d0a-abde-7936c605c3a5",
+  "contractName": "CM Acceptance Contract 1792944312315",
+  "serviceName": "CM Contracted Support 1792944312315",
+  "catalogServiceName": "CM Catalog Support 1792944312315",
+  "profileName": "CM Acceptance Profile 1792944312315",
+  "rateCentsPerHour": 12000,
+  "setupStatus": "DB-seeded-not-yet-UI-verified",
+  "setup": "Operator SQL creates a separate profile, unique hourly and catalog services, active contract/assignment/line and cycle. Product time capture, profile selection, approvals and invoice generation remain to execute."
+}

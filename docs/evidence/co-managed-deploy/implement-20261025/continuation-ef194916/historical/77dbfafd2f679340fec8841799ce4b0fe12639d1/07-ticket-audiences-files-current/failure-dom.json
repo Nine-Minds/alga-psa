@@ -1,0 +1,636 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\n← Back to\nTickets\n1 / 23\n#000003\nCreated via Client Portal\nGrid\nEntry\nDuplicate\nDelete\nCM requester conversation 1792939250877\n\nCreated 10/25/2026, 10:40 AM (33 minutes ago)\n\nUpdated 10/25/2026, 10:40 AM (33 minutes ago)\n\nCM requester conversation 1792939250877\nStatus\nOpen\nAssigned To\nNot assigned\nBoard\nService Desk\nCategory\nSelect category\nPriority\nHigh\nResponse State\nSet Response State\nDue Date\nTags\nDescription\n\nDisposable requester audience and file acceptance ticket\n\nCreate Task\nLink to Task\nQuick invoice\nResolve and close\nCancel\nSave Changes\nComments\nAdd Comment\nAll Comments (2)\nClient (0)\nInternal (2)\nResolution (0)\nNewest first\nQT\n\nQA Tester (Oz) · Oz\n\nShared IT teams\n\nOct 25, 2026, 11:14 AM\n\nCM conversation 1792941243760 shared\n\nReact\nQT\n\nQA Tester (Oz) · Oz\n\nShared IT teams\n\nOct 25, 2026, 10:49 AM\n\nCM conversation 1792939796574 shared\n\nReact\nChecklist\nDocuments\nAdd document\nUpload file\nLink existing\nNo documents found\nPasswords\nNew password\nAttach existing\n\nNo passwords attached yet.\n\nExternal links\nAdd link\nTime Entry\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nContact Info\nContact\nCR\n\nConversation Requester\n\nCreated By\n\nConversation Requester\n\nCreated\n\n10/25/2026, 10:40 AM\n\nClient\nWR\n\nWhite Rabbit IT\n\nLocation\n\nMain Office - N/A - N/A (Default)\n\nContact Phone\n\nN/A\n\nContact Email\n\ncm.requester.1792939134918@cmreview.test\n\nAgent team\nWatch List\nMaterials\nCustomer Feedback\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nStarts at escalation\n\nMSP assignment\nNot assigned to the MSP\nChange\nEscalate to MSP\nAssets",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "← Back toTickets ",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-nav-prev",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-nav-next",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-grid",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-entry",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-duplicate-ticket-button",
+      "text": "Duplicate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-more-actions-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-delete-ticket-button",
+      "text": "Delete",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7d_",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-and-team-picker-trigger",
+      "text": "Not assigned",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7i_",
+      "text": "Service Desk",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Select category",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7r_",
+      "text": "High",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7u_",
+      "text": "Set Response State",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-info-due-date-picker",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-task-from-ticket-button",
+      "text": "Create Task",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "link-ticket-to-task-button",
+      "text": "Link to Task",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-quick-invoice-button",
+      "text": "Quick invoice",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-resolve-and-close-button",
+      "text": "Resolve and close",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-open-email-notification-logs",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-activity-log-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-cancel-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-save-changes-btn",
+      "text": "Save Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-show-comment-editor-btn",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_9a_-trigger-0",
+      "text": "All Comments (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_9a_-trigger-1",
+      "text": "Client (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_9a_-trigger-2",
+      "text": "Internal (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_9a_-trigger-3",
+      "text": "Resolution (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-toggle-order-btn",
+      "text": "Newest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-c90586a1-fb9e-4916-9939-5b071c039b38-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "c90586a1-fb9e-4916-9939-5b071c039b38-reactions-add-reaction-button",
+      "text": "React",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-5e8da3be-47ef-4f80-919d-b5f58bde5537-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "5e8da3be-47ef-4f80-919d-b5f58bde5537-reactions-add-reaction-button",
+      "text": "React",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-checklist-section-toggle",
+      "text": "Checklist",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-documents-section-documents-new-document-btn",
+      "text": "Add document",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-documents-section-documents-upload-btn",
+      "text": "Upload file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-documents-section-documents-link-documents-btn",
+      "text": "Link existing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "credentials-screen-new",
+      "text": "New password",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "credentials-screen-link",
+      "text": "Attach existing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-external-links-section-toggle",
+      "text": "External links",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-external-links-section-add-button",
+      "text": "Add link",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-time-summary-card-toggle",
+      "text": "Time Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-contact-info-toggle",
+      "text": "Contact Info",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-toggle-contact-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-show-client-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-show-location-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-agent-team-toggle",
+      "text": "Agent team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-watch-list-toggle",
+      "text": "Watch List",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-materials-card-toggle",
+      "text": "Materials",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-materials-card-add-btn",
+      "text": "Add Material",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-survey-summary-toggle",
+      "text": "Customer Feedback",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-history-open",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-assignment-change",
+      "text": "Change",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-escalate",
+      "text": "Escalate to MSP",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-associated-assets-toggle",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-asset-button",
+      "text": "Add Asset",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

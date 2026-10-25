@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T20:44:10.184Z",
+  "guide": "guides/09-time-and-billing.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/09-time-and-billing.html",
+  "compositeSha256": "0be19048bcaaa0e2f24d660f02575ef10cc58cb74317e65d3c7d9360ac0eb0d0",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.605582,
+    "duration": 81.08,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-time-and-billing/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "09-catalog-pricing-reconciliation-56e7",
+    "target": 46.32,
+    "actual": 46.342196,
+    "followingFrame": {
+      "mediaTime": 46.36,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/8726976",
+  "passed": true
+}

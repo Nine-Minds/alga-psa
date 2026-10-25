@@ -1,0 +1,98 @@
+{
+  "scenario": "05-current-scope-export",
+  "recordedAt": "2026-10-25T15:54:03.049Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "oversight-retains-selected-customer-and-search",
+      "passed": true,
+      "at": "2026-10-25T15:54:06.817Z"
+    },
+    {
+      "id": "reload-retains-workspace-status-search-and-sort",
+      "passed": true,
+      "at": "2026-10-25T15:54:07.521Z"
+    },
+    {
+      "id": "one-visible-row-export-includes-all-three-filtered-rows-once",
+      "passed": true,
+      "at": "2026-10-25T15:54:09.660Z"
+    },
+    {
+      "id": "detail-link-retains-customer-and-relationship",
+      "passed": true,
+      "at": "2026-10-25T15:54:10.604Z"
+    },
+    {
+      "id": "product-back-navigation-restores-applied-qualified-scope",
+      "passed": true,
+      "at": "2026-10-25T15:54:10.670Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:54:05.378Z",
+      "seconds": 2.329,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer"
+    },
+    {
+      "at": "2026-10-25T15:54:06.817Z",
+      "seconds": 3.768,
+      "actor": "qa",
+      "title": "oversight-retains-selected-customer-and-search"
+    },
+    {
+      "at": "2026-10-25T15:54:07.521Z",
+      "seconds": 4.472,
+      "actor": "qa",
+      "title": "reload-retains-workspace-status-search-and-sort"
+    },
+    {
+      "at": "2026-10-25T15:54:09.518Z",
+      "seconds": 6.469,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=1f98df77-cd15-44c2-8f4d-42ff52d01e84&searchQuery=CM+DESK+BULK+1792943612068&queueState=all&queueSort=title&pageSize=1"
+    },
+    {
+      "at": "2026-10-25T15:54:09.660Z",
+      "seconds": 6.611,
+      "actor": "qa",
+      "title": "one-visible-row-export-includes-all-three-filtered-rows-once"
+    },
+    {
+      "at": "2026-10-25T15:54:10.604Z",
+      "seconds": 7.555,
+      "actor": "qa",
+      "title": "detail-link-retains-customer-and-relationship"
+    },
+    {
+      "at": "2026-10-25T15:54:10.670Z",
+      "seconds": 7.621,
+      "actor": "qa",
+      "title": "product-back-navigation-restores-applied-qualified-scope"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Combined with the separate three-item mixed/lost-response run; no claim of full privacy or provider matrices."
+  ],
+  "durationSeconds": 8.56,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

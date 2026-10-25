@@ -1,0 +1,157 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.631
+08-sla-mapping-and-captured-targets
+
+2
+00:00:02.631 --> 00:00:04.738
+qa: navigate
+
+3
+00:00:04.738 --> 00:00:04.912
+qa: priority-mapping-persists-through-product-and-reload
+
+4
+00:00:04.912 --> 00:00:04.966
+qa: mapping-edit-does-not-rewrite-existing-obligation
+
+5
+00:00:04.966 --> 00:00:05.840
+qa: Temporary mapping retained for next bulk/SLA fixture escalations
+
+6
+00:00:05.840 --> 00:00:08.144
+08-mapping-restored-current-build
+
+7
+00:00:08.144 --> 00:00:09.738
+qa: navigate
+
+8
+00:00:09.738 --> 00:00:10.720
+qa: temporary-high-priority-mapping-restored-through-product
+
+9
+00:00:10.720 --> 00:00:12.032
+08-sla-fresh-targets-pause-current
+
+10
+00:00:12.032 --> 00:00:12.175
+Isolated SLA prerequisite
+
+11
+00:00:12.175 --> 00:00:14.476
+visibility-alone-does-not-create-MSP-obligation
+
+12
+00:00:14.476 --> 00:00:18.692
+qa: navigate
+
+13
+00:00:18.692 --> 00:00:19.118
+slaCustomer: navigate
+
+14
+00:00:19.118 --> 00:00:21.094
+slaCustomer: fresh-escalation-captures-isolated-P1-targets
+
+15
+00:00:21.094 --> 00:00:23.100
+qa: navigate
+
+16
+00:00:23.100 --> 00:00:25.148
+qa: mapping-edit-keeps-old-captured-targets
+
+17
+00:00:25.148 --> 00:00:25.490
+slaCustomer: navigate
+
+18
+00:00:25.490 --> 00:00:27.496
+slaCustomer: fresh-second-escalation-captures-different-targets
+
+19
+00:00:27.496 --> 00:00:27.923
+qa: navigate
+
+20
+00:00:27.923 --> 00:00:30.150
+qa: handback-adds-customer-responsibility-pause
+
+21
+00:00:30.150 --> 00:00:31.740
+qa: navigate
+
+22
+00:00:31.740 --> 00:00:32.400
+qa: isolated-client-policy-override-restored
+
+23
+00:00:32.400 --> 00:00:35.886
+08-business-calendar-notification-and-cutoff-current
+
+24
+00:00:35.886 --> 00:00:51.629
+qa: navigate
+
+25
+00:00:51.629 --> 00:00:58.120
+qa: navigate
+
+26
+00:00:58.120 --> 00:00:58.548
+calendarCustomer: navigate
+
+27
+00:00:58.548 --> 00:01:00.635
+calendarCustomer: business-calendar-response-due-is-one-working-minute
+
+28
+00:01:00.635 --> 00:01:01.050
+qa: navigate
+
+29
+00:01:01.050 --> 00:01:01.102
+qa: MSP-local-assignee-is-actual-notification-recipient
+
+30
+00:01:01.102 --> 00:02:58.329
+qa: Wait for real one-minute deadline and configured delivery worker
+
+31
+00:02:58.329 --> 00:03:00.957
+qa: actual-breach-mail-routes-only-to-assigned-MSP-user
+
+32
+00:03:00.957 --> 00:03:32.036
+departedCustomer: navigate
+
+33
+00:03:32.036 --> 00:03:36.386
+qa: navigate
+
+34
+00:03:36.386 --> 00:03:37.720
+qa: navigate
+
+35
+00:03:37.720 --> 00:03:40.368
+08-departure-clock-cutoff-confirmed
+
+36
+00:03:40.368 --> 00:03:40.443
+departedCustomer: navigate
+
+37
+00:03:40.443 --> 00:03:40.736
+departedCustomer: native-customer-ticket-remains-readable-after-departure
+
+38
+00:03:40.736 --> 00:03:42.788
+departedCustomer: persisted-MSP-clock-has-no-running-resolution-deadline
+
+39
+00:03:42.788 --> 00:03:43.680
+qa: navigate

@@ -1,0 +1,105 @@
+{
+  "scenario": "06-shared-project-collaboration-rehearsal-final",
+  "recordedAt": "2026-10-25T14:39:08.392Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "customer-project-collaboration-survives-reload",
+      "passed": true,
+      "at": "2026-10-25T14:39:11.550Z"
+    },
+    {
+      "id": "unshared-project-denied",
+      "passed": true,
+      "at": "2026-10-25T14:39:15.468Z"
+    },
+    {
+      "id": "approved-project-lists-two-customer-tasks",
+      "passed": true,
+      "at": "2026-10-25T14:39:17.507Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:39:08.720Z",
+      "seconds": 0.328,
+      "title": "Isolated team prerequisite",
+      "data": {
+        "teamId": "a3701f2e-8830-4fb7-8aac-1c6e0daa8fb3",
+        "teamName": "CM continuation team 1792938798759",
+        "member": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+        "method": "operator SQL fixture; customer scope and sponsor assignment use native product"
+      }
+    },
+    {
+      "at": "2026-10-25T14:39:11.020Z",
+      "seconds": 2.628,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T14:39:11.550Z",
+      "seconds": 3.158,
+      "actor": "alice",
+      "title": "customer-project-collaboration-survives-reload"
+    },
+    {
+      "at": "2026-10-25T14:39:13.553Z",
+      "seconds": 5.161,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T14:39:15.454Z",
+      "seconds": 7.062,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/e956851d-6004-4522-856a-0f5fd3c08494"
+    },
+    {
+      "at": "2026-10-25T14:39:15.468Z",
+      "seconds": 7.076,
+      "actor": "qa",
+      "title": "unshared-project-denied"
+    },
+    {
+      "at": "2026-10-25T14:39:17.495Z",
+      "seconds": 9.103,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/0fb32387-98af-4712-a323-abae6ba2868c"
+    },
+    {
+      "at": "2026-10-25T14:39:17.507Z",
+      "seconds": 9.115,
+      "actor": "qa",
+      "title": "approved-project-lists-two-customer-tasks"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#co-project-task-save')\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"submit\" id=\"co-project-task-save\" data-automation-id=\"co-project-task-save\" class=\"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400…>Save access</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    48 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+  "durationSeconds": 35.2,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

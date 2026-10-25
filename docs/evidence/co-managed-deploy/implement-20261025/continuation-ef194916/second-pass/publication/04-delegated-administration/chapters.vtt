@@ -1,0 +1,109 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.303
+04-delegation-board-current
+
+2
+00:00:00.303 --> 00:00:03.131
+Prerequisite setup: disposable empty board created using customer defaults
+
+3
+00:00:03.131 --> 00:00:05.660
+alice: navigate
+
+4
+00:00:05.660 --> 00:00:11.193
+alice: new-approval-targets-exact-record
+
+5
+00:00:11.193 --> 00:00:11.386
+alice: approved-msp-board-edit-persists
+
+6
+00:00:11.386 --> 00:00:13.372
+alice: unapproved-board-has-no-new-delegation
+
+7
+00:00:13.372 --> 00:00:13.741
+alice: customer-revocation-recorded
+
+8
+00:00:13.741 --> 00:00:14.105
+alice: stale-msp-editor-refuses-after-revocation
+
+9
+00:00:14.105 --> 00:00:14.760
+alice: revoked-grant-not-offered-after-reload
+
+10
+00:00:14.760 --> 00:00:24.000
+04-delegation-board-current / msp-video
+
+11
+00:00:24.000 --> 00:00:24.081
+04-delegation-complete-current
+
+12
+00:00:24.081 --> 00:00:26.377
+served-build-matches-current-candidate
+
+13
+00:00:26.377 --> 00:00:29.155
+alice: navigate
+
+14
+00:00:29.155 --> 00:00:29.968
+alice: customer-approves-one-nonadministrator-profile
+
+15
+00:00:29.968 --> 00:00:32.001
+alice: administrator-profile-is-not-eligible
+
+16
+00:00:32.001 --> 00:00:33.981
+qa: navigate
+
+17
+00:00:33.981 --> 00:00:36.173
+qa: delegated-profile-persists-after-reload
+
+18
+00:00:36.173 --> 00:00:38.087
+alice: navigate
+
+19
+00:00:38.087 --> 00:00:40.238
+qa: navigate
+
+20
+00:00:40.238 --> 00:00:42.372
+alice: navigate
+
+21
+00:00:42.372 --> 00:00:44.318
+qa: navigate
+
+22
+00:00:44.318 --> 00:00:48.442
+alice: navigate
+
+23
+00:00:48.442 --> 00:00:49.336
+qa: navigate
+
+24
+00:00:49.336 --> 00:00:52.974
+qa: resend-preserves-invitation-terms
+
+25
+00:00:52.974 --> 00:00:55.121
+alice: navigate
+
+26
+00:00:55.121 --> 00:00:55.455
+qa: navigate
+
+27
+00:00:55.455 --> 00:00:56.400
+qa: review-approvals-revoked-profile-restored

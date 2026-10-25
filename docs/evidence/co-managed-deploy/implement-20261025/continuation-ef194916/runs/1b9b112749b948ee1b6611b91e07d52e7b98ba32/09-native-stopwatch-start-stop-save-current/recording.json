@@ -1,0 +1,156 @@
+{
+  "scenario": "09-native-stopwatch-start-stop-save-current",
+  "recordedAt": "2026-10-25T17:01:41.098Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "native-stop-prefills-one-billable-minute-from-short-real-span",
+      "passed": true,
+      "at": "2026-10-25T17:01:52.618Z",
+      "data": {
+        "hours": 0,
+        "minutes": 1
+      }
+    },
+    {
+      "id": "stopwatch-save-creates-one-qualified-commercial-minute",
+      "passed": true,
+      "at": "2026-10-25T17:01:53.639Z",
+      "data": {
+        "entry": {
+          "entry_id": "cd5ffad1-e715-4cf6-9103-a7f25ab45bfc",
+          "user_id": "b7c90073-cb8a-41da-b290-20896699a0ec",
+          "work_item_type": "co_managed",
+          "work_item_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+          "co_managed_work_reference_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+          "billing_mode": "commercial",
+          "billable_duration": 1,
+          "notes": "CM native stopwatch 1792947701172"
+        }
+      }
+    },
+    {
+      "id": "stopwatch-session-is-logged-and-no-open-timer-remains",
+      "passed": true,
+      "at": "2026-10-25T17:01:53.781Z",
+      "data": {
+        "sessions": [
+          {
+            "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+            "session_id": "e697ba0c-5037-4151-8069-5d996dbbf256",
+            "user_id": "b7c90073-cb8a-41da-b290-20896699a0ec",
+            "work_item_type": "co_managed",
+            "work_item_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+            "service_id": "5313da86-1055-4a3d-a998-2a72bf37e564",
+            "notes": "CM native stopwatch 1792947701172",
+            "status": "logged",
+            "time_entry_id": "cd5ffad1-e715-4cf6-9103-a7f25ab45bfc",
+            "closed_at": "2026-10-25T17:01:52.923+00:00",
+            "created_at": "2026-10-25T17:01:49.648+00:00",
+            "updated_at": "2026-10-25T17:01:52.923+00:00"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T17:01:44.533Z",
+      "seconds": 3.435,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T17:01:48.245Z",
+      "seconds": 7.147,
+      "actor": "stopwatchTech",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T17:01:52.618Z",
+      "seconds": 11.52,
+      "actor": "stopwatchTech",
+      "title": "native-stop-prefills-one-billable-minute-from-short-real-span",
+      "data": {
+        "hours": 0,
+        "minutes": 1
+      }
+    },
+    {
+      "at": "2026-10-25T17:01:53.639Z",
+      "seconds": 12.541,
+      "actor": "stopwatchTech",
+      "title": "stopwatch-save-creates-one-qualified-commercial-minute",
+      "data": {
+        "entry": {
+          "entry_id": "cd5ffad1-e715-4cf6-9103-a7f25ab45bfc",
+          "user_id": "b7c90073-cb8a-41da-b290-20896699a0ec",
+          "work_item_type": "co_managed",
+          "work_item_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+          "co_managed_work_reference_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+          "billing_mode": "commercial",
+          "billable_duration": 1,
+          "notes": "CM native stopwatch 1792947701172"
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T17:01:53.781Z",
+      "seconds": 12.683,
+      "actor": "stopwatchTech",
+      "title": "stopwatch-session-is-logged-and-no-open-timer-remains",
+      "data": {
+        "sessions": [
+          {
+            "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+            "session_id": "e697ba0c-5037-4151-8069-5d996dbbf256",
+            "user_id": "b7c90073-cb8a-41da-b290-20896699a0ec",
+            "work_item_type": "co_managed",
+            "work_item_id": "2b4c7643-4d74-45cd-8224-fdc759b8cd5c",
+            "service_id": "5313da86-1055-4a3d-a998-2a72bf37e564",
+            "notes": "CM native stopwatch 1792947701172",
+            "status": "logged",
+            "time_entry_id": "cd5ffad1-e715-4cf6-9103-a7f25ab45bfc",
+            "closed_at": "2026-10-25T17:01:52.923+00:00",
+            "created_at": "2026-10-25T17:01:49.648+00:00",
+            "updated_at": "2026-10-25T17:01:52.923+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T17:01:57.108Z",
+      "seconds": 16.01,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Native stopwatch start/stop/prefill/save segment; catalog pricing/invoice reconciliation is separate."
+  ],
+  "durationSeconds": 23.16,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "stopwatchTech",
+      "email": "cm.stopwatch.1792947701172@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

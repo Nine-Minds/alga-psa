@@ -1,0 +1,18 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792941544146"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/conversationDraftSubmission.test.ts (9 tests) 11ms 15 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (27 tests) 124ms 110 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedPortalAttachments.test.tsx (13 tests) 51ms 114 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedCommentAttachments.test.tsx (16 tests) 245ms 122 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx (8 tests) 276ms 140 MB heap used
+
+ Test Files  5 passed (5)
+      Tests  73 passed (73)
+   Start at  15:19:04
+   Duration  8.73s (transform 2.02s, setup 198ms, collect 3.43s, tests 707ms, environment 178ms, prepare 67ms)
+

@@ -1,0 +1,269 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:13.304
+10-departure-a-provision-56e7
+
+2
+00:00:13.304 --> 00:00:18.607
+qa: navigate
+
+3
+00:00:18.607 --> 00:00:22.091
+qa: navigate
+
+4
+00:00:22.091 --> 00:00:25.325
+qa: disposable-workspace-provisioned-with-one-allocation
+
+5
+00:00:25.325 --> 00:00:29.453
+qa: navigate
+
+6
+00:00:29.453 --> 00:00:31.436
+qa: navigate
+
+7
+00:00:31.436 --> 00:00:32.634
+qa: navigate
+
+8
+00:00:32.634 --> 00:00:34.640
+qa: msp-technician-has-collaborate-access
+
+9
+00:00:34.640 --> 00:00:35.295
+qa: navigate
+
+10
+00:00:35.295 --> 00:00:37.634
+qa: msp-maps-every-customer-priority-to-its-sla
+
+11
+00:00:37.634 --> 00:00:39.348
+departAdmin: navigate
+
+12
+00:00:39.348 --> 00:00:39.966
+departAdmin: customer-native-ticket-created
+
+13
+00:00:39.966 --> 00:00:41.983
+departAdmin: customer-hands-the-native-ticket-to-the-msp
+
+14
+00:00:41.983 --> 00:00:42.840
+qa: navigate
+
+15
+00:00:42.840 --> 00:00:45.484
+10-departure-b-content-56e7
+
+16
+00:00:45.484 --> 00:00:46.564
+qa: navigate
+
+17
+00:00:46.564 --> 00:00:48.565
+qa: msp-technician-assigned-to-the-shared-ticket
+
+18
+00:00:48.565 --> 00:00:51.706
+qa: navigate
+
+19
+00:00:51.706 --> 00:00:53.749
+qa: shared-file-bytes-before-cutoff
+
+20
+00:00:53.749 --> 00:00:55.876
+qa: navigate
+
+21
+00:00:55.876 --> 00:00:57.982
+qa: MSPprivate-file-bytes-before-cutoff
+
+22
+00:00:57.982 --> 00:01:00.777
+departAdmin: navigate
+
+23
+00:01:00.777 --> 00:01:02.778
+departAdmin: customerprivate-file-bytes-before-cutoff
+
+24
+00:01:02.778 --> 00:01:05.271
+departAdmin: navigate
+
+25
+00:01:05.271 --> 00:01:05.558
+departAdmin: msp-assignee-receives-shared-customer-message-by-mail
+
+26
+00:01:05.558 --> 00:01:07.512
+departAdmin: operator-prerequisite-isolated-technician
+
+27
+00:01:07.512 --> 00:01:08.597
+qa: navigate
+
+28
+00:01:08.597 --> 00:01:10.519
+qa: technician-granted-collaborate-access
+
+29
+00:01:10.519 --> 00:01:10.760
+qa: navigate
+
+30
+00:01:10.760 --> 00:01:11.252
+qa: msp-client-billing-email-set
+
+31
+00:01:11.252 --> 00:01:13.768
+qa: msp-client-billing-cycle-created-natively
+
+32
+00:01:13.768 --> 00:01:15.896
+departTech: navigate
+
+33
+00:01:15.896 --> 00:01:18.000
+departTech: invoiced-before-cutoff-is-commercial-msp-time-on-shared-work
+
+34
+00:01:18.000 --> 00:01:20.026
+departTech: navigate
+
+35
+00:01:20.026 --> 00:01:22.239
+departTech: uninvoiced-at-cutoff-is-commercial-msp-time-on-shared-work
+
+36
+00:01:22.239 --> 00:01:24.412
+departTech: navigate
+
+37
+00:01:24.412 --> 00:01:24.976
+qa: navigate
+
+38
+00:01:24.976 --> 00:01:26.958
+qa: separate-approver-approves-both-entries
+
+39
+00:01:26.958 --> 00:01:35.134
+qa: navigate
+
+40
+00:01:35.134 --> 00:01:37.148
+qa: first-entry-drafted-before-cutoff-at-catalog-rate
+
+41
+00:01:37.148 --> 00:01:40.005
+departAdmin: navigate
+
+42
+00:01:40.005 --> 00:01:40.880
+departAdmin: msp-delivery-is-queued-and-unsent-at-cutoff
+
+43
+00:01:40.880 --> 00:01:41.797
+10-departure-c-cutoff-56e7
+
+44
+00:01:41.797 --> 00:01:44.077
+baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation
+
+45
+00:01:44.077 --> 00:01:44.879
+qa: navigate
+
+46
+00:01:44.879 --> 00:01:45.014
+qa: allocation-released-once-and-paid-pool-unchanged
+
+47
+00:01:45.014 --> 00:01:45.668
+qa: msp-sla-clock-is-held-by-the-cutoff
+
+48
+00:01:45.668 --> 00:03:05.325
+qa: refresh-repeats-neither-closure-nor-release
+
+49
+00:03:05.325 --> 00:03:05.641
+qa: queued-delivery-is-skipped-not-sent-after-cutoff
+
+50
+00:03:05.641 --> 00:03:07.612
+qa: old-live-shared-file-denied
+
+51
+00:03:07.612 --> 00:03:07.941
+qa: navigate
+
+52
+00:03:07.941 --> 00:03:09.836
+qa: archive-sealed-at-cutoff
+
+53
+00:03:09.836 --> 00:03:12.222
+qa: navigate
+
+54
+00:03:12.222 --> 00:03:12.408
+qa: retained-shared-bytes-match
+
+55
+00:03:12.408 --> 00:03:14.539
+qa: archive-retains-the-msp-time-evidence
+
+56
+00:03:14.539 --> 00:03:17.157
+departAdmin: navigate
+
+57
+00:03:17.157 --> 00:03:19.049
+departAdmin: customer-workspace-offers-no-changes-after-departure
+
+58
+00:03:19.049 --> 00:03:21.691
+qa: navigate
+
+59
+00:03:21.691 --> 00:03:21.991
+qa: archive-and-seal-unchanged-after-cutoff
+
+60
+00:03:21.991 --> 00:03:23.933
+qa: commercial-entries-survive-departure
+
+61
+00:03:23.933 --> 00:03:24.095
+qa: navigate
+
+62
+00:03:24.095 --> 00:03:25.460
+qa: pre-cutoff-draft-still-opens-with-its-line
+
+63
+00:03:25.460 --> 00:03:27.475
+qa: pre-cutoff-draft-reversed-after-departure
+
+64
+00:03:27.475 --> 00:03:37.601
+qa: navigate
+
+65
+00:03:37.601 --> 00:03:39.611
+qa: msp-bills-retained-commercial-time-after-departure
+
+66
+00:03:39.611 --> 00:03:41.166
+departAdmin: navigate
+
+67
+00:03:41.166 --> 00:03:42.080
+departAdmin: customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock

@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:11.805Z",
+  "guide": "guides/07-conversations-and-files.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/07-conversations-and-files.html",
+  "compositeSha256": "fc72ba5def6e519b7223ee1f421ab006c004d91817bcaca6d475cb3f87e13ace",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.607495,
+    "duration": 165.88,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversations-and-files/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "whole-private-thread-preview-counts-root-reply-and-file",
+    "target": 102.648,
+    "actual": 102.669559,
+    "followingFrame": {
+      "mediaTime": 102.68,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/15381164",
+  "passed": true
+}

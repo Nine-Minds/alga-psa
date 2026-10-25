@@ -1,0 +1,53 @@
+{
+  "scenario": "09-billing-capture-rehearsal",
+  "recordedAt": "2026-10-25T15:24:34.875Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T15:24:35.065Z",
+      "seconds": 0.19,
+      "title": "Operator prerequisite: isolated technician and approval team",
+      "data": {
+        "userId": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+        "email": "cm.billing.1792941874918@cmreview.test",
+        "teamId": "54a57136-5e4e-41c1-a6f1-5368f2342b01",
+        "approver": "QA Tester",
+        "method": "SQL fixture; relationship assignment, capture, submit, approval and invoicing use native UI"
+      }
+    },
+    {
+      "at": "2026-10-25T15:24:37.410Z",
+      "seconds": 2.535,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:24:40.407Z",
+      "seconds": 5.532,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out billing profile saved \"Command failed: docker exec co-managed-it-postgres psql -X -t -A -U postgres -d server_co_managed -v ON_ERROR_STOP=1 -c select billing_profile_id from co_managed_work_references where tenant='24ac76c8-df59-4b10-8371-c56222904580' and customer_tenant='1f98df77-cd15-44c2-8f4d-42ff52d01e84' and source_id='d07b5183-f423-4cef-8df3-d27a7e1619dd'\\nERROR:  relation \\\"co_managed_work_references\\\" does not exist\\nLINE 1: select billing_profile_id from co_managed_work_references wh...\\n                                       ^\\n\"",
+  "durationSeconds": 51.76,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

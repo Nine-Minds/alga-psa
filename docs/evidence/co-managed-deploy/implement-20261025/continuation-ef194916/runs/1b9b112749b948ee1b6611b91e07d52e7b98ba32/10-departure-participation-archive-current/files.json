@@ -1,0 +1,23 @@
+[
+  {
+    "label": "shared",
+    "fileName": "cm-cutoff-shared-1792946015139.txt",
+    "href": "/api/co-management/attachments/a6b7304b-dba6-4f54-88fc-728ebe87b6aa?customerTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&relationshipId=4f999745-cbd0-453e-905a-9a5b0210bbb0&ticketId=e7110d08-88d7-4f9a-addc-246e0ec8bbe9&storeTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&threadId=00d41382-13b2-46fa-b541-930f7581cdf0&commentId=00d41382-13b2-46fa-b541-930f7581cdf0",
+    "sha256": "8e06aa03d81377ba49912a07ab61d9da4592770814dcf37b97e00f88680ce1a6",
+    "text": "CM cutoff 1792946015139 shared"
+  },
+  {
+    "label": "MSPprivate",
+    "fileName": "cm-cutoff-MSPprivate-1792946015139.txt",
+    "href": "/api/co-management/attachments/533ba260-f5d2-4158-b5bf-00a9841442ed?customerTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&relationshipId=4f999745-cbd0-453e-905a-9a5b0210bbb0&ticketId=e7110d08-88d7-4f9a-addc-246e0ec8bbe9&storeTenant=24ac76c8-df59-4b10-8371-c56222904580&threadId=2a6b45d2-ed2d-42d4-9bd5-c97fcb301fdb&commentId=2a6b45d2-ed2d-42d4-9bd5-c97fcb301fdb",
+    "sha256": "96d65cd13595c784542b614db6d49378ecf6faafccad826b899bdc846d56e764",
+    "text": "CM cutoff 1792946015139 MSPprivate"
+  },
+  {
+    "label": "customerprivate",
+    "fileName": "cm-cutoff-customerprivate-1792946015139.txt",
+    "href": "/api/co-management/attachments/74dbe043-3e3d-4063-bf6c-bee3bed7a75e?customerTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&relationshipId=4f999745-cbd0-453e-905a-9a5b0210bbb0&ticketId=e7110d08-88d7-4f9a-addc-246e0ec8bbe9&storeTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&threadId=42a5c166-4e6a-40e2-90aa-0d4a679d2af7&commentId=42a5c166-4e6a-40e2-90aa-0d4a679d2af7",
+    "sha256": "113f8a6a583c0032edce29e52c8403277557ed88647b8384779be8b0273a7a4f",
+    "text": "CM cutoff 1792946015139 customerprivate"
+  }
+]

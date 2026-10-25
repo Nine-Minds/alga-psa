@@ -1,0 +1,20 @@
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/robert/alga-copies/feature-co-managed-it/packages/billing/dist/actions/recurringServicePeriodSync.mjs' imported from /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/sync-billing.mts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/esm/index.mjs?1792940512710:2:3744)
+    at resolveDirectory (file:///home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/esm/index.mjs?1792940512710:2:4243)
+    at resolveTsPaths (file:///home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/esm/index.mjs?1792940512710:2:4984)
+    at resolve (file:///home/robert/alga-copies/feature-co-managed-it/node_modules/tsx/dist/esm/index.mjs?1792940512710:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at Hooks.resolve (node:internal/modules/esm/hooks:240:30) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///home/robert/alga-copies/feature-co-managed-it/packages/billing/dist/actions/recurringServicePeriodSync.mjs'
+}
+
+Node.js v22.18.0

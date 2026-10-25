@@ -1,0 +1,53 @@
+{
+  "url": "http://127.0.0.1:8874/",
+  "title": "Co-Managed IT review",
+  "headings": [
+    "Co-Managed IT review",
+    "Recorded outcomes",
+    "Remaining acceptance",
+    "Main walkthrough"
+  ],
+  "links": [
+    {
+      "text": "Current acceptance ledger and evidence",
+      "href": "/evidence/implement-20261025/acceptance.html"
+    },
+    {
+      "text": "Collection and twelve guides",
+      "href": "guides/index.html"
+    },
+    {
+      "text": "PR #3363",
+      "href": "https://github.com/Nine-Minds/alga-psa/pull/3363"
+    },
+    {
+      "text": "Repaired canonical app",
+      "href": "http://feature-co-managed-it.localhost:23374/msp/tickets"
+    },
+    {
+      "text": "Coverage",
+      "href": "evidence/walkthroughs-c04-production/video-coverage.json"
+    },
+    {
+      "text": "Playback verification",
+      "href": "evidence/walkthroughs-c04-production/playback-verification.json"
+    },
+    {
+      "text": "Current preparation",
+      "href": "current-preparation.json"
+    },
+    {
+      "text": "Historical packet",
+      "href": "history-before-c04-takeover.html"
+    },
+    {
+      "text": "Recording JSON",
+      "href": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json"
+    },
+    {
+      "text": "Chapters",
+      "href": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt"
+    }
+  ],
+  "historicalMedia": "Published overview still points at c04; this capture does not relabel it as current application acceptance."
+}

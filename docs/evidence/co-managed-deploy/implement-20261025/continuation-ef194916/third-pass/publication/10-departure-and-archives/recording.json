@@ -1,0 +1,382 @@
+{
+  "guide": "guides/10-departure-and-archives.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "Disposable relationship prepared natively and ended. After cutoff the customer workspace is read-only by design (reading, export and upgrade remain), so no customer change is permitted; its native screen offers none, and the sealed archive and its evidence count are unchanged. White Rabbit was not touched.",
+  "durationSeconds": 222.08,
+  "sha256": "db08f133a344ebfde3be050312dce34bab9a699a9328055d6805e2009aa56d7d",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/recording.json",
+      "name": "10-departure-a-provision-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 42.84,
+      "offsetSeconds": 0,
+      "sha256": "a13b56ac4e28f9be8b0c9f477de5a1eda3d639d804428989b012b89583839acf",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 7
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/recording.json",
+      "name": "10-departure-b-content-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 58.04,
+      "offsetSeconds": 42.84,
+      "sha256": "1228975909059d2cfb51122c7ec18c8eff6491449c0f0b36754de493a0ec2c05",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 13
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json",
+      "name": "10-departure-c-cutoff-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 121.2,
+      "offsetSeconds": 100.88,
+      "sha256": "7036dec7cc145e433a85f3d7f27c0dd43660e50f039457eb27a3ef8b97e4080d",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 21
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "10-departure-a-provision-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 13.304,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 18.607,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 22.091,
+      "title": "disposable-workspace-provisioned-with-one-allocation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 25.325,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.453,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 31.436,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.634,
+      "title": "msp-technician-has-collaborate-access",
+      "actor": "qa"
+    },
+    {
+      "seconds": 34.64,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 35.295,
+      "title": "msp-maps-every-customer-priority-to-its-sla",
+      "actor": "qa"
+    },
+    {
+      "seconds": 37.634,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 39.348,
+      "title": "customer-native-ticket-created",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 39.966,
+      "title": "customer-hands-the-native-ticket-to-the-msp",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 41.983,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 42.84,
+      "title": "10-departure-b-content-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 45.484,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.56400000000001,
+      "title": "msp-technician-assigned-to-the-shared-ticket",
+      "actor": "qa"
+    },
+    {
+      "seconds": 48.565000000000005,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 51.706,
+      "title": "shared-file-bytes-before-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 53.749,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 55.876000000000005,
+      "title": "MSPprivate-file-bytes-before-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 57.982,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 60.777,
+      "title": "customerprivate-file-bytes-before-cutoff",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 62.778000000000006,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 65.271,
+      "title": "msp-assignee-receives-shared-customer-message-by-mail",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 65.558,
+      "title": "operator-prerequisite-isolated-technician",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 67.512,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 68.59700000000001,
+      "title": "technician-granted-collaborate-access",
+      "actor": "qa"
+    },
+    {
+      "seconds": 70.519,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 70.76,
+      "title": "msp-client-billing-email-set",
+      "actor": "qa"
+    },
+    {
+      "seconds": 71.25200000000001,
+      "title": "msp-client-billing-cycle-created-natively",
+      "actor": "qa"
+    },
+    {
+      "seconds": 73.768,
+      "title": "navigate",
+      "actor": "departTech"
+    },
+    {
+      "seconds": 75.896,
+      "title": "invoiced-before-cutoff-is-commercial-msp-time-on-shared-work",
+      "actor": "departTech"
+    },
+    {
+      "seconds": 78,
+      "title": "navigate",
+      "actor": "departTech"
+    },
+    {
+      "seconds": 80.02600000000001,
+      "title": "uninvoiced-at-cutoff-is-commercial-msp-time-on-shared-work",
+      "actor": "departTech"
+    },
+    {
+      "seconds": 82.239,
+      "title": "navigate",
+      "actor": "departTech"
+    },
+    {
+      "seconds": 84.412,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 84.976,
+      "title": "separate-approver-approves-both-entries",
+      "actor": "qa"
+    },
+    {
+      "seconds": 86.958,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 95.134,
+      "title": "first-entry-drafted-before-cutoff-at-catalog-rate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 97.148,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 100.005,
+      "title": "msp-delivery-is-queued-and-unsent-at-cutoff",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 100.88,
+      "title": "10-departure-c-cutoff-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 101.797,
+      "title": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation"
+    },
+    {
+      "seconds": 104.077,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 104.87899999999999,
+      "title": "allocation-released-once-and-paid-pool-unchanged",
+      "actor": "qa"
+    },
+    {
+      "seconds": 105.014,
+      "title": "msp-sla-clock-is-held-by-the-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 105.66799999999999,
+      "title": "refresh-repeats-neither-closure-nor-release",
+      "actor": "qa"
+    },
+    {
+      "seconds": 185.325,
+      "title": "queued-delivery-is-skipped-not-sent-after-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 185.641,
+      "title": "old-live-shared-file-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 187.612,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 187.941,
+      "title": "archive-sealed-at-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 189.836,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 192.22199999999998,
+      "title": "retained-shared-bytes-match",
+      "actor": "qa"
+    },
+    {
+      "seconds": 192.40800000000002,
+      "title": "archive-retains-the-msp-time-evidence",
+      "actor": "qa"
+    },
+    {
+      "seconds": 194.539,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 197.15699999999998,
+      "title": "customer-workspace-offers-no-changes-after-departure",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 199.04899999999998,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 201.691,
+      "title": "archive-and-seal-unchanged-after-cutoff",
+      "actor": "qa"
+    },
+    {
+      "seconds": 201.99099999999999,
+      "title": "commercial-entries-survive-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 203.933,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 204.095,
+      "title": "pre-cutoff-draft-still-opens-with-its-line",
+      "actor": "qa"
+    },
+    {
+      "seconds": 205.45999999999998,
+      "title": "pre-cutoff-draft-reversed-after-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 207.475,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 217.601,
+      "title": "msp-bills-retained-commercial-time-after-departure",
+      "actor": "qa"
+    },
+    {
+      "seconds": 219.611,
+      "title": "navigate",
+      "actor": "departAdmin"
+    },
+    {
+      "seconds": 221.166,
+      "title": "customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock",
+      "actor": "departAdmin"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

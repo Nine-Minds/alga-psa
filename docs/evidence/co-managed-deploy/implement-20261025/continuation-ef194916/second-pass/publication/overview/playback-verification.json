@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:22.601Z",
+  "guide": "index.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/index.html",
+  "publicUrl": "http://100.82.172.57:8874/index.html",
+  "compositeSha256": "6325cdc3561eb21ba459f773f8431bb4afda7d518f7c7bdc4bb7ccbec2fe9dab",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.60542,
+    "duration": 37.6,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/overview/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "QA-shared-Entry-uses-same-qualified-work",
+    "target": 32.546,
+    "actual": 32.556744,
+    "followingFrame": {
+      "mediaTime": 32.56,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/3690013",
+  "passed": true
+}

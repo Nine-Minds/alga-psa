@@ -1,0 +1,85 @@
+{
+  "scenario": "09-billing-capture-rehearsal-retry",
+  "recordedAt": "2026-10-25T15:25:11.633Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [
+    {
+      "id": "qualified-work-billing-profile-persists",
+      "passed": true,
+      "at": "2026-10-25T15:25:17.246Z",
+      "data": {
+        "profileId": "25f62551-6f09-4a3e-b975-43525c00aaff",
+        "taskId": "d07b5183-f423-4cef-8df3-d27a7e1619dd"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:25:11.668Z",
+      "seconds": 0.035,
+      "title": "Operator prerequisite: isolated technician and approval team",
+      "data": {
+        "userId": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+        "email": "cm.billing.1792941874918@cmreview.test",
+        "teamId": "54a57136-5e4e-41c1-a6f1-5368f2342b01",
+        "approver": "QA Tester",
+        "method": "SQL fixture; relationship assignment, capture, submit, approval and invoicing use native UI"
+      }
+    },
+    {
+      "at": "2026-10-25T15:25:13.991Z",
+      "seconds": 2.358,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:25:15.910Z",
+      "seconds": 4.277,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd"
+    },
+    {
+      "at": "2026-10-25T15:25:17.246Z",
+      "seconds": 5.613,
+      "actor": "qa",
+      "title": "qualified-work-billing-profile-persists",
+      "data": {
+        "profileId": "25f62551-6f09-4a3e-b975-43525c00aaff",
+        "taskId": "d07b5183-f423-4cef-8df3-d27a7e1619dd"
+      }
+    },
+    {
+      "at": "2026-10-25T15:25:19.264Z",
+      "seconds": 7.631,
+      "actor": "billingTech",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out contracted time persisted \"Command failed: docker exec co-managed-it-postgres psql -X -t -A -U postgres -d server_co_managed -v ON_ERROR_STOP=1 -c select row_to_json(e) from(select entry_id,time_sheet_id,tenant,user_id,work_item_type,work_item_id,billing_mode,billable_duration,service_id,contract_line_id,billing_profile_id,notes from time_entries where tenant='24ac76c8-df59-4b10-8371-c56222904580' and notes='CM billing 1792941874918 contracted')e\\nERROR:  column \\\"billing_profile_id\\\" does not exist\\nLINE 1: ...ode,billable_duration,service_id,contract_line_id,billing_pr...\\n                                                             ^\\n\"",
+  "durationSeconds": 55.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "billingTech",
+      "email": "cm.billing.1792941874918@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

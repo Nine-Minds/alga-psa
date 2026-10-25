@@ -1,0 +1,34 @@
+{
+  "scenario": "07-requester-preparation",
+  "recordedAt": "2026-10-25T14:37:03.685Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T14:37:06.044Z",
+      "seconds": 2.359,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('option', { name: /White Rabbit IT/ })\u001b[22m\n",
+  "durationSeconds": 28.56,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

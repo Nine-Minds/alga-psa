@@ -1,0 +1,475 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nNT\n← Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (11 days ago)\n\nUpdated 10/17/2026, 7:55 PM (8 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nCategory\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nOz\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nResponse\nBreached\n\nCompleted · Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\n\nDue · Oct 25, 2026, 7:48 AM\n\nMSP assignment\nNot assigned to the MSP\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (19)\nReplies (19)\nTime (0)\nSystem (0)\nAlerts (0)\nOCT 15\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nOCT 24\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 24, 11:24 PM\n\nCM-LEAD LIVE HINT REPAIR 1792898627713\n\nTODAY\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 12:47 AM\n\nCM-LEAD LIVE HINT REPAIR 1792903629273\n\nAL\n\nAlice Liddell (White Rabbit IT)\n\nShared IT teams\nOct 25, 1:37 AM\n\nCD28 AFTER-COMMIT CUSTOMER NOTE 0536\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 1:38 AM\n\nCD28 AFTER-COMMIT MSP SHARED NOTE 0537\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 1:39 AM\n\nCD28 QA SHARED COMMENT LIVE TEST 0539\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 2:07 AM\n\nCM-CURRENT-LIVE-1792908414869 shared note to customer\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 25, 2:07 AM\n\nCM-CURRENT-LIVE-1792908414869 MSP PRIVATE\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 4:03 AM\n\nCM-704F-TAKEOVER-LIVE-1792915404250 shared note to customer\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 25, 4:03 AM\n\nCM-704F-TAKEOVER-LIVE-1792915404250 MSP PRIVATE\n\nQT\n\nQA Tester (Oz)\n\nShared IT teams\nOct 25, 7:47 AM\n\nCM-C04-TAKEOVER-LIVE-1792928810673 shared note to customer\n\nQT\n\nQA Tester (Oz)\n\nMy organization only\nOct 25, 7:47 AM\n\nCM-C04-TAKEOVER-LIVE-1792928810673 MSP PRIVATE\n\nShow all activity",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "NT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "← Back toTickets ",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-grid",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-entry",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-title-edit",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-resolve-and-close-button",
+      "text": "Resolve and close",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-all-fields-button",
+      "text": "All fields",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-status-select",
+      "text": "Open",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-priority-select",
+      "text": "High",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-board-select",
+      "text": "Service Desk",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Category",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-assignee-picker",
+      "text": "Not assigned",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-bento-hero-due-date-picker",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-response-state-select",
+      "text": "No reply needed",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-client-open",
+      "text": "White Rabbit IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-client-edit",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-history-open",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-order-toggle",
+      "text": "Oldest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-everything",
+      "text": "Everything (19)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-reply",
+      "text": "Replies (19)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-time",
+      "text": "Time (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-system",
+      "text": "System (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-alert",
+      "text": "Alerts (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-0227d6db-9f34-4377-b48f-131f62d46040-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-42396e5e-4b87-4768-9d3b-838b25d49a46-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-983523aa-fb19-4fcf-b10c-5269b38f0237-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-64001918-5c9b-4fa1-bfd5-ab22e80f8f76-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-f8fc4f69-e251-45d4-9c14-1bc8efa48c54-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-19e3a2a3-8ebb-4f9a-9ade-ce87dc2812c7-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-1ac4b258-85e0-4c88-932b-4e93017ab754-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-558c6726-e73a-419f-ac39-6e7b5066470d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-e2894f92-358a-4924-90b2-e9239939c729-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-2a4c068b-4c54-46d0-ad6f-1dfa41fdbb40-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-fc71c502-2f6a-4d89-8351-6fbd63b02a43-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-8fe0787a-38ab-4ee1-8fc5-dc1eb39dc295-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-d6691829-24a3-4c91-a393-e65f7ba79428-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-42d74fa2-7f79-421e-a69e-2853fb40f927-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-534457a5-6da4-45d1-9503-543cc801cc2d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-c189d5fc-ba15-4052-adbe-498efff6c502-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-713a7286-b102-48a2-bf28-4f3d4d56f320-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-72a1767c-9885-4d1a-8a49-a868c4f4dae7-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-e7ff2d27-b444-44ca-8cf7-421d51846fcc-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-history-clamp-toggle",
+      "text": "Show all activity",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

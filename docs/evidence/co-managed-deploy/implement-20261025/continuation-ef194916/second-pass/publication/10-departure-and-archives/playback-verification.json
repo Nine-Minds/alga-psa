@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:17.341Z",
+  "guide": "guides/10-departure-and-archives.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/10-departure-and-archives.html",
+  "compositeSha256": "a774535f68a3b843e48d3075968861504f87c9182e633c8926c9d23b3e189f3e",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606112,
+    "duration": 59.04,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-and-archives/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "retained-shared-bytes-match",
+    "target": 25.635,
+    "actual": 25.646572,
+    "followingFrame": {
+      "mediaTime": 25.64,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/5386504",
+  "passed": true
+}

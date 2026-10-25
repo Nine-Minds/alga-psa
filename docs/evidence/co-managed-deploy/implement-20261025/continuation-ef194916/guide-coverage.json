@@ -1,0 +1,2502 @@
+{
+  "schemaVersion": 3,
+  "checkedAt": "2026-10-25T20:46:03.561Z",
+  "candidateRevision": "HEAD",
+  "buildId": "build-1792957994771",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "requiredGuides": 14,
+  "currentBuildRecordedGuides": 11,
+  "coveredGuides": 11,
+  "partialGuides": 0,
+  "blockedGuides": 3,
+  "reviewReady": false,
+  "recordingReady": true,
+  "runtimeSummary": "Canonical port 23374 serves the normally admitted source 56e708a31b0c68e2c287863ddbe73adc2422b1e7 / build-1792957994771 (dist server/.next-review-final-56e708a31b; health 200; HTML build stamp confirmed). Guides count as covered only for scenarios recorded on that build.",
+  "mediaPlaybackScope": "14 of 14 published composites have verified playback, chapter seek, following-frame and HTTP range proof; each composite is labelled with the build it was recorded on.",
+  "guides": [
+    {
+      "guide": "index.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/account-boundary/recording.json",
+            "evidence/takeover-c04-production/production-cookie-coexistence/recording.json",
+            "evidence/takeover-c04-production/main-native-effect-final/recording.json",
+            "evidence/takeover-c04-production/main-worker-business-confirmed/recording.json",
+            "evidence/takeover-c04-production/main-native-comment-file/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.webm",
+          "chapterVtt": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.vtt",
+          "recordingJson": "current/c04a67fff5b553d2c2a1f55a14194f829343adae/main.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Native MSP desk, client entry, Entry/Grid and authoritative customer route; full native edit of status, priority and category by the MSP; MSP assignment; customer-owned assignee, board, contact and client read-only for the MSP; customer-only sections absent; customer assigns natively and writes privately; viewer read-only; review ticket restored.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-layout-boundaries-56e7/recording.json",
+          "assertions": 5,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Current overview entry, native MSP desk, shared Entry/Grid and authoritative customer ticket navigation recorded. Full edits/assignment/category/stopwatch and all native privacy/field controls are not completed here. Published overview still embeds historical c04 media; current clips remain separately labelled. Child guides retain their own acceptance results."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-walkthrough-56e7/recording.json",
+          "assertions": 14,
+          "scenarioStatus": "passed"
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-layout-boundaries-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-walkthrough-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-layout-boundaries-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-walkthrough-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Native MSP desk, client entry, Entry/Grid and authoritative customer route; full native edit of status, priority and category by the MSP; MSP assignment; customer-owned assignee, board, contact and client read-only for the MSP; customer-only sections absent; customer assigns natively and writes privately; viewer read-only; review ticket restored."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:41:05.460Z",
+      "durationSeconds": 37.6,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "partial",
+          "remaining": "Current overview entry, native MSP desk, shared Entry/Grid and authoritative customer ticket navigation recorded. Full edits/assignment/category/stopwatch and all native privacy/field controls are not completed here.  Child guides retain their own acceptance results.",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-overview-native-layout-boundaries-current/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-overview-native-layout-boundaries-current/recording.json",
+              "assertions": 5,
+              "scenarioStatus": "partial"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-overview-native-layout-boundaries-current/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/overview/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/overview/playback-verification.json",
+          "recordedAt": "2026-10-25T16:37:30.743Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/overview/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/index.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/overview/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:43:43.304Z",
+        "guide": "index.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/index.html",
+        "publicUrl": "http://100.82.172.57:8874/index.html",
+        "compositeSha256": "e15ba6c8bd8e994a12643ac278bd0ae6d71bb1a78ea8402ca929d6544978fbe8",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.606754,
+          "duration": 93.76,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/overview/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "navigate",
+          "target": 63.986,
+          "actual": 63.994413,
+          "followingFrame": {
+            "mediaTime": 64,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/9225299",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/index.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/collection-final/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/collection.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Composition only: every child guide link opens and matches the ledger, and each child page embeds the composite for the build that guide was recorded on. The three blocked-external guides keep their earlier-build evidence and are not counted as covered.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-guide-links-56e7/recording.json",
+          "assertions": 24,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "All twelve child guide links opened and were reconciled with the acceptance ledger (10 covered on the current build, 1 partial, 3 blocked-external). Collection navigation does not accept child guides."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-publication-56e7/recording.json",
+          "assertions": 26,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Collection composition only; unresolved child scenarios and external fixtures remain separately labelled and keep reviewReady=false."
+          ]
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-guide-links-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-publication-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-guide-links-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-publication-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Composition only: every child guide link opens and matches the ledger, and each child page embeds the composite for the build that guide was recorded on. The three blocked-external guides keep their earlier-build evidence and are not counted as covered."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:45:06.493Z",
+      "durationSeconds": 4.24,
+      "acceptanceAnnotation": "The collection scenario verifies links, current composite sources, chapter controls and accurate per-child acceptance. Covering collection composition does not promote any child guide or make reviewReady true.",
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-guide-links-reconciliation-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-current-publication-complete/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-guide-links-reconciliation-current/recording.json",
+              "assertions": 24,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-current-publication-complete/recording.json",
+              "assertions": 26,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-guide-links-reconciliation-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-current-publication-complete/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/collection/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/collection/playback-verification.json",
+          "recordedAt": "2026-10-25T17:08:32.626Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/collection/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/index.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/collection/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:45:19.331Z",
+        "guide": "guides/index.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/index.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/index.html",
+        "compositeSha256": "19f72428c6477ce5e1cac719d032366bd46a8942cb5a56eed1e187d9f286367d",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.602319,
+          "duration": 7.44,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/collection/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "composite-embedded-for-recorded-build-05-ticket-queue.html",
+          "target": 5.912,
+          "actual": 5.916241,
+          "followingFrame": {
+            "mediaTime": 5.92,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/1063031",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/01-onboarding-full-attempt/recording.json",
+            "evidence/takeover-c04-production/01-onboarding-claim-continuation/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/01-onboarding.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/recording.json",
+          "assertions": 13,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "A valid ordinary command created its exact positive-control QA board; the same protocol was denied while customer acceptance was pending. Capacity was increased by one through the configured simulator and the extra accepted fixture is retained. SMTP sink is the configured simulator. No external Microsoft or payment claim. Expired invitation and stale-scope race matrices are tracked separately from this guide."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/recording.json",
+          "assertions": 2,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Fresh post-acceptance session confirmation; the invitation, pending-acceptance denial and cancellation are in the onboarding recording."
+          ]
+        }
+      ],
+      "recordedAt": "2026-10-25T20:34:45.091Z",
+      "durationSeconds": 61.32,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "invitedAdmin",
+          "email": "desk.accept.1792935749585@cmreview.test",
+          "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+        }
+      ],
+      "actorAnnotation": "The original capture helper kept its QA step label after the manual invitation claim. The invited-tenant assertion and a separate fresh invited-admin session receipt establish the customer actor; the raw capture is preserved.",
+      "historicalBoundedEvidence": [
+        "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/01-current-accepted-customer-confirmation/session-receipt.json",
+        "current-customer-session-response.json"
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "mediaPlaybackVerified": true,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding-current-build/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-current-accepted-customer-confirmation/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding-current-build/recording.json",
+              "assertions": 13,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-current-accepted-customer-confirmation/recording.json",
+              "assertions": 2,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding-current-build/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-current-accepted-customer-confirmation/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/01-onboarding/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/01-onboarding/playback-verification.json",
+          "recordedAt": "2026-10-25T15:54:26.643Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/01-onboarding/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/01-onboarding.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/01-onboarding/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:43:52.772Z",
+        "guide": "guides/01-onboarding.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/01-onboarding.html",
+        "compositeSha256": "f7728d2b16c9fbd0be6542b6b60210c5ef9628139e459f64ca04c230414612ab",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.606359,
+          "duration": 43.4,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "deep-native-link-requires-customer-acceptance",
+          "target": 30.352,
+          "actual": 30.356862,
+          "followingFrame": {
+            "mediaTime": 30.36,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/4716654",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "blocked-external",
+      "status": "blocked-external",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/02-current-allocation-verified/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/02-licensing-and-seats.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Blocked-external, not retried in this pass. Missing: A Nine Minds-signed license JWT bound to the sponsor tenant 24ac76c8-df59-4b10-8371-c56222904580 (aud = that tenant, tier 'pro', future exp, co_managed_seats = N), on a self-hosted installation that has a license_state row; A real Stripe test account with a co-managed seat price, owned by the release owner. Unblock: As the sponsor administrator on the self-hosted installation, open /msp/licenses, paste the signed token into #license-manual-key and click #license-activate-manual-key. / Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_CO_MANAGED_USER_PRICE_ID and MASTER_BILLING_TENANT_ID, unset STRIPE_API_BASE_URL, restart the review app, then buy one seat from the client's seats dialog. Evidence of the parts already verified was recorded on 1b9b112749.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/recording.json",
+          "assertions": 5,
+          "scenarioStatus": "partial"
+        },
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/recording.json",
+          "assertions": 3,
+          "scenarioStatus": "passed"
+        }
+      ],
+      "historicalBoundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/02-simulator-purchase-and-allocation/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "simulator-provider-reconciliation-increases-pool",
+              "passed": true,
+              "at": "2026-10-25T12:28:21.536Z",
+              "data": {
+                "original": 14,
+                "target": 15,
+                "provider": "configured Stripe simulator; not real Stripe test mode"
+              }
+            },
+            {
+              "id": "allocation-persisted-in-database-and-reload",
+              "passed": true,
+              "at": "2026-10-25T12:28:25.825Z"
+            },
+            {
+              "id": "below-active-minimum-denied-before-submission",
+              "passed": true,
+              "at": "2026-10-25T12:28:25.861Z"
+            },
+            {
+              "id": "allocation-and-purchased-capacity-restored",
+              "passed": true,
+              "at": "2026-10-25T12:28:29.852Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+      "runtime": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066"
+      },
+      "scenario": {
+        "status": "blocked-external",
+        "rawClips": [
+          "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/recording.json",
+          "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Blocked-external, not retried in this pass. Missing: A Nine Minds-signed license JWT bound to the sponsor tenant 24ac76c8-df59-4b10-8371-c56222904580 (aud = that tenant, tier 'pro', future exp, co_managed_seats = N), on a self-hosted installation that has a license_state row; A real Stripe test account with a co-managed seat price, owned by the release owner. Unblock: As the sponsor administrator on the self-hosted installation, open /msp/licenses, paste the signed token into #license-manual-key and click #license-activate-manual-key. / Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_CO_MANAGED_USER_PRICE_ID and MASTER_BILLING_TENANT_ID, unset STRIPE_API_BASE_URL, restart the review app, then buy one seat from the client's seats dialog. Evidence of the parts already verified was recorded on 1b9b112749."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T17:04:46.144Z",
+      "durationSeconds": 12.24,
+      "compositeRecording": "continuation-ef194916/second-pass/publication/02-licensing-and-seats/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/02-licensing-and-seats.html",
+      "playbackProofPath": "continuation-ef194916/second-pass/publication/02-licensing-and-seats/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T17:08:00.258Z",
+        "guide": "guides/02-licensing-and-seats.html",
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/02-licensing-and-seats.html",
+        "compositeSha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.605192,
+          "duration": 18.36,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "below-usage-reduction-is-disabled",
+          "target": 10.252,
+          "actual": 10.260341,
+          "followingFrame": {
+            "mediaTime": 10.28,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/2229001",
+        "passed": true
+      },
+      "blockedPortions": [
+        {
+          "id": "self-host-signed-license",
+          "missingFixture": "Approved tenant-bound signed test license and isolated self-host installation",
+          "unexecuted": "Signed-capacity shortfall, missing claim, lapse/read-only and renewal journeys",
+          "owner": "Release operator / license issuer",
+          "requirements": [
+            "clientIntegration:T019"
+          ],
+          "attempted": "Hosted installation left in its actual mode. No supplied signed tenant-bound fixture or approved isolated installation; existing unbound legacy fixtures cannot establish this journey."
+        }
+      ],
+      "externalReleaseRequirements": [
+        {
+          "id": "clientIntegration:T018",
+          "missingFixture": "Approved real Stripe test account, USD11.49 recurring price and checkout/reconciliation receipts"
+        }
+      ],
+      "inReachRemaining": [],
+      "passedPortions": [
+        "Hosted simulator provider-verified purchase and dropped-response reload recovery",
+        "Allocation save/reload, usage floor and restoration of original capacity/allocation"
+      ],
+      "blockedExternal": {
+        "missingResources": [
+          {
+            "resource": "A Nine Minds-signed license JWT bound to the sponsor tenant 24ac76c8-df59-4b10-8371-c56222904580 (aud = that tenant, tier 'pro', future exp, co_managed_seats = N), on a self-hosted installation that has a license_state row",
+            "why": "Only public verification keys are in the repository (packages/licensing/src/lib/license-keys.ts); seat capacity is read from claims.co_managed_seats only for a matching aud and tier 'pro' (packages/licensing/src/lib/co-managed-license.ts, co-managed-entitlements.ts).",
+            "unblock": "As the sponsor administrator on the self-hosted installation, open /msp/licenses, paste the signed token into #license-manual-key and click #license-activate-manual-key."
+          },
+          {
+            "resource": "A real Stripe test account with a co-managed seat price, owned by the release owner",
+            "why": "The hosted purchase path uses the Stripe simulator while STRIPE_API_BASE_URL is set (ee/server/src/lib/stripe/stripeApiOverride.ts); real receipts need real Stripe keys.",
+            "unblock": "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_CO_MANAGED_USER_PRICE_ID and MASTER_BILLING_TENANT_ID, unset STRIPE_API_BASE_URL, restart the review app, then buy one seat from the client's seats dialog."
+          }
+        ],
+        "alreadyVerified": "Hosted simulator purchase, allocation, usage floor, lost-response reload and explicit same-operation replay (one receipt; pool 19), recorded on 1b9b112749 / build-1792941614066. Not re-run in this pass, as ordered.",
+        "retriedThisPass": false,
+        "record": "continuation-ef194916/third-pass/blocked-external.json"
+      },
+      "recordedOnCurrentBuild": false
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/03-access-policies-final/recording.json",
+            "evidence/takeover-c04-production/03-viewer-source-boundaries/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/03-access-policies.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-scope-team-independent-grants-56e7/recording.json",
+          "assertions": 12,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Scope, explicit/board grant independence, staff and team intersection segment. Field masks, direct API controls and stale file/export revocation remain separate required segments. Test scope is retained for those segments, not restored yet."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-field-masks-api-stale-file-export-56e7/recording.json",
+          "assertions": 20,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Viewer Entry/Grid is a separate segment. API keys and fixture bundle assignments are revoked in finally. QA remains assigned to this disposable relationship for the subsequent SLA/departure scenario."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-56e7/recording.json",
+          "assertions": 6,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Viewer Entry/Grid segment only; scope/API/revocation are recorded separately."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-layout-parity-56e7/recording.json",
+          "assertions": 17,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Scope, field-mask/API and stale-revocation matrices are recorded in the earlier current-build access segments; project scope and revocation in current guide 06."
+          ]
+        }
+      ],
+      "recordedAt": "2026-10-25T20:37:19.077Z",
+      "durationSeconds": 118.08,
+      "actors": [
+        {
+          "name": "viewer",
+          "email": "noassign@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-scope-team-independent-grants-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-field-masks-api-stale-file-export-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-layout-parity-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-scope-team-independent-grants-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-field-masks-api-stale-file-export-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-layout-parity-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "mediaPlaybackVerified": true,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/recording.json",
+              "assertions": 12,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/recording.json",
+              "assertions": 20,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/recording.json",
+              "assertions": 0,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/recording.json",
+              "assertions": 17,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-scope-team-independent-grants-current-ready/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-field-masks-api-stale-file-export-current-confirmed/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-current-build/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-viewer-layout-parity-complete/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/03-access-policies/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/03-access-policies/playback-verification.json",
+          "recordedAt": "2026-10-25T16:52:17.392Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/03-access-policies/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/03-access-policies.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/03-access-policies/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:43:54.904Z",
+        "guide": "guides/03-access-policies.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/03-access-policies.html",
+        "compositeSha256": "53ae9ac33bed0b2ea1c87ea0d50b136871e1b9bda3636a50ce4512e66f0a719f",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.608848,
+          "duration": 97.04,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-access-policies/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "home-file-mask-revokes-copied-download-while-grant-stays-active",
+          "target": 65.43,
+          "actual": 65.465153,
+          "followingFrame": {
+            "mediaTime": 65.48,
+            "presentedFrames": 19
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/10388534",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/04-delegated-administration/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/04-delegated-administration.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/recording.json",
+          "assertions": 6,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Board approval, exact target save, restoration, and stale-editor revocation passed. Nonadministrator profile and customer-created invitation resend still require their own executed UI checks."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/recording.json",
+          "assertions": 11,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Board exact-target/stale-editor revocation is a separate current-build recording. SMTP delivery uses the approved controlled simulator mailbox; no claim of public-provider acceptance."
+          ]
+        }
+      ],
+      "mediaPlaybackVerified": true,
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "recordedAt": "2026-10-25T20:28:59.927Z",
+      "durationSeconds": 47.16,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/recording.json",
+              "assertions": 6,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/recording.json",
+              "assertions": 11,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-board-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegation-complete-current/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/04-delegated-administration/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/04-delegated-administration/playback-verification.json",
+          "recordedAt": "2026-10-25T15:38:47.872Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/04-delegated-administration/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/04-delegated-administration.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/04-delegated-administration/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:43:56.846Z",
+        "guide": "guides/04-delegated-administration.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/04-delegated-administration.html",
+        "compositeSha256": "536377cf290052508c08b7f02cd2e5354bab2b2811f6946f3c391480deb9079a",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.605838,
+          "duration": 42.64,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegated-administration/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "navigate",
+          "target": 24.439,
+          "actual": 24.493111,
+          "followingFrame": {
+            "mediaTime": 24.48,
+            "presentedFrames": 19
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/4893364",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/05-ticket-queue/recording.json",
+            "evidence/takeover-c04-production/05-filtered-queue-export/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/05-ticket-queue.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/recording.json",
+          "assertions": 14,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Three-ticket selection, native separation, filtered CSV, customer concurrent change, explicit-scope revocation, mixed per-item outcomes and lost-response reload recovery exercised. Queue scope and multi-page export checks run separately."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/recording.json",
+          "assertions": 5,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Combined with the separate three-item mixed/lost-response run; no claim of full privacy or provider matrices."
+          ]
+        }
+      ],
+      "recordedAt": "2026-10-25T20:33:28.502Z",
+      "durationSeconds": 37.88,
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "mediaPlaybackVerified": true,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/recording.json",
+              "assertions": 14,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/recording.json",
+              "assertions": 5,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/05-ticket-queue/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/05-ticket-queue/playback-verification.json",
+          "recordedAt": "2026-10-25T15:54:03.049Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/05-ticket-queue/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/05-ticket-queue.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/05-ticket-queue/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:43:58.765Z",
+        "guide": "guides/05-ticket-queue.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/05-ticket-queue.html",
+        "compositeSha256": "762d4d17f1ffab403301c07169947ec3e480d5d2d3adff54f7c6bb61e40e75f1",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.607784,
+          "duration": 34.88,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-ticket-queue/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "customer-native-history-shows-the-successful-shared-note",
+          "target": 19.823,
+          "actual": 19.842378,
+          "followingFrame": {
+            "mediaTime": 19.84,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/2964967",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/06-task-edit-revocation/recording.json",
+            "evidence/takeover-c04-production/06-project-grant-recovery/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/06-projects-and-tasks.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/recording.json",
+          "assertions": 5,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Native project/phase/two-task creation only. Shared collaboration, team queues, effort and revocation require separate acceptance."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/recording.json",
+          "assertions": 13,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Project creation is a separate native recording. Task effort, conversation/file bytes and fresh read denial after project revocation remain required."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/recording.json",
+          "assertions": 15,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Isolated project sharing is deliberately revoked. Native-creation and task-assignment/stale-edit recordings complete the other project guide obligations."
+          ]
+        }
+      ],
+      "historicalBoundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/06-task-assignment-stale-history-final/recording.json",
+          "sourceRevision": "1bdea5dd80021b508699181b8906f4b233ce4efb",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "msp-task-assignment-persists",
+              "passed": true,
+              "at": "2026-10-25T13:10:46.470Z"
+            },
+            {
+              "id": "msp-assignment-does-not-replace-customer-local-owner",
+              "passed": true,
+              "at": "2026-10-25T13:10:46.623Z"
+            },
+            {
+              "id": "remove-msp-assignment-persists",
+              "passed": true,
+              "at": "2026-10-25T13:10:47.895Z"
+            },
+            {
+              "id": "stale-msp-edit-refused",
+              "passed": true,
+              "at": "2026-10-25T13:10:51.196Z"
+            },
+            {
+              "id": "reload-recovers-current-authoritative-value",
+              "passed": true,
+              "at": "2026-10-25T13:10:51.397Z"
+            },
+            {
+              "id": "task-history-retains-qualified-change",
+              "passed": true,
+              "at": "2026-10-25T13:10:53.560Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:30:38.931Z",
+      "durationSeconds": 97.88,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/recording.json",
+              "assertions": 5,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/recording.json",
+              "assertions": 13,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/recording.json",
+              "assertions": 15,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/06-projects-and-tasks/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/06-projects-and-tasks/playback-verification.json",
+          "recordedAt": "2026-10-25T15:41:19.082Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/06-projects-and-tasks/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/06-projects-and-tasks.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/06-projects-and-tasks/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:44:00.625Z",
+        "guide": "guides/06-projects-and-tasks.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/06-projects-and-tasks.html",
+        "compositeSha256": "c21a3761399dfacc5bfbb0833ef57a226db6799805e3ebc4fcf109acaf8ad2ef",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.608842,
+          "duration": 86.08,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-projects-and-tasks/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "navigate",
+          "target": 63.862,
+          "actual": 63.86948,
+          "followingFrame": {
+            "mediaTime": 63.88,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/9076553",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/07-conversations-final/recording.json",
+            "evidence/takeover-c04-production/07-task-thread-files-disclosure/recording.json",
+            "evidence/takeover-c04-production/07-disclosed-file-removal-continuation/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/07-conversations-and-files.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/recording.json",
+          "assertions": 10,
+          "scenarioStatus": "passed"
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/recording.json",
+          "assertions": 20,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Ticket audience/file bytes matrix only. Replies, edits/deletion, disclosure, uncertain publication recovery and requester task conversation require their own current-build recordings."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/recording.json",
+          "assertions": 10,
+          "scenarioStatus": "passed"
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/recording.json",
+          "assertions": 17,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Requester task conversation is a separate segment. Disclosure uses disposable synthetic content. Removed files and deleted root are intentionally retained as tombstones/audit history."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/recording.json",
+          "assertions": 7,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Requester task conversation and file/reply segment; original task visibility restored. Separate ticket recovery defect remains unaccepted."
+          ]
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:14:59.096Z",
+      "durationSeconds": 82.56,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "partial",
+          "remaining": "Product defect: a server-executed dropped publication response shows an unknown-outcome warning but closes and clears the native composer. The same immutable intent cannot be recovered through the offered UI without reconstruction. Attachment removal, whole-thread transfer/restriction, requester task messages/replies and exact file bytes passed. No duplicate resend or product repair is claimed.",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversation-lifecycle-continuation/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-thread-disclosure-and-publication-recovery/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-uncertain-response-recovery-blocker/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-requester-task-conversation-complete/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/recording.json",
+              "assertions": 20,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/recording.json",
+              "assertions": 7,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversation-lifecycle-continuation/recording.json",
+              "assertions": 2,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-thread-disclosure-and-publication-recovery/recording.json",
+              "assertions": 8,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-uncertain-response-recovery-blocker/recording.json",
+              "assertions": 3,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-requester-task-conversation-complete/recording.json",
+              "assertions": 7,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-audiences-files-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-ticket-mutations-confirmed-save-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversation-lifecycle-continuation/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-thread-disclosure-and-publication-recovery/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-uncertain-response-recovery-blocker/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-requester-task-conversation-complete/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/07-conversations-and-files/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/07-conversations-and-files/playback-verification.json",
+          "recordedAt": "2026-10-25T16:57:06.062Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/07-conversations-and-files/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/07-conversations-and-files.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/07-conversations-and-files/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:44:03.442Z",
+        "guide": "guides/07-conversations-and-files.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/07-conversations-and-files.html",
+        "compositeSha256": "1ec5cd135ded564a4d5631f79a2c4d0f419ed03d9817bb5cf581ccec737b6847",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.595635,
+          "duration": 181.92,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-conversations-and-files/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "qa-deleted-root-file-link-denied",
+          "target": 108.305,
+          "actual": 108.334661,
+          "followingFrame": {
+            "mediaTime": 108.32,
+            "presentedFrames": 8
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/19439166",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/05-customer-ticket-loop/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/08-sla.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Mapping persistence, captured-target immutability, restored mapping, fresh differing targets and handback pause, business-calendar arithmetic and an actual breach mail routed only to the assigned MSP user. The business-calendar recording ends with a harness timeout on an absent post-departure history control after its four assertions passed; the departure clock cutoff is verified in 10-departure-c-cutoff-56e7 (cutoff adds the customer_responsible pause, no resolution deadline, no former MSP clock on the customer ticket). CE/EE release parity remains unverified in the requirement ledger.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/recording.json",
+          "assertions": 2,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Mapping persistence and captured-target immutability verified. High→P1 temporary mapping awaits restoration after subsequent fixture escalation. New differing targets, notification recipients, and departure clock cutoff still need execution."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/recording.json",
+          "assertions": 1,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Reversible fixture cleanup only; full SLA guide remains partial."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/recording.json",
+          "assertions": 6,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Actual differing captured targets, mapping immutability and handback pause segment. Business-time arithmetic, actual breach notification recipients, CE/EE parity and departure cutoff remain unverified. Isolated captured policies/tickets are retained; sponsor default policy was not changed."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/recording.json",
+          "assertions": 4,
+          "scenarioStatus": "failed",
+          "harnessError": "locator.waitFor: Timeout 25000ms exceeded."
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json",
+          "assertions": 21,
+          "scenarioStatus": "passed"
+        }
+      ],
+      "historicalBoundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/08-sla-mapping-and-captured-targets/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "priority-mapping-persists-through-product-and-reload",
+              "passed": true,
+              "at": "2026-10-25T12:35:33.194Z"
+            },
+            {
+              "id": "mapping-edit-does-not-rewrite-existing-obligation",
+              "passed": true,
+              "at": "2026-10-25T12:35:33.353Z"
+            }
+          ]
+        },
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/08-mapping-restored-current-build/recording.json",
+          "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+          "scenarioStatus": "passed",
+          "assertions": [
+            {
+              "id": "temporary-high-priority-mapping-restored-through-product",
+              "passed": true,
+              "at": "2026-10-25T13:47:13.737Z",
+              "data": {
+                "original": "Not mapped"
+              }
+            }
+          ]
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Mapping persistence, captured-target immutability, restored mapping, fresh differing targets and handback pause, business-calendar arithmetic and an actual breach mail routed only to the assigned MSP user. The business-calendar recording ends with a harness timeout on an absent post-departure history control after its four assertions passed; the departure clock cutoff is verified in 10-departure-c-cutoff-56e7 (cutoff adds the customer_responsible pause, no resolution deadline, no former MSP clock on the customer ticket). CE/EE release parity remains unverified in the requirement ledger."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:38:22.559Z",
+      "durationSeconds": 32.4,
+      "acceptanceAnnotation": "Aggregate of current mapping/differing-target/handback, business-calendar/actual notification, and fresh departure-cutoff segments. The calendar recording preserves its final harness timeout on a nonexistent history button; its clock arithmetic and actual delivery assertions ran before that timeout. The separate cutoff segment supplies the required positive-control native read and absent former-MSP clock. CE/EE release-parity requirements remain outside this guide acceptance and unverified in the requirement ledger.",
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "covered",
+          "remaining": "",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-mapping-and-captured-targets/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-mapping-restored-current-build/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-fresh-targets-pause-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-business-calendar-notification-and-cutoff-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-departure-clock-cutoff-confirmed/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-mapping-and-captured-targets/recording.json",
+              "assertions": 2,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-mapping-restored-current-build/recording.json",
+              "assertions": 1,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-fresh-targets-pause-current/recording.json",
+              "assertions": 6,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-business-calendar-notification-and-cutoff-current/recording.json",
+              "assertions": 4,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-departure-clock-cutoff-confirmed/recording.json",
+              "assertions": 4,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-mapping-and-captured-targets/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-mapping-restored-current-build/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla-fresh-targets-pause-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-business-calendar-notification-and-cutoff-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-departure-clock-cutoff-confirmed/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/08-sla/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/08-sla/playback-verification.json",
+          "recordedAt": "2026-10-25T17:03:22.851Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/08-sla/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/08-sla.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/08-sla/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:44:07.172Z",
+        "guide": "guides/08-sla.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/08-sla.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/08-sla.html",
+        "compositeSha256": "ac37df50f78669a3bc425e71baaedad30216f3cf67e600959cb470555b3f121a",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.605943,
+          "duration": 288.88,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "refresh-repeats-neither-closure-nor-release",
+          "target": 172.468,
+          "actual": 172.497558,
+          "followingFrame": {
+            "mediaTime": 172.48,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/27098217",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/09-timesheet-production/recording.json",
+            "evidence/takeover-c04-production/09-current-operational-time/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Capture, routing and separate approval; customer operational effort; native stopwatch; catalog pricing review (uncovered catalog time needs no pricing decision and is billed as-is) and catalog invoice reconciliation at the catalog rate traced to its source entries. Drafts only; nothing finalized or emailed.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/recording.json",
+          "assertions": 9,
+          "scenarioStatus": "partial",
+          "segmentLimitations": [
+            "Billing capture, source routing and approval segment. Invoice generation, customer effort and stopwatch are separate required segments."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/recording.json",
+          "assertions": 6,
+          "scenarioStatus": "passed"
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/recording.json",
+          "assertions": 3,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Native stopwatch start/stop/prefill/save segment; catalog pricing/invoice reconciliation is separate."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/recording.json",
+          "assertions": 12,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Draft invoice only; nothing finalized or emailed."
+          ]
+        }
+      ],
+      "historicalBoundedEvidence": [
+        {
+          "path": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/09-isolated-approval-with-team-prerequisite/recording.json",
+          "sourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+          "scenarioStatus": "partial",
+          "assertions": [
+            {
+              "id": "exact-new-commercial-entry-rendered",
+              "passed": true,
+              "at": "2026-10-25T13:02:01.378Z"
+            },
+            {
+              "id": "sheet-is-isolated-to-new-review-entry",
+              "passed": true,
+              "at": "2026-10-25T13:02:01.985Z"
+            },
+            {
+              "id": "submitted-sheet-is-preserved",
+              "passed": true,
+              "at": "2026-10-25T13:02:02.258Z"
+            },
+            {
+              "id": "new-sheet-submitted-through-native-control",
+              "passed": true,
+              "at": "2026-10-25T13:02:02.259Z"
+            },
+            {
+              "id": "separate-approver-preserves-qualified-commercial-entry",
+              "passed": true,
+              "at": "2026-10-25T13:02:05.858Z"
+            }
+          ]
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Capture, routing and separate approval; customer operational effort; native stopwatch; catalog pricing review (uncovered catalog time needs no pricing decision and is billed as-is) and catalog invoice reconciliation at the catalog rate traced to its source entries. Drafts only; nothing finalized or emailed."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:23:26.806Z",
+      "durationSeconds": 37.88,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "partial",
+          "remaining": "Native stopwatch start/stop/prefill/save now passed with one logged session and one commercial minute. Existing exact contract routing, separate approval, INV-000004 (0 from 15 minutes) and 6+21 minute operational/commercial reconciliation remain verified. Catalog-pricing acknowledgement and catalog invoice reconciliation remain in reach and unverified; the approved six-minute catalog entry is not invoiced.",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-native-stopwatch-start-stop-save-current/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/recording.json",
+              "assertions": 1,
+              "scenarioStatus": "preparation"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/recording.json",
+              "assertions": 9,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/recording.json",
+              "assertions": 4,
+              "scenarioStatus": "partial"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/recording.json",
+              "assertions": 5,
+              "scenarioStatus": "passed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-native-stopwatch-start-stop-save-current/recording.json",
+              "assertions": 3,
+              "scenarioStatus": "passed"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-native-line-save-preparation/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-capture-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-billing-invoice-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-operational-commercial-effort-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-native-stopwatch-start-stop-save-current/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/09-time-and-billing/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/09-time-and-billing/playback-verification.json",
+          "recordedAt": "2026-10-25T17:01:41.098Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/09-time-and-billing/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/09-time-and-billing.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/09-time-and-billing/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:44:10.184Z",
+        "guide": "guides/09-time-and-billing.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/09-time-and-billing.html",
+        "compositeSha256": "0be19048bcaaa0e2f24d660f02575ef10cc58cb74317e65d3c7d9360ac0eb0d0",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.605582,
+          "duration": 81.08,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-time-and-billing/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "09-catalog-pricing-reconciliation-56e7",
+          "target": 46.32,
+          "actual": 46.342196,
+          "followingFrame": {
+            "mediaTime": 46.36,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/8726976",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "covered",
+      "status": "covered",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/10-c04-departure/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/10-departure-and-archives.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Disposable relationship prepared natively and ended. After cutoff the customer workspace is read-only by design (reading, export and upgrade remain), so no customer change is permitted; its native screen offers none, and the sealed archive and its evidence count are unchanged. White Rabbit was not touched.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/recording.json",
+          "assertions": 7,
+          "scenarioStatus": "passed"
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/recording.json",
+          "assertions": 13,
+          "scenarioStatus": "passed",
+          "segmentLimitations": [
+            "Isolated technician/team created by operator SQL (same prerequisite as guide 09); assignment, staff access, billing cycle, time capture, approval, invoicing and messages use native UI. SMTP sink reject-mail fault holds the queued delivery."
+          ]
+        },
+        {
+          "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+          "buildId": "build-1792957994771",
+          "artifact": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json",
+          "assertions": 21,
+          "scenarioStatus": "passed"
+        }
+      ],
+      "testedRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+      "runtime": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771"
+      },
+      "scenario": {
+        "status": "covered",
+        "rawClips": [
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/recording.json",
+          "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Disposable relationship prepared natively and ended. After cutoff the customer workspace is read-only by design (reading, export and upgrade remain), so no customer change is permitted; its native screen offers none, and the sealed archive and its evidence count are unchanged. White Rabbit was not touched."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T20:26:36.398Z",
+      "durationSeconds": 59.04,
+      "recordedOnCurrentBuild": true,
+      "priorBuildEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "coverageStatus": "partial",
+          "remaining": "Disposable relationship 20b527f2 ended normally; capacity released once, old live reads/files denied, retained shared/MSP-private bytes match, customer-private content excluded and customer native data retained. Client-restricted local reader gets archive 404. The initial broad local viewer was authorized for organization-owned retained evidence; its failed deny assertion is preserved and corrected by the follow-up, not labelled a product bug. Relationship-specific commercial/invoice continuity, post-cutoff archive immutability and queued-notification suppression remain unverified.",
+          "recordings": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-participation-archive-current/walkthrough.webm",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-archive-authority-followup-current/walkthrough.webm"
+          ],
+          "boundedEvidence": [
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-participation-archive-current/recording.json",
+              "assertions": 15,
+              "scenarioStatus": "failed"
+            },
+            {
+              "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+              "buildId": "build-1792941614066",
+              "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-archive-authority-followup-current/recording.json",
+              "assertions": 5,
+              "scenarioStatus": "partial"
+            }
+          ],
+          "rawClips": [
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-participation-archive-current/recording.json",
+            "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-archive-authority-followup-current/recording.json"
+          ],
+          "compositeRecording": "continuation-ef194916/second-pass/publication/10-departure-and-archives/walkthrough.webm",
+          "playbackProofPath": "continuation-ef194916/second-pass/publication/10-departure-and-archives/playback-verification.json",
+          "recordedAt": "2026-10-25T16:34:42.274Z"
+        }
+      ],
+      "compositeRecording": "continuation-ef194916/third-pass/publication/10-departure-and-archives/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/10-departure-and-archives.html",
+      "playbackProofPath": "continuation-ef194916/third-pass/publication/10-departure-and-archives/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T20:44:12.394Z",
+        "guide": "guides/10-departure-and-archives.html",
+        "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+        "buildId": "build-1792957994771",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/10-departure-and-archives.html",
+        "compositeSha256": "db08f133a344ebfde3be050312dce34bab9a699a9328055d6805e2009aa56d7d",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.606724,
+          "duration": 222.08,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-and-archives/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation",
+          "target": 101.797,
+          "actual": 101.825844,
+          "followingFrame": {
+            "mediaTime": 101.8,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/21986460",
+        "passed": true
+      }
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "blocked-external",
+      "status": "blocked-external",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/11-export-restore-and-upgrade/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/11-export-restore-and-upgrade.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Blocked-external, not retried in this pass. Missing: A Pro license signed for the restored destination tenant (aud = destination tenant UUID, tier 'pro') on a self-hosted destination with a license_state row; or, for hosted, exactly one active paid PSA Stripe subscription whose metadata.tenant_id is the destination tenant. Unblock: From server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant <restored-uuid> --operation-id <retained-uuid> --license-file /abs/pro-license.jwt (hosted: --activate-hosted with the same tenant and operation flags). Evidence of the parts already verified was recorded on 1b9b112749.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/recording.json",
+          "assertions": 4,
+          "scenarioStatus": "partial"
+        }
+      ],
+      "testedRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+      "runtime": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066"
+      },
+      "scenario": {
+        "status": "partial",
+        "rawClips": [
+          "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Blocked-external, not retried in this pass. Missing: A Pro license signed for the restored destination tenant (aud = destination tenant UUID, tier 'pro') on a self-hosted destination with a license_state row; or, for hosted, exactly one active paid PSA Stripe subscription whose metadata.tenant_id is the destination tenant. Unblock: From server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant <restored-uuid> --operation-id <retained-uuid> --license-file /abs/pro-license.jwt (hosted: --activate-hosted with the same tenant and operation flags). Evidence of the parts already verified was recorded on 1b9b112749."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T16:36:00.326Z",
+      "durationSeconds": 7.4,
+      "compositeRecording": "continuation-ef194916/second-pass/publication/11-export-restore-and-upgrade/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/11-export-restore-and-upgrade.html",
+      "playbackProofPath": "continuation-ef194916/second-pass/publication/11-export-restore-and-upgrade/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T17:08:19.089Z",
+        "guide": "guides/11-export-restore-and-upgrade.html",
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/11-export-restore-and-upgrade.html",
+        "compositeSha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.608105,
+          "duration": 7.4,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "customer-export-remains-available-after-reload",
+          "target": 4.503,
+          "actual": 4.526887,
+          "followingFrame": {
+            "mediaTime": 4.52,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/713083",
+        "passed": true
+      },
+      "blockedPortions": [
+        {
+          "id": "destination-signed-license",
+          "missingFixture": "Approved tenant-bound Pro license for an isolated destination",
+          "unexecuted": "Self-host restore entitlement/activation and recovered native login/data/files/credentials",
+          "owner": "Destination operator / license issuer",
+          "attempted": "Current encrypted post-departure archive was downloaded; historical suspended restore is retained without claiming activation. No destination-bound license is supplied."
+        },
+        {
+          "id": "destination-paid-subscription",
+          "missingFixture": "Prepared destination-owned paid subscription verifiable by the provider",
+          "unexecuted": "Hosted destination activation and paid independent upgrade",
+          "owner": "Destination billing operator",
+          "attempted": "Native upgrade screen refuses sponsor entitlement. No prepared destination-owned paid subscription is available."
+        }
+      ],
+      "inReachRemaining": [
+        "Current encrypted archive content inspection is not yet run; this is not classified as externally blocked."
+      ],
+      "blockedExternal": {
+        "missingResources": [
+          {
+            "resource": "A Pro license signed for the restored destination tenant (aud = destination tenant UUID, tier 'pro') on a self-hosted destination with a license_state row; or, for hosted, exactly one active paid PSA Stripe subscription whose metadata.tenant_id is the destination tenant",
+            "why": "Activation checks activateTenantPsaLicense / retainTenantPsaLicense (packages/licensing/src/lib/tenant-license-state.ts) or retainHostedPsaUpgradeCandidate + paidPsaUpgradeFromStripe (packages/licensing/src/lib/hosted-psa-upgrade.ts, ee/server/src/lib/stripe/coManagedIndependentEntitlement.ts); the hosted check reads Stripe directly, so the simulator cannot satisfy it.",
+            "unblock": "From server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant <restored-uuid> --operation-id <retained-uuid> --license-file /abs/pro-license.jwt (hosted: --activate-hosted with the same tenant and operation flags)."
+          }
+        ],
+        "alreadyVerified": "Browser export and the paid-entitlement denial, recorded on 1b9b112749 / build-1792941614066.",
+        "inReachNotBlocked": "Inspecting a current export archive needs no external resource: scripts/restore-portable-workspace.ts --inspect --archive /abs/backup.alga (passphrase from a hidden prompt or --passphrase-stdin) prints sourceTenant, packageId, sha256 and eligible administrators. It was not run in this pass.",
+        "retriedThisPass": false,
+        "record": "continuation-ef194916/third-pass/blocked-external.json"
+      },
+      "recordedOnCurrentBuild": false
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "candidateRevision": "HEAD",
+      "coverageStatus": "blocked-external",
+      "status": "blocked-external",
+      "historicalRecording": {
+        "artifact": "../c04a67fff5/guide-coverage.json",
+        "testedRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+        "scenario": {
+          "status": "partial; consult outcomes and limitations",
+          "rawClips": [
+            "evidence/takeover-c04-production/12-customer-integrations/recording.json"
+          ]
+        },
+        "recordingPaths": {
+          "webm": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.webm",
+          "chapterVtt": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.vtt",
+          "recordingJson": "guides/current/c04a67fff5b553d2c2a1f55a14194f829343adae/12-customer-integrations.json"
+        },
+        "coverageStatus": "partial"
+      },
+      "remaining": "Blocked-external, not retried in this pass. Missing: An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, plus an inbound mailbox the Graph subscription can notify; Directory provisioning (SCIM) enabled for the customer tenant. Unblock: As the customer administrator open /msp/co-management/providers, choose #provider-credentials-microsoft-tab, click #microsoft-settings-add-profile, fill #microsoft-profile-client-id, #microsoft-profile-tenant-id and #microsoft-profile-client-secret, tick email and msp_sso, and click #microsoft-profile-save. / Enable skim-support-feature for the tenant, then /msp/security-settings?tab=user-provisioning → #create-scim-connection-button. Evidence of the parts already verified was recorded on 1b9b112749.",
+      "boundedEvidence": [
+        {
+          "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+          "buildId": "build-1792941614066",
+          "artifact": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/recording.json",
+          "assertions": 6,
+          "scenarioStatus": "partial"
+        }
+      ],
+      "testedRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+      "runtime": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066"
+      },
+      "scenario": {
+        "status": "partial",
+        "rawClips": [
+          "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/recording.json"
+        ]
+      },
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/walkthrough.webm"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "limitations": [
+        "Blocked-external, not retried in this pass. Missing: An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, plus an inbound mailbox the Graph subscription can notify; Directory provisioning (SCIM) enabled for the customer tenant. Unblock: As the customer administrator open /msp/co-management/providers, choose #provider-credentials-microsoft-tab, click #microsoft-settings-add-profile, fill #microsoft-profile-client-id, #microsoft-profile-tenant-id and #microsoft-profile-client-secret, tick email and msp_sso, and click #microsoft-profile-save. / Enable skim-support-feature for the tenant, then /msp/security-settings?tab=user-provisioning → #create-scim-connection-button. Evidence of the parts already verified was recorded on 1b9b112749."
+      ],
+      "mediaPlaybackVerified": true,
+      "recordedAt": "2026-10-25T16:36:37.268Z",
+      "durationSeconds": 7.84,
+      "compositeRecording": "continuation-ef194916/second-pass/publication/12-customer-integrations/walkthrough.webm",
+      "publishedRecordingUrl": "http://100.82.172.57:8874/guides/12-customer-integrations.html",
+      "playbackProofPath": "continuation-ef194916/second-pass/publication/12-customer-integrations/playback-verification.json",
+      "playbackProof": {
+        "checkedAt": "2026-10-25T17:08:20.810Z",
+        "guide": "guides/12-customer-integrations.html",
+        "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+        "buildId": "build-1792941614066",
+        "evidenceSnapshotParent": "HEAD",
+        "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+        "publicUrl": "http://100.82.172.57:8874/guides/12-customer-integrations.html",
+        "compositeSha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524",
+        "applicationBuildStampMatches": true,
+        "applicationHealthStatus": 200,
+        "played": {
+          "time": 0.605728,
+          "duration": 7.84,
+          "width": 1440,
+          "height": 1000,
+          "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-customer-integrations/walkthrough.webm"
+        },
+        "seek": {
+          "control": "visible #current-chapters selector",
+          "chapter": "navigate",
+          "target": 4.849,
+          "actual": 4.862402,
+          "followingFrame": {
+            "mediaTime": 4.88,
+            "presentedFrames": 18
+          }
+        },
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/739416",
+        "passed": true
+      },
+      "blockedPortions": [
+        {
+          "id": "isolated-provider-directory-inbound",
+          "missingFixture": "Approved isolated Google/Microsoft application, directory and inbound-mail binding",
+          "unexecuted": "Customer provider configuration/save/redaction, OAuth callback/tenant link, directory sync, inbound reply/attachment/replay and credential revocation",
+          "owner": "Integration environment / provider application operator",
+          "attempted": "Opened the isolated customer provider workbench and verified return/catalog boundaries. Correlated one real SMTP-sink notification to its requester-visible message with private bodies excluded. No approved application/directory/inbound binding has been supplied; production SSO safeguards remain enabled."
+        }
+      ],
+      "inReachRemaining": [],
+      "blockedExternal": {
+        "missingResources": [
+          {
+            "resource": "An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, plus an inbound mailbox the Graph subscription can notify",
+            "why": "Sign-in, mail and directory use real Microsoft endpoints unless MICROSOFT_GRAPH_BASE_URL / MICROSOFT_LOGIN_BASE_URL point at the emulator; production disables the SSO emulator (packages/auth/src/lib/sso/microsoftSsoEmulator.ts). Graph change notifications post to NEXT_PUBLIC_BASE_URL / NEXTAUTH_URL, which must be reachable from the internet.",
+            "unblock": "As the customer administrator open /msp/co-management/providers, choose #provider-credentials-microsoft-tab, click #microsoft-settings-add-profile, fill #microsoft-profile-client-id, #microsoft-profile-tenant-id and #microsoft-profile-client-secret, tick email and msp_sso, and click #microsoft-profile-save."
+          },
+          {
+            "resource": "Directory provisioning (SCIM) enabled for the customer tenant",
+            "why": "The user-provisioning tab is hidden unless the PostHog flag skim-support-feature is on (Enterprise edition).",
+            "unblock": "Enable skim-support-feature for the tenant, then /msp/security-settings?tab=user-provisioning → #create-scim-connection-button."
+          }
+        ],
+        "alreadyVerified": "Isolated provider forms, route boundaries and one actual SMTP-sink requester notification, recorded on 1b9b112749 / build-1792941614066.",
+        "retriedThisPass": false,
+        "record": "continuation-ef194916/third-pass/blocked-external.json"
+      },
+      "recordedOnCurrentBuild": false
+    }
+  ],
+  "historicalRecordedGuides": 14,
+  "historicalMediaPlaybackVerified": 14,
+  "currentBuildMediaPlaybackVerified": 0,
+  "priorCandidateGuideCoverage": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156",
+    "scenarioCovered": [
+      "guides/04-delegated-administration.html",
+      "guides/06-projects-and-tasks.html"
+    ],
+    "mediaPublicationVerified": false,
+    "note": "All specified runtime steps executed; the recordings are retained under historical/. These are not acceptance on the newer candidate."
+  },
+  "currentEvidenceDirectory": "continuation-ef194916",
+  "applicationSourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "candidateRevisionMeaning": "HEAD resolves to the containing consolidated evidence commit. Application source is pinned separately per guide; evidence commits are not application builds.",
+  "playbackVerifiedGuides": 14,
+  "blockedFixtureClasses": 4,
+  "notReached": [],
+  "openProductDefects": [],
+  "coveredOnPriorBuildOnly": [],
+  "reviewReadyReason": "Guide acceptance is not requirement acceptance: the formal requirement ledger still has implemented-but-unverified and blocked-external rows, and three guides are blocked-external.",
+  "resolvedProductDefects": [
+    {
+      "id": "native-comment-unknown-response-clears-composer",
+      "commit": "1c431798ba",
+      "guide": "guides/07-conversations-and-files.html",
+      "fix": "An unconfirmed comment publish keeps the composer, draft and staged files; retry reuses the same operation.",
+      "regression": "packages/tickets/src/components/ticket/__tests__/TicketDetailsContainer.unconfirmedComment.test.tsx",
+      "evidence": "07-composer-draft-recovery-56e7"
+    },
+    {
+      "id": "late-layout-preference-unmounts-entry-composer",
+      "commit": "3e423f3133",
+      "guide": "guides/07-conversations-and-files.html",
+      "fix": "A stored ticket layout preference that loads after the user chose a layout no longer switches layouts (which unmounted an open Entry composer and its draft).",
+      "regression": "packages/tickets/src/components/ticket/__tests__/TicketDetails.remoteUpdates.test.tsx",
+      "evidence": "07-grid-parity-and-file-limits-56e7"
+    },
+    {
+      "id": "co-managed-time-missing-from-billing-client-lookups",
+      "commit": "c31dc3bfad",
+      "guide": "guides/09-time-and-billing.html",
+      "fix": "The unresolved-charge review, the Automatic Invoices period filter and recurring approval blockers resolve the client through the billing work context, so co-managed catalog time can be reviewed and invoiced and unapproved co-managed time blocks its line.",
+      "regression": "server/src/test/integration/billing/{unresolvedCatalogPricing,billingProfileAttribution}.integration.test.ts, server/src/test/integration/billingInvoiceTiming.integration.test.ts",
+      "evidence": "09-catalog-pricing-reconciliation-56e7"
+    },
+    {
+      "id": "shared-ticket-hides-customer-assignee",
+      "commit": "33ae41dcae",
+      "guide": "index.html",
+      "fix": "The MSP sees the customer assignee by name (never its identity) in Entry and Grid.",
+      "regression": "packages/tickets/src/lib/assigneeDisplay.test.ts, TicketInfo.sharedEntryGating, BentoHero.unsavedChanges, coManagedSharedTicketData",
+      "evidence": "00-overview-native-walkthrough-56e7"
+    },
+    {
+      "id": "billing-dashboard-review-excludes-today",
+      "commit": "91c9b27009",
+      "guide": "guides/09-time-and-billing.html",
+      "fix": "The client billing dashboard reviews the last 30 days including today.",
+      "regression": "packages/clients/src/components/clients/ClientContractLineDashboard.reviewWindow.test.tsx",
+      "evidence": "09-catalog-pricing-reconciliation-56e7"
+    },
+    {
+      "id": "ended-customer-workspace-offers-failing-edits",
+      "commit": "56e708a31b",
+      "guide": "guides/10-departure-and-archives.html",
+      "fix": "An ended (or pending) co-managed workspace renders its native ticket screen read-only, never shows the denied native time panel, and ticket writes return the real read-only message.",
+      "regression": "server/src/test/unit/product/coManagedLocalTicketDataSource.test.tsx, packages/tickets/src/actions/ticketActionErrors.lifecycle.test.ts",
+      "evidence": "10-departure-c-cutoff-56e7"
+    }
+  ],
+  "preExistingIssuesObserved": [
+    {
+      "where": "server/src/components/layout/Header.tsx (TenantBadge)",
+      "issue": "The header shows the active tenant UUID as a badge.",
+      "scope": "Present on origin/main; not changed here."
+    },
+    {
+      "where": "packages/scheduling/src/components/time-management/time-entry/time-sheet/ContractInfoBanner.tsx",
+      "issue": "Says uncovered time \"will be routed to the system-managed default contract\", but contract eligibility excludes that contract; such time is billed as unresolved work at the catalog rate.",
+      "scope": "Present on origin/main; not changed here."
+    },
+    {
+      "where": "packages/reporting/src/actions/report-actions/getHoursByServiceType.ts",
+      "issue": "Filters work_item_type on \"Ticket\"/\"Project Task\", which the time_entries check constraint never allows, so \"Hours by service\" is always empty (and ignores co-managed work).",
+      "scope": "Present on origin/main; not changed here."
+    }
+  ]
+}

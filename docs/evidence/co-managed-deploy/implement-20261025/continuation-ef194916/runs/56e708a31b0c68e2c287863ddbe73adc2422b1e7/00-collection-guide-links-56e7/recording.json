@@ -1,0 +1,395 @@
+{
+  "scenario": "00-collection-guide-links-56e7",
+  "recordedAt": "2026-10-25T20:45:00.493Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "collection-links-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:00.950Z"
+    },
+    {
+      "id": "child-guide-opens-01-onboarding.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.021Z",
+      "data": {
+        "title": "Customer onboarding",
+        "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.190Z"
+    },
+    {
+      "id": "child-guide-opens-02-licensing-and-seats.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.262Z",
+      "data": {
+        "title": "Licensing and seats",
+        "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+        "currentAcceptance": "blocked-external"
+      }
+    },
+    {
+      "id": "collection-links-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.422Z"
+    },
+    {
+      "id": "child-guide-opens-03-access-policies.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.495Z",
+      "data": {
+        "title": "Access policies",
+        "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.635Z"
+    },
+    {
+      "id": "child-guide-opens-04-delegated-administration.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.698Z",
+      "data": {
+        "title": "Delegated administration",
+        "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.839Z"
+    },
+    {
+      "id": "child-guide-opens-05-ticket-queue.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:01.913Z",
+      "data": {
+        "title": "Ticket queue operations",
+        "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.145Z"
+    },
+    {
+      "id": "child-guide-opens-06-projects-and-tasks.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.208Z",
+      "data": {
+        "title": "Projects and tasks",
+        "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.357Z"
+    },
+    {
+      "id": "child-guide-opens-07-conversations-and-files.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.434Z",
+      "data": {
+        "title": "Conversations and files",
+        "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.591Z"
+    },
+    {
+      "id": "child-guide-opens-08-sla.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.665Z",
+      "data": {
+        "title": "SLA configuration",
+        "url": "http://127.0.0.1:8874/guides/08-sla.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.817Z"
+    },
+    {
+      "id": "child-guide-opens-09-time-and-billing.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:02.882Z",
+      "data": {
+        "title": "Time approval and billing",
+        "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.056Z"
+    },
+    {
+      "id": "child-guide-opens-10-departure-and-archives.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.130Z",
+      "data": {
+        "title": "Departure and archives",
+        "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "id": "collection-links-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.280Z"
+    },
+    {
+      "id": "child-guide-opens-11-export-restore-and-upgrade.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.338Z",
+      "data": {
+        "title": "Export, restore and independence",
+        "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+        "currentAcceptance": "blocked-external"
+      }
+    },
+    {
+      "id": "collection-links-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.522Z"
+    },
+    {
+      "id": "child-guide-opens-12-customer-integrations.html",
+      "passed": true,
+      "at": "2026-10-25T20:45:03.591Z",
+      "data": {
+        "title": "Customer-owned integrations",
+        "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+        "currentAcceptance": "blocked-external"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:45:00.950Z",
+      "seconds": 0.457,
+      "title": "collection-links-01-onboarding.html"
+    },
+    {
+      "at": "2026-10-25T20:45:01.021Z",
+      "seconds": 0.528,
+      "title": "child-guide-opens-01-onboarding.html",
+      "data": {
+        "title": "Customer onboarding",
+        "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:01.190Z",
+      "seconds": 0.697,
+      "title": "collection-links-02-licensing-and-seats.html"
+    },
+    {
+      "at": "2026-10-25T20:45:01.262Z",
+      "seconds": 0.769,
+      "title": "child-guide-opens-02-licensing-and-seats.html",
+      "data": {
+        "title": "Licensing and seats",
+        "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+        "currentAcceptance": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:01.422Z",
+      "seconds": 0.929,
+      "title": "collection-links-03-access-policies.html"
+    },
+    {
+      "at": "2026-10-25T20:45:01.495Z",
+      "seconds": 1.002,
+      "title": "child-guide-opens-03-access-policies.html",
+      "data": {
+        "title": "Access policies",
+        "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:01.635Z",
+      "seconds": 1.142,
+      "title": "collection-links-04-delegated-administration.html"
+    },
+    {
+      "at": "2026-10-25T20:45:01.698Z",
+      "seconds": 1.205,
+      "title": "child-guide-opens-04-delegated-administration.html",
+      "data": {
+        "title": "Delegated administration",
+        "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:01.839Z",
+      "seconds": 1.346,
+      "title": "collection-links-05-ticket-queue.html"
+    },
+    {
+      "at": "2026-10-25T20:45:01.913Z",
+      "seconds": 1.42,
+      "title": "child-guide-opens-05-ticket-queue.html",
+      "data": {
+        "title": "Ticket queue operations",
+        "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:02.145Z",
+      "seconds": 1.652,
+      "title": "collection-links-06-projects-and-tasks.html"
+    },
+    {
+      "at": "2026-10-25T20:45:02.208Z",
+      "seconds": 1.715,
+      "title": "child-guide-opens-06-projects-and-tasks.html",
+      "data": {
+        "title": "Projects and tasks",
+        "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:02.357Z",
+      "seconds": 1.864,
+      "title": "collection-links-07-conversations-and-files.html"
+    },
+    {
+      "at": "2026-10-25T20:45:02.434Z",
+      "seconds": 1.941,
+      "title": "child-guide-opens-07-conversations-and-files.html",
+      "data": {
+        "title": "Conversations and files",
+        "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:02.591Z",
+      "seconds": 2.098,
+      "title": "collection-links-08-sla.html"
+    },
+    {
+      "at": "2026-10-25T20:45:02.665Z",
+      "seconds": 2.172,
+      "title": "child-guide-opens-08-sla.html",
+      "data": {
+        "title": "SLA configuration",
+        "url": "http://127.0.0.1:8874/guides/08-sla.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:02.817Z",
+      "seconds": 2.324,
+      "title": "collection-links-09-time-and-billing.html"
+    },
+    {
+      "at": "2026-10-25T20:45:02.882Z",
+      "seconds": 2.389,
+      "title": "child-guide-opens-09-time-and-billing.html",
+      "data": {
+        "title": "Time approval and billing",
+        "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:03.056Z",
+      "seconds": 2.563,
+      "title": "collection-links-10-departure-and-archives.html"
+    },
+    {
+      "at": "2026-10-25T20:45:03.130Z",
+      "seconds": 2.637,
+      "title": "child-guide-opens-10-departure-and-archives.html",
+      "data": {
+        "title": "Departure and archives",
+        "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+        "currentAcceptance": "covered"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:03.280Z",
+      "seconds": 2.787,
+      "title": "collection-links-11-export-restore-and-upgrade.html"
+    },
+    {
+      "at": "2026-10-25T20:45:03.338Z",
+      "seconds": 2.845,
+      "title": "child-guide-opens-11-export-restore-and-upgrade.html",
+      "data": {
+        "title": "Export, restore and independence",
+        "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+        "currentAcceptance": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:03.522Z",
+      "seconds": 3.029,
+      "title": "collection-links-12-customer-integrations.html"
+    },
+    {
+      "at": "2026-10-25T20:45:03.591Z",
+      "seconds": 3.098,
+      "title": "child-guide-opens-12-customer-integrations.html",
+      "data": {
+        "title": "Customer-owned integrations",
+        "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+        "currentAcceptance": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-25T20:45:03.745Z",
+      "seconds": 3.252,
+      "title": "Child acceptance reconciliation",
+      "data": {
+        "requiredGuides": 14,
+        "coveredGuides": 10,
+        "partialGuides": 1,
+        "reviewReady": false,
+        "publication": "Existing guide pages embed historical media; current committed clips are separate."
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "All twelve child guide links opened and were reconciled with the acceptance ledger (10 covered on the current build, 1 partial, 3 blocked-external). Collection navigation does not accept child guides."
+  ],
+  "durationSeconds": 4,
+  "actors": []
+}

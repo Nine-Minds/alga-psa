@@ -1,0 +1,92 @@
+[
+  {
+    "ticket_id": "10e62b90-2074-4969-a701-04a55c900ac6",
+    "obligation_id": "f505b8af-7f34-4f52-ab8b-7c60085362b8",
+    "priority_id": "266c6f0a-a71d-47eb-8976-334ce2cd0608",
+    "sla_policy_id": "eb0dd89f-6ffc-43f1-b68c-2476c1d44fdf",
+    "clock": {
+      "identity": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "ticketId": "10e62b90-2074-4969-a701-04a55c900ac6",
+        "obligationId": "f505b8af-7f34-4f52-ab8b-7c60085362b8",
+        "sourceTenant": "1abff734-2991-44be-ad9f-78d6837f11be"
+      },
+      "response": {
+        "dueAt": "2026-10-25T21:23:08.431Z",
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": null,
+        "targetMinutes": 45,
+        "completedElapsedMilliseconds": null
+      },
+      "schedule": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "entries": [],
+        "is_24x7": true,
+        "holidays": [],
+        "timezone": "UTC",
+        "is_default": false,
+        "schedule_id": "24x7",
+        "schedule_name": "24x7"
+      },
+      "startedAt": "2026-10-25T20:38:08.431Z",
+      "observedAt": "2026-10-25T20:38:08.431Z",
+      "resolution": {
+        "dueAt": "2026-10-25T22:08:08.431Z",
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": null,
+        "targetMinutes": 90,
+        "completedElapsedMilliseconds": null
+      },
+      "pauseReasons": [],
+      "elapsedMilliseconds": 0
+    }
+  },
+  {
+    "ticket_id": "aab3be03-2410-42d8-a942-5c928f7e2b48",
+    "obligation_id": "4d17453d-1260-48e3-915e-d9f590dc1460",
+    "priority_id": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+    "sla_policy_id": "eb0dd89f-6ffc-43f1-b68c-2476c1d44fdf",
+    "clock": {
+      "identity": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "ticketId": "aab3be03-2410-42d8-a942-5c928f7e2b48",
+        "obligationId": "4d17453d-1260-48e3-915e-d9f590dc1460",
+        "sourceTenant": "1abff734-2991-44be-ad9f-78d6837f11be"
+      },
+      "response": {
+        "dueAt": null,
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": null,
+        "targetMinutes": 30,
+        "completedElapsedMilliseconds": null
+      },
+      "schedule": {
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+        "entries": [],
+        "is_24x7": true,
+        "holidays": [],
+        "timezone": "UTC",
+        "is_default": false,
+        "schedule_id": "24x7",
+        "schedule_name": "24x7"
+      },
+      "startedAt": "2026-10-25T20:38:01.901Z",
+      "observedAt": "2026-10-25T20:38:10.902Z",
+      "resolution": {
+        "dueAt": null,
+        "breached": false,
+        "breachedAt": null,
+        "completedAt": null,
+        "targetMinutes": 60,
+        "completedElapsedMilliseconds": null
+      },
+      "pauseReasons": [
+        "customer_responsible"
+      ],
+      "elapsedMilliseconds": 9001
+    }
+  }
+]

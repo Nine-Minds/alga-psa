@@ -1,0 +1,327 @@
+{
+  "scenario": "03-scope-team-independent-grants-current-ready",
+  "recordedAt": "2026-10-25T15:58:14.067Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "sponsor-technician-assignment-persists",
+      "passed": true,
+      "at": "2026-10-25T15:58:19.611Z"
+    },
+    {
+      "id": "escalation-only-mode-persists",
+      "passed": true,
+      "at": "2026-10-25T15:58:22.242Z"
+    },
+    {
+      "id": "assigned-technician-cannot-expand-customer-scope",
+      "passed": true,
+      "at": "2026-10-25T15:58:24.185Z"
+    },
+    {
+      "id": "escalation-opens-only-qualified-ticket",
+      "passed": true,
+      "at": "2026-10-25T15:58:31.039Z"
+    },
+    {
+      "id": "un-escalated-sibling-remains-denied",
+      "passed": true,
+      "at": "2026-10-25T15:58:33.033Z"
+    },
+    {
+      "id": "board-view-opens-un-escalated-oversight-without-write",
+      "passed": true,
+      "at": "2026-10-25T15:58:39.293Z"
+    },
+    {
+      "id": "independent-board-grant-retains-read-after-explicit-revocation",
+      "passed": true,
+      "at": "2026-10-25T15:58:43.877Z"
+    },
+    {
+      "id": "customer-board-collaboration-enables-technician",
+      "passed": true,
+      "at": "2026-10-25T15:58:49.082Z"
+    },
+    {
+      "id": "unassigned-local-admin-denied",
+      "passed": true,
+      "at": "2026-10-25T15:58:54.905Z"
+    },
+    {
+      "id": "empty-assigned-team-does-not-grant-nonmember",
+      "passed": true,
+      "at": "2026-10-25T15:59:00.077Z"
+    },
+    {
+      "id": "current-team-membership-intersects-approved-board-and-local-permission",
+      "passed": true,
+      "at": "2026-10-25T15:59:02.769Z"
+    },
+    {
+      "id": "team-view-restricts-collaborative-board-to-readonly",
+      "passed": true,
+      "at": "2026-10-25T15:59:07.192Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:58:16.516Z",
+      "seconds": 2.449,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:16.741Z",
+      "seconds": 2.674,
+      "actor": "scopeCustomer",
+      "title": "Preparation: prior explicit grant revoked before full rerun"
+    },
+    {
+      "at": "2026-10-25T15:58:18.859Z",
+      "seconds": 4.792,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:58:19.611Z",
+      "seconds": 5.544,
+      "actor": "qa",
+      "title": "sponsor-technician-assignment-persists"
+    },
+    {
+      "at": "2026-10-25T15:58:21.695Z",
+      "seconds": 7.628,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:58:22.242Z",
+      "seconds": 8.175,
+      "actor": "scopeCustomer",
+      "title": "escalation-only-mode-persists"
+    },
+    {
+      "at": "2026-10-25T15:58:24.175Z",
+      "seconds": 10.108,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:24.185Z",
+      "seconds": 10.118,
+      "actor": "qa",
+      "title": "assigned-technician-cannot-expand-customer-scope"
+    },
+    {
+      "at": "2026-10-25T15:58:26.176Z",
+      "seconds": 12.109,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=c28dddbc-b9b1-4309-971b-14e472739a5c"
+    },
+    {
+      "at": "2026-10-25T15:58:28.522Z",
+      "seconds": 14.455,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:30.993Z",
+      "seconds": 16.926,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:31.039Z",
+      "seconds": 16.972,
+      "actor": "qa",
+      "title": "escalation-opens-only-qualified-ticket"
+    },
+    {
+      "at": "2026-10-25T15:58:33.023Z",
+      "seconds": 18.956,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:58:33.033Z",
+      "seconds": 18.966,
+      "actor": "qa",
+      "title": "un-escalated-sibling-remains-denied"
+    },
+    {
+      "at": "2026-10-25T15:58:35.108Z",
+      "seconds": 21.041,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:58:39.243Z",
+      "seconds": 25.176,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:58:39.293Z",
+      "seconds": 25.226,
+      "actor": "qa",
+      "title": "board-view-opens-un-escalated-oversight-without-write"
+    },
+    {
+      "at": "2026-10-25T15:58:41.331Z",
+      "seconds": 27.264,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:43.827Z",
+      "seconds": 29.76,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/9c8a547b-9519-486f-9d3a-2a7adb829b32"
+    },
+    {
+      "at": "2026-10-25T15:58:43.877Z",
+      "seconds": 29.81,
+      "actor": "qa",
+      "title": "independent-board-grant-retains-read-after-explicit-revocation"
+    },
+    {
+      "at": "2026-10-25T15:58:45.929Z",
+      "seconds": 31.862,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:58:48.995Z",
+      "seconds": 34.928,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:58:49.082Z",
+      "seconds": 35.015,
+      "actor": "qa",
+      "title": "customer-board-collaboration-enables-technician"
+    },
+    {
+      "at": "2026-10-25T15:58:54.892Z",
+      "seconds": 40.825,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:58:54.905Z",
+      "seconds": 40.838,
+      "actor": "scopeTeamUser",
+      "title": "unassigned-local-admin-denied"
+    },
+    {
+      "at": "2026-10-25T15:58:56.941Z",
+      "seconds": 42.874,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:59:00.066Z",
+      "seconds": 45.999,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:59:00.077Z",
+      "seconds": 46.01,
+      "actor": "scopeTeamUser",
+      "title": "empty-assigned-team-does-not-grant-nonmember"
+    },
+    {
+      "at": "2026-10-25T15:59:00.661Z",
+      "seconds": 46.594,
+      "actor": "scopeTeamUser",
+      "title": "Operator prerequisite: candidate becomes a member of the prepared team",
+      "data": {
+        "teamId": "d822952d-17de-4de9-bf48-1a79c7aafacb",
+        "userId": "cbc57194-39a3-44c5-a605-07e5a999ef41"
+      }
+    },
+    {
+      "at": "2026-10-25T15:59:02.675Z",
+      "seconds": 48.608,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:59:02.769Z",
+      "seconds": 48.702,
+      "actor": "scopeTeamUser",
+      "title": "current-team-membership-intersects-approved-board-and-local-permission"
+    },
+    {
+      "at": "2026-10-25T15:59:04.818Z",
+      "seconds": 50.751,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T15:59:07.092Z",
+      "seconds": 53.025,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T15:59:07.192Z",
+      "seconds": 53.125,
+      "actor": "scopeTeamUser",
+      "title": "team-view-restricts-collaborative-board-to-readonly"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Scope, explicit/board grant independence, staff and team intersection segment. Field masks, direct API controls and stale file/export revocation remain separate required segments. Test scope is retained for those segments, not restored yet."
+  ],
+  "durationSeconds": 54.08,
+  "actors": [
+    {
+      "name": "scopeCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "scopeTeamUser",
+      "email": "cm.scope.1792942366365@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+﻿workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at
+1f98df77-cd15-44c2-8f4d-42ff52d01e84,c7de2b20-f1d9-4374-b7bb-c223f681955e,f9ddf614-0c5a-4ed3-a070-c410ec47f7b7,White Rabbit IT,D3823982,CM DESK BULK 1792960382398 2,Open,High,false,msp,2026-10-14T18:24:35.761+00:00,2026-10-25T20:33:03.359298+00:00
+1f98df77-cd15-44c2-8f4d-42ff52d01e84,c7de2b20-f1d9-4374-b7bb-c223f681955e,e9362db2-a4ea-40e8-a00e-ef854790e7dd,White Rabbit IT,D3823981,CM DESK BULK 1792960382398 1,Open,High,false,msp,2026-10-14T18:24:35.761+00:00,2026-10-25T20:33:03.212441+00:00
+1f98df77-cd15-44c2-8f4d-42ff52d01e84,c7de2b20-f1d9-4374-b7bb-c223f681955e,a562b1df-845a-42d6-b0b3-78b27682f4fa,White Rabbit IT,D3823980,CM DESK BULK 1792960382398 0,Open,High,false,msp,2026-10-14T18:24:35.761+00:00,2026-10-25T20:33:03.059802+00:00

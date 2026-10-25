@@ -1,0 +1,56 @@
+{
+  "guide": "guides/11-export-restore-and-upgrade.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "blocked-external",
+  "remaining": "Blocked-external: no approved tenant-bound destination license and no prepared destination-owned paid subscription. Activation, recovered native login/data/files/credentials and completed paid upgrade are not accepted. Current browser export and entitlement denial passed. Current archive content inspection remains in reach and unverified.",
+  "durationSeconds": 7.4,
+  "sha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/recording.json",
+      "name": "11-post-departure-export-upgrade-boundary-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 7.4,
+      "offsetSeconds": 0,
+      "sha256": "3e6dc565d3f661029776ccbd5e83edc5c019c705c2996ba01bc5adfa7c9ae451",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 4
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "11-post-departure-export-upgrade-boundary-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 2.348,
+      "title": "navigate",
+      "actor": "exportCustomer"
+    },
+    {
+      "seconds": 2.433,
+      "title": "short-passphrase-blocked-by-export-form",
+      "actor": "exportCustomer"
+    },
+    {
+      "seconds": 3.47,
+      "title": "actual-encrypted-archive-downloaded-after-departure",
+      "actor": "exportCustomer"
+    },
+    {
+      "seconds": 4.503,
+      "title": "customer-export-remains-available-after-reload",
+      "actor": "exportCustomer"
+    },
+    {
+      "seconds": 6.417,
+      "title": "navigate",
+      "actor": "exportCustomer"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

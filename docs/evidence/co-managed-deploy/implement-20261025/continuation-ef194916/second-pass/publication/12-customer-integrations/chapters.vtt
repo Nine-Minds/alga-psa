@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.432
+12-provider-boundaries-and-outbound-current
+
+2
+00:00:00.432 --> 00:00:02.349
+isolatedCustomerAdmin: provider-session-is-isolated-customer-not-sponsor
+
+3
+00:00:02.349 --> 00:00:02.548
+isolatedCustomerAdmin: navigate
+
+4
+00:00:02.548 --> 00:00:02.644
+isolatedCustomerAdmin: customer-provider-workbench-has-provider-specific-forms
+
+5
+00:00:02.644 --> 00:00:04.849
+isolatedCustomerAdmin: provider-back-link-returns-to-native-customer-email-settings
+
+6
+00:00:04.849 --> 00:00:06.841
+isolatedCustomerAdmin: navigate
+
+7
+00:00:06.841 --> 00:00:07.840
+requesterMailRecipient: navigate

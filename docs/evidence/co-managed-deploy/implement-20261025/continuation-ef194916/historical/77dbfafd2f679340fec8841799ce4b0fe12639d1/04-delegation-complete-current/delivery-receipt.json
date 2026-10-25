@@ -1,0 +1,14 @@
+{
+  "invitationId": "24396cbd-528d-40ef-81f1-8dcf518c8d1e",
+  "recipient": "cm.invite.1792938496687@cmreview.test",
+  "roleId": "5249a4d5-7ee2-423d-abdc-e48d2889697b",
+  "expiresAt": "2026-10-26T14:28:23.846242+00:00",
+  "originalMessageCount": 2,
+  "afterMessageCount": 3,
+  "exactSetupLinkPreserved": true,
+  "setupLinkSha256": "f5eda062377667c386e6879178dfbd7339c7482403af65f542b7e668fb66f51e",
+  "invitationRowUnchanged": true,
+  "profileGrant": "50e8fed8-b18e-4d5f-971a-01c5a3b7629e",
+  "invitationGrant": "b77769c8-f4d4-4f51-a8bd-8de7d1bd0e17",
+  "grantsRevoked": true
+}

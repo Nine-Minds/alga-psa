@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T20:44:12.394Z",
+  "guide": "guides/10-departure-and-archives.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/10-departure-and-archives.html",
+  "compositeSha256": "db08f133a344ebfde3be050312dce34bab9a699a9328055d6805e2009aa56d7d",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606724,
+    "duration": 222.08,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-and-archives/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation",
+    "target": 101.797,
+    "actual": 101.825844,
+    "followingFrame": {
+      "mediaTime": 101.8,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/21986460",
+  "passed": true
+}

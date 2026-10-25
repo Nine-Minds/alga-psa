@@ -1,0 +1,5 @@
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm'

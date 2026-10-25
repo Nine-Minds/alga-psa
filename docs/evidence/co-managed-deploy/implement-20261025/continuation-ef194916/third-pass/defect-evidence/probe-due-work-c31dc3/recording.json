@@ -1,0 +1,77 @@
+{
+  "scenario": "probe-due-work-c31dc3",
+  "recordedAt": "2026-10-25T18:48:45.495Z",
+  "runtime": {
+    "sourceRevision": "c31dc3bfadd41285c77ea6a8c064951a8de9590f",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "c31dc3bfadd41285c77ea6a8c064951a8de9590f",
+    "buildId": "build-1792952196688"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T18:48:47.923Z",
+      "seconds": 2.428,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T18:48:48.157Z",
+      "seconds": 2.662,
+      "actor": "qa",
+      "title": "response",
+      "data": {
+        "status": 200,
+        "unresolved": [
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c",
+          "unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c"
+        ],
+        "len": 96858
+      }
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "probe"
+  ],
+  "durationSeconds": 2.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

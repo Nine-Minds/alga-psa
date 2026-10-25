@@ -1,0 +1,244 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=client-contracts&contractId=8f95071f-ee8d-4705-a980-391b83b32fbd&contractView=lines",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nBack to Contracts\nCM Acceptance Contract 1792944312315\nActive\nClient-owned\nBilling Frequency:\nMonthly\n•\nCurrency:\nUSD\n•\nContract Lines:\n1\n•\nStart Date:\nOct 1, 2026\n•\nEnd Date:\nOngoing\n•\nLast Updated:\nOct 13, 2026\n\nIsolated co-managed time routing acceptance\n\nOverview\nContract Lines\nPricing Schedules\nDocuments\nInvoices\nContract Lines\n\nManage the contract lines and services for this contract\n\n+ Add location\nAdd from Presets\nCreate Custom\nName:\nCM Acceptance Contract 1792944312315 - Hourly\nType:\nHourly\n•\nFrequency: Monthly\n•\nServices: 1 service\nEdit\nRemove\n\nContract Line Configuration\n\nSettings that apply to this contract line\n\nSaving...\nCancel\nLOCATION\nRabbit Hole — 42 Rabbit Hole Lane\nBilling profile\nUse the contract's profile\n\nCharges from this line are billed to this profile, overriding the contract.\n\nBILLING TIMING\nIn Advance\nCADENCE OWNER\nClient schedule\nMINIMUM BILLABLE TIME (MINUTES)\nROUND UP TO NEAREST (MINUTES)\nServices (1)\nAdd Item\n\nCM Contracted Support 1792944312315\n\nHourly Service\n\nRemove\nHOURLY RATE\n$\nEnable bucket usage tracking\nBucket Pools\nAdd Pool\n\nA contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab.\n\nNo bucket pools on this line. Add a pool to include prepaid hours.",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-to-contracts",
+      "text": "Back to Contracts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Overview",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Contract Lines",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Pricing Schedules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Invoices",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-location-group-select",
+      "text": "+ Add location",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-contract-line-from-preset-btn",
+      "text": "Add from Presets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-custom-contract-line-btn",
+      "text": "Create Custom",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "save-line-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Saving...",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-line-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Cancel",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "location-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Rabbit Hole — 42 Rabbit Hole Lane",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "billing-profile-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Use the contract's profile",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "billing-timing-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "In Advance",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cadence-owner-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Client schedule",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "min-billable-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "",
+      "value": "1",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "round-up-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "",
+      "value": "1",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-service-a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "text": "Add Item",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-service-5633847c-47d9-4013-995b-0440945a2cda",
+      "text": "Remove",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "rate-5633847c-47d9-4013-995b-0440945a2cda",
+      "text": "",
+      "value": "120.00",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "Enable bucket usage tracking",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-bucket-pool-button",
+      "text": "Add Pool",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

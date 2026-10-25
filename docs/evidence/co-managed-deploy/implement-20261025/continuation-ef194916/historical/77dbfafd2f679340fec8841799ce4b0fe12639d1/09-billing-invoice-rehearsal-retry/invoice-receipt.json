@@ -1,0 +1,49 @@
+{
+  "invoice": {
+    "invoice_id": "43905293-0114-4ddd-81e6-1cbf34ea5452",
+    "invoice_number": "INV-000003",
+    "client_id": "151ce95d-225d-4756-be83-89580d04ef22",
+    "billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+    "status": "draft",
+    "subtotal": 3000,
+    "total_amount": 3000
+  },
+  "sources": [
+    {
+      "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+      "work_item_snapshot": {
+        "rate": 12000,
+        "title": "CM continuation task 1 1792938628367",
+        "version": 2,
+        "rateKind": "uniform",
+        "entryDate": "2026-10-25",
+        "netAmount": 3000,
+        "serviceId": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+        "workItemId": "d07b5183-f423-4cef-8df3-d27a7e1619dd",
+        "description": null,
+        "serviceName": "CM Contracted Support 1792940395745",
+        "uniformRate": 12000,
+        "sourceTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "ticketNumber": null,
+        "workItemType": "project_task",
+        "billedMinutes": 15,
+        "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+        "workReferenceId": "cfb6e09a-b513-4e28-ac98-a8257af2921a"
+      }
+    }
+  ],
+  "entry": {
+    "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+    "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+    "work_item_type": "co_managed",
+    "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+    "billing_mode": "commercial",
+    "billable_duration": 15,
+    "service_id": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+    "contract_line_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+    "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+    "notes": "CM billing 1792941874918 contracted"
+  }
+}

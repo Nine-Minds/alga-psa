@@ -1,0 +1,139 @@
+{
+  "scenario": "12-provider-boundaries-and-outbound-current",
+  "recordedAt": "2026-10-25T16:36:37.268Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "provider-session-is-isolated-customer-not-sponsor",
+      "passed": true,
+      "at": "2026-10-25T16:36:37.700Z",
+      "data": {
+        "tenant": "791752cb-ce46-4a52-8fa2-8aa9b4df0aa8"
+      }
+    },
+    {
+      "id": "customer-provider-workbench-has-provider-specific-forms",
+      "passed": true,
+      "at": "2026-10-25T16:36:39.816Z"
+    },
+    {
+      "id": "provider-back-link-returns-to-native-customer-email-settings",
+      "passed": true,
+      "at": "2026-10-25T16:36:39.912Z"
+    },
+    {
+      "id": "customer-broad-integration-catalog-is-denied",
+      "passed": true,
+      "at": "2026-10-25T16:36:42.126Z"
+    },
+    {
+      "id": "actual-simulated-SMTP-recipient-mail-correlates-with-native-requester-message",
+      "passed": true,
+      "at": "2026-10-25T16:36:44.127Z",
+      "data": {
+        "recipient": "cm.requester.1792939134918@cmreview.test",
+        "matchingDeliveries": 1,
+        "publicMessage": "CM conversation 1792943905070 requester",
+        "provider": "configured SMTP sink; not a real provider acceptance"
+      }
+    },
+    {
+      "id": "correlated-requester-email-excludes-staff-private-bodies",
+      "passed": true,
+      "at": "2026-10-25T16:36:44.127Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:36:37.700Z",
+      "seconds": 0.432,
+      "actor": "isolatedCustomerAdmin",
+      "title": "provider-session-is-isolated-customer-not-sponsor",
+      "data": {
+        "tenant": "791752cb-ce46-4a52-8fa2-8aa9b4df0aa8"
+      }
+    },
+    {
+      "at": "2026-10-25T16:36:39.617Z",
+      "seconds": 2.349,
+      "actor": "isolatedCustomerAdmin",
+      "title": "navigate",
+      "data": "/msp/co-management/providers"
+    },
+    {
+      "at": "2026-10-25T16:36:39.816Z",
+      "seconds": 2.548,
+      "actor": "isolatedCustomerAdmin",
+      "title": "customer-provider-workbench-has-provider-specific-forms"
+    },
+    {
+      "at": "2026-10-25T16:36:39.912Z",
+      "seconds": 2.644,
+      "actor": "isolatedCustomerAdmin",
+      "title": "provider-back-link-returns-to-native-customer-email-settings"
+    },
+    {
+      "at": "2026-10-25T16:36:42.117Z",
+      "seconds": 4.849,
+      "actor": "isolatedCustomerAdmin",
+      "title": "navigate",
+      "data": "/msp/settings/integrations"
+    },
+    {
+      "at": "2026-10-25T16:36:42.126Z",
+      "seconds": 4.858,
+      "actor": "isolatedCustomerAdmin",
+      "title": "customer-broad-integration-catalog-is-denied"
+    },
+    {
+      "at": "2026-10-25T16:36:44.109Z",
+      "seconds": 6.841,
+      "actor": "requesterMailRecipient",
+      "title": "navigate",
+      "data": "/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:36:44.127Z",
+      "seconds": 6.859,
+      "actor": "requesterMailRecipient",
+      "title": "actual-simulated-SMTP-recipient-mail-correlates-with-native-requester-message",
+      "data": {
+        "recipient": "cm.requester.1792939134918@cmreview.test",
+        "matchingDeliveries": 1,
+        "publicMessage": "CM conversation 1792943905070 requester",
+        "provider": "configured SMTP sink; not a real provider acceptance"
+      }
+    },
+    {
+      "at": "2026-10-25T16:36:44.127Z",
+      "seconds": 6.859,
+      "actor": "requesterMailRecipient",
+      "title": "correlated-requester-email-excludes-staff-private-bodies"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Current isolated provider forms, customer-owned session, return navigation, catalog boundary and one actual SMTP-sink requester notification verified. Provider configuration save/redaction, real application OAuth callback/tenant linking, directory provisioning, inbound reply/attachment/replay and provider revocation remain unexecuted: no approved isolated application/directory/inbound binding has been supplied. This is unfinished integration preparation, not an additional external waiver; production SSO safeguards were not changed."
+  ],
+  "durationSeconds": 7.84,
+  "actors": [
+    {
+      "name": "isolatedCustomerAdmin",
+      "email": "desk.accept.1792942824603@cmreview.test",
+      "tenant": "791752cb-ce46-4a52-8fa2-8aa9b4df0aa8"
+    },
+    {
+      "name": "requesterMailRecipient",
+      "email": "cm.requester.1792939134918@cmreview.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "customer": "1abff734-2991-44be-ad9f-78d6837f11be",
+  "relationship": "037abc3e-b5e6-4555-afa0-a32ede2695d7",
+  "client": "f742dc37-1d61-4529-b8b0-1ba29323684c",
+  "operation": "38299219-4af3-469e-befe-ec3d8a31a149",
+  "stamp": 1792960527011,
+  "boardId": "4341eab0-f6f5-41a3-80be-c0d1754e1449",
+  "boardName": "CM isolated access 1792960527011",
+  "teamId": "1644699b-c9bb-4797-8d71-3ef61097348a",
+  "teamName": "CM isolated scope team 1792960527011",
+  "userId": "725ecc8f-03ac-43e1-a0ab-1ea18d03685a",
+  "email": "cm.scope.1792960527011@cmreview.test",
+  "name": "CM Scope 1792960527011",
+  "bundleId": "27eab667-8105-4d4d-a426-f63d1246bc11",
+  "revisionId": "0e951aa8-dc1a-4634-9415-c34541f5f881",
+  "tickets": [
+    {
+      "id": "138d48d4-765c-450e-8246-04d09d5e8c30",
+      "title": "CM access 1792960527011 0",
+      "number": "A05270110"
+    },
+    {
+      "id": "b0e52840-c75b-41db-a5ac-dfefb86f4d8a",
+      "title": "CM access 1792960527011 1",
+      "number": "A05270111"
+    }
+  ],
+  "setup": "Operator fixture only; scope, assignment, handoff, file and revocation checks remain unexecuted.",
+  "administratorId": "5362b60a-eccc-48fc-829b-4364ee38ca02",
+  "defaultBoardId": "f5fa1a65-26e5-4126-aff4-2a18fd5ef7a8",
+  "customerClientId": "a6fc54cd-9413-4521-bc1a-80031c57fb24",
+  "priorityId": "512ff13e-c7c3-44ef-8bb2-3ddb6b32af2e",
+  "statusId": "4f86deb8-a614-4318-954a-d8faa4bf5e0a",
+  "baseline": {
+    "visibility_mode": "board_scope",
+    "boards": [
+      {
+        "board_id": "f5fa1a65-26e5-4126-aff4-2a18fd5ef7a8",
+        "can_collaborate": true
+      }
+    ]
+  },
+  "finalScope": "board_scope with isolated board Collaborate",
+  "finalTeamAccess": "View",
+  "explicitTicket0Revoked": true
+}

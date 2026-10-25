@@ -1,0 +1,342 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nInvoicing\nGenerate\nDrafts\nFinalized\nProject Billing\nAutomatic Invoices\nAll\n3\nReady\n2\nCombinable\n2\nNeeds attention\n0\nNot yet due\n1\nFilters\n3 selected\n3 invoice(s) · 0 combined · 3 separate\n$24.00\nknown now · 1 calculated at generation\nPreview Selected\nGenerate Invoices (3)\n\t\nCLIENT / GROUP\n\t\nSTATUS\n\t\nSERVICE PERIOD\n\t\nAMOUNT\n\n\n\t\nWhite Rabbit\nT&M ×2\n2 line items\n\t\nNot yet due\nOpens Dec 1, 2026\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nSMOKE CM hourly support SEP\nT&M\nSMOKE CM hourly support SEP - Hourly\nClient schedule · Arrears\n\t\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nSMOKE CM hourly support\nT&M\nSMOKE CM hourly support - Hourly\nClient schedule · Arrears\n\t\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M ×4\n4 line items\n\t\nCombine\n\t\nOct 1 – Dec 1, 2026\n\t\nCalculated at generation\n\n\n\t\nSMOKE CM hourly support SEP\nT&M\nSMOKE CM hourly support SEP - Hourly\nClient schedule · Arrears\n\t\n\t\nOct 2026\n\t\nCalculated at generation\n\n\n\t\nSMOKE CM hourly support\nT&M\nSMOKE CM hourly support - Hourly\nClient schedule · Arrears\n\t\n\t\nOct 2026\n\t\nCalculated at generation\n\n\n\t\nCM Acceptance Contract 1792940395745\nT&M\nCM Acceptance Contract 1792940395745 - Hourly\nClient schedule · Advance\n\t\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nCM Acceptance Contract 1792944312315\nT&M\nCM Acceptance Contract 1792944312315 - Hourly\nClient schedule · Advance\n\t\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M ×5\n5 line items\n\t\nCombine\n\t\nOct 2026\n\t\n$61.00\n+ 1 at generation\n\n\n\t\nCM Acceptance Contract 1792944312315\nT&M\nCM Acceptance Contract 1792944312315 - Hourly\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\nCalculated at generation\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$12.00\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$25.00\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$12.00\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$12.00\nRecurring Invoice History\n2 columns hidden.\nShow all\nClient\n\t\nAssignment Scope\n\t\nCadence Source\n\t\nService Period\n\t\nActions\n\n\nWR\nWhite Rabbit\n\t\nExplicit contract assignment\n\t\nClient schedule\n\t\n2026-09-01 to 2026-10-01\n\t\nOpen menu\n\n\nWR\nWhite Rabbit\n\t\nExplicit contract assignment\n\t\nClient schedule\n\t\n2026-10-01 to 2026-11-01\n\t\nOpen menu\nInvoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate 3 separate invoices.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM Acceptance Contract 1792944312315\nCM Contracted Support 1792944312315\t0.25\t$120.00\t$30.00\nCM Contracted Support 1792944312315\t0.25\t$120.00\t$30.00\nSubtotal\t$60.00\nTax\t$0.00\nTotal\t$60.00\nInvoice 2\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nCM Catalog Support 1792944312315\t0.1\t$120.00\t$12.00\nSubtotal\t$12.00\nTax\t$0.00\nTotal\t$12.00\nInvoice 3\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nCM Catalog Support 1792944312315\t0.1\t$120.00\t$12.00\nSubtotal\t$12.00\nTax\t$0.00\nTotal\t$12.00\nClose Preview\nGenerate Invoice",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-0",
+      "text": "Generate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-1",
+      "text": "Drafts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-2",
+      "text": "Finalized",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-3",
+      "text": "Project Billing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_u_",
+      "text": "Automatic Invoices",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-all",
+      "text": "All3",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-ready",
+      "text": "Ready2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-combinable",
+      "text": "Combinable2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-attention",
+      "text": "Needs attention0",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-notYetDue",
+      "text": "Not yet due1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-filters-button",
+      "text": "Filters",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "filter-clients-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "preview-selected-button",
+      "text": "Preview Selected",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "generate-invoices-button",
+      "text": "Generate Invoices (3)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-all",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "on",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-12-01:2027-01-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:5bdc7f0c-5093-4371-be6a-b4015ea75c64:client:arrears:period:2026-11-01:2026-12-01:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "on",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-12-01:2027-01-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:c7d857e1-2fa0-4242-b497-01123fa356a4:client:arrears:period:2026-11-01:2026-12-01:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "on",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:5bdc7f0c-5093-4371-be6a-b4015ea75c64:client:arrears:period:2026-10-01:2026-11-01:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:c7d857e1-2fa0-4242-b497-01123fa356a4:client:arrears:period:2026-10-01:2026-11-01:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance:period:2026-11-01:2026-12-01:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-11-01:2026-12-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:a4c2d8f0-d82d-415e-a553-977fa5afcad1:client:advance:period:2026-11-01:2026-12-01:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:a4c2d8f0-d82d-415e-a553-977fa5afcad1:client:advance:period:2026-10-01:2026-11-01:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd:period:2026-10-01:2026-11-01:unresolved:time:22d6acc4-1e3d-4769-bf10-f8668793decd:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c:period:2026-10-01:2026-11-01:unresolved:time:581ca088-3f19-44fa-bf4e-96a98594c22c:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:unresolved:time:ec3c3993-ca33-4dca-b4df-947ef4da2944:period:2026-10-01:2026-11-01:unresolved:time:ec3c3993-ca33-4dca-b4df-947ef4da2944:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-child-parent-group:151ce95d-225d-4756-be83-89580d04ef22:2026-10-01:2026-11-01-client_cadence_window:client:151ce95d-225d-4756-be83-89580d04ef22:schedule:24ac76c8-df59-4b10-8371-c56222904580:unresolved:time:fd35a828-a9c2-409d-9ce6-adecff95e2dc:period:2026-10-01:2026-11-01:unresolved:time:fd35a828-a9c2-409d-9ce6-adecff95e2dc:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "filter-invoiced-clients-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "actions-trigger-invoiced-69a224cf-a9a4-4a28-bbc3-fc4798b4b176",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "actions-trigger-invoiced-43905293-0114-4ddd-81e6-1cbf34ea5452",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "close-preview-dialog-button",
+      "text": "Close Preview",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "generate-invoice-from-preview-button",
+      "text": "Generate Invoice",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

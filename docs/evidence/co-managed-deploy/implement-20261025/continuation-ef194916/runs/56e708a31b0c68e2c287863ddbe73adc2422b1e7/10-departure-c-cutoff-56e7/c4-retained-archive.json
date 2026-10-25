@@ -1,0 +1,321 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-managed/archive",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM DESK BULK 1792931890975 1\nWhite Rabbit\nCM DESK BULK 1792943612068 0\nWhite Rabbit\nCM DESK BULK 1792933878902 1\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nCM DESK BULK 1792933878902 0\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nCM access 1792942366365 1\nCM DESK 1792935726307 Accept\nCM access 1792942366365 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 0\nCM DESK 1792935726307 Accept\nCM isolated SLA 1792945887398 1\nCM DESK 1792935726307 Accept\nCM calendar SLA 1792947582941\nCM DESK 1792942795727 Accept\nCM DEPART 1792959853966 shared ticket\nCM DEPART 1792959853966\nPrevious\nNext\nCM DEPART 1792959853966 shared ticket\n\nCM DEPART 1792959853966\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 queued-at-cutoff\n\nMSP-private note\nOct 25, 2026, 4:26 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 MSPprivate\n\nSaved work details\nOct 25, 2026, 4:26 PM\n\nCM DEPART 1792959853966 shared ticket\n\nStatus\nOpen\nPriority\nLow\nConversation\nOct 25, 2026, 4:26 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 shared\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 mail-control\n\nConversation\nOct 25, 2026, 4:26 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 queued-at-cutoff\n\nTime recorded\nOct 25, 2026, 4:25 PM\n\nCM Depart Tech 1792959853966 · Oz\n\nTime recorded\nOct 25, 2026, 4:25 PM\n\nCM Depart Tech 1792959853966 · Oz\n\nConversation\nOct 25, 2026, 4:25 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nCM DEPART 1792959853966 mail-control\n\nMSP-private note\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 MSPprivate\n\nConversation\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nCM DEPART 1792959853966 shared\n\nWork updated\nOct 25, 2026, 4:25 PM\n\nQA Tester · Oz\n\nMSP assignment changed\nEscalated to MSP\nOct 25, 2026, 4:24 PM\n\nDepart Admin · CM DEPART 1792959853966 IT\n\nPlease take this disposable departure ticket 1792959853966\n\nPrevious\nNext\nRetained files\ncm-depart-shared-1792959853966.txt31 bytes\ncm-depart-MSPprivate-1792959853966.txt35 bytesMSP-private file\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-refresh",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-ad9d4711-1c78-4416-a537-f6ccdd2c562a",
+      "text": "CM DESK BULK 1792931890975 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-b4aa2aed-e8ec-4486-b8f2-1465dd4d7321",
+      "text": "CM DESK BULK 1792943612068 0White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-cdb5635c-de99-4de9-a33e-963ca5750dd9",
+      "text": "CM DESK BULK 1792933878902 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-cfff4242-7962-4100-a54c-687eaa540500",
+      "text": "SMOKE callout count change 142333White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-d863e047-efcd-4712-be1a-5a0e0cbe69f9",
+      "text": "CM DESK BULK 1792933878902 0White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-1f98df77-cd15-44c2-8f4d-42ff52d01e84-c7de2b20-f1d9-4374-b7bb-c223f681955e-ticket-dc04da68-785a-41a2-8981-dc23832716af",
+      "text": "Printer offline in accountsWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-16a124c1-1309-4ea5-89aa-cc7c55fd059c",
+      "text": "CM access 1792942366365 1CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-9c8a547b-9519-486f-9d3a-2a7adb829b32",
+      "text": "CM access 1792942366365 0CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-d752f251-369d-41de-b167-5e24b7bed410",
+      "text": "CM isolated SLA 1792945887398 0CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-20b527f2-8631-4fe7-a744-dc20883a0c5a-4f999745-cbd0-453e-905a-9a5b0210bbb0-ticket-e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+      "text": "CM isolated SLA 1792945887398 1CM DESK 1792935726307 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-791752cb-ce46-4a52-8fa2-8aa9b4df0aa8-db33aa40-989b-4e96-9a8c-ae482c1ace02-ticket-b5c51cc1-8a8d-4651-ae6c-fb3ae3ba59b7",
+      "text": "CM calendar SLA 1792947582941CM DESK 1792942795727 Accept",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-d46de2e8-21a5-424d-8699-f14e07e407a4-38db9e8a-7f42-429c-baae-f0eb813b385b-ticket-c7c64319-d853-4b83-b774-a846d285aa1f",
+      "text": "CM DEPART 1792959853966 shared ticketCM DEPART 1792959853966",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

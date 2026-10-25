@@ -1,0 +1,1 @@
+{"customer":"20b527f2-8631-4fe7-a744-dc20883a0c5a","relationship":"4f999745-cbd0-453e-905a-9a5b0210bbb0","boardId":"62b35d8e-6061-4ff7-9652-97ded63cd430","teamId":"d822952d-17de-4de9-bf48-1a79c7aafacb","userId":"cbc57194-39a3-44c5-a605-07e5a999ef41","tickets":["9c8a547b-9519-486f-9d3a-2a7adb829b32","16a124c1-1309-4ea5-89aa-cc7c55fd059c"]}

@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-25T14:43:58.199471+00:00",
+  "pid": 3774088,
+  "reason": "Concluded candidate build remained detached",
+  "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+  "command": "next-build (v16.3.8)                                                                       ",
+  "ppid": 3774087,
+  "signal": "SIGTERM"
+}

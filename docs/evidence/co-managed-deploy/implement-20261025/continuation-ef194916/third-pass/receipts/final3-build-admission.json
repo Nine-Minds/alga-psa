@@ -1,0 +1,15 @@
+{
+  "service": {
+    "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "name": "review-build-prep-final-56e708a31b",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-build-prep-final-56e708a31b:21",
+    "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh review-build-prep-final-56e708a31b bash /tmp/alga-smoke-evidence/co-managed-it-implement-20261025/continuation-ef194916/scripts/prepare-final-56e708a31b.sh",
+    "status": "live",
+    "createdAt": "2026-10-25T19:47:07.281Z",
+    "createdBy": "Implement"
+  },
+  "created": true
+}

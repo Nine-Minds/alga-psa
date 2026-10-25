@@ -1,0 +1,15 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/coManagedTimeBillingProfileActions.test.ts (6 tests) 5ms 13 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx (11 tests) 176ms 56 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  17 passed (17)
+   Start at  14:46:34
+   Duration  4.83s (transform 156ms, setup 186ms, collect 124ms, tests 181ms, environment 185ms, prepare 65ms)
+

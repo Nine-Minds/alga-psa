@@ -1,0 +1,199 @@
+{
+  "guide": "guides/index.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 6.48,
+  "sha256": "ad6a07436464c0e3ed1d7965e226eee44054d7b8106012a28852af6976563089",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-guide-links-reconciliation-current/recording.json",
+      "name": "00-collection-guide-links-reconciliation-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 4.24,
+      "offsetSeconds": 0,
+      "sha256": "27b4155a4cfbf3df014a54f5a9333307e9d7a5d446f769b37173f22918bc89c9",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-guide-links-reconciliation-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 24
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-current-publication-complete/recording.json",
+      "name": "00-collection-current-publication-complete",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 2.24,
+      "offsetSeconds": 4.24,
+      "sha256": "d96435fbd1ad3c464ef6d3ea2f6a20f0beb1062f60e89f49614c267eae6e1b67",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/00-collection-current-publication-complete/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 26
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "00-collection-guide-links-reconciliation-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.363,
+      "title": "collection-links-01-onboarding.html"
+    },
+    {
+      "seconds": 0.44,
+      "title": "child-guide-opens-01-onboarding.html"
+    },
+    {
+      "seconds": 0.712,
+      "title": "collection-links-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 0.785,
+      "title": "child-guide-opens-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 0.958,
+      "title": "collection-links-03-access-policies.html"
+    },
+    {
+      "seconds": 1.023,
+      "title": "child-guide-opens-03-access-policies.html"
+    },
+    {
+      "seconds": 1.215,
+      "title": "collection-links-04-delegated-administration.html"
+    },
+    {
+      "seconds": 1.272,
+      "title": "child-guide-opens-04-delegated-administration.html"
+    },
+    {
+      "seconds": 1.437,
+      "title": "collection-links-05-ticket-queue.html"
+    },
+    {
+      "seconds": 1.493,
+      "title": "child-guide-opens-05-ticket-queue.html"
+    },
+    {
+      "seconds": 1.699,
+      "title": "collection-links-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 1.768,
+      "title": "child-guide-opens-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 1.921,
+      "title": "collection-links-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 1.98,
+      "title": "child-guide-opens-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 2.16,
+      "title": "collection-links-08-sla.html"
+    },
+    {
+      "seconds": 2.214,
+      "title": "child-guide-opens-08-sla.html"
+    },
+    {
+      "seconds": 2.434,
+      "title": "collection-links-09-time-and-billing.html"
+    },
+    {
+      "seconds": 2.478,
+      "title": "child-guide-opens-09-time-and-billing.html"
+    },
+    {
+      "seconds": 2.654,
+      "title": "collection-links-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 2.714,
+      "title": "child-guide-opens-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 2.881,
+      "title": "collection-links-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 2.947,
+      "title": "child-guide-opens-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 3.119,
+      "title": "collection-links-12-customer-integrations.html"
+    },
+    {
+      "seconds": 3.176,
+      "title": "child-guide-opens-12-customer-integrations.html"
+    },
+    {
+      "seconds": 3.342,
+      "title": "Child acceptance reconciliation"
+    },
+    {
+      "seconds": 4.24,
+      "title": "00-collection-current-publication-complete",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 4.667,
+      "title": "current-composite-embedded-01-onboarding.html"
+    },
+    {
+      "seconds": 4.772,
+      "title": "current-composite-embedded-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 4.844,
+      "title": "current-composite-embedded-03-access-policies.html"
+    },
+    {
+      "seconds": 4.925000000000001,
+      "title": "current-composite-embedded-04-delegated-administration.html"
+    },
+    {
+      "seconds": 4.997,
+      "title": "current-composite-embedded-05-ticket-queue.html"
+    },
+    {
+      "seconds": 5.074,
+      "title": "current-composite-embedded-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 5.168,
+      "title": "current-composite-embedded-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 5.263,
+      "title": "current-composite-embedded-08-sla.html"
+    },
+    {
+      "seconds": 5.346,
+      "title": "current-composite-embedded-09-time-and-billing.html"
+    },
+    {
+      "seconds": 5.434,
+      "title": "current-composite-embedded-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 5.522,
+      "title": "current-composite-embedded-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 5.594,
+      "title": "current-composite-embedded-12-customer-integrations.html"
+    },
+    {
+      "seconds": 5.626,
+      "title": "overview-also-embeds-current-composite"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

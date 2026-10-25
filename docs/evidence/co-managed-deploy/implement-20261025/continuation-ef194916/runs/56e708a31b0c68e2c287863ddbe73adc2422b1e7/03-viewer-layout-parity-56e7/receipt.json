@@ -1,0 +1,11 @@
+{
+  "ticketId": "cfff4242-7962-4100-a54c-687eaa540500",
+  "customer": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "relationship": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+  "layouts": [
+    "Entry",
+    "Grid"
+  ],
+  "unchanged": true,
+  "selector": "Visible category picker automation container selects its actual combobox in both Entry and Grid, regardless of current category label"
+}

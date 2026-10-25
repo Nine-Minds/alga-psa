@@ -1,0 +1,113 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:27.889
+00-overview-native-layout-boundaries-56e7
+
+2
+00:00:27.889 --> 00:00:30.023
+qa: navigate
+
+3
+00:00:30.023 --> 00:00:32.040
+qa: navigate
+
+4
+00:00:32.040 --> 00:00:32.791
+qa: navigate
+
+5
+00:00:32.791 --> 00:00:33.574
+qa: QA-shared-Entry-uses-same-qualified-work
+
+6
+00:00:33.574 --> 00:00:35.990
+qa: QA-shared-Grid-uses-same-qualified-work
+
+7
+00:00:35.990 --> 00:00:36.833
+alice: navigate
+
+8
+00:00:36.833 --> 00:00:37.720
+alice: customer-native-route-keeps-authoritative-ticket
+
+9
+00:00:37.720 --> 00:00:38.425
+00-overview-native-walkthrough-56e7
+
+10
+00:00:38.425 --> 00:00:40.695
+baseline
+
+11
+00:00:40.695 --> 00:00:41.131
+alice: navigate
+
+12
+00:00:41.131 --> 00:00:43.287
+alice: customer-admin-creates-board-category-natively
+
+13
+00:00:43.287 --> 00:00:48.450
+qa: navigate
+
+14
+00:00:48.450 --> 00:00:58.288
+qa: msp-status-priority-category-persist-on-customer-ticket
+
+15
+00:00:58.288 --> 00:00:59.195
+qa: msp-assignment-persists-after-reload
+
+16
+00:00:59.195 --> 00:01:01.099
+qa: customer-owned-assignee-board-contact-client-are-read-only-for-msp
+
+17
+00:01:01.099 --> 00:01:01.839
+qa: grid-shows-same-edited-values
+
+18
+00:01:01.839 --> 00:01:03.986
+qa: grid-keeps-customer-owned-assignee-read-only
+
+19
+00:01:03.986 --> 00:01:04.848
+alice: navigate
+
+20
+00:01:04.848 --> 00:01:05.669
+alice: customer-native-ticket-shows-msp-edits-and-assignment
+
+21
+00:01:05.669 --> 00:01:08.454
+alice: customer-assigns-its-own-technician-natively
+
+22
+00:01:08.454 --> 00:01:09.661
+qa: navigate
+
+23
+00:01:09.661 --> 00:01:11.965
+qa: msp-sees-customer-assignee
+
+24
+00:01:11.965 --> 00:01:13.025
+viewer: navigate
+
+25
+00:01:13.025 --> 00:01:15.132
+viewer: viewer-sees-values-with-every-field-read-only
+
+26
+00:01:15.132 --> 00:01:18.499
+alice: navigate
+
+27
+00:01:18.499 --> 00:01:32.884
+qa: navigate
+
+28
+00:01:32.884 --> 00:01:33.760
+qa: review-ticket-restored

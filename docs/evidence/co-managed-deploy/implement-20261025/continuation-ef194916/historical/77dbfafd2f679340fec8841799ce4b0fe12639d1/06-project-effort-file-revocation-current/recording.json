@@ -1,0 +1,400 @@
+{
+  "scenario": "06-project-effort-file-revocation-current",
+  "recordedAt": "2026-10-25T15:20:28.381Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [
+    {
+      "id": "alice-time-qualified-on-same-authoritative-task",
+      "passed": true,
+      "at": "2026-10-25T15:20:31.478Z",
+      "data": {
+        "entry": {
+          "entry_id": "5d60cfbe-5b13-492f-8cd4-b35ddfcaf869",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "service_id": null,
+          "contract_line_id": null,
+          "work_item_type": "project_task",
+          "work_item_id": "22c70167-e5ed-4c2f-9e29-f4c453a09b24",
+          "co_managed_work_reference_id": null,
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "id": "customer-operational-time-has-no-commercial-attributes",
+      "passed": true,
+      "at": "2026-10-25T15:20:31.478Z"
+    },
+    {
+      "id": "qa-time-qualified-on-same-authoritative-task",
+      "passed": true,
+      "at": "2026-10-25T15:20:35.269Z",
+      "data": {
+        "entry": {
+          "entry_id": "1e22041f-a46e-47cb-aaeb-65fa9d0c99e6",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "billing_mode": "commercial",
+          "billable_duration": 12,
+          "service_id": "5313da86-1055-4a3d-a998-2a72bf37e564",
+          "contract_line_id": null,
+          "work_item_type": "co_managed",
+          "work_item_id": "1d01b43e-bd1b-4b92-990c-c486479e4378",
+          "co_managed_work_reference_id": "1d01b43e-bd1b-4b92-990c-c486479e4378",
+          "minutes": 12
+        }
+      }
+    },
+    {
+      "id": "qa-effort-reconciles-6-plus-12-equals-18",
+      "passed": true,
+      "at": "2026-10-25T15:20:37.626Z",
+      "data": {
+        "expectedMinutes": {
+          "customer": 6,
+          "msp": 12,
+          "combined": 18
+        },
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "id": "qa-does-not-reveal-other-organization-time-notes",
+      "passed": true,
+      "at": "2026-10-25T15:20:37.636Z"
+    },
+    {
+      "id": "alice-effort-reconciles-6-plus-12-equals-18",
+      "passed": true,
+      "at": "2026-10-25T15:20:39.611Z",
+      "data": {
+        "expectedMinutes": {
+          "customer": 6,
+          "msp": 12,
+          "combined": 18
+        },
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "id": "alice-does-not-reveal-other-organization-time-notes",
+      "passed": true,
+      "at": "2026-10-25T15:20:39.618Z"
+    },
+    {
+      "id": "project-rollup-counts-task-time-once",
+      "passed": true,
+      "at": "2026-10-25T15:20:41.587Z",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "id": "MSP-task-attachment-byte-content-matches",
+      "passed": true,
+      "at": "2026-10-25T15:20:44.743Z"
+    },
+    {
+      "id": "customer-task-message-and-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-25T15:20:46.669Z"
+    },
+    {
+      "id": "customer-project-grant-removed-after-reload",
+      "passed": true,
+      "at": "2026-10-25T15:20:48.987Z"
+    },
+    {
+      "id": "copied-task-file-link-denied-after-project-revocation",
+      "passed": true,
+      "at": "2026-10-25T15:20:49.025Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "revoked-task-closes-editor-conversation-and-effort",
+      "passed": true,
+      "at": "2026-10-25T15:20:50.982Z"
+    },
+    {
+      "id": "revoked-task-absent-from-fresh-queue",
+      "passed": true,
+      "at": "2026-10-25T15:20:53.153Z"
+    },
+    {
+      "id": "customer-keeps-native-task-after-grant-revocation",
+      "passed": true,
+      "at": "2026-10-25T15:20:55.192Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T15:20:30.761Z",
+      "seconds": 2.38,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:31.478Z",
+      "seconds": 3.097,
+      "actor": "alice",
+      "title": "alice-time-qualified-on-same-authoritative-task",
+      "data": {
+        "entry": {
+          "entry_id": "5d60cfbe-5b13-492f-8cd4-b35ddfcaf869",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "service_id": null,
+          "contract_line_id": null,
+          "work_item_type": "project_task",
+          "work_item_id": "22c70167-e5ed-4c2f-9e29-f4c453a09b24",
+          "co_managed_work_reference_id": null,
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:31.478Z",
+      "seconds": 3.097,
+      "actor": "alice",
+      "title": "customer-operational-time-has-no-commercial-attributes"
+    },
+    {
+      "at": "2026-10-25T15:20:33.844Z",
+      "seconds": 5.463,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:35.269Z",
+      "seconds": 6.888,
+      "actor": "qa",
+      "title": "qa-time-qualified-on-same-authoritative-task",
+      "data": {
+        "entry": {
+          "entry_id": "1e22041f-a46e-47cb-aaeb-65fa9d0c99e6",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "billing_mode": "commercial",
+          "billable_duration": 12,
+          "service_id": "5313da86-1055-4a3d-a998-2a72bf37e564",
+          "contract_line_id": null,
+          "work_item_type": "co_managed",
+          "work_item_id": "1d01b43e-bd1b-4b92-990c-c486479e4378",
+          "co_managed_work_reference_id": "1d01b43e-bd1b-4b92-990c-c486479e4378",
+          "minutes": 12
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:37.610Z",
+      "seconds": 9.229,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:37.626Z",
+      "seconds": 9.245,
+      "actor": "qa",
+      "title": "qa-effort-reconciles-6-plus-12-equals-18",
+      "data": {
+        "expectedMinutes": {
+          "customer": 6,
+          "msp": 12,
+          "combined": 18
+        },
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:37.636Z",
+      "seconds": 9.255,
+      "actor": "qa",
+      "title": "qa-does-not-reveal-other-organization-time-notes"
+    },
+    {
+      "at": "2026-10-25T15:20:39.599Z",
+      "seconds": 11.218,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:39.611Z",
+      "seconds": 11.23,
+      "actor": "alice",
+      "title": "alice-effort-reconciles-6-plus-12-equals-18",
+      "data": {
+        "expectedMinutes": {
+          "customer": 6,
+          "msp": 12,
+          "combined": 18
+        },
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:39.618Z",
+      "seconds": 11.237,
+      "actor": "alice",
+      "title": "alice-does-not-reveal-other-organization-time-notes"
+    },
+    {
+      "at": "2026-10-25T15:20:41.579Z",
+      "seconds": 13.198,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/683251b1-4773-4094-b24f-02f53289eadc"
+    },
+    {
+      "at": "2026-10-25T15:20:41.587Z",
+      "seconds": 13.206,
+      "actor": "qa",
+      "title": "project-rollup-counts-task-time-once",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:43.511Z",
+      "seconds": 15.13,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:44.743Z",
+      "seconds": 16.362,
+      "actor": "qa",
+      "title": "MSP-task-attachment-byte-content-matches"
+    },
+    {
+      "at": "2026-10-25T15:20:46.637Z",
+      "seconds": 18.256,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:46.669Z",
+      "seconds": 18.288,
+      "actor": "alice",
+      "title": "customer-task-message-and-file-bytes-match"
+    },
+    {
+      "at": "2026-10-25T15:20:48.635Z",
+      "seconds": 20.254,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T15:20:48.987Z",
+      "seconds": 20.606,
+      "actor": "alice",
+      "title": "customer-project-grant-removed-after-reload"
+    },
+    {
+      "at": "2026-10-25T15:20:49.025Z",
+      "seconds": 20.644,
+      "actor": "qa",
+      "title": "copied-task-file-link-denied-after-project-revocation",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T15:20:50.970Z",
+      "seconds": 22.589,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:50.982Z",
+      "seconds": 22.601,
+      "actor": "qa",
+      "title": "revoked-task-closes-editor-conversation-and-effort"
+    },
+    {
+      "at": "2026-10-25T15:20:52.891Z",
+      "seconds": 24.51,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-25T15:20:53.153Z",
+      "seconds": 24.772,
+      "actor": "qa",
+      "title": "revoked-task-absent-from-fresh-queue"
+    },
+    {
+      "at": "2026-10-25T15:20:55.180Z",
+      "seconds": 26.799,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/683251b1-4773-4094-b24f-02f53289eadc/tasks/22c70167-e5ed-4c2f-9e29-f4c453a09b24"
+    },
+    {
+      "at": "2026-10-25T15:20:55.192Z",
+      "seconds": 26.811,
+      "actor": "alice",
+      "title": "customer-keeps-native-task-after-grant-revocation"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Isolated project sharing is deliberately revoked. Native-creation and task-assignment/stale-edit recordings complete the other project guide obligations."
+  ],
+  "durationSeconds": 27.52,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

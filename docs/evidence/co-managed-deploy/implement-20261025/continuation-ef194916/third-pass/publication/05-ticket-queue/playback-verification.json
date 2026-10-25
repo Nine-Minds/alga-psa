@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T20:43:58.765Z",
+  "guide": "guides/05-ticket-queue.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/05-ticket-queue.html",
+  "compositeSha256": "762d4d17f1ffab403301c07169947ec3e480d5d2d3adff54f7c6bb61e40e75f1",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.607784,
+    "duration": 34.88,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-ticket-queue/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "customer-native-history-shows-the-successful-shared-note",
+    "target": 19.823,
+    "actual": 19.842378,
+    "followingFrame": {
+      "mediaTime": 19.84,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/2964967",
+  "passed": true
+}

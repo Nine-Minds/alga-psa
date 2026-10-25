@@ -1,0 +1,212 @@
+{
+  "scenario": "07-composer-draft-recovery-56e7",
+  "recordedAt": "2026-10-25T20:11:05.150Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "unknown-outcome-surfaced-and-composer-stays-open",
+      "passed": true,
+      "at": "2026-10-25T20:11:16.153Z",
+      "data": {
+        "toast": "We could not confirm whether the message was saved. Retry to check the same request.",
+        "persistedMessages": 1,
+        "operationId": "0e6e5589-65e0-4a8b-9852-90d655c98fd0"
+      }
+    },
+    {
+      "id": "draft-text-retained-after-unknown-outcome",
+      "passed": true,
+      "at": "2026-10-25T20:11:16.154Z",
+      "data": {
+        "editorText": "CM draft recovery 1792959069902\n\n\n"
+      }
+    },
+    {
+      "id": "staged-file-retained-after-unknown-outcome",
+      "passed": true,
+      "at": "2026-10-25T20:11:16.188Z",
+      "data": {
+        "fileName": "cm-draft-recovery-1792959069902.txt"
+      }
+    },
+    {
+      "id": "retry-reused-the-same-operation",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.412Z",
+      "data": {
+        "operations": [
+          "0e6e5589-65e0-4a8b-9852-90d655c98fd0",
+          "0e6e5589-65e0-4a8b-9852-90d655c98fd0"
+        ]
+      }
+    },
+    {
+      "id": "retry-created-no-duplicate-message",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.702Z",
+      "data": {
+        "persistedMessages": 1
+      }
+    },
+    {
+      "id": "confirmed-retry-closes-the-composer",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.705Z"
+    },
+    {
+      "id": "published-file-bytes-complete",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.750Z",
+      "data": {
+        "fileName": "cm-draft-recovery-1792959069902.txt"
+      }
+    },
+    {
+      "id": "thread-shows-the-message-once",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.758Z"
+    },
+    {
+      "id": "reopened-composer-is-empty-after-confirmation",
+      "passed": true,
+      "at": "2026-10-25T20:11:18.996Z",
+      "data": {
+        "editorText": "\n"
+      }
+    },
+    {
+      "id": "ordinary-publish-confirmed-and-closed",
+      "passed": true,
+      "at": "2026-10-25T20:11:20.279Z",
+      "data": {
+        "persistedMessages": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:11:08.320Z",
+      "seconds": 3.17,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:11:10.081Z",
+      "seconds": 4.931,
+      "actor": "qa",
+      "title": "composed",
+      "data": {
+        "text": "CM draft recovery 1792959069902",
+        "fileName": "cm-draft-recovery-1792959069902.txt"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:16.153Z",
+      "seconds": 11.003,
+      "actor": "qa",
+      "title": "unknown-outcome-surfaced-and-composer-stays-open",
+      "data": {
+        "toast": "We could not confirm whether the message was saved. Retry to check the same request.",
+        "persistedMessages": 1,
+        "operationId": "0e6e5589-65e0-4a8b-9852-90d655c98fd0"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:16.154Z",
+      "seconds": 11.004,
+      "actor": "qa",
+      "title": "draft-text-retained-after-unknown-outcome",
+      "data": {
+        "editorText": "CM draft recovery 1792959069902\n\n\n"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:16.188Z",
+      "seconds": 11.038,
+      "actor": "qa",
+      "title": "staged-file-retained-after-unknown-outcome",
+      "data": {
+        "fileName": "cm-draft-recovery-1792959069902.txt"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:18.412Z",
+      "seconds": 13.262,
+      "actor": "qa",
+      "title": "retry-reused-the-same-operation",
+      "data": {
+        "operations": [
+          "0e6e5589-65e0-4a8b-9852-90d655c98fd0",
+          "0e6e5589-65e0-4a8b-9852-90d655c98fd0"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:18.702Z",
+      "seconds": 13.552,
+      "actor": "qa",
+      "title": "retry-created-no-duplicate-message",
+      "data": {
+        "persistedMessages": 1
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:18.705Z",
+      "seconds": 13.555,
+      "actor": "qa",
+      "title": "confirmed-retry-closes-the-composer"
+    },
+    {
+      "at": "2026-10-25T20:11:18.750Z",
+      "seconds": 13.6,
+      "actor": "qa",
+      "title": "published-file-bytes-complete",
+      "data": {
+        "fileName": "cm-draft-recovery-1792959069902.txt"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:18.758Z",
+      "seconds": 13.608,
+      "actor": "qa",
+      "title": "thread-shows-the-message-once"
+    },
+    {
+      "at": "2026-10-25T20:11:18.996Z",
+      "seconds": 13.846,
+      "actor": "qa",
+      "title": "reopened-composer-is-empty-after-confirmation",
+      "data": {
+        "editorText": "\n"
+      }
+    },
+    {
+      "at": "2026-10-25T20:11:20.279Z",
+      "seconds": 15.129,
+      "actor": "qa",
+      "title": "ordinary-publish-confirmed-and-closed",
+      "data": {
+        "persistedMessages": 1
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 15.92,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

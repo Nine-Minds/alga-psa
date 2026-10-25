@@ -1,0 +1,170 @@
+{
+  "scenario": "04-delegation-complete-current",
+  "recordedAt": "2026-10-25T14:30:43.824Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "served-build-matches-current-candidate",
+      "passed": true,
+      "at": "2026-10-25T14:30:43.885Z",
+      "data": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      }
+    },
+    {
+      "id": "customer-approves-one-nonadministrator-profile",
+      "passed": true,
+      "at": "2026-10-25T14:30:55.677Z",
+      "data": {
+        "profileGrant": "14d7bca3-ffb8-4066-aee7-d871c0650be6",
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b"
+      }
+    },
+    {
+      "id": "administrator-profile-is-not-eligible",
+      "passed": true,
+      "at": "2026-10-25T14:30:56.504Z"
+    },
+    {
+      "id": "delegated-profile-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-25T14:31:02.084Z"
+    },
+    {
+      "id": "customer-native-users-shows-delegated-profile",
+      "passed": true,
+      "at": "2026-10-25T14:31:04.143Z"
+    },
+    {
+      "id": "revoked-profile-editor-no-longer-offered",
+      "passed": true,
+      "at": "2026-10-25T14:31:11.993Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:30:43.885Z",
+      "seconds": 0.061,
+      "title": "served-build-matches-current-candidate",
+      "data": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      }
+    },
+    {
+      "at": "2026-10-25T14:30:46.231Z",
+      "seconds": 2.407,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:30:55.677Z",
+      "seconds": 11.853,
+      "actor": "alice",
+      "title": "customer-approves-one-nonadministrator-profile",
+      "data": {
+        "profileGrant": "14d7bca3-ffb8-4066-aee7-d871c0650be6",
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b"
+      }
+    },
+    {
+      "at": "2026-10-25T14:30:56.504Z",
+      "seconds": 12.68,
+      "actor": "alice",
+      "title": "administrator-profile-is-not-eligible"
+    },
+    {
+      "at": "2026-10-25T14:30:58.835Z",
+      "seconds": 15.011,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:31:02.084Z",
+      "seconds": 18.26,
+      "actor": "qa",
+      "title": "delegated-profile-persists-after-reload"
+    },
+    {
+      "at": "2026-10-25T14:31:04.127Z",
+      "seconds": 20.303,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-25T14:31:04.143Z",
+      "seconds": 20.319,
+      "actor": "alice",
+      "title": "customer-native-users-shows-delegated-profile"
+    },
+    {
+      "at": "2026-10-25T14:31:06.104Z",
+      "seconds": 22.28,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:31:09.173Z",
+      "seconds": 25.349,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:31:11.983Z",
+      "seconds": 28.159,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:31:11.993Z",
+      "seconds": 28.169,
+      "actor": "qa",
+      "title": "revoked-profile-editor-no-longer-offered"
+    },
+    {
+      "at": "2026-10-25T14:31:13.917Z",
+      "seconds": 30.093,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:31:21.576Z",
+      "seconds": 37.752,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "approved-resend-displays-original-recipient-role-expiry",
+  "durationSeconds": 38.92,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

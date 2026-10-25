@@ -1,0 +1,117 @@
+{
+  "scenario": "00-overview-native-layout-boundaries-current",
+  "recordedAt": "2026-10-25T16:37:30.743Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "overview-client-entry-retains-qualified-customer-context",
+      "passed": true,
+      "at": "2026-10-25T16:37:58.269Z"
+    },
+    {
+      "id": "native-MSP-desk-remains-available",
+      "passed": true,
+      "at": "2026-10-25T16:38:00.359Z"
+    },
+    {
+      "id": "QA-shared-Entry-uses-same-qualified-work",
+      "passed": true,
+      "at": "2026-10-25T16:38:03.289Z"
+    },
+    {
+      "id": "QA-shared-Grid-uses-same-qualified-work",
+      "passed": true,
+      "at": "2026-10-25T16:38:04.156Z"
+    },
+    {
+      "id": "customer-native-route-keeps-authoritative-ticket",
+      "passed": true,
+      "at": "2026-10-25T16:38:07.402Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:37:58.246Z",
+      "seconds": 27.503,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T16:37:58.269Z",
+      "seconds": 27.526,
+      "actor": "qa",
+      "title": "overview-client-entry-retains-qualified-customer-context"
+    },
+    {
+      "at": "2026-10-25T16:38:00.344Z",
+      "seconds": 29.601,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T16:38:00.359Z",
+      "seconds": 29.616,
+      "actor": "qa",
+      "title": "native-MSP-desk-remains-available"
+    },
+    {
+      "at": "2026-10-25T16:38:02.443Z",
+      "seconds": 31.7,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T16:38:03.289Z",
+      "seconds": 32.546,
+      "actor": "qa",
+      "title": "QA-shared-Entry-uses-same-qualified-work"
+    },
+    {
+      "at": "2026-10-25T16:38:04.156Z",
+      "seconds": 33.413,
+      "actor": "qa",
+      "title": "QA-shared-Grid-uses-same-qualified-work"
+    },
+    {
+      "at": "2026-10-25T16:38:06.563Z",
+      "seconds": 35.82,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T16:38:07.402Z",
+      "seconds": 36.659,
+      "actor": "alice",
+      "title": "customer-native-route-keeps-authoritative-ticket"
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Current overview entry, native MSP desk, shared Entry/Grid and authoritative customer ticket navigation recorded. Full edits/assignment/category/stopwatch and all native privacy/field controls are not completed here. Published overview still embeds historical c04 media; current clips remain separately labelled. Child guides retain their own acceptance results."
+  ],
+  "durationSeconds": 37.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

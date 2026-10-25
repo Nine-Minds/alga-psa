@@ -1,0 +1,394 @@
+{
+  "scenario": "10-departure-b-content-56e7",
+  "recordedAt": "2026-10-25T20:25:06.525Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "msp-technician-assigned-to-the-shared-ticket",
+      "passed": true,
+      "at": "2026-10-25T20:25:10.249Z"
+    },
+    {
+      "id": "shared-file-bytes-before-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:25:15.391Z"
+    },
+    {
+      "id": "MSPprivate-file-bytes-before-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:25:19.561Z"
+    },
+    {
+      "id": "customerprivate-file-bytes-before-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:25:24.462Z"
+    },
+    {
+      "id": "msp-assignee-receives-shared-customer-message-by-mail",
+      "passed": true,
+      "at": "2026-10-25T20:25:28.956Z",
+      "data": {
+        "to": "qa@emeraldcity.oz"
+      }
+    },
+    {
+      "id": "technician-granted-collaborate-access",
+      "passed": true,
+      "at": "2026-10-25T20:25:32.282Z"
+    },
+    {
+      "id": "msp-client-billing-email-set",
+      "passed": true,
+      "at": "2026-10-25T20:25:34.445Z",
+      "data": {
+        "billingEmail": "billing.depart.1792959853966@cmreview.test"
+      }
+    },
+    {
+      "id": "msp-client-billing-cycle-created-natively",
+      "passed": true,
+      "at": "2026-10-25T20:25:34.937Z",
+      "data": {
+        "cycles": [
+          {
+            "billing_cycle_id": "9b7495c8-e3fc-434e-a134-f189e2c3cf23",
+            "period_start_date": "2026-10-01T00:00:00+00:00",
+            "period_end_date": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "invoiced-before-cutoff-is-commercial-msp-time-on-shared-work",
+      "passed": true,
+      "at": "2026-10-25T20:25:39.581Z",
+      "data": {
+        "entry": {
+          "entry_id": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+          "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+          "billable_duration": 20,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+          "contract_line_id": null
+        }
+      }
+    },
+    {
+      "id": "uninvoiced-at-cutoff-is-commercial-msp-time-on-shared-work",
+      "passed": true,
+      "at": "2026-10-25T20:25:43.711Z",
+      "data": {
+        "entry": {
+          "entry_id": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+          "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+          "billable_duration": 10,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+          "contract_line_id": null
+        }
+      }
+    },
+    {
+      "id": "separate-approver-approves-both-entries",
+      "passed": true,
+      "at": "2026-10-25T20:25:48.661Z"
+    },
+    {
+      "id": "first-entry-drafted-before-cutoff-at-catalog-rate",
+      "passed": true,
+      "at": "2026-10-25T20:25:58.819Z",
+      "data": {
+        "inv": {
+          "invoice_id": "4dc6985b-e6f1-422a-8471-1f43d9b3c7e0",
+          "invoice_number": "INV-000013",
+          "status": "draft",
+          "subtotal": 4000
+        }
+      }
+    },
+    {
+      "id": "msp-delivery-is-queued-and-unsent-at-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:26:03.690Z",
+      "data": {
+        "pending": {
+          "delivery_key": "co-managed-comment:d46de2e8-21a5-424d-8699-f14e07e407a4:c7c64319-d853-4b83-b774-a846d285aa1f:444c7441-7fd9-4307-a984-7b716c2e08ab:42b60ee4-536c-44b2-aab4-150ea2acfd4c:email:24ac76c8-df59-4b10-8371-c56222904580:5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+          "status": "pending",
+          "attempt_count": 1,
+          "error_code": "email_provider_failed",
+          "next_attempt_at": "2026-10-25T20:27:02.88109+00:00",
+          "comment_id": "444c7441-7fd9-4307-a984-7b716c2e08ab"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:25:09.169Z",
+      "seconds": 2.644,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:10.249Z",
+      "seconds": 3.724,
+      "actor": "qa",
+      "title": "msp-technician-assigned-to-the-shared-ticket"
+    },
+    {
+      "at": "2026-10-25T20:25:12.250Z",
+      "seconds": 5.725,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:15.391Z",
+      "seconds": 8.866,
+      "actor": "qa",
+      "title": "shared-file-bytes-before-cutoff"
+    },
+    {
+      "at": "2026-10-25T20:25:17.434Z",
+      "seconds": 10.909,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:19.561Z",
+      "seconds": 13.036,
+      "actor": "qa",
+      "title": "MSPprivate-file-bytes-before-cutoff"
+    },
+    {
+      "at": "2026-10-25T20:25:21.667Z",
+      "seconds": 15.142,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:24.462Z",
+      "seconds": 17.937,
+      "actor": "departAdmin",
+      "title": "customerprivate-file-bytes-before-cutoff"
+    },
+    {
+      "at": "2026-10-25T20:25:26.463Z",
+      "seconds": 19.938,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:28.956Z",
+      "seconds": 22.431,
+      "actor": "departAdmin",
+      "title": "msp-assignee-receives-shared-customer-message-by-mail",
+      "data": {
+        "to": "qa@emeraldcity.oz"
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:29.243Z",
+      "seconds": 22.718,
+      "actor": "departAdmin",
+      "title": "operator-prerequisite-isolated-technician",
+      "data": {
+        "techId": "1cbb69f1-0f45-490d-8764-87e939da9c1a",
+        "teamId": "83acdd1d-dacf-4f12-b7d7-85662b65f20a",
+        "approver": "QA Tester"
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:31.197Z",
+      "seconds": 24.672,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/ff49c96a-143b-4859-9a3f-4a2eac68bec8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T20:25:32.282Z",
+      "seconds": 25.757,
+      "actor": "qa",
+      "title": "technician-granted-collaborate-access"
+    },
+    {
+      "at": "2026-10-25T20:25:34.204Z",
+      "seconds": 27.679,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/ff49c96a-143b-4859-9a3f-4a2eac68bec8?tab=billing"
+    },
+    {
+      "at": "2026-10-25T20:25:34.445Z",
+      "seconds": 27.92,
+      "actor": "qa",
+      "title": "msp-client-billing-email-set",
+      "data": {
+        "billingEmail": "billing.depart.1792959853966@cmreview.test"
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:34.937Z",
+      "seconds": 28.412,
+      "actor": "qa",
+      "title": "msp-client-billing-cycle-created-natively",
+      "data": {
+        "cycles": [
+          {
+            "billing_cycle_id": "9b7495c8-e3fc-434e-a134-f189e2c3cf23",
+            "period_start_date": "2026-10-01T00:00:00+00:00",
+            "period_end_date": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:37.453Z",
+      "seconds": 30.928,
+      "actor": "departTech",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:39.581Z",
+      "seconds": 33.056,
+      "actor": "departTech",
+      "title": "invoiced-before-cutoff-is-commercial-msp-time-on-shared-work",
+      "data": {
+        "entry": {
+          "entry_id": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+          "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+          "billable_duration": 20,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+          "contract_line_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:41.685Z",
+      "seconds": 35.16,
+      "actor": "departTech",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:25:43.711Z",
+      "seconds": 37.186,
+      "actor": "departTech",
+      "title": "uninvoiced-at-cutoff-is-commercial-msp-time-on-shared-work",
+      "data": {
+        "entry": {
+          "entry_id": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+          "time_sheet_id": "dfd686fe-6040-4f8d-a6a8-deaaebdbc203",
+          "billable_duration": 10,
+          "billing_mode": "commercial",
+          "work_item_type": "co_managed",
+          "work_item_id": "5732bb2e-625f-48fc-b215-e22c5de25b5c",
+          "contract_line_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:25:45.924Z",
+      "seconds": 39.399,
+      "actor": "departTech",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/dfd686fe-6040-4f8d-a6a8-deaaebdbc203"
+    },
+    {
+      "at": "2026-10-25T20:25:48.097Z",
+      "seconds": 41.572,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-25T20:25:48.661Z",
+      "seconds": 42.136,
+      "actor": "qa",
+      "title": "separate-approver-approves-both-entries"
+    },
+    {
+      "at": "2026-10-25T20:25:50.643Z",
+      "seconds": 44.118,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T20:25:58.819Z",
+      "seconds": 52.294,
+      "actor": "qa",
+      "title": "first-entry-drafted-before-cutoff-at-catalog-rate",
+      "data": {
+        "inv": {
+          "invoice_id": "4dc6985b-e6f1-422a-8471-1f43d9b3c7e0",
+          "invoice_number": "INV-000013",
+          "status": "draft",
+          "subtotal": 4000
+        }
+      }
+    },
+    {
+      "at": "2026-10-25T20:26:00.833Z",
+      "seconds": 54.308,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:26:03.690Z",
+      "seconds": 57.165,
+      "actor": "departAdmin",
+      "title": "msp-delivery-is-queued-and-unsent-at-cutoff",
+      "data": {
+        "pending": {
+          "delivery_key": "co-managed-comment:d46de2e8-21a5-424d-8699-f14e07e407a4:c7c64319-d853-4b83-b774-a846d285aa1f:444c7441-7fd9-4307-a984-7b716c2e08ab:42b60ee4-536c-44b2-aab4-150ea2acfd4c:email:24ac76c8-df59-4b10-8371-c56222904580:5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+          "status": "pending",
+          "attempt_count": 1,
+          "error_code": "email_provider_failed",
+          "next_attempt_at": "2026-10-25T20:27:02.88109+00:00",
+          "comment_id": "444c7441-7fd9-4307-a984-7b716c2e08ab"
+        }
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Isolated technician/team created by operator SQL (same prerequisite as guide 09); assignment, staff access, billing cycle, time capture, approval, invoicing and messages use native UI. SMTP sink reject-mail fault holds the queued delivery."
+  ],
+  "durationSeconds": 58.04,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "departAdmin",
+      "email": "depart.admin.1792959853966@cmreview.test",
+      "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    },
+    {
+      "name": "departTech",
+      "email": "cm.depart.tech.1792959853966@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

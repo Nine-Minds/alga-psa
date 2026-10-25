@@ -1,0 +1,302 @@
+{
+  "guide": "guides/06-projects-and-tasks.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 116.32,
+  "sha256": "a75f79c1acb35fcb6dd3a9d168b136942546d453ccad32e1a54442725d9e474d",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/recording.json",
+      "name": "06-native-project-creation-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 36.4,
+      "offsetSeconds": 0,
+      "sha256": "1dee568e4ae52437376e1e3045309594a5738f503d9a45b3ece7b66cc92e34f4",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-native-project-creation-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 5
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/recording.json",
+      "name": "06-shared-project-collaboration-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 32.76,
+      "offsetSeconds": 36.4,
+      "sha256": "e2eb483b5f4197d1a7ce97a0c378e8e2b6972b77ade1addffc23d72ed7d31d2c",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 13
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/recording.json",
+      "name": "06-shared-project-collaboration-current / customer-video",
+      "kind": "secondary actual concurrent browser camera",
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "durationSeconds": 18.44,
+      "offsetSeconds": 69.16,
+      "sha256": "e03c6f409760b752e9ceb9bbf361befc02377234d432448399452062326186f3",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-shared-project-collaboration-current/customer-video/6560c5de8da56f161075442bb3e5968a.webm"
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/recording.json",
+      "name": "06-project-effort-file-revocation-current",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 28.72,
+      "offsetSeconds": 87.6,
+      "sha256": "689ba8d12a9e4dac48483f19a08bfd71e493f6c6119c4025009753b6b1b195f3",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-project-effort-file-revocation-current/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 15
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "06-native-project-creation-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.082,
+      "title": "served-build-matches-recorded-candidate"
+    },
+    {
+      "seconds": 2.516,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 16.141,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 28.69,
+      "title": "native-task-1-persists-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 30.826,
+      "title": "native-task-2-persists-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 32.769,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 35.431,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 36.4,
+      "title": "06-shared-project-collaboration-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 36.748,
+      "title": "Isolated team prerequisite"
+    },
+    {
+      "seconds": 39.068,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 41.163,
+      "title": "customer-project-collaboration-survives-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 43.224,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 46.204,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 48.233,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 49.165,
+      "title": "shared-task-edit-survives-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 51.512,
+      "title": "native-customer-task-shows-MSP-edit",
+      "actor": "qa"
+    },
+    {
+      "seconds": 53.314,
+      "title": "person-assignment-keeps-local-owner",
+      "actor": "qa"
+    },
+    {
+      "seconds": 55.235,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 55.598,
+      "title": "working-assigned-to-me-shows-person-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 59.441,
+      "title": "team-assignment-persists",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.393,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.696,
+      "title": "my-teams-filter-shows-team-assigned-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.903999999999996,
+      "title": "oversight-retains-qualified-team-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 63.59,
+      "title": "removing-MSP-assignment-preserves-customer-owner",
+      "actor": "qa"
+    },
+    {
+      "seconds": 66.218,
+      "title": "stale-MSP-save-cannot-overwrite-customer",
+      "actor": "qa"
+    },
+    {
+      "seconds": 68.179,
+      "title": "qualified-history-retains-both-organizations",
+      "actor": "qa"
+    },
+    {
+      "seconds": 69.16,
+      "title": "06-shared-project-collaboration-current / customer-video",
+      "kind": "secondary actual concurrent browser camera"
+    },
+    {
+      "seconds": 87.6,
+      "title": "06-project-effort-file-revocation-current",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 90.01299999999999,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 90.714,
+      "title": "alice-time-qualified-on-same-authoritative-task",
+      "actor": "alice"
+    },
+    {
+      "seconds": 93.03999999999999,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 95.06299999999999,
+      "title": "qa-time-qualified-on-same-authoritative-task",
+      "actor": "qa"
+    },
+    {
+      "seconds": 97.87899999999999,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 99.82799999999999,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 101.821,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 103.738,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 105.02499999999999,
+      "title": "MSP-task-attachment-byte-content-matches",
+      "actor": "qa"
+    },
+    {
+      "seconds": 106.97,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 107.005,
+      "title": "customer-task-message-and-file-bytes-match",
+      "actor": "alice"
+    },
+    {
+      "seconds": 108.952,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 109.356,
+      "title": "customer-project-grant-removed-after-reload",
+      "actor": "alice"
+    },
+    {
+      "seconds": 109.398,
+      "title": "copied-task-file-link-denied-after-project-revocation",
+      "actor": "qa"
+    },
+    {
+      "seconds": 111.342,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 113.291,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 113.512,
+      "title": "revoked-task-absent-from-fresh-queue",
+      "actor": "qa"
+    },
+    {
+      "seconds": 115.53299999999999,
+      "title": "navigate",
+      "actor": "alice"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

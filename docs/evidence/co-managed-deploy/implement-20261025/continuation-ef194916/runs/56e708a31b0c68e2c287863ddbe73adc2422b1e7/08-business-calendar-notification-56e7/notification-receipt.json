@@ -1,0 +1,34 @@
+{
+  "delivered": true,
+  "waitedFor": "real 1-minute deadline plus scheduled worker",
+  "events": [
+    {
+      "notification_event_id": "bcf41bfb-5500-4e6d-bb21-d68333e2f83a",
+      "sla_type": "response",
+      "threshold_percent": 100,
+      "status": "completed",
+      "occurred_at": "2026-10-25T20:40:00.683+00:00"
+    }
+  ],
+  "recipients": [
+    {
+      "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+      "channel": "email",
+      "status": "delivered"
+    },
+    {
+      "recipient_user_id": "5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+      "channel": "in_app",
+      "status": "created"
+    }
+  ],
+  "matchingMail": [
+    {
+      "to": [
+        "qa@emeraldcity.oz"
+      ],
+      "subject": "SLA BREACH: Ticket #CAL0702618 - Response SLA Exceeded",
+      "sha256": "12608faea38dc3fb23b895edf8d6e9c53ffd3f67377bfeae8cf25692ca0f3140"
+    }
+  ]
+}

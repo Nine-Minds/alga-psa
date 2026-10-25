@@ -1,0 +1,56 @@
+{
+  "customerEntry": {
+    "entry_id": "d744963e-f334-4e13-a383-90ba47f8926e",
+    "billing_mode": "operational",
+    "billable_duration": 0,
+    "service_id": null,
+    "contract_line_id": null,
+    "work_item_type": "project_task",
+    "work_item_id": "d07b5183-f423-4cef-8df3-d27a7e1619dd",
+    "minutes": 6
+  },
+  "before": {
+    "alice": {
+      "raw": [
+        "0 hours",
+        "0.7 hours",
+        "0.7 hours"
+      ],
+      "customer": 0,
+      "msp": 0.7,
+      "combined": 0.7
+    },
+    "qa": {
+      "raw": [
+        "0 hours",
+        "0.7 hours",
+        "0.7 hours"
+      ],
+      "customer": 0,
+      "msp": 0.7,
+      "combined": 0.7
+    }
+  },
+  "after": {
+    "alice": {
+      "raw": [
+        "0.1 hours",
+        "0.7 hours",
+        "0.8 hours"
+      ],
+      "customer": 0.1,
+      "msp": 0.7,
+      "combined": 0.8
+    },
+    "qa": {
+      "raw": [
+        "0.1 hours",
+        "0.7 hours",
+        "0.8 hours"
+      ],
+      "customer": 0.1,
+      "msp": 0.7,
+      "combined": 0.8
+    }
+  }
+}

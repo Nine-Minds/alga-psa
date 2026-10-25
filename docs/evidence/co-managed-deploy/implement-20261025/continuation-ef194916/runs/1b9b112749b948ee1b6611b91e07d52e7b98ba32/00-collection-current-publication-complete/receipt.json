@@ -1,0 +1,90 @@
+{
+  "guides": [
+    {
+      "guide": "guides/01-onboarding.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/01-onboarding/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "bae09d2178b130587929ff483c152c59545ffc4893f1804d11dedcf015cca97b",
+      "playbackProof": "continuation-ef194916/second-pass/publication/01-onboarding/playback-verification.json"
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/walkthrough.webm",
+      "scenario": "blocked-external",
+      "sha256": "18bf92195d7f436a4e8f7f7de7022cc6a6bce94ba4cf570fd728c23bb1f39f66",
+      "playbackProof": "continuation-ef194916/second-pass/publication/02-licensing-and-seats/playback-verification.json"
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/03-access-policies/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "ae926b10d3e5e131eae6ab200f39a8077cf5b6c03fdf13f45e9a729fe084daec",
+      "playbackProof": "continuation-ef194916/second-pass/publication/03-access-policies/playback-verification.json"
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/04-delegated-administration/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "6910eb6d774d675b6d0792a5cfd25376e5b19711a752bda475cfd44f3f49323d",
+      "playbackProof": "continuation-ef194916/second-pass/publication/04-delegated-administration/playback-verification.json"
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-ticket-queue/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "16edfcbd4487520a23b46845982fb56929a00a7f2735ed22b0c568828563e8a5",
+      "playbackProof": "continuation-ef194916/second-pass/publication/05-ticket-queue/playback-verification.json"
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/06-projects-and-tasks/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "a75f79c1acb35fcb6dd3a9d168b136942546d453ccad32e1a54442725d9e474d",
+      "playbackProof": "continuation-ef194916/second-pass/publication/06-projects-and-tasks/playback-verification.json"
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/07-conversations-and-files/walkthrough.webm",
+      "scenario": "partial",
+      "sha256": "fc72ba5def6e519b7223ee1f421ab006c004d91817bcaca6d475cb3f87e13ace",
+      "playbackProof": "continuation-ef194916/second-pass/publication/07-conversations-and-files/playback-verification.json"
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla/walkthrough.webm",
+      "scenario": "covered",
+      "sha256": "e65dc55c4627f1f196b4278c9d1b66ede7d9e4941457e48bfea01e6701372505",
+      "playbackProof": "continuation-ef194916/second-pass/publication/08-sla/playback-verification.json"
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/09-time-and-billing/walkthrough.webm",
+      "scenario": "partial",
+      "sha256": "15069440543968000578d2a397e411b451402f33e8d13d3fa24711d5fab9888b",
+      "playbackProof": "continuation-ef194916/second-pass/publication/09-time-and-billing/playback-verification.json"
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/10-departure-and-archives/walkthrough.webm",
+      "scenario": "partial",
+      "sha256": "a774535f68a3b843e48d3075968861504f87c9182e633c8926c9d23b3e189f3e",
+      "playbackProof": "continuation-ef194916/second-pass/publication/10-departure-and-archives/playback-verification.json"
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-export-restore-and-upgrade/walkthrough.webm",
+      "scenario": "blocked-external",
+      "sha256": "430035cbfc9ef1f17c8014712faa30dc43ea2c6154e38b64022435003c43621e",
+      "playbackProof": "continuation-ef194916/second-pass/publication/11-export-restore-and-upgrade/playback-verification.json"
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "recordingSource": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-customer-integrations/walkthrough.webm",
+      "scenario": "blocked-external",
+      "sha256": "e46e31bef3b9534ca8254022db02fec053e38d992fd8a6f2a1c55ff1db642524",
+      "playbackProof": "continuation-ef194916/second-pass/publication/12-customer-integrations/playback-verification.json"
+    }
+  ],
+  "overviewRecording": "/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/overview/walkthrough.webm",
+  "meaning": "Collection link/composition/provenance scenario covered. This does not accept any partial child scenario or unblock an external fixture."
+}

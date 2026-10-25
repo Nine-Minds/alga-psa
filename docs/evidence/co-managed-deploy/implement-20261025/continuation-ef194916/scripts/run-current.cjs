@@ -1,0 +1,3 @@
+const fs=require('fs'),cp=require('child_process');
+const id=fs.readFileSync('/home/robert/alga-copies/feature-co-managed-it/server/.next-review-customer-files/BUILD_ID','utf8').trim();
+(async()=>{const end=Date.now()+300000;while(Date.now()<end){try{if((await(await fetch('http://feature-co-managed-it.localhost:23374/auth/msp/signin')).text()).includes(id)){for(const script of process.argv.slice(2)){const r=cp.spawnSync(process.execPath,[require('path').join(__dirname,script)],{stdio:'inherit',env:process.env});if(r.status!==0){process.exitCode=r.status??1;return}}return}}catch{}await new Promise(r=>setTimeout(r,1000));}throw Error('Current build did not become ready')})().catch(e=>{console.error(e.message);process.exitCode=1});

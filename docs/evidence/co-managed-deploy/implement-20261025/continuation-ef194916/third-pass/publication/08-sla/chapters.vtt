@@ -1,0 +1,233 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.674
+08-sla-mapping-and-captured-targets-56e7
+
+2
+00:00:02.674 --> 00:00:04.364
+qa: navigate
+
+3
+00:00:04.364 --> 00:00:04.506
+qa: priority-mapping-persists-through-product-and-reload
+
+4
+00:00:04.506 --> 00:00:04.638
+qa: mapping-edit-does-not-rewrite-existing-obligation
+
+5
+00:00:04.638 --> 00:00:05.400
+qa: Temporary mapping retained for next bulk/SLA fixture escalations
+
+6
+00:00:05.400 --> 00:00:07.757
+08-mapping-restored-56e7
+
+7
+00:00:07.757 --> 00:00:09.393
+qa: navigate
+
+8
+00:00:09.393 --> 00:00:10.280
+qa: temporary-high-priority-mapping-restored-through-product
+
+9
+00:00:10.280 --> 00:00:11.186
+08-sla-fresh-targets-pause-56e7
+
+10
+00:00:11.186 --> 00:00:11.320
+Isolated SLA prerequisite
+
+11
+00:00:11.320 --> 00:00:13.611
+visibility-alone-does-not-create-MSP-obligation
+
+12
+00:00:13.611 --> 00:00:18.005
+qa: navigate
+
+13
+00:00:18.005 --> 00:00:18.491
+slaCustomer: navigate
+
+14
+00:00:18.491 --> 00:00:20.447
+slaCustomer: fresh-escalation-captures-isolated-P1-targets
+
+15
+00:00:20.447 --> 00:00:22.547
+qa: navigate
+
+16
+00:00:22.547 --> 00:00:24.543
+qa: mapping-edit-keeps-old-captured-targets
+
+17
+00:00:24.543 --> 00:00:24.924
+slaCustomer: navigate
+
+18
+00:00:24.924 --> 00:00:26.954
+slaCustomer: fresh-second-escalation-captures-different-targets
+
+19
+00:00:26.954 --> 00:00:27.392
+qa: navigate
+
+20
+00:00:27.392 --> 00:00:29.530
+qa: handback-adds-customer-responsibility-pause
+
+21
+00:00:29.530 --> 00:00:32.281
+qa: navigate
+
+22
+00:00:32.281 --> 00:00:32.560
+qa: isolated-client-policy-override-restored
+
+23
+00:00:32.560 --> 00:00:36.375
+08-business-calendar-notification-56e7
+
+24
+00:00:36.375 --> 00:00:38.328
+qa: navigate
+
+25
+00:00:38.328 --> 00:00:43.430
+qa: navigate
+
+26
+00:00:43.430 --> 00:00:43.867
+calendarCustomer: navigate
+
+27
+00:00:43.867 --> 00:00:45.889
+calendarCustomer: business-calendar-response-due-is-one-working-minute
+
+28
+00:00:45.889 --> 00:00:46.345
+qa: navigate
+
+29
+00:00:46.345 --> 00:00:46.391
+qa: MSP-local-assignee-is-actual-notification-recipient
+
+30
+00:00:46.391 --> 00:02:15.784
+qa: Wait for real one-minute deadline and configured delivery worker
+
+31
+00:02:15.784 --> 00:02:18.417
+qa: actual-breach-mail-routes-only-to-assigned-MSP-user
+
+32
+00:02:18.417 --> 00:02:45.452
+departedCustomer: navigate
+
+33
+00:02:45.452 --> 00:02:47.680
+qa: navigate
+
+34
+00:02:47.680 --> 00:02:48.597
+10-departure-c-cutoff-56e7
+
+35
+00:02:48.597 --> 00:02:50.877
+baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation
+
+36
+00:02:50.877 --> 00:02:51.679
+qa: navigate
+
+37
+00:02:51.679 --> 00:02:51.814
+qa: allocation-released-once-and-paid-pool-unchanged
+
+38
+00:02:51.814 --> 00:02:52.468
+qa: msp-sla-clock-is-held-by-the-cutoff
+
+39
+00:02:52.468 --> 00:04:12.125
+qa: refresh-repeats-neither-closure-nor-release
+
+40
+00:04:12.125 --> 00:04:12.441
+qa: queued-delivery-is-skipped-not-sent-after-cutoff
+
+41
+00:04:12.441 --> 00:04:14.412
+qa: old-live-shared-file-denied
+
+42
+00:04:14.412 --> 00:04:14.741
+qa: navigate
+
+43
+00:04:14.741 --> 00:04:16.636
+qa: archive-sealed-at-cutoff
+
+44
+00:04:16.636 --> 00:04:19.022
+qa: navigate
+
+45
+00:04:19.022 --> 00:04:19.208
+qa: retained-shared-bytes-match
+
+46
+00:04:19.208 --> 00:04:21.339
+qa: archive-retains-the-msp-time-evidence
+
+47
+00:04:21.339 --> 00:04:23.957
+departAdmin: navigate
+
+48
+00:04:23.957 --> 00:04:25.849
+departAdmin: customer-workspace-offers-no-changes-after-departure
+
+49
+00:04:25.849 --> 00:04:28.491
+qa: navigate
+
+50
+00:04:28.491 --> 00:04:28.791
+qa: archive-and-seal-unchanged-after-cutoff
+
+51
+00:04:28.791 --> 00:04:30.733
+qa: commercial-entries-survive-departure
+
+52
+00:04:30.733 --> 00:04:30.895
+qa: navigate
+
+53
+00:04:30.895 --> 00:04:32.260
+qa: pre-cutoff-draft-still-opens-with-its-line
+
+54
+00:04:32.260 --> 00:04:34.275
+qa: pre-cutoff-draft-reversed-after-departure
+
+55
+00:04:34.275 --> 00:04:44.401
+qa: navigate
+
+56
+00:04:44.401 --> 00:04:46.411
+qa: msp-bills-retained-commercial-time-after-departure
+
+57
+00:04:46.411 --> 00:04:47.966
+departAdmin: navigate
+
+58
+00:04:47.966 --> 00:04:48.880
+departAdmin: customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock

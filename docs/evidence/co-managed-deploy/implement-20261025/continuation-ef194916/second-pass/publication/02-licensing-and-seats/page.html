@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Licensing and seats · Co-Managed IT</title><meta name="description" content="Licensing and seats: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside class="provenance" id="current-acceptance">Current application 1b9b112749b948ee1b6611b91e07d52e7b98ba32, build-1792941614066. Guide scenario: blocked-external. 7 covered / 4 partial / 3 blocked-external. All fourteen current composites have published playback and chapter-seek proof. reviewReady=false.</aside><h1 id="licensing-and-seats">Licensing and seats</h1><section id="current-walkthrough" class="walkthrough-recording"><h2>Current build recording</h2><p>Scenario: blocked-external. Blocked-external: no approved tenant-bound signed test license and isolated self-host installation for signed-capacity/lapse/missing-claim/renewal journeys (T019); approved real Stripe release-owner account/price/receipts remain T018. Hosted simulator purchase, allocation, usage floor, lost-response reload and explicit same-operation replay passed; replay preserved one receipt and the later pool reduction to 19. Playback proof is separate from this result.</p><video controls="" muted="" preload="metadata" width="1280" style="max-width: 100%;" src="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/walkthrough.webm"><track kind="chapters" src="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/chapters.vtt" srclang="en" default=""></video><label for="current-chapters">Seek a current recording chapter</label><select id="current-chapters" style="max-width: 100%;"><option value="0.000">00:00:00.000 02-licensing-hosted-current</option><option value="3.318">00:00:03.318 qa: navigate</option><option value="4.699">00:00:04.699 qa: lost-response-executes-one-provider-operation</option><option value="5.386">00:00:05.386 qa: fresh-reload-reconciles-verified-target</option><option value="7.807">00:00:07.807 qa: navigate</option><option value="10.084">00:00:10.084 qa: allocation-persists-and-does-not-change-purchased-capacity</option><option value="10.252">00:00:10.252 qa: below-usage-reduction-is-disabled</option><option value="12.240">00:00:12.240 02-completed-hosted-operation-replay-current</option><option value="15.782">00:00:15.782 qa: navigate</option><option value="16.667">00:00:16.667 qa: completed-hosted-purchase-same-operation-replay-is-accepted</option></select><p><a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/recording.json">Composite metadata</a> · <a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/chapters.vtt">Chapter file</a> · <a href="/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-and-seats/playback-verification.json">Playback receipt</a> · </p><script>(()=>{const section=document.getElementById('current-walkthrough'),v=section.querySelector('video'),s=section.querySelector('select');s.addEventListener('change',()=>{v.currentTime=Number(s.value);v.play().catch(()=>{});});})();</script></section>
+<p>The MSP buys or licenses a sponsor pool, then allocates technician seats to individual customer workspaces. A proposed purchase is not verified capacity.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use an MSP account administrator for pool changes and a relationship administrator for customer allocations. Start at the <a href="http://feature-co-managed-it.localhost:23374/msp/co-managed">Co-Managed IT overview</a>. Record purchased capacity, allocated seats, available seats, and the disposable customer's allocation and usage.</p>
+<p>Purchase steps require the configured isolated payment simulator or an approved test provider. Self-hosted capacity requires a signed test license. The latest ticket review did not freshly exercise purchase or license renewal. See <a href="index.html#review-order-and-retained-changes">review conventions</a>.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>Charging twice when an uncertain purchase is retried.</li>
+<li>Allocating seats before payment or license verification.</li>
+<li>Reducing an allocation below active technicians and pending invitations.</li>
+<li>Mistaking customer allocation changes for cancellation of purchased capacity.</li>
+</ul>
+<h2 id="1-reconcile-the-pool-with-customer-allocations">1. Reconcile the pool with customer allocations</h2>
+<p>Open the overview and the disposable client's <strong>Co-managed IT</strong> view. Compare pool totals with <strong>Capacity</strong> and the customer's used/allocated technician seats. Reload both pages.</p>
+<p>Expected: used seats fit inside the allocation; all customer allocations fit inside verified capacity. Pool availability decreases when seats are allocated, not merely when technicians sign in.</p>
+<h2 id="2-review-a-hosted-pool-purchase">2. Review a hosted pool purchase</h2>
+<ol>
+<li>As the account administrator, change the pool's seat quantity to a known target. Record the existing quantity and the proposed total.</li>
+<li>Select <strong>Review purchase</strong>. Check the quantity, monthly total and amount due before <strong>Confirm purchase</strong>.</li>
+<li>Complete the test checkout. If a purchase is pending, use <strong>Resume purchase</strong> rather than starting a competing operation.</li>
+<li>Refresh the overview until entitlement verification resolves. Compare the provider's checkout/invoice record with AlgaPSA's pool.</li>
+</ol>
+<p>Expected: capacity increases only after verification. Reopening the same pending purchase does not create another charge. Record provider operation identifiers alongside the resulting pool total. Test data here does not certify a live Stripe SKU or production pricing.</p>
+<h2 id="3-change-a-customer39s-allocation">3. Change a customer's allocation</h2>
+<ol>
+<li>Open the disposable client, <strong>Co-managed IT → Capacity → Change seat allocation</strong>.</li>
+<li>Enter <strong>Technician seats</strong> within available pool capacity and select <strong>Save allocation</strong>.</li>
+<li>Reload the client and overview. Check that the allocation changed by the requested amount and availability changed by the opposite amount.</li>
+<li>Try a value below the displayed minimum supported by active technicians and pending invitations.</li>
+</ol>
+<p>Expected: valid changes persist; invalid reductions do not alter the allocation. For a hosted shortfall, review the proposed <strong>new pool total</strong> before purchasing. After verification, save/retry the allocation without paying again. An unavailable provider or missing administrator permission must show a blocker, not invented capacity.</p>
+<h2 id="4-check-the-self-hosted-branch-separately">4. Check the self-hosted branch separately</h2>
+<p>On a self-hosted review installation, follow <strong>Manage license</strong> to <a href="http://feature-co-managed-it.localhost:23374/msp/licenses">License Management</a>. Install the operator-supplied signed test license, refresh, and repeat the allocation check. Increasing a form value cannot bypass signed capacity. Do not try to exercise this branch by changing the hosted review deployment's mode.</p>
+<p>License lapse and renewal need an isolated lifecycle fixture: record the lapse deadline, verify growth is denied, observe the planned read-only transition, then verify renewal recovery without duplicate effects. This timing exercise remains separate from the quick capacity check.</p>
+<h2 id="pass-criteria-and-retained-state">Pass criteria and retained state</h2>
+<p>Pass when provider/license capacity, sponsor totals and customer allocations reconcile after reload, with no duplicate charge or over-allocation. Restore a temporary allocation only if current usage permits. Retain purchase receipts; lowering an allocation does not cancel the sponsor subscription.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedPoolEditor.tsx">Pool editor</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedClientSeats.tsx">Customer seat allocation and shortfall purchase</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/tenantLicenseManagement.ts">Tenant license management</a></li>
+</ul>
+</main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer>
+</body></html>

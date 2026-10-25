@@ -1,0 +1,382 @@
+{
+  "scenario": "07-ticket-mutations-disclosure-recovery-56e7",
+  "recordedAt": "2026-10-25T20:13:38.761Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "customer-reply-persists-on-MSP-root",
+      "passed": true,
+      "at": "2026-10-25T20:13:44.790Z"
+    },
+    {
+      "id": "customer-cannot-edit-or-delete-MSP-author",
+      "passed": true,
+      "at": "2026-10-25T20:13:44.794Z"
+    },
+    {
+      "id": "MSP-sees-customer-reply-with-author-organization",
+      "passed": true,
+      "at": "2026-10-25T20:13:47.630Z"
+    },
+    {
+      "id": "eligible-author-edit-propagates-to-customer-with-reply-retained",
+      "passed": true,
+      "at": "2026-10-25T20:13:53.593Z"
+    },
+    {
+      "id": "deleted-root-is-tombstoned-and-customer-reply-survives",
+      "passed": true,
+      "at": "2026-10-25T20:14:00.063Z"
+    },
+    {
+      "id": "qa-deleted-root-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T20:14:03.266Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "alice-deleted-root-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T20:14:07.199Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "explicit-file-removal-denies-old-link",
+      "passed": true,
+      "at": "2026-10-25T20:14:14.073Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "removed-file-is-absent-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:14:14.083Z"
+    },
+    {
+      "id": "whole-private-thread-preview-counts-root-reply-and-file",
+      "passed": true,
+      "at": "2026-10-25T20:14:29.718Z",
+      "data": {
+        "preview": "Change thread audience\n\nThis changes the audience of the entire thread: 2 messages and 1 attachments.\n\nCurrent audience: My organization only\n\nVisible to\nSelect...\n\nReplies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.\n\nSharing transfers this thread and its attachments into the customer workspace. The original MSP-privat"
+      }
+    },
+    {
+      "id": "MSP-private-original-is-retained-readonly",
+      "passed": true,
+      "at": "2026-10-25T20:14:30.399Z"
+    },
+    {
+      "id": "customer-receives-entire-disclosed-thread-and-matching-file",
+      "passed": true,
+      "at": "2026-10-25T20:14:34.144Z",
+      "data": {
+        "destinationStore": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "sourceStore": "24ac76c8-df59-4b10-8371-c56222904580"
+      }
+    },
+    {
+      "id": "customer-cannot-use-private-original-file-link",
+      "passed": true,
+      "at": "2026-10-25T20:14:34.154Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "requester-receives-disclosed-reply-and-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T20:14:36.224Z"
+    },
+    {
+      "id": "whole-thread-restriction-revokes-requester-message-reply-and-copied-file",
+      "passed": true,
+      "at": "2026-10-25T20:14:44.115Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "lost-publication-response-recovers-one-message-with-same-operation",
+      "passed": true,
+      "at": "2026-10-25T20:14:53.228Z",
+      "data": {
+        "publicationOperationIds": [
+          "f8408b74-b6b4-4885-bdce-f88b255eca84",
+          "f8408b74-b6b4-4885-bdce-f88b255eca84"
+        ],
+        "persistedMessages": 1
+      }
+    },
+    {
+      "id": "recovered-publication-has-complete-byte-exact-file-after-reload",
+      "passed": true,
+      "at": "2026-10-25T20:14:58.298Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:13:41.310Z",
+      "seconds": 2.549,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:44.790Z",
+      "seconds": 6.029,
+      "actor": "alice",
+      "title": "customer-reply-persists-on-MSP-root"
+    },
+    {
+      "at": "2026-10-25T20:13:44.794Z",
+      "seconds": 6.033,
+      "actor": "alice",
+      "title": "customer-cannot-edit-or-delete-MSP-author"
+    },
+    {
+      "at": "2026-10-25T20:13:47.025Z",
+      "seconds": 8.264,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:47.630Z",
+      "seconds": 8.869,
+      "actor": "qa",
+      "title": "MSP-sees-customer-reply-with-author-organization"
+    },
+    {
+      "at": "2026-10-25T20:13:52.234Z",
+      "seconds": 13.473,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:13:53.593Z",
+      "seconds": 14.832,
+      "actor": "alice",
+      "title": "eligible-author-edit-propagates-to-customer-with-reply-retained"
+    },
+    {
+      "at": "2026-10-25T20:13:55.614Z",
+      "seconds": 16.853,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:00.063Z",
+      "seconds": 21.302,
+      "actor": "qa",
+      "title": "deleted-root-is-tombstoned-and-customer-reply-survives"
+    },
+    {
+      "at": "2026-10-25T20:14:02.250Z",
+      "seconds": 23.489,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:03.266Z",
+      "seconds": 24.505,
+      "actor": "qa",
+      "title": "qa-deleted-root-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:05.284Z",
+      "seconds": 26.523,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:07.199Z",
+      "seconds": 28.438,
+      "actor": "alice",
+      "title": "alice-deleted-root-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:09.206Z",
+      "seconds": 30.445,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:14.073Z",
+      "seconds": 35.312,
+      "actor": "qa",
+      "title": "explicit-file-removal-denies-old-link",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:14.083Z",
+      "seconds": 35.322,
+      "actor": "qa",
+      "title": "removed-file-is-absent-after-reload"
+    },
+    {
+      "at": "2026-10-25T20:14:16.088Z",
+      "seconds": 37.327,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:26.211Z",
+      "seconds": 47.45,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:29.718Z",
+      "seconds": 50.957,
+      "actor": "qa",
+      "title": "whole-private-thread-preview-counts-root-reply-and-file",
+      "data": {
+        "preview": "Change thread audience\n\nThis changes the audience of the entire thread: 2 messages and 1 attachments.\n\nCurrent audience: My organization only\n\nVisible to\nSelect...\n\nReplies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.\n\nSharing transfers this thread and its attachments into the customer workspace. The original MSP-privat"
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:30.399Z",
+      "seconds": 51.638,
+      "actor": "qa",
+      "title": "MSP-private-original-is-retained-readonly"
+    },
+    {
+      "at": "2026-10-25T20:14:32.428Z",
+      "seconds": 53.667,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:34.144Z",
+      "seconds": 55.383,
+      "actor": "alice",
+      "title": "customer-receives-entire-disclosed-thread-and-matching-file",
+      "data": {
+        "destinationStore": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "sourceStore": "24ac76c8-df59-4b10-8371-c56222904580"
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:34.154Z",
+      "seconds": 55.393,
+      "actor": "alice",
+      "title": "customer-cannot-use-private-original-file-link",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:36.189Z",
+      "seconds": 57.428,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:36.224Z",
+      "seconds": 57.463,
+      "actor": "requester",
+      "title": "requester-receives-disclosed-reply-and-file-bytes"
+    },
+    {
+      "at": "2026-10-25T20:14:38.314Z",
+      "seconds": 59.553,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:43.785Z",
+      "seconds": 65.024,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:44.115Z",
+      "seconds": 65.354,
+      "actor": "requester",
+      "title": "whole-thread-restriction-revokes-requester-message-reply-and-copied-file",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:46.224Z",
+      "seconds": 67.463,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T20:14:53.228Z",
+      "seconds": 74.467,
+      "actor": "qa",
+      "title": "lost-publication-response-recovers-one-message-with-same-operation",
+      "data": {
+        "publicationOperationIds": [
+          "f8408b74-b6b4-4885-bdce-f88b255eca84",
+          "f8408b74-b6b4-4885-bdce-f88b255eca84"
+        ],
+        "persistedMessages": 1
+      }
+    },
+    {
+      "at": "2026-10-25T20:14:58.298Z",
+      "seconds": 79.537,
+      "actor": "qa",
+      "title": "recovered-publication-has-complete-byte-exact-file-after-reload"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Requester task conversation is a separate segment. Disclosure uses disposable synthetic content. Removed files and deleted root are intentionally retained as tombstones/audit history."
+  ],
+  "durationSeconds": 80.36,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "requester",
+      "email": "cm.requester.1792939134918@cmreview.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

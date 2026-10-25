@@ -1,0 +1,163 @@
+{
+  "checkedAt": "2026-10-25T20:45:03.745Z",
+  "guides": [
+    {
+      "guide": "guides/01-onboarding.html",
+      "url": "http://127.0.0.1:8874/guides/01-onboarding.html",
+      "title": "Customer onboarding",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-onboarding-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/01-accepted-customer-confirmation-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "url": "http://127.0.0.1:8874/guides/02-licensing-and-seats.html",
+      "title": "Licensing and seats",
+      "httpStatus": 200,
+      "currentAcceptance": "blocked-external",
+      "remaining": "Blocked-external, not retried in this pass. Missing: A Nine Minds-signed license JWT bound to the sponsor tenant 24ac76c8-df59-4b10-8371-c56222904580 (aud = that tenant, tier 'pro', future exp, co_managed_seats = N), on a self-hosted installation that has a license_state row; A real Stripe test account with a co-managed seat price, owned by the release owner. Unblock: As the sponsor administrator on the self-hosted installation, open /msp/licenses, paste the signed token into #license-manual-key and click #license-activate-manual-key. / Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_CO_MANAGED_USER_PRICE_ID and MASTER_BILLING_TENANT_ID, unset STRIPE_API_BASE_URL, restart the review app, then buy one seat from the client's seats dialog. Evidence of the parts already verified was recorded on 1b9b112749.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-licensing-hosted-current/walkthrough.webm",
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/02-completed-hosted-operation-replay-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "url": "http://127.0.0.1:8874/guides/03-access-policies.html",
+      "title": "Access policies",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-scope-team-independent-grants-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-field-masks-api-stale-file-export-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/03-viewer-layout-parity-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "url": "http://127.0.0.1:8874/guides/04-delegated-administration.html",
+      "title": "Delegated administration",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-board-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/04-delegation-complete-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "url": "http://127.0.0.1:8874/guides/05-ticket-queue.html",
+      "title": "Ticket queue operations",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-mixed-recovery-56e7b/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/05-current-scope-export-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "url": "http://127.0.0.1:8874/guides/06-projects-and-tasks.html",
+      "title": "Projects and tasks",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-native-project-creation-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-shared-project-collaboration-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/06-project-effort-file-revocation-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "url": "http://127.0.0.1:8874/guides/07-conversations-and-files.html",
+      "title": "Conversations and files",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-composer-draft-recovery-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-audiences-files-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-grid-parity-and-file-limits-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-ticket-mutations-disclosure-recovery-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/07-requester-task-conversation-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "url": "http://127.0.0.1:8874/guides/08-sla.html",
+      "title": "SLA configuration",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "Mapping persistence, captured-target immutability, restored mapping, fresh differing targets and handback pause, business-calendar arithmetic and an actual breach mail routed only to the assigned MSP user. The business-calendar recording ends with a harness timeout on an absent post-departure history control after its four assertions passed; the departure clock cutoff is verified in 10-departure-c-cutoff-56e7 (cutoff adds the customer_responsible pause, no resolution deadline, no former MSP clock on the customer ticket). CE/EE release parity remains unverified in the requirement ledger.",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-mapping-and-captured-targets-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-mapping-restored-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-sla-fresh-targets-pause-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/08-business-calendar-notification-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "url": "http://127.0.0.1:8874/guides/09-time-and-billing.html",
+      "title": "Time approval and billing",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "Capture, routing and separate approval; customer operational effort; native stopwatch; catalog pricing review (uncovered catalog time needs no pricing decision and is billed as-is) and catalog invoice reconciliation at the catalog rate traced to its source entries. Drafts only; nothing finalized or emailed.",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-billing-capture-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-operational-commercial-effort-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-native-stopwatch-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/09-catalog-pricing-reconciliation-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "url": "http://127.0.0.1:8874/guides/10-departure-and-archives.html",
+      "title": "Departure and archives",
+      "httpStatus": 200,
+      "currentAcceptance": "covered",
+      "remaining": "Disposable relationship prepared natively and ended. After cutoff the customer workspace is read-only by design (reading, export and upgrade remain), so no customer change is permitted; its native screen offers none, and the sealed archive and its evidence count are unchanged. White Rabbit was not touched.",
+      "recordings": [
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-a-provision-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-b-content-56e7/walkthrough.webm",
+        "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/10-departure-c-cutoff-56e7/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "url": "http://127.0.0.1:8874/guides/11-export-restore-and-upgrade.html",
+      "title": "Export, restore and independence",
+      "httpStatus": 200,
+      "currentAcceptance": "blocked-external",
+      "remaining": "Blocked-external, not retried in this pass. Missing: A Pro license signed for the restored destination tenant (aud = destination tenant UUID, tier 'pro') on a self-hosted destination with a license_state row; or, for hosted, exactly one active paid PSA Stripe subscription whose metadata.tenant_id is the destination tenant. Unblock: From server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --activate --destination-tenant <restored-uuid> --operation-id <retained-uuid> --license-file /abs/pro-license.jwt (hosted: --activate-hosted with the same tenant and operation flags). Evidence of the parts already verified was recorded on 1b9b112749.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/11-post-departure-export-upgrade-boundary-current/walkthrough.webm"
+      ]
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "url": "http://127.0.0.1:8874/guides/12-customer-integrations.html",
+      "title": "Customer-owned integrations",
+      "httpStatus": 200,
+      "currentAcceptance": "blocked-external",
+      "remaining": "Blocked-external, not retried in this pass. Missing: An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, plus an inbound mailbox the Graph subscription can notify; Directory provisioning (SCIM) enabled for the customer tenant. Unblock: As the customer administrator open /msp/co-management/providers, choose #provider-credentials-microsoft-tab, click #microsoft-settings-add-profile, fill #microsoft-profile-client-id, #microsoft-profile-tenant-id and #microsoft-profile-client-secret, tick email and msp_sso, and click #microsoft-profile-save. / Enable skim-support-feature for the tenant, then /msp/security-settings?tab=user-provisioning → #create-scim-connection-button. Evidence of the parts already verified was recorded on 1b9b112749.",
+      "recordings": [
+        "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/12-provider-boundaries-and-outbound-current/walkthrough.webm"
+      ]
+    }
+  ],
+  "coveredGuides": 10,
+  "partialGuides": 1,
+  "reviewReady": false,
+  "meaning": "Link navigation passed; it does not accept the linked scenarios or relabel historical media."
+}

@@ -1,0 +1,97 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:06.291
+05-current-mixed-recovery-56e7b
+
+2
+00:00:06.291 --> 00:00:08.349
+alice: three-disposable-tickets-escalated-through-product
+
+3
+00:00:08.349 --> 00:00:10.348
+qa: navigate
+
+4
+00:00:10.348 --> 00:00:11.395
+qa: navigate
+
+5
+00:00:11.395 --> 00:00:11.532
+qa: qualified-filter-and-selection-set-survive-reload
+
+6
+00:00:11.532 --> 00:00:13.958
+qa: full-filtered-export-includes-all-authorized-rows
+
+7
+00:00:13.958 --> 00:00:15.610
+qa: customer-change-races-stale-selected-revision
+
+8
+00:00:15.610 --> 00:00:16.974
+qa: third-selected-explicit-only-grant-revoked
+
+9
+00:00:16.974 --> 00:00:17.194
+qa: reload-offers-explicit-frozen-intent-recovery
+
+10
+00:00:17.194 --> 00:00:17.344
+qa: mixed-results-distinguish-conflict-return-and-access-denied
+
+11
+00:00:17.344 --> 00:00:17.473
+qa: lost-response-replay-creates-one-handoff-note
+
+12
+00:00:17.473 --> 00:00:18.049
+qa: conflicted-item-does-not-receive-bulk-note
+
+13
+00:00:18.049 --> 00:00:18.563
+qa: oversight-retains-returned-work-without-revoked-ticket-or-duplication
+
+14
+00:00:18.563 --> 00:00:19.823
+qa: completed-return-requeries-working-membership
+
+15
+00:00:19.823 --> 00:00:24.310
+qa: customer-native-history-shows-the-successful-shared-note
+
+16
+00:00:24.310 --> 00:00:25.280
+qa: fixture-responsibility-restored-through-customer-ui
+
+17
+00:00:25.280 --> 00:00:27.608
+05-current-scope-export-56e7
+
+18
+00:00:27.608 --> 00:00:29.071
+qa: navigate
+
+19
+00:00:29.071 --> 00:00:30.796
+qa: oversight-retains-selected-customer-and-search
+
+20
+00:00:30.796 --> 00:00:32.809
+qa: reload-retains-workspace-status-search-and-sort
+
+21
+00:00:32.809 --> 00:00:32.962
+qa: navigate
+
+22
+00:00:32.962 --> 00:00:33.929
+qa: one-visible-row-export-includes-all-three-filtered-rows-once
+
+23
+00:00:33.929 --> 00:00:33.976
+qa: detail-link-retains-customer-and-relationship
+
+24
+00:00:33.976 --> 00:00:34.880
+qa: product-back-navigation-restores-applied-qualified-scope

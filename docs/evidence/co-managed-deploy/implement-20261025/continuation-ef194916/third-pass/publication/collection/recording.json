@@ -1,0 +1,199 @@
+{
+  "guide": "guides/index.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "Composition only: every child guide link opens and matches the ledger, and each child page embeds the composite for the build that guide was recorded on. The three blocked-external guides keep their earlier-build evidence and are not counted as covered.",
+  "durationSeconds": 7.44,
+  "sha256": "19f72428c6477ce5e1cac719d032366bd46a8942cb5a56eed1e187d9f286367d",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-guide-links-56e7/recording.json",
+      "name": "00-collection-guide-links-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 4,
+      "offsetSeconds": 0,
+      "sha256": "0468ad18df1206e9fa9c21603f76b1676b3d8283a9e717a688e18b14c02be9e2",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-guide-links-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 24
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-publication-56e7/recording.json",
+      "name": "00-collection-publication-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 3.44,
+      "offsetSeconds": 4,
+      "sha256": "c1c923778e4bd05550dce5d7af2cb27281ca27fe34f811365dc50a21c35cc41e",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-collection-publication-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 26
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "00-collection-guide-links-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 0.457,
+      "title": "collection-links-01-onboarding.html"
+    },
+    {
+      "seconds": 0.528,
+      "title": "child-guide-opens-01-onboarding.html"
+    },
+    {
+      "seconds": 0.697,
+      "title": "collection-links-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 0.769,
+      "title": "child-guide-opens-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 0.929,
+      "title": "collection-links-03-access-policies.html"
+    },
+    {
+      "seconds": 1.002,
+      "title": "child-guide-opens-03-access-policies.html"
+    },
+    {
+      "seconds": 1.142,
+      "title": "collection-links-04-delegated-administration.html"
+    },
+    {
+      "seconds": 1.205,
+      "title": "child-guide-opens-04-delegated-administration.html"
+    },
+    {
+      "seconds": 1.346,
+      "title": "collection-links-05-ticket-queue.html"
+    },
+    {
+      "seconds": 1.42,
+      "title": "child-guide-opens-05-ticket-queue.html"
+    },
+    {
+      "seconds": 1.652,
+      "title": "collection-links-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 1.715,
+      "title": "child-guide-opens-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 1.864,
+      "title": "collection-links-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 1.941,
+      "title": "child-guide-opens-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 2.098,
+      "title": "collection-links-08-sla.html"
+    },
+    {
+      "seconds": 2.172,
+      "title": "child-guide-opens-08-sla.html"
+    },
+    {
+      "seconds": 2.324,
+      "title": "collection-links-09-time-and-billing.html"
+    },
+    {
+      "seconds": 2.389,
+      "title": "child-guide-opens-09-time-and-billing.html"
+    },
+    {
+      "seconds": 2.563,
+      "title": "collection-links-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 2.637,
+      "title": "child-guide-opens-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 2.787,
+      "title": "collection-links-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 2.845,
+      "title": "child-guide-opens-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 3.029,
+      "title": "collection-links-12-customer-integrations.html"
+    },
+    {
+      "seconds": 3.098,
+      "title": "child-guide-opens-12-customer-integrations.html"
+    },
+    {
+      "seconds": 3.252,
+      "title": "Child acceptance reconciliation"
+    },
+    {
+      "seconds": 4,
+      "title": "00-collection-publication-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 5.532,
+      "title": "composite-embedded-for-recorded-build-01-onboarding.html"
+    },
+    {
+      "seconds": 5.647,
+      "title": "composite-embedded-for-recorded-build-02-licensing-and-seats.html"
+    },
+    {
+      "seconds": 5.74,
+      "title": "composite-embedded-for-recorded-build-03-access-policies.html"
+    },
+    {
+      "seconds": 5.82,
+      "title": "composite-embedded-for-recorded-build-04-delegated-administration.html"
+    },
+    {
+      "seconds": 5.912,
+      "title": "composite-embedded-for-recorded-build-05-ticket-queue.html"
+    },
+    {
+      "seconds": 5.99,
+      "title": "composite-embedded-for-recorded-build-06-projects-and-tasks.html"
+    },
+    {
+      "seconds": 6.08,
+      "title": "composite-embedded-for-recorded-build-07-conversations-and-files.html"
+    },
+    {
+      "seconds": 6.17,
+      "title": "composite-embedded-for-recorded-build-08-sla.html"
+    },
+    {
+      "seconds": 6.252,
+      "title": "composite-embedded-for-recorded-build-09-time-and-billing.html"
+    },
+    {
+      "seconds": 6.34,
+      "title": "composite-embedded-for-recorded-build-10-departure-and-archives.html"
+    },
+    {
+      "seconds": 6.436,
+      "title": "composite-embedded-for-recorded-build-11-export-restore-and-upgrade.html"
+    },
+    {
+      "seconds": 6.536,
+      "title": "composite-embedded-for-recorded-build-12-customer-integrations.html"
+    },
+    {
+      "seconds": 6.577,
+      "title": "overview-also-embeds-current-composite"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

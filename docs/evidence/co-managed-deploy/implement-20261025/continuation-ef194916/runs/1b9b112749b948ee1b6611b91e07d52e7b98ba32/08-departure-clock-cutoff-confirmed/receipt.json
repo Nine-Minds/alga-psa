@@ -1,0 +1,155 @@
+{
+  "cutoffResource": {
+    "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+    "ticket": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+    "relationship": "4f999745-cbd0-453e-905a-9a5b0210bbb0"
+  },
+  "storedClock": {
+    "identity": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "ticketId": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+      "obligationId": "888d7953-6575-41f9-9743-8fed36b6dc32",
+      "sourceTenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    },
+    "response": {
+      "dueAt": "2026-10-25T17:16:41.943Z",
+      "breached": false,
+      "breachedAt": null,
+      "completedAt": "2026-10-25T16:33:38.916Z",
+      "targetMinutes": 45,
+      "completedElapsedMilliseconds": 116973
+    },
+    "schedule": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "entries": [],
+      "is_24x7": true,
+      "holidays": [],
+      "timezone": "UTC",
+      "is_default": false,
+      "schedule_id": "24x7",
+      "schedule_name": "24x7"
+    },
+    "startedAt": "2026-10-25T16:31:41.943Z",
+    "observedAt": "2026-10-25T16:33:52.636Z",
+    "resolution": {
+      "dueAt": null,
+      "breached": false,
+      "breachedAt": null,
+      "completedAt": null,
+      "targetMinutes": 90,
+      "completedElapsedMilliseconds": null
+    },
+    "pauseReasons": [
+      "customer_responsible"
+    ],
+    "elapsedMilliseconds": 130693
+  },
+  "businessCalendarClock": {
+    "identity": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "ticketId": "b5c51cc1-8a8d-4651-ae6c-fb3ae3ba59b7",
+      "obligationId": "23ba2e7b-623d-4fd6-becb-f6a5005cbe02",
+      "sourceTenant": "791752cb-ce46-4a52-8fa2-8aa9b4df0aa8"
+    },
+    "response": {
+      "dueAt": null,
+      "breached": true,
+      "breachedAt": "2026-10-25T17:01:08.802Z",
+      "completedAt": null,
+      "targetMinutes": 1,
+      "completedElapsedMilliseconds": null
+    },
+    "schedule": {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "entries": [
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "23:59:00",
+          "entry_id": "9d9e3339-30b5-4acc-848a-fbe1406b1e8b",
+          "is_enabled": true,
+          "start_time": "00:00:00",
+          "day_of_week": 0,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "bab703bc-80df-46de-b7b6-38b1df141da0",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 1,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "998cbec9-912c-48e2-8410-b73fe83cda37",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 2,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "9a9a1b3e-01d1-410e-a4ca-f1f469efd0b3",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 3,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "849001a0-d9cd-4773-a046-fa921f32226e",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 4,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "87e1417e-c992-4e66-9616-9dd937fbb204",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 5,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        },
+        {
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "end_time": "17:00:00",
+          "entry_id": "da889b5c-a8e2-4c0d-8af3-56d5731b45f2",
+          "is_enabled": true,
+          "start_time": "09:00:00",
+          "day_of_week": 6,
+          "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190"
+        }
+      ],
+      "is_24x7": false,
+      "holidays": [],
+      "timezone": "UTC",
+      "created_at": "2026-10-25T16:59:44.091Z",
+      "is_default": false,
+      "updated_at": "2026-10-25T16:59:44.091Z",
+      "schedule_id": "e95f66b9-555d-416f-9125-a01fa892f190",
+      "schedule_name": "CM isolated calendar 1792947582941"
+    },
+    "startedAt": "2026-10-25T17:00:08.802Z",
+    "observedAt": "2026-10-25T17:02:08.991Z",
+    "resolution": {
+      "dueAt": null,
+      "breached": false,
+      "breachedAt": null,
+      "completedAt": null,
+      "targetMinutes": 1500,
+      "completedElapsedMilliseconds": null
+    },
+    "pauseReasons": [
+      "customer_responsible"
+    ],
+    "elapsedMilliseconds": 120189
+  },
+  "notificationReceipt": "08-business-calendar-notification-and-cutoff-current/notification-receipt.json",
+  "actualBreachMail": "One actual SMTP-sink message only to QA, plus one in-app recipient receipt. Configuration restored and temporary staff assignment removed."
+}

@@ -1,0 +1,34 @@
+{
+  "scenario": "09-billing-line-edit-preparation",
+  "recordedAt": "2026-10-25T15:03:04.951Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T15:03:07.420Z",
+      "seconds": 2.469,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts&contractId=95dafe0f-6952-4a90-a3f4-91674f10f85c&contractView=lines"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog') to be visible\u001b[22m\n",
+  "durationSeconds": 28.44,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

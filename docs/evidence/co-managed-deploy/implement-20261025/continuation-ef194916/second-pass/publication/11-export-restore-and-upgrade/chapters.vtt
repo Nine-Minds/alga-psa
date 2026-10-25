@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.348
+11-post-departure-export-upgrade-boundary-current
+
+2
+00:00:02.348 --> 00:00:02.433
+exportCustomer: navigate
+
+3
+00:00:02.433 --> 00:00:03.470
+exportCustomer: short-passphrase-blocked-by-export-form
+
+4
+00:00:03.470 --> 00:00:04.503
+exportCustomer: actual-encrypted-archive-downloaded-after-departure
+
+5
+00:00:04.503 --> 00:00:06.417
+exportCustomer: customer-export-remains-available-after-reload
+
+6
+00:00:06.417 --> 00:00:07.400
+exportCustomer: navigate

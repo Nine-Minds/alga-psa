@@ -1,0 +1,266 @@
+{
+  "scenario": "04-delegation-rehearsal-2",
+  "recordedAt": "2026-10-25T14:32:01.846Z",
+  "runtime": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+    "buildId": "build-1792934305248"
+  },
+  "assertions": [
+    {
+      "id": "served-build-matches-current-candidate",
+      "passed": true,
+      "at": "2026-10-25T14:32:01.895Z",
+      "data": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      }
+    },
+    {
+      "id": "customer-approves-one-nonadministrator-profile",
+      "passed": true,
+      "at": "2026-10-25T14:32:07.798Z",
+      "data": {
+        "profileGrant": "cb7fd6c3-7bc5-43f6-aeae-38843fedc23f",
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b"
+      }
+    },
+    {
+      "id": "administrator-profile-is-not-eligible",
+      "passed": true,
+      "at": "2026-10-25T14:32:08.622Z"
+    },
+    {
+      "id": "delegated-profile-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-25T14:32:14.027Z"
+    },
+    {
+      "id": "customer-native-users-shows-delegated-profile",
+      "passed": true,
+      "at": "2026-10-25T14:32:16.627Z"
+    },
+    {
+      "id": "revoked-profile-editor-no-longer-offered",
+      "passed": true,
+      "at": "2026-10-25T14:32:32.287Z"
+    },
+    {
+      "id": "approved-resend-displays-original-recipient-role-expiry",
+      "passed": true,
+      "at": "2026-10-25T14:32:46.044Z"
+    },
+    {
+      "id": "resend-preserves-invitation-terms",
+      "passed": true,
+      "at": "2026-10-25T14:32:52.014Z",
+      "data": {
+        "invitationId": "24396cbd-528d-40ef-81f1-8dcf518c8d1e",
+        "recipient": "cm.invite.1792938496687@cmreview.test",
+        "roleId": "5249a4d5-7ee2-423d-abdc-e48d2889697b",
+        "expiresAt": "2026-10-26T14:28:23.846242+00:00",
+        "unchangedToken": true,
+        "unchangedCustomerCreator": true
+      }
+    },
+    {
+      "id": "delivered-resend-preserves-exact-setup-link",
+      "passed": true,
+      "at": "2026-10-25T14:32:52.016Z",
+      "data": {
+        "setupLinkSha256": "f5eda062377667c386e6879178dfbd7339c7482403af65f542b7e668fb66f51e",
+        "deliveredCount": 2,
+        "roleMentioned": true
+      }
+    },
+    {
+      "id": "revoked-invitation-operation-not-offered",
+      "passed": true,
+      "at": "2026-10-25T14:33:01.303Z"
+    },
+    {
+      "id": "review-approvals-revoked-profile-restored",
+      "passed": true,
+      "at": "2026-10-25T14:33:06.882Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T14:32:01.895Z",
+      "seconds": 0.049,
+      "title": "served-build-matches-current-candidate",
+      "data": {
+        "sourceRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
+        "buildId": "build-1792934305248"
+      }
+    },
+    {
+      "at": "2026-10-25T14:32:04.253Z",
+      "seconds": 2.407,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:32:07.798Z",
+      "seconds": 5.952,
+      "actor": "alice",
+      "title": "customer-approves-one-nonadministrator-profile",
+      "data": {
+        "profileGrant": "cb7fd6c3-7bc5-43f6-aeae-38843fedc23f",
+        "profileId": "31f316eb-f7c2-4356-b519-e9c6183baf1b"
+      }
+    },
+    {
+      "at": "2026-10-25T14:32:08.622Z",
+      "seconds": 6.776,
+      "actor": "alice",
+      "title": "administrator-profile-is-not-eligible"
+    },
+    {
+      "at": "2026-10-25T14:32:10.993Z",
+      "seconds": 9.147,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:32:14.027Z",
+      "seconds": 12.181,
+      "actor": "qa",
+      "title": "delegated-profile-persists-after-reload"
+    },
+    {
+      "at": "2026-10-25T14:32:16.078Z",
+      "seconds": 14.232,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-25T14:32:16.627Z",
+      "seconds": 14.781,
+      "actor": "alice",
+      "title": "customer-native-users-shows-delegated-profile"
+    },
+    {
+      "at": "2026-10-25T14:32:18.776Z",
+      "seconds": 16.93,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:32:29.362Z",
+      "seconds": 27.516,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:32:32.276Z",
+      "seconds": 30.43,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:32:32.287Z",
+      "seconds": 30.441,
+      "actor": "qa",
+      "title": "revoked-profile-editor-no-longer-offered"
+    },
+    {
+      "at": "2026-10-25T14:32:34.312Z",
+      "seconds": 32.466,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:32:46.001Z",
+      "seconds": 44.155,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:32:46.044Z",
+      "seconds": 44.198,
+      "actor": "qa",
+      "title": "approved-resend-displays-original-recipient-role-expiry"
+    },
+    {
+      "at": "2026-10-25T14:32:52.014Z",
+      "seconds": 50.168,
+      "actor": "qa",
+      "title": "resend-preserves-invitation-terms",
+      "data": {
+        "invitationId": "24396cbd-528d-40ef-81f1-8dcf518c8d1e",
+        "recipient": "cm.invite.1792938496687@cmreview.test",
+        "roleId": "5249a4d5-7ee2-423d-abdc-e48d2889697b",
+        "expiresAt": "2026-10-26T14:28:23.846242+00:00",
+        "unchangedToken": true,
+        "unchangedCustomerCreator": true
+      }
+    },
+    {
+      "at": "2026-10-25T14:32:52.016Z",
+      "seconds": 50.17,
+      "actor": "qa",
+      "title": "delivered-resend-preserves-exact-setup-link",
+      "data": {
+        "setupLinkSha256": "f5eda062377667c386e6879178dfbd7339c7482403af65f542b7e668fb66f51e",
+        "deliveredCount": 2,
+        "roleMentioned": true
+      }
+    },
+    {
+      "at": "2026-10-25T14:32:57.139Z",
+      "seconds": 55.293,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-25T14:33:01.288Z",
+      "seconds": 59.442,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T14:33:01.303Z",
+      "seconds": 59.457,
+      "actor": "qa",
+      "title": "revoked-invitation-operation-not-offered"
+    },
+    {
+      "at": "2026-10-25T14:33:06.882Z",
+      "seconds": 65.036,
+      "actor": "qa",
+      "title": "review-approvals-revoked-profile-restored"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Board exact-target/stale-editor revocation is a separate current-build recording. SMTP delivery uses the approved controlled simulator mailbox; no claim of public-provider acceptance."
+  ],
+  "durationSeconds": 66.08,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

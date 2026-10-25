@@ -1,0 +1,281 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.449
+03-scope-team-independent-grants-current-ready
+
+2
+00:00:02.449 --> 00:00:02.674
+scopeCustomer: navigate
+
+3
+00:00:02.674 --> 00:00:04.792
+scopeCustomer: Preparation: prior explicit grant revoked before full rerun
+
+4
+00:00:04.792 --> 00:00:05.544
+qa: navigate
+
+5
+00:00:05.544 --> 00:00:07.628
+qa: sponsor-technician-assignment-persists
+
+6
+00:00:07.628 --> 00:00:08.175
+scopeCustomer: navigate
+
+7
+00:00:08.175 --> 00:00:10.108
+scopeCustomer: escalation-only-mode-persists
+
+8
+00:00:10.108 --> 00:00:12.109
+qa: navigate
+
+9
+00:00:12.109 --> 00:00:14.455
+qa: navigate
+
+10
+00:00:14.455 --> 00:00:16.926
+scopeCustomer: navigate
+
+11
+00:00:16.926 --> 00:00:16.972
+qa: navigate
+
+12
+00:00:16.972 --> 00:00:18.956
+qa: escalation-opens-only-qualified-ticket
+
+13
+00:00:18.956 --> 00:00:21.041
+qa: navigate
+
+14
+00:00:21.041 --> 00:00:25.176
+scopeCustomer: navigate
+
+15
+00:00:25.176 --> 00:00:25.226
+qa: navigate
+
+16
+00:00:25.226 --> 00:00:27.264
+qa: board-view-opens-un-escalated-oversight-without-write
+
+17
+00:00:27.264 --> 00:00:29.760
+scopeCustomer: navigate
+
+18
+00:00:29.760 --> 00:00:29.810
+qa: navigate
+
+19
+00:00:29.810 --> 00:00:31.862
+qa: independent-board-grant-retains-read-after-explicit-revocation
+
+20
+00:00:31.862 --> 00:00:34.928
+scopeCustomer: navigate
+
+21
+00:00:34.928 --> 00:00:35.015
+qa: navigate
+
+22
+00:00:35.015 --> 00:00:40.825
+qa: customer-board-collaboration-enables-technician
+
+23
+00:00:40.825 --> 00:00:42.874
+scopeTeamUser: navigate
+
+24
+00:00:42.874 --> 00:00:45.999
+qa: navigate
+
+25
+00:00:45.999 --> 00:00:46.594
+scopeTeamUser: navigate
+
+26
+00:00:46.594 --> 00:00:48.608
+scopeTeamUser: Operator prerequisite: candidate becomes a member of the prepared team
+
+27
+00:00:48.608 --> 00:00:48.702
+scopeTeamUser: navigate
+
+28
+00:00:48.702 --> 00:00:50.751
+scopeTeamUser: current-team-membership-intersects-approved-board-and-local-permission
+
+29
+00:00:50.751 --> 00:00:53.025
+qa: navigate
+
+30
+00:00:53.025 --> 00:00:53.125
+scopeTeamUser: navigate
+
+31
+00:00:53.125 --> 00:00:54.080
+scopeTeamUser: team-view-restricts-collaborative-board-to-readonly
+
+32
+00:00:54.080 --> 00:00:56.425
+03-field-masks-api-stale-file-export-current-confirmed
+
+33
+00:00:56.425 --> 00:00:58.760
+qa: navigate
+
+34
+00:00:58.760 --> 00:00:58.792
+scopeTeamUser: navigate
+
+35
+00:00:58.792 --> 00:00:59.161
+scopeTeamUser: assigned-team-member-downloads-exact-allowed-file-bytes
+
+36
+00:00:59.161 --> 00:00:59.345
+scopeTeamUser: customer-native-API-positive-control-reads-own-ticket
+
+37
+00:00:59.345 --> 00:00:59.519
+scopeTeamUser: customer-native-API-updates-own-authoritative-ticket
+
+38
+00:00:59.519 --> 00:00:59.576
+scopeTeamUser: customer-native-API-restores-review-title
+
+39
+00:00:59.576 --> 00:00:59.739
+scopeTeamUser: MSP-native-API-does-not-resolve-bare-customer-ID
+
+40
+00:00:59.739 --> 00:01:01.999
+scopeTeamUser: MSP-native-API-cannot-write-foreign-ticket
+
+41
+00:01:01.999 --> 00:01:02.518
+qa: navigate
+
+42
+00:01:02.518 --> 00:01:04.804
+qa: qualified-action-positive-control-updates-exact-customer-work
+
+43
+00:01:04.804 --> 00:01:07.166
+qa: navigate
+
+44
+00:01:07.166 --> 00:01:07.375
+scopeTeamUser: navigate
+
+45
+00:01:07.375 --> 00:01:08.767
+scopeTeamUser: view-team-denied-same-valid-qualified-write-command
+
+46
+00:01:08.767 --> 00:01:10.785
+scopeTeamUser: home-field-policy-redacts-shared-title-and-derived-display
+
+47
+00:01:10.785 --> 00:01:11.799
+scopeTeamUser: navigate
+
+48
+00:01:11.799 --> 00:01:12.151
+scopeTeamUser: masked-title-cannot-be-used-to-discover-a-queue-result
+
+49
+00:01:12.151 --> 00:01:12.314
+scopeTeamUser: home-file-mask-revokes-copied-download-while-grant-stays-active
+
+50
+00:01:12.314 --> 00:01:14.339
+scopeTeamUser: restored-home-policy-readmits-original-file-with-same-bytes
+
+51
+00:01:14.339 --> 00:01:16.383
+qa: navigate
+
+52
+00:01:16.383 --> 00:01:16.861
+scopeCustomer: navigate
+
+53
+00:01:16.861 --> 00:01:16.904
+scopeCustomer: last-board-grant-removed-after-reload
+
+54
+00:01:16.904 --> 00:01:17.146
+qa: copied-file-link-denied-after-last-independent-grant-is-removed
+
+55
+00:01:17.146 --> 00:01:19.085
+qa: previously-valid-qualified-write-denied-after-grant-removal
+
+56
+00:01:19.085 --> 00:01:21.051
+qa: navigate
+
+57
+00:01:21.051 --> 00:01:22.087
+qa: navigate
+
+58
+00:01:22.087 --> 00:01:24.118
+qa: fresh-export-with-previous-filter-does-not-leak-revoked-work
+
+59
+00:01:24.118 --> 00:01:27.155
+scopeCustomer: navigate
+
+60
+00:01:27.155 --> 00:01:27.313
+qa: navigate
+
+61
+00:01:27.313 --> 00:01:28.520
+qa: original-customer-board-restored-and-temporary-team-scope-removed
+
+62
+00:01:28.520 --> 00:01:30.882
+03-viewer-current-build
+
+63
+00:01:30.882 --> 00:01:58.080
+viewer: navigate
+
+64
+00:01:58.080 --> 00:02:01.001
+03-viewer-layout-parity-complete
+
+65
+00:02:01.001 --> 00:02:01.968
+viewer: navigate
+
+66
+00:02:01.968 --> 00:02:03.036
+viewer: Entry-category-is-disabled
+
+67
+00:02:03.036 --> 00:02:03.365
+viewer: Entry-readonly-survives-reload
+
+68
+00:02:03.365 --> 00:02:04.260
+viewer: Grid-category-is-disabled
+
+69
+00:02:04.260 --> 00:02:04.788
+viewer: Grid-readonly-survives-reload
+
+70
+00:02:04.788 --> 00:02:05.040
+viewer: viewer-layout-checks-leave-ticket-unchanged

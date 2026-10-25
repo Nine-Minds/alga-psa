@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25T17:08:13.760Z",
+  "guide": "guides/08-sla.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "evidenceSnapshotParent": "HEAD",
+  "url": "http://127.0.0.1:8874/guides/08-sla.html",
+  "publicUrl": "http://100.82.172.57:8874/guides/08-sla.html",
+  "compositeSha256": "e65dc55c4627f1f196b4278c9d1b66ede7d9e4941457e48bfea01e6701372505",
+  "applicationBuildStampMatches": true,
+  "applicationHealthStatus": 200,
+  "played": {
+    "time": 0.606045,
+    "duration": 223.68,
+    "width": 1440,
+    "height": 1000,
+    "currentSrc": "http://127.0.0.1:8874/evidence/implement-20261025/current-1b9b112749b948ee1b6611b91e07d52e7b98ba32/08-sla/walkthrough.webm"
+  },
+  "seek": {
+    "control": "visible #current-chapters selector",
+    "chapter": "navigate",
+    "target": 58.12,
+    "actual": 58.158824,
+    "followingFrame": {
+      "mediaTime": 58.16,
+      "presentedFrames": 18
+    }
+  },
+  "rangeStatus": 206,
+  "contentRange": "bytes 0-1023/19015937",
+  "passed": true
+}

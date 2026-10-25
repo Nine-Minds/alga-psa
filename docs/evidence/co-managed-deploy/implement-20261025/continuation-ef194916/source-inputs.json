@@ -1,0 +1,18 @@
+{
+  "candidateRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "sha256": {
+    "packages/co-managed/src/timeWorkItem.ts": "ac78a491cbee1227a3ef51072cc1e62a23d4247274746ec5c1f30478fe3b27a7",
+    "packages/co-managed/src/index.ts": "f310ff2d031c5f4f0d78cd4690933933842776d05c43581d48e5e8dbac7f9b6a",
+    "server/src/components/co-managed/CoManagedTimeEntry.tsx": "b7f193d77eeb196ec6c5f77bb7e6a763cd21bbf472fd70b674986f573684c9ca",
+    "server/src/lib/actions/coManagedTimeActions.ts": "c555a01c91c0decc80f41868ed824a7c55faab800f2f51bfe3568c56a4019f58",
+    "server/src/components/co-managed/CoManagedTicketAttachmentsProvider.tsx": "53af43faf51588057dfc64f93e898c0ea51c046f449bc0cb0478016018491f6e",
+    "server/src/components/co-managed/SharedTicketScreen.tsx": "4a89d6f66711c2c93be3d781c0eb841b173b02bcbf9c4019989a5071c2e2e021",
+    "ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts": "3f9960b167a7987d8d285d78a1c0a96e35eb85901ff4adb0ce311fa57b433dc1",
+    "server/src/components/co-managed/CoManagedLocalTicketDataSourceProvider.tsx": "25366ad4c39317bda93883cea2cd724c7b260c519b6877a850599ad0b8a93adb",
+    "server/src/components/co-managed/sharedTicketDataSource.tsx": "b8c48060e1e3ef34670bac889ffaebb73f74dbd8ab0b0489b3f99a7c2768df8f",
+    "server/src/components/co-managed/ticketCommentWriter.ts": "a9463388330136f9f523ac73f2473f293ccdfbc99dff5409375457be05b615c6",
+    "server/src/test/unit/product/coManagedLocalTicketDataSource.test.tsx": "5851e85e46cfafd305f14b096e3afadd665e67db4a0614a81e94e9bec0c3b4b5",
+    "server/src/test/unit/product/coManagedSharedTicketDataSource.test.tsx": "400de0b42cc6952f24c4376b735ecaea1c17f24e4b64474cf71e42c19e785cf7"
+  },
+  "databaseRun": "Ran with the working tree time-launch repair before its commit. These DB/service sources and the integration test are byte-identical to this candidate. Subsequent attachment composition changes affect frontend rendering only."
+}

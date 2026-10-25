@@ -1,0 +1,176 @@
+{
+  "guide": "index.html",
+  "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+  "buildId": "build-1792957994771",
+  "scenarioStatus": "covered",
+  "remaining": "Native MSP desk, client entry, Entry/Grid and authoritative customer route; full native edit of status, priority and category by the MSP; MSP assignment; customer-owned assignee, board, contact and client read-only for the MSP; customer-only sections absent; customer assigns natively and writes privately; viewer read-only; review ticket restored.",
+  "durationSeconds": 93.76,
+  "sha256": "e15ba6c8bd8e994a12643ac278bd0ae6d71bb1a78ea8402ca929d6544978fbe8",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-layout-boundaries-56e7/recording.json",
+      "name": "00-overview-native-layout-boundaries-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 37.72,
+      "offsetSeconds": 0,
+      "sha256": "0fed567ef060887efaaaf8f0951de04da1fe95f6a2e015ae185296514cf580fe",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-layout-boundaries-56e7/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 5
+    },
+    {
+      "metadata": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-walkthrough-56e7/recording.json",
+      "name": "00-overview-native-walkthrough-56e7",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 56.04,
+      "offsetSeconds": 37.72,
+      "sha256": "8add6c11d0683266b075003a351317de30fb3b677ab71f54792e5bb4ad3eeb7b",
+      "path": "continuation-ef194916/runs/56e708a31b0c68e2c287863ddbe73adc2422b1e7/00-overview-native-walkthrough-56e7/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 14
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "00-overview-native-layout-boundaries-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 27.889,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 30.023,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.04,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 32.791,
+      "title": "QA-shared-Entry-uses-same-qualified-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 33.574,
+      "title": "QA-shared-Grid-uses-same-qualified-work",
+      "actor": "qa"
+    },
+    {
+      "seconds": 35.99,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 36.833,
+      "title": "customer-native-route-keeps-authoritative-ticket",
+      "actor": "alice"
+    },
+    {
+      "seconds": 37.72,
+      "title": "00-overview-native-walkthrough-56e7",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 38.425,
+      "title": "baseline"
+    },
+    {
+      "seconds": 40.695,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 41.131,
+      "title": "customer-admin-creates-board-category-natively",
+      "actor": "alice"
+    },
+    {
+      "seconds": 43.287,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 48.45,
+      "title": "msp-status-priority-category-persist-on-customer-ticket",
+      "actor": "qa"
+    },
+    {
+      "seconds": 58.288,
+      "title": "msp-assignment-persists-after-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 59.195,
+      "title": "customer-owned-assignee-board-contact-client-are-read-only-for-msp",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.099000000000004,
+      "title": "grid-shows-same-edited-values",
+      "actor": "qa"
+    },
+    {
+      "seconds": 61.839,
+      "title": "grid-keeps-customer-owned-assignee-read-only",
+      "actor": "qa"
+    },
+    {
+      "seconds": 63.986,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 64.848,
+      "title": "customer-native-ticket-shows-msp-edits-and-assignment",
+      "actor": "alice"
+    },
+    {
+      "seconds": 65.669,
+      "title": "customer-assigns-its-own-technician-natively",
+      "actor": "alice"
+    },
+    {
+      "seconds": 68.45400000000001,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 69.661,
+      "title": "msp-sees-customer-assignee",
+      "actor": "qa"
+    },
+    {
+      "seconds": 71.965,
+      "title": "navigate",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 73.025,
+      "title": "viewer-sees-values-with-every-field-read-only",
+      "actor": "viewer"
+    },
+    {
+      "seconds": 75.132,
+      "title": "navigate",
+      "actor": "alice"
+    },
+    {
+      "seconds": 78.499,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 92.884,
+      "title": "review-ticket-restored",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

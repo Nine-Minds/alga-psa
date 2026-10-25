@@ -1,0 +1,3 @@
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/walkthrough.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/customer-video/d80b87427895f9487c14cba643e01edf.webm'
+file '/home/robert/alga-copies/feature-co-managed-it/docs/evidence/co-managed-deploy/implement-20261025/continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/walkthrough.webm'

@@ -1,0 +1,16 @@
+{
+  "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+  "relationship": "4f999745-cbd0-453e-905a-9a5b0210bbb0",
+  "ticket": "e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+  "route": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9",
+  "prefix": "CM cutoff 1792946015139",
+  "before": {
+    "capacity": 19,
+    "allocation": {
+      "allocation_id": "fa1d3b6a-fd8d-4d94-8553-571046c9335f",
+      "seats": 1,
+      "state": "active",
+      "released_at": null
+    }
+  }
+}

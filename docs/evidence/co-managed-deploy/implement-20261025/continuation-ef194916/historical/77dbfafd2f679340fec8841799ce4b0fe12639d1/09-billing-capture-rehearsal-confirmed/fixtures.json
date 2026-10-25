@@ -1,0 +1,110 @@
+{
+  "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+  "clientId": "151ce95d-225d-4756-be83-89580d04ef22",
+  "suffix": 1792940395745,
+  "profileId": "25f62551-6f09-4a3e-b975-43525c00aaff",
+  "contractId": "95dafe0f-6952-4a90-a3f4-91674f10f85c",
+  "assignmentId": "b3860dec-c274-40c3-8159-6e1182d244d7",
+  "lineId": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+  "serviceId": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+  "catalogServiceId": "6707cbdf-f85e-405c-b60b-4cd5c17a2bc8",
+  "configId": "18b9522d-2b41-4176-a01c-31836829f63a",
+  "cycleId": "949ef1f0-a8cc-4f99-a8e4-99b62312fc47",
+  "contractName": "CM Acceptance Contract 1792940395745",
+  "serviceName": "CM Contracted Support 1792940395745",
+  "catalogServiceName": "CM Catalog Support 1792940395745",
+  "profileName": "CM Acceptance Profile 1792940395745",
+  "rateCentsPerHour": 12000,
+  "setupStatus": "native-line-save-and-service-periods-confirmed-on-a46",
+  "setup": "Operator SQL creates a separate profile, unique hourly and catalog services, active contract/assignment/line and cycle. Product time capture, profile selection, approvals and invoice generation remain to execute.",
+  "periods": [
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2026-10-01",
+      "service_period_end": "2026-11-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2026-11-01",
+      "service_period_end": "2026-12-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2026-12-01",
+      "service_period_end": "2027-01-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2027-01-01",
+      "service_period_end": "2027-02-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2027-02-01",
+      "service_period_end": "2027-03-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2027-03-01",
+      "service_period_end": "2027-04-01",
+      "lifecycle_state": "generated"
+    },
+    {
+      "schedule_key": "schedule:24ac76c8-df59-4b10-8371-c56222904580:1c1f541f-9854-45a5-b0a6-db5509b6b7aa:client:advance",
+      "obligation_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "service_period_start": "2027-04-01",
+      "service_period_end": "2027-05-01",
+      "lifecycle_state": "generated"
+    }
+  ],
+  "verifiedAt": "2026-10-25T15:08:28.880675+00:00",
+  "stamp": 1792941874918,
+  "userId": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+  "teamId": "54a57136-5e4e-41c1-a6f1-5368f2342b01",
+  "email": "cm.billing.1792941874918@cmreview.test",
+  "name": "CM Billing 1792941874918",
+  "taskId": "d07b5183-f423-4cef-8df3-d27a7e1619dd",
+  "projectId": "0fb32387-98af-4712-a323-abae6ba2868c",
+  "taskRoute": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/d07b5183-f423-4cef-8df3-d27a7e1619dd",
+  "entries": [
+    {
+      "entry_id": "2d75e4e4-2ad9-450a-b611-8d6cdacb1e4d",
+      "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+      "work_item_type": "co_managed",
+      "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+      "billing_mode": "commercial",
+      "billable_duration": 15,
+      "service_id": "b20eeca6-43d6-4f12-af3f-7ee3cf64d28f",
+      "contract_line_id": "1c1f541f-9854-45a5-b0a6-db5509b6b7aa",
+      "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+      "notes": "CM billing 1792941874918 contracted"
+    },
+    {
+      "entry_id": "fd35a828-a9c2-409d-9ce6-adecff95e2dc",
+      "time_sheet_id": "86dee19d-135d-4286-a178-da3c6e31aade",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "user_id": "473bbfc0-838f-4cf3-ae65-228c30f1bdb8",
+      "work_item_type": "co_managed",
+      "work_item_id": "cfb6e09a-b513-4e28-ac98-a8257af2921a",
+      "billing_mode": "commercial",
+      "billable_duration": 6,
+      "service_id": "6707cbdf-f85e-405c-b60b-4cd5c17a2bc8",
+      "contract_line_id": null,
+      "work_reference_billing_profile_id": "25f62551-6f09-4a3e-b975-43525c00aaff",
+      "notes": "CM billing 1792941874918 catalog"
+    }
+  ]
+}

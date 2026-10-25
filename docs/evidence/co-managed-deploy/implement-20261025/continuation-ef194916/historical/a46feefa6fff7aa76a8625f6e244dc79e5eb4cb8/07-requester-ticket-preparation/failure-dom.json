@@ -1,0 +1,258 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/client-portal/tickets",
+  "text": "AlgaPSA\n\nWORKSPACE\n\nDashboard\nTickets\nService Requests\nProjects\nAppointments\nMy devices\n\nRESOURCES\n\nDocuments\nKnowledge Base\n\nMORE\n\nProfile\nClient Settings\nTickets\nCR\nAll Statuses\nAll Response Statuses\nAll Priorities\nFilter by category\nCreate Support Ticket\n1 column hidden.\nShow all\nTitle\n\t\nStatus\n\t\nPriority\n\t\nDue Date\n\t\nAssigned To\n\n\nCM DESK BULK 1792935847416 2\nD8474162\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nSMOKE callout count change 142333\n000002\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931483404 0\nD4834040\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931483404 1\nD4834041\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931783979 0\nD7839790\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931783979 1\nD7839791\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931890975 0\nD8909750\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931890975 1\nD8909751\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931944987 0\nD9449870\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n\nCM DESK BULK 1792931944987 1\nD9449871\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nNo due date\n\t\n\n1 - 10 of 22 items\n\n1\n2\n3\n10 items/page\nCreate Support Ticket\n\n\n\n\nCM DESK delegated 1792931006582\nSelect Board\nCM DESK delegated 1792931006582\nService Desk\nSelect Priority\nSelect Priority\nLow\nCritical\nMedium\nHigh\nUrgent\nCancel\nCreate Ticket",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "client-sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "radix-_r_4_",
+      "text": "CR",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_c_",
+      "text": "All Statuses",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_f_",
+      "text": "All Response Statuses",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_i_",
+      "text": "All Priorities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Filter by category",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "client-portal-search-tickets-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reset-filters-button",
+      "text": "Reset",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-ticket-button",
+      "text": "Create Support Ticket",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "change-ticket-status-button",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-portal-tickets-table-pagination-prev-btn",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "3",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-portal-tickets-table-pagination-next-btn",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-portal-tickets-table-pagination-items-per-page",
+      "text": "10 items/page",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "client-ticket-title",
+      "text": "",
+      "value": "CM requester conversation 1792939194083",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-ticket-board",
+      "text": "CM DESK delegated 1792931006582",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select BoardCM DESK delegated 1792931006582Service Desk",
+      "value": "a649bb80-5276-4f18-a6fd-380a5e6d5b52",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-ticket-priority",
+      "text": "Select Priority",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select PriorityLowCriticalMediumHighUrgent",
+      "value": "678355aa-05c2-40ca-9e94-555572505096",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-ticket-button",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "submit-ticket-button",
+      "text": "Create Ticket",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "scenario": "03-scope-team-independent-grants-current",
+  "recordedAt": "2026-10-25T15:38:32.566Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T15:38:35.533Z",
+      "seconds": 2.967,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('option', { name: 'QA Tester', exact: true })\u001b[22m\n",
+  "durationSeconds": 30.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

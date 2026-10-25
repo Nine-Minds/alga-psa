@@ -1,0 +1,178 @@
+{
+  "guide": "guides/05-ticket-queue.html",
+  "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "scenarioStatus": "covered",
+  "remaining": "",
+  "durationSeconds": 52.68,
+  "sha256": "16edfcbd4487520a23b46845982fb56929a00a7f2735ed22b0c568828563e8a5",
+  "clips": [
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/recording.json",
+      "name": "05-current-mixed-recovery-confirmed",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 29.32,
+      "offsetSeconds": 0,
+      "sha256": "e97caeb5d988ec42dc893d946e29f6d6d62df8dfc1ce3bcd675fcf579e4a1320",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/walkthrough.webm",
+      "originalScenarioStatus": "partial",
+      "assertions": 14
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/recording.json",
+      "name": "05-current-mixed-recovery-confirmed / customer-video",
+      "kind": "secondary actual concurrent browser camera",
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "durationSeconds": 14.8,
+      "offsetSeconds": 29.32,
+      "sha256": "88ae15c873834b35d58d53e14db8d0a56f20395e8912ee3ecb8c9b136a1ff9a0",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-mixed-recovery-confirmed/customer-video/d80b87427895f9487c14cba643e01edf.webm"
+    },
+    {
+      "metadata": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/recording.json",
+      "name": "05-current-scope-export",
+      "kind": "primary actual browser capture",
+      "durationSeconds": 8.56,
+      "offsetSeconds": 44.120000000000005,
+      "sha256": "f0b758efc084d12911027c395346a610ffc4b034b4fd8ee76666a84b93544d12",
+      "path": "continuation-ef194916/runs/1b9b112749b948ee1b6611b91e07d52e7b98ba32/05-current-scope-export/walkthrough.webm",
+      "originalScenarioStatus": "passed",
+      "assertions": 5
+    }
+  ],
+  "excluded": [],
+  "chapters": [
+    {
+      "seconds": 0,
+      "title": "05-current-mixed-recovery-confirmed",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 8.983,
+      "title": "three-disposable-tickets-escalated-through-product",
+      "actor": "alice"
+    },
+    {
+      "seconds": 11.337,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 13.36,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 14.426,
+      "title": "qualified-filter-and-selection-set-survive-reload",
+      "actor": "qa"
+    },
+    {
+      "seconds": 14.541,
+      "title": "full-filtered-export-includes-all-authorized-rows",
+      "actor": "qa"
+    },
+    {
+      "seconds": 17.125,
+      "title": "customer-change-races-stale-selected-revision",
+      "actor": "qa"
+    },
+    {
+      "seconds": 19.087,
+      "title": "third-selected-explicit-only-grant-revoked",
+      "actor": "qa"
+    },
+    {
+      "seconds": 20.55,
+      "title": "reload-offers-explicit-frozen-intent-recovery",
+      "actor": "qa"
+    },
+    {
+      "seconds": 20.858,
+      "title": "mixed-results-distinguish-conflict-return-and-access-denied",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.111,
+      "title": "lost-response-replay-creates-one-handoff-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.264,
+      "title": "conflicted-item-does-not-receive-bulk-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 21.861,
+      "title": "oversight-retains-returned-work-without-revoked-ticket-or-duplication",
+      "actor": "qa"
+    },
+    {
+      "seconds": 22.387,
+      "title": "completed-return-requeries-working-membership",
+      "actor": "qa"
+    },
+    {
+      "seconds": 23.723,
+      "title": "customer-native-history-shows-the-successful-shared-note",
+      "actor": "qa"
+    },
+    {
+      "seconds": 29.32,
+      "title": "05-current-mixed-recovery-confirmed / customer-video",
+      "kind": "secondary actual concurrent browser camera"
+    },
+    {
+      "seconds": 44.120000000000005,
+      "title": "05-current-scope-export",
+      "kind": "primary actual browser capture"
+    },
+    {
+      "seconds": 46.449000000000005,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 47.888000000000005,
+      "title": "oversight-retains-selected-customer-and-search",
+      "actor": "qa"
+    },
+    {
+      "seconds": 48.592000000000006,
+      "title": "reload-retains-workspace-status-search-and-sort",
+      "actor": "qa"
+    },
+    {
+      "seconds": 50.589000000000006,
+      "title": "navigate",
+      "actor": "qa"
+    },
+    {
+      "seconds": 50.731,
+      "title": "one-visible-row-export-includes-all-three-filtered-rows-once",
+      "actor": "qa"
+    },
+    {
+      "seconds": 51.675000000000004,
+      "title": "detail-link-retains-customer-and-relationship",
+      "actor": "qa"
+    },
+    {
+      "seconds": 51.74100000000001,
+      "title": "product-back-navigation-restores-applied-qualified-scope",
+      "actor": "qa"
+    }
+  ],
+  "meaning": "Composite of committed actual browser captures. Failed/partial source segments retain their recorded outcome. Playback verification does not upgrade scenario acceptance."
+}

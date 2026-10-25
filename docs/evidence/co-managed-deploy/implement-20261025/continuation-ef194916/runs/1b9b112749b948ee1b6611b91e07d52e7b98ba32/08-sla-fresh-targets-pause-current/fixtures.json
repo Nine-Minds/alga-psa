@@ -1,0 +1,13 @@
+{
+  "policyId": "c02946a6-a0d9-413a-b6db-0ab5f177a60f",
+  "tickets": [
+    "d752f251-369d-41de-b167-5e24b7bed410",
+    "e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+  ],
+  "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+  "relationship": "4f999745-cbd0-453e-905a-9a5b0210bbb0",
+  "operation": "c28dddbc-b9b1-4309-971b-14e472739a5c",
+  "oldPolicy": "",
+  "oldMap": "306498fd-9625-4285-bbaf-6e5d4baaf4c5",
+  "setup": "Operator SQL creates only isolated policy/client override and un-escalated tickets; mappings and responsibility use actual UI"
+}

@@ -1,0 +1,47 @@
+{
+  "scenario": "09-billing-native-line-save-preparation",
+  "recordedAt": "2026-10-25T16:05:13.153Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "Isolated hourly line saved through native UI",
+      "passed": true,
+      "at": "2026-10-25T16:05:15.773Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:05:15.548Z",
+      "seconds": 2.395,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts&contractId=8f95071f-ee8d-4705-a980-391b83b32fbd&contractView=lines"
+    },
+    {
+      "at": "2026-10-25T16:05:15.773Z",
+      "seconds": 2.62,
+      "actor": "qa",
+      "title": "Isolated hourly line saved through native UI"
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Billing prerequisite only; no invoice or time acceptance."
+  ],
+  "durationSeconds": 3.64,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

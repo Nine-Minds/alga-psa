@@ -1,0 +1,42 @@
+{
+  "customer": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+  "ticketId": "16a124c1-1309-4ea5-89aa-cc7c55fd059c",
+  "keyIds": [
+    {
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a",
+      "id": "ad144a79-4dea-4be1-b3cc-9bdb20187e4f",
+      "userId": "797f8426-e659-4430-8e03-6efc43255471"
+    },
+    {
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "id": "b012624e-ac59-4887-bffd-ad226faffb24",
+      "userId": "cbc57194-39a3-44c5-a605-07e5a999ef41"
+    }
+  ],
+  "bundles": [
+    {
+      "bundleId": "c8e38cb5-0a63-49d9-b1d9-61354a4a6d8e",
+      "revisionId": "6d161c7e-c108-4784-9efe-bfe79da2fda0",
+      "redactedFields": [
+        "title",
+        "description",
+        "priority_id"
+      ]
+    },
+    {
+      "bundleId": "4fd9142c-6690-4754-a43e-8c8bf1c0e963",
+      "revisionId": "748e43e1-2dbd-4f96-87b5-c18ce1a7c3b1",
+      "redactedFields": [
+        "attachments"
+      ]
+    }
+  ],
+  "file": {
+    "fileName": "cm-scope-1792942366365.txt",
+    "href": "/api/co-management/attachments/cb6efd2c-3518-45a5-abb7-f4bdb953738d?customerTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&relationshipId=4f999745-cbd0-453e-905a-9a5b0210bbb0&ticketId=16a124c1-1309-4ea5-89aa-cc7c55fd059c&storeTenant=20b527f2-8631-4fe7-a744-dc20883a0c5a&threadId=538ecfea-c412-4ae7-8b8d-23897a5634d0&commentId=538ecfea-c412-4ae7-8b8d-23897a5634d0",
+    "sha256": "889b55988ed1ba042152c1297708b358b85043ae1cc64d73e3a387cde53238a1"
+  },
+  "finalState": "Original customer Service Desk scope restored; isolated board unshared, explicit ticket 0 already revoked, test team removed. QA retained for the separately planned lifecycle fixture.",
+  "keysRevoked": true,
+  "bundleAssignmentsInactive": true
+}

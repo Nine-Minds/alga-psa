@@ -1,0 +1,9 @@
+{
+  "method": "SQL prerequisite creates three un-escalated customer tickets only; all responsibility transitions use product UI",
+  "tickets": [
+    "a562b1df-845a-42d6-b0b3-78b27682f4fa",
+    "e9362db2-a4ea-40e8-a00e-ef854790e7dd",
+    "f9ddf614-0c5a-4ed3-a070-c410ec47f7b7"
+  ],
+  "prefix": "CM DESK BULK 1792960382398"
+}

@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-25T16:39:33.035505+00:00",
+  "evidenceSnapshotParent": "HEAD",
+  "applicationSourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+  "buildId": "build-1792941614066",
+  "healthStatus": 200,
+  "HTMLBuildStampMatches": true,
+  "PID": 43770,
+  "startTicks": "308909484",
+  "applicationParity": true,
+  "evidenceOnlyChangedPathsSinceApplicationSource": 574,
+  "observation": "Bounded serving process evidence only; no long-term memory-stability claim."
+}

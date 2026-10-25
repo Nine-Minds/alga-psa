@@ -1,0 +1,139 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/client-portal/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "text": "AlgaPSA\n\nWORKSPACE\n\nDashboard\nTickets\nService Requests\nProjects\nAppointments\nMy devices\n\nRESOURCES\n\nDocuments\nKnowledge Base\n\nMORE\n\nProfile\nClient Settings\nTickets\nCR\nBack to Tickets\n#000003\nCreated Oct 25, 2026 10:40 AM (about 1 hour ago)\nLast Updated Oct 25, 2026 10:40 AM (about 1 hour ago)\nCM requester conversation 1792939250877\nStatus\nOpen\nAwaiting Your Response\nCreated via Client Portal\nAssigned To\n-\nPriority\nHigh\nDue Date\n-\nDescription\n\nDisposable requester audience and file acceptance ticket\n\nComments\nAdd Comment\nAll Comments (2)\nResolution (0)\nNewest first\nQT\n\nQA Tester (Oz)\n\nOct 25, 2026, 11:58 AM\n\nCM conversation 1792943905070 requester\n\nAttachments\ncm-requester-1792943905070.txt\nReact\nQT\n\nQA Tester (Oz)\n\nOct 25, 2026, 11:38 AM\n\nCM conversation 1792942712645 requester\n\nAttachments\ncm-requester-1792942712645.txt\nReact\nDocuments\nAdd document\nUpload file\nLink existing\nNo documents found",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "client-sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "radix-_r_4_",
+      "text": "CR",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-to-tickets-button",
+      "text": "Back to Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7_",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-6a1806e0-d0c3-4349-ae81-a95b95d7dbf1-conversation-show-comment-editor-btn",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_1h_-trigger-0",
+      "text": "All Comments (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_1h_-trigger-1",
+      "text": "Resolution (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-6a1806e0-d0c3-4349-ae81-a95b95d7dbf1-conversation-toggle-order-btn",
+      "text": "Newest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-cf012854-777a-45e0-8124-30aa4eb18226-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cf012854-777a-45e0-8124-30aa4eb18226-reactions-add-reaction-button",
+      "text": "React",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-8728906a-85c5-48f4-b561-f99979ae62c9-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "8728906a-85c5-48f4-b561-f99979ae62c9-reactions-add-reaction-button",
+      "text": "React",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-documents-section-documents-new-document-btn",
+      "text": "Add document",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-documents-section-documents-upload-btn",
+      "text": "Upload file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-documents-section-documents-link-documents-btn",
+      "text": "Link existing",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "customerEntry": {
+    "entry_id": "2a08cc69-d5cf-40b6-84d6-78b2d385c923",
+    "billing_mode": "operational",
+    "billable_duration": 0,
+    "service_id": null,
+    "contract_line_id": null,
+    "work_item_type": "project_task",
+    "work_item_id": "3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5",
+    "minutes": 6
+  },
+  "commercialEntries": [
+    {
+      "entry_id": "7fc0b76c-f887-4a63-88bb-89b3341a37ea",
+      "time_sheet_id": "75850b17-59ae-4dda-8906-fae1b04523fb",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "user_id": "f5fc74ba-8a64-4de9-b552-5d059b3578b1",
+      "work_item_type": "co_managed",
+      "work_item_id": "99eb95c7-2aa2-4af9-89f8-fdfaa79da960",
+      "billing_mode": "commercial",
+      "billable_duration": 15,
+      "service_id": "c7c29168-250e-4294-8d9d-76fee5c4425e",
+      "contract_line_id": "a4c2d8f0-d82d-415e-a553-977fa5afcad1",
+      "work_reference_billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3",
+      "notes": "CM billing 1792945920805 contracted"
+    },
+    {
+      "entry_id": "22d6acc4-1e3d-4769-bf10-f8668793decd",
+      "time_sheet_id": "75850b17-59ae-4dda-8906-fae1b04523fb",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "user_id": "f5fc74ba-8a64-4de9-b552-5d059b3578b1",
+      "work_item_type": "co_managed",
+      "work_item_id": "99eb95c7-2aa2-4af9-89f8-fdfaa79da960",
+      "billing_mode": "commercial",
+      "billable_duration": 6,
+      "service_id": "2ee6f215-feee-4f42-924b-09533a329d47",
+      "contract_line_id": null,
+      "work_reference_billing_profile_id": "a5859741-4347-45ea-9fc4-20138e9875c3",
+      "notes": "CM billing 1792945920805 catalog"
+    }
+  ],
+  "expectedMinutes": {
+    "customer": 6,
+    "msp": 21,
+    "total": 27
+  }
+}

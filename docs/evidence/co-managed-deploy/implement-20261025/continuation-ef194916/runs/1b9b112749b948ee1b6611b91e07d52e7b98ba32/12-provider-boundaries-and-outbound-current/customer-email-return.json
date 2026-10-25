@@ -1,0 +1,104 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/email",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nEmail\n791752cb-ce46-4a52-8fa2-8aa9b4df0aa8\nQuick Create\nDR\nEmail\nEmail Configuration\n\nConfigure email providers, domains, and settings\n\nInbound Email\nOutbound Email\nConfigure outbound email for your organization.\nOutbound Provider\n\nChoose how outbound emails are sent from your organization.\n\nNine Minds Managed\n\nEmails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.\n\nManaged Domains\n\nAdd a custom domain and follow the DNS instructions to verify ownership.\n\nDomain\nAdd Domain\n\nNo managed domains yet. Add one to get started.",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "DR",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Inbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Outbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "outbound-provider-select",
+      "text": "Nine Minds Managed",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "managed-domain-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-managed-domain-button",
+      "text": "Add Domain",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

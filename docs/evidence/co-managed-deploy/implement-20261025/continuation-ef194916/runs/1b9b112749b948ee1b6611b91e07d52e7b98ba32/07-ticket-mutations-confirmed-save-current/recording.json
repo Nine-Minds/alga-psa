@@ -1,0 +1,171 @@
+{
+  "scenario": "07-ticket-mutations-confirmed-save-current",
+  "recordedAt": "2026-10-25T16:17:47.725Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "customer-reply-persists-on-MSP-root",
+      "passed": true,
+      "at": "2026-10-25T16:17:52.705Z"
+    },
+    {
+      "id": "customer-cannot-edit-or-delete-MSP-author",
+      "passed": true,
+      "at": "2026-10-25T16:17:52.709Z"
+    },
+    {
+      "id": "MSP-sees-customer-reply-with-author-organization",
+      "passed": true,
+      "at": "2026-10-25T16:17:54.916Z"
+    },
+    {
+      "id": "eligible-author-edit-propagates-to-customer-with-reply-retained",
+      "passed": true,
+      "at": "2026-10-25T16:17:57.983Z"
+    },
+    {
+      "id": "deleted-root-is-tombstoned-and-customer-reply-survives",
+      "passed": true,
+      "at": "2026-10-25T16:18:01.729Z"
+    },
+    {
+      "id": "qa-deleted-root-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T16:18:04.196Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "alice-deleted-root-file-link-denied",
+      "passed": true,
+      "at": "2026-10-25T16:18:06.278Z",
+      "data": {
+        "status": 404
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:17:50.359Z",
+      "seconds": 2.634,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:17:52.705Z",
+      "seconds": 4.98,
+      "actor": "alice",
+      "title": "customer-reply-persists-on-MSP-root"
+    },
+    {
+      "at": "2026-10-25T16:17:52.709Z",
+      "seconds": 4.984,
+      "actor": "alice",
+      "title": "customer-cannot-edit-or-delete-MSP-author"
+    },
+    {
+      "at": "2026-10-25T16:17:54.870Z",
+      "seconds": 7.145,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:17:54.916Z",
+      "seconds": 7.191,
+      "actor": "qa",
+      "title": "MSP-sees-customer-reply-with-author-organization"
+    },
+    {
+      "at": "2026-10-25T16:17:57.933Z",
+      "seconds": 10.208,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:17:57.983Z",
+      "seconds": 10.258,
+      "actor": "alice",
+      "title": "eligible-author-edit-propagates-to-customer-with-reply-retained"
+    },
+    {
+      "at": "2026-10-25T16:17:59.955Z",
+      "seconds": 12.23,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:18:01.729Z",
+      "seconds": 14.004,
+      "actor": "qa",
+      "title": "deleted-root-is-tombstoned-and-customer-reply-survives"
+    },
+    {
+      "at": "2026-10-25T16:18:03.813Z",
+      "seconds": 16.088,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:18:04.196Z",
+      "seconds": 16.471,
+      "actor": "qa",
+      "title": "qa-deleted-root-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:18:06.197Z",
+      "seconds": 18.472,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:18:06.278Z",
+      "seconds": 18.553,
+      "actor": "alice",
+      "title": "alice-deleted-root-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:18:08.250Z",
+      "seconds": 20.525,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'cm-requester-1792943905070.txt', exact: true }).locator('..').getByRole('button', { name: 'Remove', exact: true })\u001b[22m\n",
+  "durationSeconds": 46.56,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

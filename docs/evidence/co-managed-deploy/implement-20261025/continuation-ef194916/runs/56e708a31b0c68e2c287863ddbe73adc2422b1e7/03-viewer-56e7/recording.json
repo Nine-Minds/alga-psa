@@ -1,0 +1,120 @@
+{
+  "scenario": "03-viewer-56e7",
+  "recordedAt": "2026-10-25T20:37:09.691Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "viewer-entry-category-readonly",
+      "passed": true,
+      "at": "2026-10-25T20:37:13.923Z"
+    },
+    {
+      "id": "viewer-entry-current-status-readable",
+      "passed": true,
+      "at": "2026-10-25T20:37:13.923Z"
+    },
+    {
+      "id": "viewer-entry-no-save-bar",
+      "passed": true,
+      "at": "2026-10-25T20:37:13.925Z"
+    },
+    {
+      "id": "viewer-grid-no-writable-composer",
+      "passed": true,
+      "at": "2026-10-25T20:37:15.140Z"
+    },
+    {
+      "id": "shared-grid-no-native-tags-controls",
+      "passed": true,
+      "at": "2026-10-25T20:37:15.140Z"
+    },
+    {
+      "id": "unassigned-local-administrator-cannot-read-qualified-ticket",
+      "passed": true,
+      "at": "2026-10-25T20:37:18.028Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:37:12.032Z",
+      "seconds": 2.341,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:37:13.923Z",
+      "seconds": 4.232,
+      "actor": "viewer",
+      "title": "viewer-entry-category-readonly"
+    },
+    {
+      "at": "2026-10-25T20:37:13.923Z",
+      "seconds": 4.232,
+      "actor": "viewer",
+      "title": "viewer-entry-current-status-readable"
+    },
+    {
+      "at": "2026-10-25T20:37:13.925Z",
+      "seconds": 4.234,
+      "actor": "viewer",
+      "title": "viewer-entry-no-save-bar"
+    },
+    {
+      "at": "2026-10-25T20:37:15.140Z",
+      "seconds": 5.449,
+      "actor": "viewer",
+      "title": "viewer-grid-no-writable-composer"
+    },
+    {
+      "at": "2026-10-25T20:37:15.140Z",
+      "seconds": 5.449,
+      "actor": "viewer",
+      "title": "shared-grid-no-native-tags-controls"
+    },
+    {
+      "at": "2026-10-25T20:37:15.809Z",
+      "seconds": 6.118,
+      "actor": "viewer",
+      "title": "Prerequisite unassigned local administrator fixture",
+      "data": {
+        "id": "16c2f5ac-9222-42df-9fce-d2f8869f344f",
+        "email": "desk.unassigned.1792960635190@emeraldcity.oz",
+        "setup": "SQL; no customer/staff assignment granted"
+      }
+    },
+    {
+      "at": "2026-10-25T20:37:18.016Z",
+      "seconds": 8.325,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T20:37:18.028Z",
+      "seconds": 8.337,
+      "actor": "viewer",
+      "title": "unassigned-local-administrator-cannot-read-qualified-ticket"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Viewer Entry/Grid segment only; scope/API/revocation are recorded separately."
+  ],
+  "durationSeconds": 9.2,
+  "actors": [
+    {
+      "name": "viewer",
+      "email": "noassign@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

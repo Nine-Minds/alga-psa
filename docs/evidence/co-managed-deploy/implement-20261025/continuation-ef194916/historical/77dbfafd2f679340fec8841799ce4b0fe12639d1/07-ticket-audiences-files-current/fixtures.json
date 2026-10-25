@@ -1,0 +1,25 @@
+{
+  "ticketId": "6a1806e0-d0c3-4349-ae81-a95b95d7dbf1",
+  "title": "CM requester conversation 1792939250877",
+  "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+  "requesterUserId": "5c078e8f-1985-4c39-babc-0d38350973a7",
+  "contactId": "b934eff4-d983-4930-8e38-eb6a23a9fe12",
+  "requesterEmail": "cm.requester.1792939134918@cmreview.test",
+  "prefix": "CM conversation 1792941243760",
+  "messages": [
+    {
+      "key": "shared",
+      "text": "CM conversation 1792941243760 shared",
+      "who": "qa"
+    }
+  ],
+  "files": [
+    {
+      "key": "shared",
+      "fileName": "cm-shared-1792941243760.txt",
+      "href": "/api/co-management/attachments/8c68bb3d-aca4-4ca1-94e7-c0cd129f2574?customerTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&relationshipId=c7de2b20-f1d9-4374-b7bb-c223f681955e&ticketId=6a1806e0-d0c3-4349-ae81-a95b95d7dbf1&storeTenant=1f98df77-cd15-44c2-8f4d-42ff52d01e84&threadId=c90586a1-fb9e-4916-9939-5b071c039b38&commentId=c90586a1-fb9e-4916-9939-5b071c039b38",
+      "sha256": "ffcc65e046a858006b212728b116403923f2b92dea9fa0f61b2aad6738032549"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "scenario": "07-conversation-lifecycle-continuation",
+  "recordedAt": "2026-10-25T16:53:04.374Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "explicit-file-removal-denies-old-link",
+      "passed": true,
+      "at": "2026-10-25T16:53:09.303Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "removed-file-is-absent-after-reload",
+      "passed": true,
+      "at": "2026-10-25T16:53:09.331Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:53:04.641Z",
+      "seconds": 0.267,
+      "title": "Resume accepted mutation segment after persisted reply/edit/tombstone",
+      "data": {
+        "earlier": "07-ticket-mutations-confirmed-save-current",
+        "remaining": "attachment removal, transfer/restriction and uncertain publication recovery"
+      }
+    },
+    {
+      "at": "2026-10-25T16:53:07.399Z",
+      "seconds": 3.025,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:53:09.303Z",
+      "seconds": 4.929,
+      "actor": "qa",
+      "title": "explicit-file-removal-denies-old-link",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:53:09.331Z",
+      "seconds": 4.957,
+      "actor": "qa",
+      "title": "removed-file-is-absent-after-reload"
+    },
+    {
+      "at": "2026-10-25T16:53:11.338Z",
+      "seconds": 6.964,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    },
+    {
+      "at": "2026-10-25T16:53:16.393Z",
+      "seconds": 12.019,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/6a1806e0-d0c3-4349-ae81-a95b95d7dbf1"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "whole-private-thread-preview-counts-root-reply-and-file",
+  "durationSeconds": 13.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Time approval and billing · Co-Managed IT</title><meta name="description" content="Time approval and billing: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
+<body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation"><a href="index.html">All section guides</a><a href="/">Ticket-screen walkthrough</a></nav></header>
+<main id="content"><aside id="implement-current-status" class="provenance"><strong>Current Implement result:</strong> Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false. <a href="/evidence/implement-20261025/acceptance.html">Current acceptance ledger and evidence</a>. Historical recordings retain their original build and partial result.</aside><aside class="provenance"><strong>Guide publication revision:</strong> <code>475e84aa343aa82c5c16901492925960cbd0de53</code>. <strong>Recorded runtime revision:</strong> <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Recording status for this guide: <strong>complete</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status">Canonical application: build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Guides: 2 COVERED / 12 PARTIAL. Requirements: 32 verified / 226 implemented-unverified / 2 external provider portions. Review and recording readiness remain false.</aside><h1 id="time-approval-and-billing">Time approval and billing</h1>
+<p>MSP commercial effort stays in the MSP workspace. Customer operational effort stays with the customer. Their combined display must not turn customer effort into billable MSP time.</p>
+<h2 id="before-you-start">Before you start</h2>
+<p>Use an assigned MSP technician, a customer technician, an MSP timesheet approver and a billing operator. Prepare a current time period and a valid service/contract line for the sponsor&#39;s client. Start on <a href="http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500">shared ticket 000002</a>, or a disposable shared task.</p>
+<p>The October 25 production check at source <code>cd28aa9531f7</code> (build
+<code>build-1792904848073</code>) verifies the repaired native timesheet projection: Grid
+shows both shared work rows, and List shows five entries totaling 4:15, including
+the exact 15-minute commercial entry <code>9bcd33ca</code>. A new customer entry
+<code>1a9812cb</code> persisted after reload as five minutes of operational effort, with
+zero billable minutes and no service or contract line. The separate recording
+for this guide retains those outcomes and the actual build revision.</p>
+<p>These checks close the demonstrated missing-row display failure. Approval,
+invoice generation, timer recovery, and the previously reported invalid
+contract-line behavior after a date change remain unaccepted. Do not infer
+those results from correct rows or totals.</p>
+<h2 id="risks-to-check">Risks to check</h2>
+<ul>
+<li>Lost billable MSP time or invisible timesheet rows.</li>
+<li>Customer operational effort appearing on an MSP invoice.</li>
+<li>Duplicate time after stopwatch/manual-save recovery.</li>
+<li>Approval or billing losing the original customer/work attribution.</li>
+</ul>
+<h2 id="1-persist-one-commercial-entry">1. Persist one commercial entry</h2>
+<p>As QA, open <strong>Log time</strong> on the shared ticket. Choose the date before selecting the service. Enter a distinct description and a small known duration such as 15 minutes, complete the required fields and save once. Reload the ticket, reopen its time-entry list, and record the saved entry and MSP effort delta.</p>
+<p>Expected: one persisted entry belongs to Oz, points to this qualified customer work and adds exactly 15 minutes to MSP effort. A changed picker or closed dialog without a persisted row is not a pass. The work reference uses <code>co_managed</code>, not the foreign customer&#39;s native ticket ID.</p>
+<h2 id="2-check-stopwatch-and-customer-effort-separately">2. Check stopwatch and customer effort separately</h2>
+<p>If the native stopwatch is offered to the authorized technician, start it, stop it after a recorded interval, and complete its time-entry flow. Reload and compare the entry count and duration; stopping must not silently create two entries.</p>
+<p>As the customer, record a small operational entry on the same authoritative work. Reload <strong>Customer / MSP / Combined</strong> effort from both permitted views.</p>
+<p>Expected: each organization owns its own entry, and the combined total is the arithmetic sum of the disclosed effort. Customer time does not carry MSP commercial service, contract line or invoice attributes. The viewer must not gain a time-entry flow.</p>
+<h2 id="3-follow-the-entry-into-normal-timesheets">3. Follow the entry into normal timesheets</h2>
+<p>As the MSP technician, open <a href="http://feature-co-managed-it.localhost:23374/msp/time-entry">Time Entry</a>, select the relevant period and inspect its timesheet details. Find the exact review entry and compare duration, description, work identity and total.</p>
+<p>Submit through the normal timesheet controls, then inspect it as an approver at <a href="http://feature-co-managed-it.localhost:23374/msp/time-sheet-approvals">Timesheet Approvals</a>. Approve or return the disposable sheet through the offered workflow, then reload both views.</p>
+<p>Expected: shared rows are visible and identifiable wherever totals include them. A missing row with a correct total is a failure to record, not a reason to use only the ticket effort display. If this blocks approval, stop this flow and preserve evidence.</p>
+<h2 id="4-reconcile-commercial-billing">4. Reconcile commercial billing</h2>
+<p>Use the prepared client contract and service in <a href="http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing">Invoicing</a>. The Billing root can open Quotes; select <strong>Invoicing</strong> in the sidebar. Review eligible approved time and generate a draft invoice through the ordinary billing workflow only when that setup is available. Open the resulting invoice and trace its source time back to the review entry.</p>
+<p>Expected: MSP commercial time reaches the correct MSP client and contract line once; customer operational entries never become sponsor billable time. The draft, approved minutes and source entry must reconcile. Do not infer this result from a ticket&#39;s combined effort total.</p>
+<p>Billing-profile controls are implemented on qualified time surfaces that mount them. The native shared ticket does not gain a general billing/quick-invoice section. If a required profile cannot be configured through the prepared surface, record the setup gap rather than assuming a ticket billing control exists.</p>
+<h2 id="pass-criteria-and-retained-state">Pass criteria and retained state</h2>
+<p>Pass when exact persisted entries agree across effort, timesheet, approval and draft billing, with commercial and operational ownership preserved. Keep time and financial evidence; do not delete entries to restore a display count. Record any absent rows, unavailable period or missing contract as a distinct failure or blocker.</p>
+<h2 id="source-references">Source references</h2>
+<ul>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/useCoManagedSharedTimeConfig.ts">Native shared-ticket time reference</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedTimeEntry.tsx">Qualified time launcher</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/server/src/components/co-managed/CoManagedTimeBillingProfile.tsx">Commercial billing profile</a></li>
+<li><a href="https://github.com/Nine-Minds/alga-psa/blob/475e84aa343aa82c5c16901492925960cbd0de53/packages/co-managed/src/timeEntryBillingMode.ts">Shared time billing mode</a></li>
+</ul>
+<section class="walkthrough-recording" id="09-time-and-billing-recording" data-recording-status="complete" aria-labelledby="09-time-and-billing-recording-title">
+<h2 id="09-time-and-billing-recording-title">Walkthrough recording</h2>
+<p>Recorded 2026-10-25T11:48:23.011Z at revision <code>c04a67fff5b553d2c2a1f55a14194f829343adae</code>. Playback and chapter seeking were verified.</p>
+<p><strong>Scenario result:</strong> partial; consult outcomes and limitations. A playable recording does not establish acceptance of unverified steps.</p>
+<ul class="recording-limitations"><li>Native timesheet and billing navigation/projections inspected. No whole sheet, older entries or existing invoice was changed. Approval and generation require a fully isolated eligible billing window.</li><li>Native customer operational time launcher exercised; exact persisted receipt determines write outcome. Full-sheet approvals and invoicing remain separate.</li><li>Recorded on canonical production c04a67fff5/build-1792926045353. Publication changes are evidence only. Full guide and release acceptance remain incomplete.</li></ul>
+<video controls preload="metadata" aria-label="guides/09-time-and-billing.html walkthrough recording"><source src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.webm" type="video/webm"><track kind="chapters" srclang="en" label="Chapters" src="current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt" default></video>
+<label for="09-time-and-billing-chapters">Chapters</label><select id="09-time-and-billing-chapters"><option value="0">09 timesheet production</option><option value="8.882">Native timesheet projection</option><option value="11.222">Exact new commercial entry row</option><option value="16.282">Billing entry surface</option><option value="17.24">09 current operational time</option><option value="25.122">Customer native task time launcher</option></select>
+<p><a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.json">Recording metadata</a> · <a href="current/c04a67fff5b553d2c2a1f55a14194f829343adae/09-time-and-billing.vtt">Chapter file</a></p>
+<script>(()=>{const section=document.getElementById("09-time-and-billing-recording");const video=section.querySelector('video');const select=section.querySelector('select');select.addEventListener('change',()=>{video.currentTime=Number(select.value);video.play();});video.addEventListener('timeupdate',()=>{let active=0;for(let i=0;i<select.options.length;i++){if(Number(select.options[i].value)<=video.currentTime)active=i;}select.selectedIndex=active;});})();</script>
+</section></main>
+<footer><nav aria-label="Footer navigation"><a href="index.html">Back to all guides</a><a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>

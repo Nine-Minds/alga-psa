@@ -1,0 +1,589 @@
+{
+  "scenario": "10-departure-c-cutoff-56e7",
+  "recordedAt": "2026-10-25T20:26:36.398Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation",
+      "passed": true,
+      "at": "2026-10-25T20:26:37.315Z",
+      "data": {
+        "allocation": {
+          "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+          "seats": 1,
+          "state": "active",
+          "released_at": null
+        },
+        "delivery": {
+          "status": "pending",
+          "attempt_count": 1,
+          "error_code": "email_provider_failed",
+          "completed_at": null
+        },
+        "slaStartedAt": "2026-10-25T20:24:58.087Z",
+        "pauseReasons": [
+          "awaiting_client"
+        ],
+        "resolutionDueAt": null
+      }
+    },
+    {
+      "id": "allocation-released-once-and-paid-pool-unchanged",
+      "passed": true,
+      "at": "2026-10-25T20:26:40.397Z",
+      "data": {
+        "after": {
+          "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-25T20:26:39.8+00:00"
+        },
+        "capacity": 19
+      }
+    },
+    {
+      "id": "msp-sla-clock-is-held-by-the-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:26:40.532Z",
+      "data": {
+        "before": [
+          "awaiting_client"
+        ],
+        "after": [
+          "awaiting_client",
+          "customer_responsible"
+        ],
+        "addedByCutoff": [
+          "customer_responsible"
+        ],
+        "resolutionDueAt": null
+      }
+    },
+    {
+      "id": "refresh-repeats-neither-closure-nor-release",
+      "passed": true,
+      "at": "2026-10-25T20:26:41.186Z"
+    },
+    {
+      "id": "queued-delivery-is-skipped-not-sent-after-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:28:00.843Z",
+      "data": {
+        "settled": {
+          "status": "skipped",
+          "attempt_count": 2,
+          "error_code": null,
+          "completed_at": "2026-10-25T20:28:00.289678+00:00"
+        },
+        "controlMailStillPresent": true
+      }
+    },
+    {
+      "id": "old-live-shared-file-denied",
+      "passed": true,
+      "at": "2026-10-25T20:28:01.159Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-live-MSPprivate-file-denied",
+      "passed": true,
+      "at": "2026-10-25T20:28:01.175Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-live-customerprivate-file-denied",
+      "passed": true,
+      "at": "2026-10-25T20:28:01.190Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "old-shared-route-no-longer-shows-live-ticket",
+      "passed": true,
+      "at": "2026-10-25T20:28:03.143Z"
+    },
+    {
+      "id": "archive-sealed-at-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:28:03.459Z",
+      "data": {
+        "sealed": {
+          "content_hash": "b7670f1ebf3645bb61c04a6334050e199a79a4e443ca89ef79888b6c72dd3de1",
+          "sealed_at": "2026-10-25T20:26:39.795851+00:00"
+        },
+        "evidenceAtSeal": 13
+      }
+    },
+    {
+      "id": "retained-shared-bytes-match",
+      "passed": true,
+      "at": "2026-10-25T20:28:07.740Z"
+    },
+    {
+      "id": "retained-MSPprivate-bytes-match",
+      "passed": true,
+      "at": "2026-10-25T20:28:07.758Z"
+    },
+    {
+      "id": "archive-excludes-customer-private-content",
+      "passed": true,
+      "at": "2026-10-25T20:28:07.760Z"
+    },
+    {
+      "id": "archive-retains-the-msp-time-evidence",
+      "passed": true,
+      "at": "2026-10-25T20:28:07.926Z"
+    },
+    {
+      "id": "customer-workspace-offers-no-changes-after-departure",
+      "passed": true,
+      "at": "2026-10-25T20:28:12.675Z",
+      "data": {
+        "titleEditOffered": false,
+        "saveOffered": false,
+        "composerOffered": false,
+        "timePanelError": false
+      }
+    },
+    {
+      "id": "archive-and-seal-unchanged-after-cutoff",
+      "passed": true,
+      "at": "2026-10-25T20:28:17.209Z",
+      "data": {
+        "manifestUnchanged": true,
+        "evidence": 13
+      }
+    },
+    {
+      "id": "commercial-entries-survive-departure",
+      "passed": true,
+      "at": "2026-10-25T20:28:17.509Z"
+    },
+    {
+      "id": "pre-cutoff-draft-still-opens-with-its-line",
+      "passed": true,
+      "at": "2026-10-25T20:28:19.613Z"
+    },
+    {
+      "id": "msp-bills-retained-commercial-time-after-departure",
+      "passed": true,
+      "at": "2026-10-25T20:28:33.119Z",
+      "data": {
+        "sources": [
+          {
+            "entry": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+            "invoice": "INV-000014"
+          },
+          {
+            "entry": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+            "invoice": "INV-000015"
+          }
+        ],
+        "totalCents": 6000
+      }
+    },
+    {
+      "id": "invoice-lines-keep-the-retained-work-identity",
+      "passed": true,
+      "at": "2026-10-25T20:28:33.119Z",
+      "data": {
+        "snapshots": [
+          {
+            "rate": 12000,
+            "title": "CM DEPART 1792959853966 shared ticket",
+            "version": 2,
+            "rateKind": "uniform",
+            "entryDate": "2026-10-25",
+            "netAmount": 2000,
+            "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+            "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+            "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+            "serviceName": "CM Catalog Support 1792944312315",
+            "uniformRate": 12000,
+            "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+            "ticketNumber": "000001",
+            "workItemType": "ticket",
+            "billedMinutes": 10,
+            "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+            "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+          },
+          {
+            "rate": 12000,
+            "title": "CM DEPART 1792959853966 shared ticket",
+            "version": 2,
+            "rateKind": "uniform",
+            "entryDate": "2026-10-25",
+            "netAmount": 4000,
+            "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+            "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+            "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+            "serviceName": "CM Catalog Support 1792944312315",
+            "uniformRate": 12000,
+            "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+            "ticketNumber": "000001",
+            "workItemType": "ticket",
+            "billedMinutes": 20,
+            "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+            "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+          }
+        ]
+      }
+    },
+    {
+      "id": "customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock",
+      "passed": true,
+      "at": "2026-10-25T20:28:36.684Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:26:37.315Z",
+      "seconds": 0.917,
+      "title": "baseline-relationship-active-with-queued-delivery-and-msp-sla-obligation",
+      "data": {
+        "allocation": {
+          "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+          "seats": 1,
+          "state": "active",
+          "released_at": null
+        },
+        "delivery": {
+          "status": "pending",
+          "attempt_count": 1,
+          "error_code": "email_provider_failed",
+          "completed_at": null
+        },
+        "slaStartedAt": "2026-10-25T20:24:58.087Z",
+        "pauseReasons": [
+          "awaiting_client"
+        ],
+        "resolutionDueAt": null
+      }
+    },
+    {
+      "at": "2026-10-25T20:26:39.595Z",
+      "seconds": 3.197,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/departure?operationId=b240dca9-0e9e-4225-a91b-3d7879323451"
+    },
+    {
+      "at": "2026-10-25T20:26:40.397Z",
+      "seconds": 3.999,
+      "actor": "qa",
+      "title": "allocation-released-once-and-paid-pool-unchanged",
+      "data": {
+        "after": {
+          "allocation_id": "5f6650da-1490-45c6-a8b1-98fa67ee878a",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-25T20:26:39.8+00:00"
+        },
+        "capacity": 19
+      }
+    },
+    {
+      "at": "2026-10-25T20:26:40.532Z",
+      "seconds": 4.134,
+      "actor": "qa",
+      "title": "msp-sla-clock-is-held-by-the-cutoff",
+      "data": {
+        "before": [
+          "awaiting_client"
+        ],
+        "after": [
+          "awaiting_client",
+          "customer_responsible"
+        ],
+        "addedByCutoff": [
+          "customer_responsible"
+        ],
+        "resolutionDueAt": null
+      }
+    },
+    {
+      "at": "2026-10-25T20:26:41.186Z",
+      "seconds": 4.788,
+      "actor": "qa",
+      "title": "refresh-repeats-neither-closure-nor-release"
+    },
+    {
+      "at": "2026-10-25T20:28:00.843Z",
+      "seconds": 84.445,
+      "actor": "qa",
+      "title": "queued-delivery-is-skipped-not-sent-after-cutoff",
+      "data": {
+        "settled": {
+          "status": "skipped",
+          "attempt_count": 2,
+          "error_code": null,
+          "completed_at": "2026-10-25T20:28:00.289678+00:00"
+        },
+        "controlMailStillPresent": true
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:01.159Z",
+      "seconds": 84.761,
+      "actor": "qa",
+      "title": "old-live-shared-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:01.175Z",
+      "seconds": 84.777,
+      "actor": "qa",
+      "title": "old-live-MSPprivate-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:01.190Z",
+      "seconds": 84.792,
+      "actor": "qa",
+      "title": "old-live-customerprivate-file-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:03.130Z",
+      "seconds": 86.732,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/d46de2e8-21a5-424d-8699-f14e07e407a4/38db9e8a-7f42-429c-baae-f0eb813b385b/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:28:03.143Z",
+      "seconds": 86.745,
+      "actor": "qa",
+      "title": "old-shared-route-no-longer-shows-live-ticket"
+    },
+    {
+      "at": "2026-10-25T20:28:03.459Z",
+      "seconds": 87.061,
+      "actor": "qa",
+      "title": "archive-sealed-at-cutoff",
+      "data": {
+        "sealed": {
+          "content_hash": "b7670f1ebf3645bb61c04a6334050e199a79a4e443ca89ef79888b6c72dd3de1",
+          "sealed_at": "2026-10-25T20:26:39.795851+00:00"
+        },
+        "evidenceAtSeal": 13
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:05.354Z",
+      "seconds": 88.956,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-25T20:28:07.740Z",
+      "seconds": 91.342,
+      "actor": "qa",
+      "title": "retained-shared-bytes-match"
+    },
+    {
+      "at": "2026-10-25T20:28:07.759Z",
+      "seconds": 91.361,
+      "actor": "qa",
+      "title": "retained-MSPprivate-bytes-match"
+    },
+    {
+      "at": "2026-10-25T20:28:07.760Z",
+      "seconds": 91.362,
+      "actor": "qa",
+      "title": "archive-excludes-customer-private-content"
+    },
+    {
+      "at": "2026-10-25T20:28:07.926Z",
+      "seconds": 91.528,
+      "actor": "qa",
+      "title": "archive-retains-the-msp-time-evidence"
+    },
+    {
+      "at": "2026-10-25T20:28:10.057Z",
+      "seconds": 93.659,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:28:12.675Z",
+      "seconds": 96.277,
+      "actor": "departAdmin",
+      "title": "customer-workspace-offers-no-changes-after-departure",
+      "data": {
+        "titleEditOffered": false,
+        "saveOffered": false,
+        "composerOffered": false,
+        "timePanelError": false
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:14.567Z",
+      "seconds": 98.169,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-25T20:28:17.209Z",
+      "seconds": 100.811,
+      "actor": "qa",
+      "title": "archive-and-seal-unchanged-after-cutoff",
+      "data": {
+        "manifestUnchanged": true,
+        "evidence": 13
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:17.509Z",
+      "seconds": 101.111,
+      "actor": "qa",
+      "title": "commercial-entries-survive-departure"
+    },
+    {
+      "at": "2026-10-25T20:28:19.451Z",
+      "seconds": 103.053,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/4dc6985b-e6f1-422a-8471-1f43d9b3c7e0"
+    },
+    {
+      "at": "2026-10-25T20:28:19.613Z",
+      "seconds": 103.215,
+      "actor": "qa",
+      "title": "pre-cutoff-draft-still-opens-with-its-line"
+    },
+    {
+      "at": "2026-10-25T20:28:20.978Z",
+      "seconds": 104.58,
+      "actor": "qa",
+      "title": "pre-cutoff-draft-reversed-after-departure",
+      "data": {
+        "invoice": "INV-000013"
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:22.993Z",
+      "seconds": 106.595,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-25T20:28:33.119Z",
+      "seconds": 116.721,
+      "actor": "qa",
+      "title": "msp-bills-retained-commercial-time-after-departure",
+      "data": {
+        "sources": [
+          {
+            "entry": "6cd46aa9-cc53-474d-a9b4-1a62c74ca109",
+            "invoice": "INV-000014"
+          },
+          {
+            "entry": "7880572d-0c05-4117-bd7a-5e6db1b31ab8",
+            "invoice": "INV-000015"
+          }
+        ],
+        "totalCents": 6000
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:33.119Z",
+      "seconds": 116.721,
+      "actor": "qa",
+      "title": "invoice-lines-keep-the-retained-work-identity",
+      "data": {
+        "snapshots": [
+          {
+            "rate": 12000,
+            "title": "CM DEPART 1792959853966 shared ticket",
+            "version": 2,
+            "rateKind": "uniform",
+            "entryDate": "2026-10-25",
+            "netAmount": 2000,
+            "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+            "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+            "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+            "serviceName": "CM Catalog Support 1792944312315",
+            "uniformRate": 12000,
+            "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+            "ticketNumber": "000001",
+            "workItemType": "ticket",
+            "billedMinutes": 10,
+            "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+            "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+          },
+          {
+            "rate": 12000,
+            "title": "CM DEPART 1792959853966 shared ticket",
+            "version": 2,
+            "rateKind": "uniform",
+            "entryDate": "2026-10-25",
+            "netAmount": 4000,
+            "serviceId": "2ee6f215-feee-4f42-924b-09533a329d47",
+            "workItemId": "c7c64319-d853-4b83-b774-a846d285aa1f",
+            "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+            "serviceName": "CM Catalog Support 1792944312315",
+            "uniformRate": 12000,
+            "sourceTenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+            "ticketNumber": "000001",
+            "workItemType": "ticket",
+            "billedMinutes": 20,
+            "relationshipId": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+            "workReferenceId": "5732bb2e-625f-48fc-b215-e22c5de25b5c"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T20:28:35.129Z",
+      "seconds": 118.731,
+      "actor": "departAdmin",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T20:28:36.684Z",
+      "seconds": 120.286,
+      "actor": "departAdmin",
+      "title": "customer-keeps-native-ticket-and-private-content-without-the-former-msp-clock"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 121.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "departAdmin",
+      "email": "depart.admin.1792959853966@cmreview.test",
+      "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "scenario": "07-requester-task-conversation-complete",
+  "recordedAt": "2026-10-25T16:57:06.062Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "customer-native-project-setting-enables-requester-tasks",
+      "passed": true,
+      "at": "2026-10-25T16:57:09.280Z"
+    },
+    {
+      "id": "requester-task-shows-public-message-with-staff-attribution",
+      "passed": true,
+      "at": "2026-10-25T16:57:14.222Z"
+    },
+    {
+      "id": "requester-task-excludes-MSP-private-message",
+      "passed": true,
+      "at": "2026-10-25T16:57:14.223Z"
+    },
+    {
+      "id": "requester-task-downloads-exact-public-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:57:14.248Z"
+    },
+    {
+      "id": "requester-task-reply-persists-through-portal-reload",
+      "passed": true,
+      "at": "2026-10-25T16:57:15.294Z"
+    },
+    {
+      "id": "staff-task-receives-requester-reply-with-organization",
+      "passed": true,
+      "at": "2026-10-25T16:57:17.275Z"
+    },
+    {
+      "id": "restored-task-visibility-revokes-copied-requester-file-link",
+      "passed": true,
+      "at": "2026-10-25T16:57:19.894Z",
+      "data": {
+        "status": 404
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:57:08.538Z",
+      "seconds": 2.476,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/0fb32387-98af-4712-a323-abae6ba2868c"
+    },
+    {
+      "at": "2026-10-25T16:57:09.280Z",
+      "seconds": 3.218,
+      "actor": "alice",
+      "title": "customer-native-project-setting-enables-requester-tasks"
+    },
+    {
+      "at": "2026-10-25T16:57:11.255Z",
+      "seconds": 5.193,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:57:14.208Z",
+      "seconds": 8.146,
+      "actor": "requester",
+      "title": "navigate",
+      "data": "/client-portal/projects/0fb32387-98af-4712-a323-abae6ba2868c?taskId=3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:57:14.222Z",
+      "seconds": 8.16,
+      "actor": "requester",
+      "title": "requester-task-shows-public-message-with-staff-attribution"
+    },
+    {
+      "at": "2026-10-25T16:57:14.223Z",
+      "seconds": 8.161,
+      "actor": "requester",
+      "title": "requester-task-excludes-MSP-private-message"
+    },
+    {
+      "at": "2026-10-25T16:57:14.248Z",
+      "seconds": 8.186,
+      "actor": "requester",
+      "title": "requester-task-downloads-exact-public-file-bytes"
+    },
+    {
+      "at": "2026-10-25T16:57:15.294Z",
+      "seconds": 9.232,
+      "actor": "requester",
+      "title": "requester-task-reply-persists-through-portal-reload"
+    },
+    {
+      "at": "2026-10-25T16:57:17.263Z",
+      "seconds": 11.201,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/3e3a77a8-c4cd-42a1-a6cb-19c5f7cba0c5"
+    },
+    {
+      "at": "2026-10-25T16:57:17.275Z",
+      "seconds": 11.213,
+      "actor": "qa",
+      "title": "staff-task-receives-requester-reply-with-organization"
+    },
+    {
+      "at": "2026-10-25T16:57:19.269Z",
+      "seconds": 13.207,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/0fb32387-98af-4712-a323-abae6ba2868c"
+    },
+    {
+      "at": "2026-10-25T16:57:19.894Z",
+      "seconds": 13.832,
+      "actor": "requester",
+      "title": "restored-task-visibility-revokes-copied-requester-file-link",
+      "data": {
+        "status": 404
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Requester task conversation and file/reply segment; original task visibility restored. Separate ticket recovery defect remains unaccepted."
+  ],
+  "durationSeconds": 14.64,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "requester",
+      "email": "cm.requester.1792939134918@cmreview.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

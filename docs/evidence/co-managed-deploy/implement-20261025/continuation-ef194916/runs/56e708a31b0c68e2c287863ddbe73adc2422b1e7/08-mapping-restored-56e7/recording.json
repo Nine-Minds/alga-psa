@@ -1,0 +1,53 @@
+{
+  "scenario": "08-mapping-restored-56e7",
+  "recordedAt": "2026-10-25T20:33:38.092Z",
+  "runtime": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "56e708a31b0c68e2c287863ddbe73adc2422b1e7",
+    "buildId": "build-1792957994771"
+  },
+  "assertions": [
+    {
+      "id": "temporary-high-priority-mapping-restored-through-product",
+      "passed": true,
+      "at": "2026-10-25T20:33:42.085Z",
+      "data": {
+        "original": "Not mapped"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T20:33:40.449Z",
+      "seconds": 2.357,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb"
+    },
+    {
+      "at": "2026-10-25T20:33:42.085Z",
+      "seconds": 3.993,
+      "actor": "qa",
+      "title": "temporary-high-priority-mapping-restored-through-product",
+      "data": {
+        "original": "Not mapped"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Reversible fixture cleanup only; full SLA guide remains partial."
+  ],
+  "durationSeconds": 4.88,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

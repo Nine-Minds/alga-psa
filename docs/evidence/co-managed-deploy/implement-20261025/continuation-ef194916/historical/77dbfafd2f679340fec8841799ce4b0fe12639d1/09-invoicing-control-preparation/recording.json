@@ -1,0 +1,35 @@
+{
+  "scenario": "09-invoicing-control-preparation",
+  "recordedAt": "2026-10-25T15:26:44.334Z",
+  "runtime": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "77dbfafd2f679340fec8841799ce4b0fe12639d1",
+    "buildId": "build-1792940166156"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-25T15:26:46.739Z",
+      "seconds": 2.405,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    }
+  ],
+  "scenarioStatus": "preparation",
+  "limitations": [
+    "Read-only invoicing control discovery on served build; no invoice generation."
+  ],
+  "durationSeconds": 5.88,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

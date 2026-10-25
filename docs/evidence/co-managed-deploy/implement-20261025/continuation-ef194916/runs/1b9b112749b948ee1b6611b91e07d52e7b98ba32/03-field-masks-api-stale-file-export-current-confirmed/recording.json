@@ -1,0 +1,413 @@
+{
+  "scenario": "03-field-masks-api-stale-file-export-current-confirmed",
+  "recordedAt": "2026-10-25T16:23:33.880Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "assigned-team-member-downloads-exact-allowed-file-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:23:38.592Z"
+    },
+    {
+      "id": "customer-native-API-positive-control-reads-own-ticket",
+      "passed": true,
+      "at": "2026-10-25T16:23:38.961Z",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "id": "customer-native-API-updates-own-authoritative-ticket",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.145Z",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "id": "customer-native-API-restores-review-title",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.319Z"
+    },
+    {
+      "id": "customer-API-key-cannot-expand-into-billing",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.334Z",
+      "data": {
+        "status": 403
+      }
+    },
+    {
+      "id": "MSP-native-API-key-positive-control-reads-own-client",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.353Z",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "id": "MSP-native-API-does-not-resolve-bare-customer-ID",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.376Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "MSP-native-API-cannot-write-foreign-ticket",
+      "passed": true,
+      "at": "2026-10-25T16:23:39.539Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "qualified-action-positive-control-updates-exact-customer-work",
+      "passed": true,
+      "at": "2026-10-25T16:23:42.318Z",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "id": "view-team-denied-same-valid-qualified-write-command",
+      "passed": true,
+      "at": "2026-10-25T16:23:47.175Z",
+      "data": {
+        "status": 200,
+        "code": "forbidden"
+      }
+    },
+    {
+      "id": "home-field-policy-redacts-shared-title-and-derived-display",
+      "passed": true,
+      "at": "2026-10-25T16:23:48.567Z"
+    },
+    {
+      "id": "masked-title-cannot-be-used-to-discover-a-queue-result",
+      "passed": true,
+      "at": "2026-10-25T16:23:51.599Z"
+    },
+    {
+      "id": "home-file-mask-revokes-copied-download-while-grant-stays-active",
+      "passed": true,
+      "at": "2026-10-25T16:23:51.951Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "restored-home-policy-readmits-original-file-with-same-bytes",
+      "passed": true,
+      "at": "2026-10-25T16:23:52.114Z"
+    },
+    {
+      "id": "last-board-grant-removed-after-reload",
+      "passed": true,
+      "at": "2026-10-25T16:23:56.661Z"
+    },
+    {
+      "id": "copied-file-link-denied-after-last-independent-grant-is-removed",
+      "passed": true,
+      "at": "2026-10-25T16:23:56.704Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "previously-valid-qualified-write-denied-after-grant-removal",
+      "passed": true,
+      "at": "2026-10-25T16:23:56.946Z",
+      "data": {
+        "status": 200,
+        "code": "forbidden"
+      }
+    },
+    {
+      "id": "fresh-qualified-detail-is-closed-after-last-grant-removal",
+      "passed": true,
+      "at": "2026-10-25T16:23:58.896Z"
+    },
+    {
+      "id": "fresh-export-with-previous-filter-does-not-leak-revoked-work",
+      "passed": true,
+      "at": "2026-10-25T16:24:01.887Z"
+    },
+    {
+      "id": "original-customer-board-restored-and-temporary-team-scope-removed",
+      "passed": true,
+      "at": "2026-10-25T16:24:07.113Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T16:23:36.225Z",
+      "seconds": 2.345,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T16:23:38.560Z",
+      "seconds": 4.68,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T16:23:38.592Z",
+      "seconds": 4.712,
+      "actor": "scopeTeamUser",
+      "title": "assigned-team-member-downloads-exact-allowed-file-bytes"
+    },
+    {
+      "at": "2026-10-25T16:23:38.961Z",
+      "seconds": 5.081,
+      "actor": "scopeTeamUser",
+      "title": "customer-native-API-positive-control-reads-own-ticket",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:39.145Z",
+      "seconds": 5.265,
+      "actor": "scopeTeamUser",
+      "title": "customer-native-API-updates-own-authoritative-ticket",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:39.319Z",
+      "seconds": 5.439,
+      "actor": "scopeTeamUser",
+      "title": "customer-native-API-restores-review-title"
+    },
+    {
+      "at": "2026-10-25T16:23:39.334Z",
+      "seconds": 5.454,
+      "actor": "scopeTeamUser",
+      "title": "customer-API-key-cannot-expand-into-billing",
+      "data": {
+        "status": 403
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:39.353Z",
+      "seconds": 5.473,
+      "actor": "scopeTeamUser",
+      "title": "MSP-native-API-key-positive-control-reads-own-client",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:39.376Z",
+      "seconds": 5.496,
+      "actor": "scopeTeamUser",
+      "title": "MSP-native-API-does-not-resolve-bare-customer-ID",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:39.539Z",
+      "seconds": 5.659,
+      "actor": "scopeTeamUser",
+      "title": "MSP-native-API-cannot-write-foreign-ticket",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:41.799Z",
+      "seconds": 7.919,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T16:23:42.318Z",
+      "seconds": 8.438,
+      "actor": "qa",
+      "title": "qualified-action-positive-control-updates-exact-customer-work",
+      "data": {
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:44.604Z",
+      "seconds": 10.724,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T16:23:46.966Z",
+      "seconds": 13.086,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T16:23:47.175Z",
+      "seconds": 13.295,
+      "actor": "scopeTeamUser",
+      "title": "view-team-denied-same-valid-qualified-write-command",
+      "data": {
+        "status": 200,
+        "code": "forbidden"
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:48.567Z",
+      "seconds": 14.687,
+      "actor": "scopeTeamUser",
+      "title": "home-field-policy-redacts-shared-title-and-derived-display"
+    },
+    {
+      "at": "2026-10-25T16:23:50.585Z",
+      "seconds": 16.705,
+      "actor": "scopeTeamUser",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=oversight&workspace=20b527f2-8631-4fe7-a744-dc20883a0c5a&searchQuery=CM%20access%201792942366365%201"
+    },
+    {
+      "at": "2026-10-25T16:23:51.599Z",
+      "seconds": 17.719,
+      "actor": "scopeTeamUser",
+      "title": "masked-title-cannot-be-used-to-discover-a-queue-result"
+    },
+    {
+      "at": "2026-10-25T16:23:51.951Z",
+      "seconds": 18.071,
+      "actor": "scopeTeamUser",
+      "title": "home-file-mask-revokes-copied-download-while-grant-stays-active",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:52.114Z",
+      "seconds": 18.234,
+      "actor": "scopeTeamUser",
+      "title": "restored-home-policy-readmits-original-file-with-same-bytes"
+    },
+    {
+      "at": "2026-10-25T16:23:54.139Z",
+      "seconds": 20.259,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T16:23:56.183Z",
+      "seconds": 22.303,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T16:23:56.661Z",
+      "seconds": 22.781,
+      "actor": "scopeCustomer",
+      "title": "last-board-grant-removed-after-reload"
+    },
+    {
+      "at": "2026-10-25T16:23:56.704Z",
+      "seconds": 22.824,
+      "actor": "qa",
+      "title": "copied-file-link-denied-after-last-independent-grant-is-removed",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:56.946Z",
+      "seconds": 23.066,
+      "actor": "qa",
+      "title": "previously-valid-qualified-write-denied-after-grant-removal",
+      "data": {
+        "status": 200,
+        "code": "forbidden"
+      }
+    },
+    {
+      "at": "2026-10-25T16:23:58.885Z",
+      "seconds": 25.005,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/16a124c1-1309-4ea5-89aa-cc7c55fd059c"
+    },
+    {
+      "at": "2026-10-25T16:23:58.896Z",
+      "seconds": 25.016,
+      "actor": "qa",
+      "title": "fresh-qualified-detail-is-closed-after-last-grant-removal"
+    },
+    {
+      "at": "2026-10-25T16:24:00.851Z",
+      "seconds": 26.971,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=oversight&workspace=20b527f2-8631-4fe7-a744-dc20883a0c5a&searchQuery=CM%20access%201792942366365%201"
+    },
+    {
+      "at": "2026-10-25T16:24:01.887Z",
+      "seconds": 28.007,
+      "actor": "qa",
+      "title": "fresh-export-with-previous-filter-does-not-leak-revoked-work"
+    },
+    {
+      "at": "2026-10-25T16:24:03.918Z",
+      "seconds": 30.038,
+      "actor": "scopeCustomer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-25T16:24:06.955Z",
+      "seconds": 33.075,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/5e9c535b-2506-4b36-9303-7032fae88807?tab=co-managed"
+    },
+    {
+      "at": "2026-10-25T16:24:07.113Z",
+      "seconds": 33.233,
+      "actor": "qa",
+      "title": "original-customer-board-restored-and-temporary-team-scope-removed"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Viewer Entry/Grid is a separate segment. API keys and fixture bundle assignments are revoked in finally. QA remains assigned to this disposable relationship for the subsequent SLA/departure scenario."
+  ],
+  "durationSeconds": 34.44,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "scopeTeamUser",
+      "email": "cm.scope.1792942366365@cmreview.test",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "scopeCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    }
+  ]
+}

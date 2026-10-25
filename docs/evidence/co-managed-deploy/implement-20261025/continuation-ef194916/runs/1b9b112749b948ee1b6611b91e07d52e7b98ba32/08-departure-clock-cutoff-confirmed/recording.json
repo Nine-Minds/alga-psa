@@ -1,0 +1,106 @@
+{
+  "scenario": "08-departure-clock-cutoff-confirmed",
+  "recordedAt": "2026-10-25T17:03:22.851Z",
+  "runtime": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "1b9b112749b948ee1b6611b91e07d52e7b98ba32",
+    "buildId": "build-1792941614066"
+  },
+  "assertions": [
+    {
+      "id": "native-customer-ticket-remains-readable-after-departure",
+      "passed": true,
+      "at": "2026-10-25T17:03:25.574Z"
+    },
+    {
+      "id": "former-MSP-live-clock-is-absent",
+      "passed": true,
+      "at": "2026-10-25T17:03:25.580Z"
+    },
+    {
+      "id": "persisted-MSP-clock-has-no-running-resolution-deadline",
+      "passed": true,
+      "at": "2026-10-25T17:03:25.867Z",
+      "data": {
+        "observedAt": "2026-10-25T16:33:52.636Z",
+        "elapsedMilliseconds": 130693,
+        "pauseReasons": [
+          "customer_responsible"
+        ]
+      }
+    },
+    {
+      "id": "former-MSP-live-detail-including-clock-is-denied",
+      "passed": true,
+      "at": "2026-10-25T17:03:27.933Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T17:03:25.499Z",
+      "seconds": 2.648,
+      "actor": "departedCustomer",
+      "title": "navigate",
+      "data": "/msp/tickets/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T17:03:25.574Z",
+      "seconds": 2.723,
+      "actor": "departedCustomer",
+      "title": "native-customer-ticket-remains-readable-after-departure"
+    },
+    {
+      "at": "2026-10-25T17:03:25.580Z",
+      "seconds": 2.729,
+      "actor": "departedCustomer",
+      "title": "former-MSP-live-clock-is-absent"
+    },
+    {
+      "at": "2026-10-25T17:03:25.867Z",
+      "seconds": 3.016,
+      "actor": "departedCustomer",
+      "title": "persisted-MSP-clock-has-no-running-resolution-deadline",
+      "data": {
+        "observedAt": "2026-10-25T16:33:52.636Z",
+        "elapsedMilliseconds": 130693,
+        "pauseReasons": [
+          "customer_responsible"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T17:03:27.919Z",
+      "seconds": 5.068,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/20b527f2-8631-4fe7-a744-dc20883a0c5a/4f999745-cbd0-453e-905a-9a5b0210bbb0/e7110d08-88d7-4f9a-addc-246e0ec8bbe9"
+    },
+    {
+      "at": "2026-10-25T17:03:27.933Z",
+      "seconds": 5.082,
+      "actor": "qa",
+      "title": "former-MSP-live-detail-including-clock-is-denied"
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Cutoff read and stored pause segment. Current mapping/differing targets, business calendar and actual notification receipts are in the other current-build SLA segments. No CE/EE release-parity claim."
+  ],
+  "durationSeconds": 5.96,
+  "actors": [
+    {
+      "name": "departedCustomer",
+      "email": "desk.accept.1792935749585@cmreview.test",
+      "tenant": "20b527f2-8631-4fe7-a744-dc20883a0c5a"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}
