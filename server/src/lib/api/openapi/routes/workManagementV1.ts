@@ -6,7 +6,13 @@ import {
   createTimeEntrySchema,
   updateTimeEntrySchema,
 } from '../../schemas/timeEntry';
-import { createTimePeriodSchema, updateTimePeriodSchema } from '../../schemas/timeSheet';
+import {
+  calendarResponseSchema,
+  createScheduleEntrySchema,
+  createTimePeriodSchema,
+  updateScheduleEntrySchema,
+  updateTimePeriodSchema,
+} from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -309,6 +315,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const CreateTimePeriodBody = registry.registerSchema('WorkV1CreateTimePeriodBody', createTimePeriodSchema);
   const UpdateTimePeriodBody = registry.registerSchema('WorkV1UpdateTimePeriodBody', updateTimePeriodSchema);
 
+  const CreateScheduleEntryBody = registry.registerSchema('WorkV1CreateScheduleEntryBody', createScheduleEntrySchema);
+  const UpdateScheduleEntryBody = registry.registerSchema('WorkV1UpdateScheduleEntryBody', updateScheduleEntrySchema);
+
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
     zOpenApi.object({
@@ -392,7 +401,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/schedules/{id}', summary: 'Delete schedule entry', description: 'Deletes schedule entry via ApiTimeSheetController.deleteScheduleEntry().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}', summary: 'Get schedule entry', description: 'Current route delegates to ApiTimeSheetController.getById() (time sheet read path), not schedule-specific getter.', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees\' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}/conflicts', summary: 'Get schedule conflicts', description: 'Current route delegates to ApiTimeSheetController.list() rather than conflict-specific schedule logic.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/tags', summary: 'List tags', description: 'Lists tags via ApiTagController.list().', family: 'tag' },
@@ -434,7 +443,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master\'s resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}/bundle/children/{childId}', summary: 'Remove bundle child', description: 'Removes child {childId} from its bundle; removes bundle settings when no children remain.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/{id}/bundle/promote', summary: 'Promote bundle master', description: 'Promotes a child ticket to be the new bundle master, re-pointing the remaining children.', family: 'ticket' },
-    { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.', family: 'ticket' },
+    { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}. Children lock status, assignee and priority only in sync_updates mode; link_only children manage their own. Switching to link_only never changes children. Switching to sync_updates while the master is open changes no children. Switching to sync_updates while the master is closed requires on_closed_master (keep_closed, apply_resolution to the still-open children, or reopen_master); omitting it returns 409 naming the allowed choices. Supplying it when switching to sync_updates on an open master returns 400; it is ignored for any other change.', family: 'ticket' },
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates a time entry. Billable entries are linked to a contract line (optional `contract_line_id`; auto-resolved when exactly one line is eligible) and draw bucket/hour-block usage. Returns 400 ValidationError (VALIDATION_ERROR) with details.reason `contract_line_ambiguous` or `contract_line_not_eligible` and details.eligible_contract_lines[] (contract_line_id, contract_line_name, contract_line_type, contract_id, contract_name, has_bucket) when the line cannot be resolved.', family: 'time_entry' },
@@ -563,6 +572,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       if (def.method === 'post' && def.path === '/api/v1/time-periods') req.body = { schema: CreateTimePeriodBody };
       if (def.method === 'put' && def.path === '/api/v1/time-periods/{id}') req.body = { schema: UpdateTimePeriodBody };
     } else if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
+    if (def.path === '/api/v1/schedules' && def.method === 'post') req.body = { schema: CreateScheduleEntryBody };
+    if (def.path === '/api/v1/schedules/{id}' && def.method === 'put') req.body = { schema: UpdateScheduleEntryBody };
 
     return req;
   }
@@ -660,6 +671,55 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       edition: 'both',
     });
   }
+
+  // ==========================================================================
+  // Calendars - GET /api/v1/calendars (calendar discovery for schedule entries)
+  // ==========================================================================
+  const CalendarListQuery = registry.registerSchema(
+    'WorkV1CalendarListQuery',
+    zOpenApi.object({
+      type: zOpenApi.enum(['personal', 'group']).optional().describe('Only return calendars of this type.'),
+      include_archived: zOpenApi.enum(['true', 'false']).optional().describe('Include archived group calendars (default false). Archived calendars are only visible to their managers.'),
+    }),
+  );
+  const CalendarItem = registry.registerSchema('WorkV1Calendar', calendarResponseSchema);
+  const CalendarListResponse = registry.registerSchema(
+    'WorkV1CalendarListResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(CalendarItem),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/calendars',
+    summary: 'List calendars',
+    description:
+      'Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: ' +
+      'the caller\'s own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see ' +
+      '(every group calendar for user_schedule:update holders). ' +
+      'HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. ' +
+      'Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send ' +
+      '`calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: CalendarListQuery },
+    responses: {
+      200: { description: 'Visible calendars.', schema: CalendarListResponse },
+      400: { description: 'Invalid query parameter.', schema: ApiError },
+      401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+      403: { description: 'Missing user_schedule:read.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController.listCalendars()',
+      'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+      'x-rbac-resource': 'time_sheet',
+    },
+    edition: 'both',
+  });
 
   // ==========================================================================
   // Stopwatch (server-side sessions) - /api/v1/stopwatch

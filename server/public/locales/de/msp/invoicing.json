@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} ausgewählt",
         "clear": "Auswahl aufheben"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Rechnung abgeschlossen, aber ein Folgeschritt wurde nicht beendet: {{steps}}. Die Rechnung ist abgeschlossen; Sie können den Schritt wiederholen.",
+      "steps": {
+        "credit_auto_apply": "automatische Gutschriftanwendung",
+        "project_deposit_credits": "Projektanzahlungsgutschriften",
+        "workflow_events": "Workflow-Ereignisse",
+        "accounting_export": "Buchhaltungsexport",
+        "replenishment_status": "Status der Prepaid-Aufladung",
+        "autopay": "Autopay"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Abbrechen",
       "confirm": "Rechnung stornieren",
       "voiding": "Wird storniert…"
+    },
+    "history": {
+      "title": "Verlauf",
+      "empty": "Kein Verlauf aufgezeichnet.",
+      "loadFailed": "Rechnungsverlauf konnte nicht geladen werden.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Abgeschlossen",
+        "invoice_unfinalized": "Wieder geöffnet",
+        "invoice_deleted": "Gelöscht"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "keine"
     }
   },
   "templateEditor": {
@@ -1377,7 +1401,7 @@
       "mediaSource": "Bildquelle",
       "mediaSourceLogo": "Firmenlogo",
       "mediaSourceCustom": "Eigenes Bild",
-      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus dem Kundendatensatz Ihres eigenen Unternehmens.",
       "mediaSourceUrl": "Quell-URL",
       "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Umbenennen",
@@ -2382,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Dokumente durchsuchen",
-      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet. Es wird nicht in Angeboten oder Rechnungen angezeigt, die über das Kundenportal aufgerufen werden.",
+      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet und kann im Kundenportal nicht geöffnet werden. Es erscheint weiterhin auf Rechnungen und in PDF-Dateien von Angeboten, die es verwenden.",
       "updating": "Wird aktualisiert...",
       "markVisible": "Als für Kunden sichtbar markieren",
       "visibleInPortal": "Im Kundenportal sichtbar",
@@ -2431,11 +2455,13 @@
     "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
     "availableLayouts": "Verfügbare Layouts",
     "actions": {
-      "newLayout": "Neues Layout"
+      "newLayout": "Neues Layout",
+      "setDefaultForClass": "Als Standard für {{class}} festlegen"
     },
     "columns": {
       "name": "Name",
-      "source": "Quelle"
+      "source": "Quelle",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standardversion)",
@@ -2467,7 +2493,10 @@
         "details": "Layoutdetails"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Etikettenklasse",
+        "labelFields": "Auf dem Etikett angezeigte Felder",
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
@@ -2513,7 +2542,8 @@
       "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
       "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
       "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
-      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden"
+      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden",
+      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich"
     },
     "invoice": {
       "notFound": "Rechnung nicht gefunden",
@@ -2535,7 +2565,9 @@
       "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Rechnungsfeld fehlt.",
       "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}.",
-      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar."
+      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+      "deleteNotDraft": "Nur Rechnungsentwürfe können gelöscht werden; stornieren Sie die Rechnung stattdessen.",
+      "deleteHasPayments": "Rechnungen mit erfassten Zahlungen können nicht gelöscht werden."
     },
     "billingCycle": {
       "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

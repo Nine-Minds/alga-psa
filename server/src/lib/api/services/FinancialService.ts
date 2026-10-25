@@ -126,6 +126,7 @@ import {
 } from '../../../interfaces/billing.interfaces';
 
 import { BillingEngine as BillingEngineClass } from '@alga-psa/billing/services';
+import { paymentTermOptions } from '@alga-psa/shared/billingClients/paymentPreferences';
 
 /**
  * HATEOAS Link interface for API discoverability
@@ -1970,11 +1971,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
     if (!hasPaymentTermsTable) {
       return {
-        data: [
-          { id: 'due_on_receipt', name: 'Due on receipt' },
-          { id: 'net_15', name: 'Net 15' },
-          { id: 'net_30', name: 'Net 30' },
-        ],
+        data: paymentTermOptions(),
         links: []
       };
     }

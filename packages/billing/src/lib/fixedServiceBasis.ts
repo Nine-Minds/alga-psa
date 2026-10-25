@@ -117,7 +117,7 @@ export function getFixedServiceBasisIssue(
   service: FixedServiceBasisFields,
   options: { requireUnitRate?: boolean } = {},
 ): FixedServiceBasisIssue | null {
-  // Templates are currency-neutral: their unit rate is an optional default and
+  // A template's unit rate is an optional default in the template's base currency;
   // an empty one follows the catalog price in the contract's currency.
   const requireUnitRate = options.requireUnitRate ?? true;
   if (isUnitFixedService(service)) {

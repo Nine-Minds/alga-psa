@@ -574,8 +574,10 @@
     "invoiceTemplateHelp": "Välj en mall eller använd standardmallen",
     "paymentTerms": {
       "dueOnReceipt": "Betalas vid mottagande",
+      "net14": "14 dagar netto",
       "net15": "15 dagar netto",
-      "net30": "30 dagar netto"
+      "net30": "30 dagar netto",
+      "net7": "7 dagar netto"
     },
     "preferredPaymentMethod": "Önskad betalningsmetod",
     "defaultCurrency": "Standardvaluta",

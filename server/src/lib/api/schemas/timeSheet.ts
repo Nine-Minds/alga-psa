@@ -315,6 +315,11 @@ const baseScheduleEntrySchema = z.object({
   work_item_id: uuidSchema.optional(),
   work_item_type: z.enum(['ticket', 'project_task', 'meeting', 'break', 'other']).optional(),
   assigned_user_ids: z.array(uuidSchema).optional(),
+  // Group calendar id. null = personal calendar (on update: move the entry off its group calendar;
+  // on create: same as omitting it). Omitted on update = leave the calendar unchanged.
+  calendar_id: uuidSchema.nullable().optional().describe(
+    'Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged.'
+  ),
   notes: z.string().optional(),
   is_private: z.boolean().optional().default(false),
   is_all_day: z.boolean().optional(),
@@ -349,6 +354,7 @@ export const scheduleEntryResponseSchema = z.object({
   notes: z.string().nullable(),
   is_private: z.boolean(),
   is_all_day: z.boolean(),
+  calendar_id: uuidSchema.nullable().optional(),
   status: z.string(),
   recurrence_pattern: z.string().nullable(),
   created_by: uuidSchema,
@@ -398,6 +404,28 @@ export type ReverseApprovalData = z.infer<typeof reverseApprovalSchema>;
 export type TimeSheetStatsResponse = z.infer<typeof timeSheetStatsResponseSchema>;
 export type TimeSheetSearchData = z.infer<typeof timeSheetSearchSchema>;
 export type TimeSheetExportQuery = z.infer<typeof timeSheetExportQuerySchema>;
+// Calendars the caller can see (GET /api/v1/calendars)
+export const calendarListQuerySchema = z.object({
+  type: z.enum(['personal', 'group']).optional(),
+  include_archived: z.enum(['true', 'false']).optional().default('false').transform((v) => v === 'true'),
+});
+
+export const calendarResponseSchema = z.object({
+  calendar_id: uuidSchema.nullable().describe(
+    'Group calendars: the id to send as calendar_id on a schedule entry. Personal calendars: always null, ' +
+    'because a personal calendar is not addressed by an id on entries. To put an entry on someone\'s personal ' +
+    'calendar, send calendar_id null (or omit it) together with assigned_user_ids: [owner_user_id].'
+  ),
+  name: z.string().describe('Group calendar name, or the owner\'s display name for a personal calendar.'),
+  calendar_type: z.enum(['personal', 'group']),
+  owner_user_id: uuidSchema.nullable().describe('Owner of a personal calendar (its identity in this list); null for group calendars.'),
+  access_level: z.enum(['read', 'edit', 'manage', 'free_busy']).describe('Effective access level of the caller on this calendar.'),
+  can_edit: z.boolean().describe('True when access_level is edit or manage.'),
+  is_archived: z.boolean(),
+});
+
+export type CalendarListQuery = z.infer<typeof calendarListQuerySchema>;
+export type CalendarResponse = z.infer<typeof calendarResponseSchema>;
 export type CreateScheduleEntryData = z.infer<typeof createScheduleEntrySchema>;
 export type UpdateScheduleEntryData = z.infer<typeof updateScheduleEntrySchema>;
 export type ScheduleEntryResponse = z.infer<typeof scheduleEntryResponseSchema>;

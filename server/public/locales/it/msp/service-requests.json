@@ -93,6 +93,36 @@
         "checkbox": "casella di controllo",
         "date": "data",
         "file-upload": "caricamento file"
+      },
+      "visibility": {
+        "title": "Mostra quando…",
+        "none": "Sempre visibile",
+        "addRule": "Aggiungi condizione",
+        "removeRule": "Rimuovi condizione",
+        "source": "Campo",
+        "selectSource": "Seleziona un campo",
+        "operator": "Condizione",
+        "value": "Valore",
+        "valueTrue": "Selezionato",
+        "valueFalse": "Non selezionato",
+        "selectValue": "Seleziona un valore",
+        "legacyBooleanWarning": "Questa regola confronta con del testo, ma una casella contiene vero/falso e non corrisponderà mai. Riseleziona il valore per correggere.",
+        "saveFailed": "Impossibile salvare le regole di visibilità.",
+        "contextSources": {
+          "requesterUserId": "Utente richiedente",
+          "clientId": "Cliente richiedente",
+          "contactId": "Contatto richiedente"
+        },
+        "operators": {
+          "equals": "è uguale a",
+          "not-equals": "non è uguale a",
+          "is-true": "è selezionato / vero",
+          "is-false": "non è selezionato / falso",
+          "has-value": "ha un valore",
+          "is-empty": "è vuoto"
+        },
+        "advancedJson": "Avanzate (JSON)",
+        "advancedJsonHelp": "La configurazione salvata completa, inclusi i valori predefiniti di contesto. Le regole di visibilità si modificano più facilmente con «Mostra quando…» su ogni campo. Le modifiche non salvate qui vengono scartate se lì si modifica una regola."
       }
     },
     "execution": {

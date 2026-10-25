@@ -1369,6 +1369,9 @@ const nextConfig = {
     // out of the Turbopack server bundle that every static-gen worker loads.
     'nodemailer',
     'imapflow',
+    // Reached from the ticket email-html route (archived .eml → display HTML);
+    // a CJS Node parser with no business in a bundle.
+    'mailparser',
     'express',
     'fluent-ffmpeg',
     'tar',

@@ -425,26 +425,75 @@
           "test": "Testa anslutning",
           "testing": "Testar…"
         },
-        "description": "Ange URL:en till din CIPP-instans och en API-token så att Alga kan identifiera och synkronisera Entra-data.",
-        "encryptionNote": "API-nyckeln krypteras vid lagring och visas aldrig igen efter att den sparats.",
+        "description": "Ange uppgifterna för en CIPP-API-klient så att Alga kan identifiera och synkronisera Entra-data.",
+        "encryptionNote": "Klienthemligheten krypteras vid lagring och visas aldrig igen efter att den sparats.",
         "errors": {
           "missingFields": "Både bas-URL och API-token krävs.",
           "testFirst": "Testa anslutningen innan du sparar.",
-          "unknown": "Ett okänt fel uppstod."
+          "unknown": "Ett okänt fel uppstod.",
+          "missingApiClientFields": "API-URL, Program-ID (klient), klienthemlighet och Klientorganisations-ID krävs alla."
         },
         "fields": {
           "apiToken": "API-token",
-          "apiTokenHelp": "I CIPP: ”Settings” → ”CIPP” → ”API access”. Kopiera API-nyckeln, inte en Azure-klienthemlighet.",
+          "apiTokenHelp": "Den statiska API-nyckeln från en äldre CIPP-version. CIPP utfärdar inte längre sådana; föredra en API-klient.",
           "apiTokenPlaceholder": "Ange token…",
-          "baseUrl": "Bas-URL för CIPP",
-          "baseUrlHelp": "Detta är värden för funktionsappen CIPP-API (till exempel my-cipp-api.azurewebsites.net), inte det CIPP-gränssnitt du loggar in i.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "CIPP-API-URL",
+          "baseUrlHelp": "CIPP-API-URL:en, med eller utan avslutande /api.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "API-URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Klistra in den API-URL som visas i CIPP. Den slutar på /api; det fungerar med eller utan det suffixet.",
+          "clientId": "Program-ID (klient)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Klienthemlighet",
+          "clientSecretPlaceholder": "Ange klienthemlighet…",
+          "clientSecretHelp": "CIPP visar hemligheten bara en gång, när du sparar klienten med Save to Azure. Om du inte längre har den skapar du en ny hemlighet och anger den här.",
+          "tenantId": "Klientorganisations-ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "Klientorganisations-ID som visas på sidan CIPP-API, bredvid klienten."
         },
         "test": {
           "passed": "CIPP svarade. Synliga klientorganisationer: {{count}}.",
           "required": "Testa anslutningen innan du sparar."
         },
-        "title": "Anslut CIPP"
+        "title": "Anslut CIPP",
+        "reconnectTitle": "Återanslut CIPP",
+        "legacyDescription": "Ange din CIPP-API-URL och en äldre statisk API-nyckel. CIPP utfärdar inte längre sådana nycklar, så använd en API-klient om du kan.",
+        "reconnectNote": "API-URL, Program-ID (klient) och Klientorganisations-ID fylls i från den aktuella anslutningen. Ange klienthemligheten igen. Den aktuella anslutningen fortsätter fungera tills de nya uppgifterna klarar ett test och du sparar.",
+        "reconnectNoteLegacy": "API-URL fylls i från den aktuella anslutningen. Ange Program-ID (klient), klienthemligheten och Klientorganisations-ID från CIPP > Integrations > CIPP-API. Den aktuella anslutningen fortsätter fungera tills de nya uppgifterna klarar ett test och du sparar.",
+        "legacyNote": "Äldre API-nycklar är endast till för anslutningar som skapades innan CIPP införde API-klienter. Befintliga anslutningar fortsätter fungera.",
+        "legacyEncryptionNote": "API-nyckeln krypteras vid lagring och visas aldrig igen efter att den sparats.",
+        "help": {
+          "title": "Var du hittar detta i CIPP",
+          "steps": {
+            "openIntegration": "Gå till Integrations > CIPP-API i CIPP.",
+            "createClient": "Välj Create New Client.",
+            "enable": "Aktivera klienten.",
+            "saveToAzure": "Välj Save to Azure.",
+            "copySecret": "Kopiera klienthemligheten. CIPP visar den bara en gång.",
+            "copyDetails": "Kopiera Klientorganisations-ID och API-URL från samma sida, tillsammans med Program-ID (klient)."
+          },
+          "tenantIdDelay": "Det kan ta 5 till 15 minuter innan Klientorganisations-ID visas efter första sparningen. Om det inte finns där ännu väntar du och uppdaterar CIPP-sidan.",
+          "restrictions": "Om klienten använder Allowed IP Ranges lägger du till Algas utgående IP-adresser där. Om den använder en Custom Role måste rollen tillåta listtenants, listusers, listgroups, listusergroups och ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Använd en äldre API-nyckel i stället",
+          "useApiClient": "Använd en CIPP-API-klient i stället (rekommenderas)"
+        },
+        "failure": {
+          "unreachable": "CIPP kunde inte nås på den här URL:en",
+          "tokenRejected": "Microsoft avvisade API-klientens inloggning",
+          "apiRefused": "CIPP avvisade åtkomsttoken",
+          "legacyRejected": "CIPP avvisade API-nyckeln",
+          "roleBlocked": "CIPP:s anpassade roll blockerar en behörighet som synkroniseringen behöver",
+          "transport": {
+            "dns": "Det gick inte att nå {{host}}: värdnamnet kan inte slås upp. Kontrollera API-URL:en; kopiera den från CIPP > Integrations > CIPP-API.",
+            "refused": "Det gick inte att nå {{host}}: anslutningen nekades. Värden finns men tar inte emot anslutningar. Kontrollera API-URL:en och att CIPP-API-funktionsappen körs.",
+            "timeout": "Det gick inte att nå {{host}}: begäran överskred tidsgränsen. Värden kan vara nere eller så blockerar en brandvägg vår trafik. Kontrollera API-URL:en och försök igen.",
+            "tls": "Det gick inte att nå {{host}}: dess TLS-certifikat godtogs inte. Använd https-API-URL:en som visas i CIPP > Integrations > CIPP-API.",
+            "network": "Det gick inte att nå {{host}}: nätverksbegäran misslyckades innan CIPP svarade. Kontrollera API-URL:en och försök igen."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft loggade in dig, men listan över hanterade klientorganisationer kunde inte läsas, så inget sparades. Dina behörigheter godkändes – detta innebär oftast att partnerns klientorganisation inte har anslutits till Microsoft 365 Lighthouse eller saknar aktiva GDAP-relationer.",
             "tokenRejected": "Microsoft avvisade anslutningens åtkomsttoken, så inget sparades. Starta anslutningen igen."
           },
-          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Ansluter…)",
           "details": "Anslutningsuppgifter",
           "directCredentialSourceLabel": "Källa för autentiseringsuppgifter:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Direktanslutning till Microsoft Entra"
-          }
+          },
+          "authTypeLabel": "Autentisering",
+          "authTypes": {
+            "api_client": "API-klient",
+            "legacy_api_token": "Äldre API-nyckel"
+          },
+          "apiUrlLabel": "API-URL",
+          "clientIdLabel": "Program-ID (klient)",
+          "cippTenantIdLabel": "Klientorganisations-ID",
+          "legacyNotice": "Den här anslutningen använder en äldre CIPP-API-nyckel. Den fortsätter synkronisera oförändrad. Återanslut för att byta till en CIPP-API-klient.",
+          "reconnectCipp": "Återanslut"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga läser klientorganisationer via den CIPP-instans du redan kör.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "Värden för funktionsappen CIPP-API, inte CIPP-gränssnittet.",
-              "apiKey": "En CIPP-API-nyckel med åtkomst till listan över klientorganisationer.",
+              "apiHost": "API-URL, Program-ID (klient) och Klientorganisations-ID från CIPP > Integrations > CIPP-API.",
+              "apiKey": "API-klientens hemlighet, som CIPP bara visar en gång.",
               "instance": "En CIPP-instans som körs."
             }
           },
@@ -1703,10 +1761,15 @@
           "consentNotGranted": "Microsoft bekräftade inte administratörssamtycke.",
           "consentPersistFailed": "Det gick inte att registrera Microsoft-administratörssamtycke.",
           "invalidState": "Den här Microsoft-konfigurationsbegäran är ogiltig eller har gått ut. Börja om från inställningarna för leverantörer.",
-          "microsoftError": "Microsoft kunde inte slutföra konfigurationsbegäran. Försök igen eller använd manuell konfiguration.",
+          "microsoftError": "Microsoft kunde inte slutföra installationsbegäran.",
           "missingCode": "Microsoft returnerade ingen auktoriseringskod. Starta konfigurationen igen.",
-          "sessionMismatch": "Din AlgaPSA-session matchar inte administratören som startade konfigurationen. Logga in och försök igen.",
-          "optionsLoadFailed": "Det gick inte att läsa in konfigurationsalternativ för Microsoft-e-post."
+          "sessionMismatch": "Den här installationen startades i en annan webbläsare eller i ett privat fönster. Slutför den i samma fönster som du startade den i, eller använd godkännandelänken.",
+          "optionsLoadFailed": "Det gick inte att läsa in konfigurationsalternativ för Microsoft-e-post.",
+          "policyBlocked": "En princip för villkorsstyrd åtkomst eller enhet i din Microsoft-klientorganisation blockerade inloggningen. Be din Microsoft-administratör undanta appen, eller godkänn från en enhet som principen tillåter.",
+          "adminRequired": "Appen måste godkännas av en global Microsoft-administratör. Kopiera godkännandelänken och skicka den till personen.",
+          "wrongTenant": "Microsoft-kontot som användes tillhör en annan Microsoft-klientorganisation än den som konfigureras.",
+          "appNotFound": "Microsoft-appen hittades inte i den Microsoft-klientorganisationen. Den kan ha tagits bort, eller så är Microsoft-klientorganisationen fel. Du kan konfigurera en annan app manuellt.",
+          "quoteDiagnostics": "Ange detta när du granskar Entras inloggningsloggar: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Klient-ID",
@@ -2650,6 +2713,202 @@
           "select": "Välj kontakt"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "Det gick inte att läsa in Datto RMM-inställningarna",
+          "loadSiteMappings": "Det gick inte att läsa in platsmappningarna",
+          "saveConfig": "Det gick inte att spara Datto RMM-konfigurationen",
+          "connectionTest": "Anslutningstestet misslyckades",
+          "disconnect": "Frånkopplingen misslyckades",
+          "syncSites": "Platssynkroniseringen misslyckades",
+          "someSitesFailed": "Vissa platser kunde inte synkroniseras: {{errors}}",
+          "syncDevices": "Enhetssynkroniseringen misslyckades",
+          "someDevicesFailed": "Vissa enheter kunde inte synkroniseras: {{errors}}",
+          "updateMapping": "Det gick inte att uppdatera mappningen",
+          "backfillAlerts": "Efterhämtningen av larm misslyckades",
+          "someAlertsFailed": "Vissa larm kunde inte uppdateras: {{errors}}",
+          "ingestSoftware": "Inläsningen av programvara misslyckades",
+          "someSoftwareFailed": "Programvaran kunde inte läsas in för vissa enheter: {{errors}}",
+          "createClients": "Det gick inte att skapa kunder för Datto-platser",
+          "someClientsFailed": "Vissa platser kopplades inte: {{errors}}",
+          "regenerateWebhookSecret": "Det gick inte att generera en ny webhook-hemlighet"
+        },
+        "toasts": {
+          "saveFailedTitle": "Det gick inte att spara",
+          "savedTitle": "Sparat",
+          "savedDescription": "Datto RMM-konfigurationen har uppdaterats.",
+          "connectionFailedTitle": "Anslutningen misslyckades",
+          "connectedTitle": "Ansluten",
+          "connectedDescription": "Datto RMM-anslutningen har verifierats.",
+          "disconnectFailedTitle": "Frånkopplingen misslyckades",
+          "disconnectedTitle": "Frånkopplad",
+          "disconnectedDescription": "Datto RMM-inloggningsuppgifterna har rensats. Platsmappningarna behölls.",
+          "syncFailedTitle": "Synkroniseringen misslyckades",
+          "sitesSyncedTitle": "Platserna har synkroniserats",
+          "sitesSyncedDescription": "Datto-platser har synkroniserats till platsmappningar.",
+          "devicesSyncedTitle": "Enheterna har synkroniserats",
+          "devicesSyncedDescription": "Datto-enheter har synkroniserats till tillgångar.",
+          "updateFailedTitle": "Uppdateringen misslyckades",
+          "backfillFailedTitle": "Efterhämtningen misslyckades",
+          "alertsSyncedTitle": "Larmen har synkroniserats",
+          "alertsSyncedDescription": "Öppna Datto-larm har efterhämtats.",
+          "ingestionFailedTitle": "Inläsningen misslyckades",
+          "softwareIngestedTitle": "Programvaran har lästs in",
+          "softwareIngestedDescription": "Datto-programvaruinventeringen har lästs in.",
+          "optionsSavedDescription": "Datto RMM-alternativen har uppdaterats.",
+          "createClientsFailedTitle": "Det gick inte att skapa kunder",
+          "sitesSyncedWithClients": "Datto-platserna har synkroniserats. Nya platser: {{created}} kunder skapade, {{linked}} kopplade, {{failed}} misslyckade.",
+          "webhookSecretRegeneratedTitle": "Ny webhook-hemlighet genererad",
+          "webhookSecretRegeneratedDescription": "Uppdatera värdet i HTTP-huvudet i dina webhook-svar i Datto."
+        },
+        "success": {
+          "saved": "Datto RMM-konfigurationen har sparats. Kör ”Testa anslutning” för att aktivera den.",
+          "unnamedAccount": "ditt konto",
+          "connection": "Anslutningen lyckades. Konto: {{account}}. Platser: {{sites}}, enheter: {{devices}}.",
+          "disconnected": "Frånkopplad.",
+          "siteSyncCompleted": "Platssynkroniseringen är klar. Behandlade: {{processed}}, skapade: {{created}}, uppdaterade: {{updated}}, misslyckade: {{failed}}",
+          "deviceSyncCompleted": "Enhetssynkroniseringen är klar. Behandlade: {{processed}}, skapade: {{created}}, uppdaterade: {{updated}}, misslyckade: {{failed}}",
+          "alertBackfillCompleted": "Efterhämtningen av larm är klar. Behandlade: {{processed}}, skapade: {{created}}, uppdaterade: {{updated}}, misslyckade: {{failed}}",
+          "softwareIngestionCompleted": "Programvaruinläsningen är klar. Behandlade: {{processed}}, installerade/uppdaterade: {{created}}, uppdaterade tillgångar: {{updated}}, misslyckade: {{failed}}",
+          "clientsCreated": "Skapade {{created}} kunder och kopplade {{linked}} befintliga kunder. Hoppades över: {{skipped}}, misslyckade: {{failed}}"
+        },
+        "mappings": {
+          "site": "Datto-plats",
+          "client": "Alga-kund",
+          "defaultContact": "Standardkontakt",
+          "missingBadge": "Finns inte i Datto",
+          "onDemandBadge": "På begäran",
+          "signedInUsersSite": "Inloggade användare för plats",
+          "signedInUsersSelect": "Välj en kopplad plats"
+        },
+        "dattoIdLabel": "Datto-ID: {{id}}",
+        "client": {
+          "loading": "Läser in kunder…",
+          "select": "Välj kund",
+          "suggested": "Förslag: {{client}}",
+          "create": "Skapa kunden ”{{name}}”",
+          "creating": "Skapar…"
+        },
+        "contact": {
+          "select": "Välj kontakt"
+        },
+        "autoSync": "Automatisk synkronisering",
+        "platform": {
+          "custom": "Anpassad URL"
+        },
+        "webhook": {
+          "copiedTitle": "Kopierad",
+          "url": "Webhook-URL",
+          "urlCopied": "Webhook-URL:en har kopierats till urklipp.",
+          "copy": "Kopiera",
+          "headerName": "Anpassat HTTP-huvudnamn",
+          "headerNameCopied": "Webhookens HTTP-huvudnamn har kopierats till urklipp.",
+          "secret": "HTTP-huvudets hemlighet",
+          "secretCopied": "Webhook-hemligheten har kopierats till urklipp.",
+          "bodyTemplate": "Brödtextmall (larm utlöst)",
+          "bodyTemplateCopied": "Brödtextmallen har kopierats till urklipp.",
+          "resolveBodyTemplate": "Brödtextmall (larm åtgärdat)",
+          "resolveBodyTemplateCopied": "Brödtextmallen för åtgärdat larm har kopierats till urklipp.",
+          "unavailable": "Webhook-information är inte tillgänglig. (Kräver läsbehörighet för inställningar.)"
+        },
+        "disconnectConfirm": {
+          "title": "Koppla från Datto RMM?",
+          "message": "Den lagrade API-nyckeln och hemligheten tas bort, webhook-hemligheten återställs och schemalagda synkroniseringar stoppas. Platsmappningar och synkroniserade tillgångar behålls."
+        },
+        "actions": {
+          "disconnect": "Koppla från",
+          "refresh": "Uppdatera",
+          "saving": "Sparar...",
+          "save": "Spara",
+          "testing": "Testar...",
+          "testConnection": "Testa anslutning",
+          "disconnecting": "Kopplar från...",
+          "syncing": "Synkroniserar...",
+          "syncSites": "Synkronisera platser",
+          "syncDevices": "Synkronisera enheter",
+          "ingesting": "Läser in...",
+          "ingestSoftware": "Läs in programvara",
+          "syncAlerts": "Synkronisera larm",
+          "createClients": "Skapa kunder",
+          "createClientsForUnmapped": "Skapa kunder för okopplade ({{count}})",
+          "regenerateSecret": "Generera ny hemlighet"
+        },
+        "title": "Datto RMM",
+        "description": "Anslut Datto RMM för att synkronisera platser och enheter, läsa in larm och öppna Web Remote från tillgångar.",
+        "status": {
+          "connected": "Ansluten",
+          "disconnected": "Frånkopplad",
+          "instanceUrlNotSet": "API-URL har inte angetts"
+        },
+        "counts": {
+          "mappedSites": "Mappade platser",
+          "syncedDevices": "Synkroniserade enheter",
+          "activeAlerts": "Aktiva larm",
+          "lastSync": "Senaste synkronisering",
+          "never": "Aldrig"
+        },
+        "lastError": "Senaste fel: {{error}}",
+        "fields": {
+          "platform": "Plattform",
+          "platformHelp": "Välj regionen i den adress du använder för att logga in på Datto RMM (till exempel är https://merlot.rmm.datto.com regionen Merlot).",
+          "instanceUrl": "API-URL",
+          "instanceUrlHelp": "Datto-API-värden, t.ex. https://merlot-api.centrastage.net. Ett avslutande /api läggs till automatiskt.",
+          "apiUserNote": "Skapa en dedikerad Datto-API-användare för Alga. Öppna användaren i Datto RMM för att generera API-nyckel och hemlighet, och ge dess säkerhetsnivå läsåtkomst till konto-, plats-, enhets-, larm- och granskningsdata.",
+          "softwareOnSync": "Läs in programvara under enhetssynkroniseringen",
+          "softwareOnSyncHelp": "Läser programvarugranskningen för varje ändrad enhet som en del av synkroniseringen. Det ger ett extra API-anrop per ändrad enhet, vilket kan gå långsamt på stora konton.",
+          "resolveOnClose": "Åtgärda Datto-larmet när dess ärende stängs",
+          "resolveOnCloseHelp": "Kräver en Datto-API-användare med skrivåtkomst till larm. Lämna avstängt för en skrivskyddad API-användare.",
+          "rebootComponent": "Omstartskomponent",
+          "rebootComponentSelect": "Välj en komponent",
+          "rebootComponentUid": "Komponent-UID",
+          "rebootComponentFallback": "Komponentlistan är inte tillgänglig ({{reason}}). Klistra i stället in komponentens UID.",
+          "rebootComponentUnknownReason": "okänt fel",
+          "rebootComponentHelp": "Lämna tomt för att inaktivera omstartsåtgärden. Endast komponenter som redan finns i ditt Datto-konto kan köras.",
+          "hostChangedHint": "Plattformen eller API-URL:en har ändrats. Ange API-nyckeln och API-hemligheten igen för att spara.",
+          "optionsNeedCredentials": "Spara först API-nyckeln och hemligheten. Dessa alternativ är låsta tills inloggningsuppgifter har sparats.",
+          "autoCreateClients": "Skapa kunder för nya platser automatiskt",
+          "autoCreateClientsHelp": "Platserna uppdateras före varje schemalagd enhetssynkronisering. När detta är på får en plats som visas för första gången en Alga-kund med samma namn, eller kopplas till den kund som redan har det namnet. Befintliga okopplade platser och platser på begäran lämnas orörda."
+        },
+        "auth": {
+          "apiKey": "API-nyckel",
+          "enterApiKey": "Ange API-nyckel",
+          "saved": "Sparad: {{value}}",
+          "apiSecret": "API-hemlighet",
+          "savedEnterToUpdate": "Sparad (ange för att uppdatera)",
+          "enterApiSecret": "Ange API-hemlighet"
+        },
+        "statusLine": {
+          "configured": "Status: Konfigurerad",
+          "notConfigured": "Status: Inte konfigurerad"
+        },
+        "loadingSettings": "Läser in Datto RMM-inställningar...",
+        "sections": {
+          "sites": "Platser",
+          "sitesDescription": "Synkronisera Datto-platser till Alga-platsmappningar och mappa dem sedan till Alga-kunder.",
+          "siteMapping": "Platsmappning",
+          "siteMappingDescription": "Tilldela varje Datto-plats till en Alga-kund och styr automatisk synkronisering per plats. Förslagen kommer från platsnamnet eller dess företagsnamn i Autotask och tillämpas aldrig automatiskt.",
+          "siteMappingEmpty": "Inga platser hittades. Kör ”Synkronisera platser” först.",
+          "devices": "Enheter",
+          "devicesDescription": "Synkronisera Datto-enheter till Alga-tillgångar för platser där automatisk synkronisering är aktiverad.",
+          "alerts": "Larm",
+          "alertsDescription": "Larm hämtas enligt det schema som anges under Automatisering av larm nedan. Använd ”Synkronisera larm” för att hämta öppna larm direkt.",
+          "webhooks": "Webhook (valfri snabbväg)",
+          "webhooksDescription": "Regelbunden hämtning är den garanterade vägen. För att få larm inom några sekunder lägger du till en webhook-svarsåtgärd i dina Datto-övervakningspolicyer med URL:en, det anpassade HTTP-huvudet och brödtextmallen nedan.",
+          "assetActions": "Tillgångsåtgärder",
+          "assetActionsDescription": "Välj den Datto-komponent som startar om en enhet när en tekniker klickar på ”Starta om enhet” på en tillgång. Den körs som ett Quick Job och kräver en API-användare med skrivåtkomst."
+        },
+        "createClientsConfirm": {
+          "title": "Skapa kunder för okopplade platser?",
+          "message": "Var och en av de {{count}} okopplade platserna får en Alga-kund med samma namn och kopplas till den. En plats vars namn matchar en befintlig kund kopplas i stället till den kunden. Platser på begäran och platser som inte längre finns i Datto lämnas orörda."
+        },
+        "proFeature": {
+          "description": "Integrationen med Datto RMM är tillgänglig i AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Generera en ny webhook-hemlighet?",
+          "message": "Den nuvarande hemligheten slutar fungera direkt. Webhook-larm avvisas tills varje webhook-svar i Datto skickar det nya värdet i HTTP-huvudet. Avsökningen påverkas inte."
+        }
+      },
       "tanium": {
         "proFeature": {
           "description": "RMM-integrationen med Tanium är tillgänglig i AlgaPSA Pro."
@@ -3018,7 +3277,9 @@
         "invalidPeopleMode": "Det är inte ett giltigt personläge.",
         "billingProfileUnavailable": "Den faktureringsprofilen är inte tillgänglig för den här kunden.",
         "mappingNotFound": "Kopplingen finns inte längre. Uppdatera sidan och försök igen.",
-        "forbidden": "Du har inte behörighet att ändra detta."
+        "forbidden": "Du har inte behörighet att ändra detta.",
+        "clientNotFound": "Den kunden finns inte längre. Uppdatera sidan och försök igen.",
+        "contactNotForClient": "Den kontakten tillhör inte kunden som platsen är kopplad till."
       }
     },
     "sso": {
@@ -3964,13 +4225,16 @@
             "callControl": "Samtalsstyrning",
             "xapi": "Konfigurations-API",
             "lastChecked": "Senast kontrollerad",
-            "notConnectedHint": "Anslut PBX-API:et ovan för att använda funktionen."
+            "notConnectedHint": "Anslut PBX-API:et ovan för att använda funktionen.",
+            "usersBlocked": "3CX API-appens roll kan inte läsa användare. Ge den nödvändiga rättigheter i 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "3CX API-appens roll kan inte hantera kontakter. Ge den nödvändiga rättigheter i 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Anknytningar",
             "sync": "Synkronisera från PBX",
             "lastSync": "Senaste synkronisering",
             "empty": "Inga anknytningar har synkroniserats ännu.",
+            "emptyAfterSync": "3CX returnerade inga aktiverade användare; kontrollera API-appens behörigheter",
             "dn": "Anknytning",
             "pbxUser": "PBX-användare",
             "algaUser": "AlgaPSA-användare",

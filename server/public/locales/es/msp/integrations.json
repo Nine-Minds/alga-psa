@@ -425,26 +425,75 @@
           "test": "Probar conexión",
           "testing": "Probando…"
         },
-        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
-        "encryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "description": "Introduzca los datos de un cliente de API de CIPP para que Alga pueda descubrir y sincronizar los datos de Entra.",
+        "encryptionNote": "El secreto de cliente se cifra en reposo y no se vuelve a mostrar después de guardar.",
         "errors": {
           "missingFields": "Se requieren tanto la URL base como el token de API.",
           "testFirst": "Pruebe la conexión antes de guardar.",
-          "unknown": "Se produjo un error desconocido."
+          "unknown": "Se produjo un error desconocido.",
+          "missingApiClientFields": "La URL de la API, el Id. de aplicación (cliente), el secreto de cliente y el Id. de inquilino son obligatorios."
         },
         "fields": {
           "apiToken": "Token de API",
-          "apiTokenHelp": "En CIPP: Configuración → CIPP → Acceso a API. Copie la clave de API, no un secreto de cliente de Azure.",
+          "apiTokenHelp": "La clave de API estática de una versión anterior de CIPP. CIPP ya no las emite; prefiera un cliente de API.",
           "apiTokenPlaceholder": "Introduzca el token...",
-          "baseUrl": "URL base de CIPP",
-          "baseUrlHelp": "Este es el host de la function app CIPP-API (por ejemplo my-cipp-api.azurewebsites.net), no el frontend de CIPP donde inicia sesión.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL de la API de CIPP",
+          "baseUrlHelp": "La URL de la API de CIPP, con o sin el /api final.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL de la API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Pegue la URL de la API que muestra CIPP. Termina en /api; funciona con o sin ese sufijo.",
+          "clientId": "Id. de aplicación (cliente)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Secreto de cliente",
+          "clientSecretPlaceholder": "Introduzca el secreto de cliente...",
+          "clientSecretHelp": "CIPP muestra el secreto una sola vez, cuando guarda el cliente con Save to Azure. Si ya no lo tiene, cree un secreto nuevo e introdúzcalo aquí.",
+          "tenantId": "Id. de inquilino",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "El Id. de inquilino que se muestra en la página CIPP-API, junto al cliente."
         },
         "test": {
           "passed": "CIPP respondió. {{count}} inquilinos visibles.",
           "required": "Pruebe la conexión antes de guardar."
         },
-        "title": "Conectar CIPP"
+        "title": "Conectar CIPP",
+        "reconnectTitle": "Reconectar CIPP",
+        "legacyDescription": "Introduzca la URL de su API de CIPP y una clave de API estática heredada. CIPP ya no emite estas claves, así que use un cliente de API si puede.",
+        "reconnectNote": "La URL de la API, el Id. de aplicación (cliente) y el Id. de inquilino se rellenan a partir de la conexión actual. Vuelva a introducir el secreto de cliente. La conexión actual sigue funcionando hasta que los nuevos datos superen una prueba y usted guarde.",
+        "reconnectNoteLegacy": "La URL de la API se rellena a partir de la conexión actual. Introduzca el Id. de aplicación (cliente), el secreto de cliente y el Id. de inquilino de CIPP > Integrations > CIPP-API. La conexión actual sigue funcionando hasta que los nuevos datos superen una prueba y usted guarde.",
+        "legacyNote": "Las claves de API heredadas son solo para conexiones creadas antes de que CIPP introdujera los clientes de API. Las conexiones existentes siguen funcionando.",
+        "legacyEncryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "help": {
+          "title": "Dónde encontrar estos datos en CIPP",
+          "steps": {
+            "openIntegration": "En CIPP, vaya a Integrations > CIPP-API.",
+            "createClient": "Elija Create New Client.",
+            "enable": "Habilite el cliente.",
+            "saveToAzure": "Elija Save to Azure.",
+            "copySecret": "Copie el secreto de cliente. CIPP lo muestra una sola vez.",
+            "copyDetails": "Copie el Id. de inquilino y la URL de la API de esa misma página, junto con el Id. de aplicación (cliente)."
+          },
+          "tenantIdDelay": "El Id. de inquilino puede tardar de 5 a 15 minutos en aparecer tras el primer guardado. Si aún no está, espere y actualice la página de CIPP.",
+          "restrictions": "Si el cliente usa Allowed IP Ranges, añada allí las IP de salida de Alga. Si usa un Custom Role, el rol debe permitir listtenants, listusers, listgroups, listusergroups y ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Usar en su lugar una clave de API heredada",
+          "useApiClient": "Usar en su lugar un cliente de API de CIPP (recomendado)"
+        },
+        "failure": {
+          "unreachable": "No se pudo acceder a CIPP en esta URL",
+          "tokenRejected": "Microsoft rechazó el inicio de sesión del cliente de API",
+          "apiRefused": "CIPP rechazó el token de acceso",
+          "legacyRejected": "CIPP rechazó la clave de API",
+          "roleBlocked": "El rol personalizado de CIPP bloquea un permiso que la sincronización necesita",
+          "transport": {
+            "dns": "No se pudo conectar con {{host}}: el nombre de host no se resuelve. Revise la URL de la API; cópiela desde CIPP > Integrations > CIPP-API.",
+            "refused": "No se pudo conectar con {{host}}: la conexión fue rechazada. El host existe, pero no acepta conexiones. Revise la URL de la API y que la aplicación de funciones CIPP-API esté en ejecución.",
+            "timeout": "No se pudo conectar con {{host}}: se agotó el tiempo de espera. Puede que el host no esté disponible o que un firewall descarte nuestro tráfico. Revise la URL de la API e inténtelo de nuevo.",
+            "tls": "No se pudo conectar con {{host}}: no se aceptó su certificado TLS. Use la URL https de la API que aparece en CIPP > Integrations > CIPP-API.",
+            "network": "No se pudo conectar con {{host}}: la solicitud de red falló antes de que CIPP respondiera. Revise la URL de la API e inténtelo de nuevo."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft inició su sesión, pero no se pudo leer la lista de inquilinos gestionados; no se guardó nada. Sus permisos fueron aceptados — normalmente significa que el inquilino de partner no está incorporado a Microsoft 365 Lighthouse o no tiene relaciones GDAP activas.",
             "tokenRejected": "Microsoft rechazó el token de acceso de la conexión; no se guardó nada. Inicie la conexión de nuevo."
           },
-          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Directo"
-          }
+          },
+          "authTypeLabel": "Autenticación",
+          "authTypes": {
+            "api_client": "Cliente de API",
+            "legacy_api_token": "Clave de API heredada"
+          },
+          "apiUrlLabel": "URL de la API",
+          "clientIdLabel": "Id. de aplicación (cliente)",
+          "cippTenantIdLabel": "Id. de inquilino",
+          "legacyNotice": "Esta conexión usa una clave de API de CIPP heredada. Sigue sincronizando sin cambios. Reconecte para cambiar a un cliente de API de CIPP.",
+          "reconnectCipp": "Reconectar"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga lee los inquilinos a través de la instancia de CIPP que ya ejecuta.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "El host de la function app CIPP-API, no el frontend de CIPP.",
-              "apiKey": "Una clave de API de CIPP con acceso a la lista de inquilinos.",
+              "apiHost": "La URL de la API, el Id. de aplicación (cliente) y el Id. de inquilino de CIPP > Integrations > CIPP-API.",
+              "apiKey": "El secreto del cliente de API, que CIPP muestra una sola vez.",
               "instance": "Una instancia de CIPP en funcionamiento."
             }
           },
@@ -1703,10 +1761,15 @@
           "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador.",
           "consentPersistFailed": "No se pudo registrar el consentimiento del administrador de Microsoft.",
           "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
-          "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",
+          "microsoftError": "Microsoft no pudo completar la solicitud de configuración.",
           "missingCode": "Microsoft no devolvió un código de autorización. Inicie de nuevo la configuración.",
-          "sessionMismatch": "Su sesión de AlgaPSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo.",
-          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft."
+          "sessionMismatch": "Esta configuración se inició en otro navegador o en una ventana privada. Termínela en la misma ventana en la que la inició, o use el enlace de aprobación.",
+          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft.",
+          "policyBlocked": "Una directiva de acceso condicional o de dispositivo de su inquilino de Microsoft bloqueó el inicio de sesión. Pida a su administrador de Microsoft que exima esta aplicación, o apruebe desde un dispositivo que su directiva permita.",
+          "adminRequired": "Un administrador global de Microsoft debe aprobar la aplicación. Copie el enlace de aprobación y envíeselo.",
+          "wrongTenant": "La cuenta de Microsoft utilizada pertenece a un inquilino de Microsoft distinto del que se está configurando.",
+          "appNotFound": "No se encontró la aplicación de Microsoft en ese inquilino de Microsoft. Puede que se haya eliminado o que el inquilino de Microsoft sea incorrecto. Puede configurar otra aplicación manualmente.",
+          "quoteDiagnostics": "Indique esto al revisar los registros de inicio de sesión de Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID de cliente",
@@ -2627,6 +2690,202 @@
           "select": "Seleccionar contacto"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "No se pudo cargar la configuración de Datto RMM",
+          "loadSiteMappings": "No se pudieron cargar las asignaciones de sitios",
+          "saveConfig": "No se pudo guardar la configuración de Datto RMM",
+          "connectionTest": "Error en la prueba de conexión",
+          "disconnect": "Error al desconectar",
+          "syncSites": "Error en la sincronización de sitios",
+          "someSitesFailed": "Algunos sitios no se pudieron sincronizar: {{errors}}",
+          "syncDevices": "Error en la sincronización de dispositivos",
+          "someDevicesFailed": "Algunos dispositivos no se pudieron sincronizar: {{errors}}",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "backfillAlerts": "Error al rellenar alertas",
+          "someAlertsFailed": "Algunas alertas no se pudieron actualizar: {{errors}}",
+          "ingestSoftware": "Error en la ingestión de software",
+          "someSoftwareFailed": "No se pudo ingerir el software de algunos dispositivos: {{errors}}",
+          "createClients": "No se pudieron crear clientes para los sitios de Datto",
+          "someClientsFailed": "Algunos sitios no se asignaron: {{errors}}",
+          "regenerateWebhookSecret": "No se pudo regenerar el secreto del webhook"
+        },
+        "toasts": {
+          "saveFailedTitle": "Error al guardar",
+          "savedTitle": "Guardado",
+          "savedDescription": "Configuración de Datto RMM actualizada.",
+          "connectionFailedTitle": "Error de conexión",
+          "connectedTitle": "Conectado",
+          "connectedDescription": "Conexión con Datto RMM verificada.",
+          "disconnectFailedTitle": "Error al desconectar",
+          "disconnectedTitle": "Desconectado",
+          "disconnectedDescription": "Credenciales de Datto RMM eliminadas. Se conservaron las asignaciones de sitios.",
+          "syncFailedTitle": "Error en la sincronización",
+          "sitesSyncedTitle": "Sitios sincronizados",
+          "sitesSyncedDescription": "Los sitios de Datto se sincronizaron como asignaciones de sitios.",
+          "devicesSyncedTitle": "Dispositivos sincronizados",
+          "devicesSyncedDescription": "Los dispositivos de Datto se sincronizaron como activos.",
+          "updateFailedTitle": "Error en la actualización",
+          "backfillFailedTitle": "Error en el relleno",
+          "alertsSyncedTitle": "Alertas sincronizadas",
+          "alertsSyncedDescription": "Se rellenaron las alertas abiertas de Datto.",
+          "ingestionFailedTitle": "Error en la ingestión",
+          "softwareIngestedTitle": "Software ingerido",
+          "softwareIngestedDescription": "Se ingirió el inventario de software de Datto.",
+          "optionsSavedDescription": "Opciones de Datto RMM actualizadas.",
+          "createClientsFailedTitle": "Error al crear clientes",
+          "sitesSyncedWithClients": "Se sincronizaron los sitios de Datto. Sitios nuevos: {{created}} clientes creados, {{linked}} vinculados, {{failed}} fallidos.",
+          "webhookSecretRegeneratedTitle": "Secreto del webhook regenerado",
+          "webhookSecretRegeneratedDescription": "Actualice el valor de la cabecera en sus respuestas de webhook de Datto."
+        },
+        "success": {
+          "saved": "Configuración de Datto RMM guardada. Ejecute «Probar conexión» para activarla.",
+          "unnamedAccount": "su cuenta",
+          "connection": "Conexión exitosa. Cuenta: {{account}}. Sitios: {{sites}}, Dispositivos: {{devices}}.",
+          "disconnected": "Desconectado.",
+          "siteSyncCompleted": "Sincronización de sitios completada. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}, Fallidos: {{failed}}",
+          "deviceSyncCompleted": "Sincronización de dispositivos completada. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}, Fallidos: {{failed}}",
+          "alertBackfillCompleted": "Relleno de alertas completado. Procesadas: {{processed}}, Creadas: {{created}}, Actualizadas: {{updated}}, Fallidas: {{failed}}",
+          "softwareIngestionCompleted": "Ingestión de software completada. Procesados: {{processed}}, Instalados/Actualizados: {{created}}, Activos actualizados: {{updated}}, Fallidos: {{failed}}",
+          "clientsCreated": "Se crearon {{created}} clientes y se vincularon {{linked}} existentes. Omitidos: {{skipped}}, Fallidos: {{failed}}"
+        },
+        "mappings": {
+          "site": "Sitio de Datto",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "missingBadge": "No está en Datto",
+          "onDemandBadge": "Bajo demanda",
+          "signedInUsersSite": "Usuarios con sesión iniciada del sitio",
+          "signedInUsersSelect": "Elija un sitio asignado"
+        },
+        "dattoIdLabel": "ID de Datto: {{id}}",
+        "client": {
+          "loading": "Cargando clientes…",
+          "select": "Seleccionar cliente",
+          "suggested": "Sugerido: {{client}}",
+          "create": "Crear cliente \"{{name}}\"",
+          "creating": "Creando…"
+        },
+        "contact": {
+          "select": "Seleccionar contacto"
+        },
+        "autoSync": "Sincronización automática",
+        "platform": {
+          "custom": "URL personalizada"
+        },
+        "webhook": {
+          "copiedTitle": "Copiado",
+          "url": "URL del webhook",
+          "urlCopied": "URL del webhook copiada al portapapeles.",
+          "copy": "Copiar",
+          "headerName": "Nombre de cabecera personalizada",
+          "headerNameCopied": "Nombre de la cabecera del webhook copiado al portapapeles.",
+          "secret": "Secreto de la cabecera",
+          "secretCopied": "Secreto del webhook copiado al portapapeles.",
+          "bodyTemplate": "Plantilla del cuerpo (alerta activada)",
+          "bodyTemplateCopied": "Plantilla del cuerpo copiada al portapapeles.",
+          "resolveBodyTemplate": "Plantilla del cuerpo (alerta resuelta)",
+          "resolveBodyTemplateCopied": "Plantilla del cuerpo de resolución copiada al portapapeles.",
+          "unavailable": "Información del webhook no disponible. (Requiere permiso de actualización de la configuración.)"
+        },
+        "disconnectConfirm": {
+          "title": "¿Desconectar Datto RMM?",
+          "message": "Se eliminan la clave API y el secreto almacenados, se restablece el secreto del webhook y se detienen las sincronizaciones programadas. Se conservan las asignaciones de sitios y los activos sincronizados."
+        },
+        "actions": {
+          "disconnect": "Desconectar",
+          "refresh": "Actualizar",
+          "saving": "Guardando...",
+          "save": "Guardar",
+          "testing": "Probando...",
+          "testConnection": "Probar conexión",
+          "disconnecting": "Desconectando...",
+          "syncing": "Sincronizando...",
+          "syncSites": "Sincronizar sitios",
+          "syncDevices": "Sincronizar dispositivos",
+          "ingesting": "Ingiriendo...",
+          "ingestSoftware": "Ingerir software",
+          "syncAlerts": "Sincronizar alertas",
+          "createClients": "Crear clientes",
+          "createClientsForUnmapped": "Crear clientes para no asignados ({{count}})",
+          "regenerateSecret": "Regenerar secreto"
+        },
+        "title": "Datto RMM",
+        "description": "Conecte Datto RMM para sincronizar sitios y dispositivos, ingerir alertas y abrir Web Remote desde los activos.",
+        "status": {
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "instanceUrlNotSet": "URL de API no establecida"
+        },
+        "counts": {
+          "mappedSites": "Sitios asignados",
+          "syncedDevices": "Dispositivos sincronizados",
+          "activeAlerts": "Alertas activas",
+          "lastSync": "Última sincronización",
+          "never": "Nunca"
+        },
+        "lastError": "Último error: {{error}}",
+        "fields": {
+          "platform": "Plataforma",
+          "platformHelp": "Elija la región que aparece en la dirección con la que inicia sesión en Datto RMM (por ejemplo, https://merlot.rmm.datto.com corresponde a Merlot).",
+          "instanceUrl": "URL de API",
+          "instanceUrlHelp": "El host de la API de Datto, p. ej. https://merlot-api.centrastage.net. Se añade /api al final automáticamente.",
+          "apiUserNote": "Cree un usuario de API de Datto dedicado para Alga. Abra ese usuario en Datto RMM para generar su clave API y su secreto, y otorgue a su nivel de seguridad acceso de lectura a los datos de la cuenta, los sitios, los dispositivos, las alertas y la auditoría.",
+          "softwareOnSync": "Ingerir software durante la sincronización de dispositivos",
+          "softwareOnSyncHelp": "Lee la auditoría de software de cada dispositivo modificado como parte de la sincronización. Esto supone una llamada adicional a la API por dispositivo modificado, lo que puede ser lento en cuentas grandes.",
+          "resolveOnClose": "Resolver la alerta de Datto cuando se cierre su ticket",
+          "resolveOnCloseHelp": "Requiere un usuario de API de Datto con acceso de escritura a las alertas. Déjelo desactivado para un usuario de API de solo lectura.",
+          "rebootComponent": "Componente de reinicio",
+          "rebootComponentSelect": "Seleccionar un componente",
+          "rebootComponentUid": "UID del componente",
+          "rebootComponentFallback": "La lista de componentes no está disponible ({{reason}}). Pegue en su lugar el UID del componente.",
+          "rebootComponentUnknownReason": "error desconocido",
+          "rebootComponentHelp": "Déjelo vacío para desactivar la acción de reinicio. Solo se pueden ejecutar componentes que ya estén en su cuenta de Datto.",
+          "hostChangedHint": "La plataforma o la URL de la API han cambiado. Vuelva a introducir la clave API y el secreto de API para guardar.",
+          "optionsNeedCredentials": "Guarde primero la clave API y el secreto. Estas opciones están bloqueadas mientras no haya credenciales almacenadas.",
+          "autoCreateClients": "Crear clientes automáticamente para sitios nuevos",
+          "autoCreateClientsHelp": "Los sitios se actualizan antes de cada sincronización programada de dispositivos. Si está activado, un sitio visto por primera vez recibe un cliente de Alga con su nombre o se vincula al cliente que ya tiene ese nombre. Los sitios no asignados existentes y los sitios bajo demanda no se modifican."
+        },
+        "auth": {
+          "apiKey": "Clave API",
+          "enterApiKey": "Introducir clave API",
+          "saved": "Guardado: {{value}}",
+          "apiSecret": "Secreto de API",
+          "savedEnterToUpdate": "Guardado (introducir para actualizar)",
+          "enterApiSecret": "Introducir secreto de API"
+        },
+        "statusLine": {
+          "configured": "Estado: Configurado",
+          "notConfigured": "Estado: No configurado"
+        },
+        "loadingSettings": "Cargando configuración de Datto RMM...",
+        "sections": {
+          "sites": "Sitios",
+          "sitesDescription": "Sincronice los sitios de Datto con las asignaciones de sitios de Alga y luego asígnelos a clientes de Alga.",
+          "siteMapping": "Asignación de sitios",
+          "siteMappingDescription": "Asigne cada sitio de Datto a un cliente de Alga y controle la sincronización automática por sitio. Las sugerencias provienen del nombre del sitio o del nombre de su empresa en Autotask y nunca se aplican automáticamente.",
+          "siteMappingEmpty": "No se encontraron sitios. Ejecute primero «Sincronizar sitios».",
+          "devices": "Dispositivos",
+          "devicesDescription": "Sincronice los dispositivos de Datto como activos de Alga para los sitios con la sincronización automática activada.",
+          "alerts": "Alertas",
+          "alertsDescription": "Las alertas se consultan según la programación configurada en Automatización de alertas, más abajo. Use «Sincronizar alertas» para obtener ahora las alertas abiertas.",
+          "webhooks": "Webhook (vía rápida opcional)",
+          "webhooksDescription": "La consulta periódica es la vía garantizada. Para recibir alertas en segundos, añada una acción de respuesta por webhook a sus políticas de monitor de Datto usando la URL, la cabecera personalizada y la plantilla del cuerpo que aparecen a continuación.",
+          "assetActions": "Acciones de activos",
+          "assetActionsDescription": "Elija el componente de Datto que reinicia un dispositivo cuando un técnico hace clic en «Reiniciar dispositivo» en un activo. Se ejecuta como Quick Job y requiere un usuario de API con acceso de escritura."
+        },
+        "createClientsConfirm": {
+          "title": "¿Crear clientes para los sitios no asignados?",
+          "message": "Cada uno de los {{count}} sitios no asignados recibe un cliente de Alga con su nombre y se asigna a él. Un sitio cuyo nombre coincide con un cliente existente se vincula a ese cliente. Los sitios bajo demanda y los que ya no están en Datto no se modifican."
+        },
+        "proFeature": {
+          "description": "La integración con Datto RMM está disponible en AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "¿Regenerar el secreto del webhook?",
+          "message": "El secreto actual deja de funcionar inmediatamente. Las alertas del webhook se rechazan hasta que cada respuesta de webhook de Datto envíe el nuevo valor de la cabecera. El sondeo no se ve afectado."
+        }
+      },
       "tanium": {
         "proFeature": {
           "description": "La integración RMM con Tanium está disponible en AlgaPSA Pro."
@@ -2995,7 +3254,9 @@
         "invalidPeopleMode": "Ese no es un modo de personas válido.",
         "billingProfileUnavailable": "Ese perfil de facturación no está disponible para este cliente.",
         "mappingNotFound": "Esa asignación ya no existe. Actualice la página e inténtelo de nuevo.",
-        "forbidden": "No tiene permiso para cambiar esto."
+        "forbidden": "No tiene permiso para cambiar esto.",
+        "clientNotFound": "Ese cliente ya no existe. Actualice e inténtelo de nuevo.",
+        "contactNotForClient": "Ese contacto no pertenece al cliente al que está asignado este sitio."
       }
     },
     "sso": {
@@ -3964,13 +4225,16 @@
             "callControl": "Control de llamadas",
             "xapi": "API de configuración",
             "lastChecked": "Última comprobación",
-            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función."
+            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función.",
+            "usersBlocked": "El rol de la aplicación API de 3CX no puede leer usuarios. Concédale los derechos necesarios en 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "El rol de la aplicación API de 3CX no puede gestionar contactos. Concédale los derechos necesarios en 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Extensiones",
             "sync": "Sincronizar desde la centralita",
             "lastSync": "Última sincronización",
             "empty": "Aún no se han sincronizado extensiones.",
+            "emptyAfterSync": "3CX no devolvió usuarios habilitados; revise los permisos de la aplicación API",
             "dn": "Extensión",
             "pbxUser": "Usuario de la centralita",
             "algaUser": "Usuario de AlgaPSA",

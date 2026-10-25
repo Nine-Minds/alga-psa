@@ -10,6 +10,8 @@ import { ContractLineServiceConfigurationService } from '../services/contractLin
 import { resolveContractLineServiceConfig } from '../lib/contractLineServiceConfigPolicy';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
 import { Knex } from 'knex';
+import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
+import { fetchCurrencyCatalogRates } from '../repositories/contractLineRepository';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
@@ -335,12 +337,23 @@ async function addServiceToTemplateLine(
   const resolvedQuantity: number | null = configurationType === 'Usage' || configurationType === 'Hourly'
     ? null
     : typeof quantity === 'number' && quantity > 0 ? quantity : 1;
-  const resolvedRate =
-    typeof customRate === 'number'
-      ? customRate
-      : service.default_rate != null
-        ? Number(service.default_rate)
-        : null;
+  // A template stores its member rates in its own base currency. Absent an
+  // explicit rate, snapshot the catalog price IN THAT CURRENCY (mode default,
+  // then the current service_prices row); never the currency-untagged
+  // service_catalog.default_rate. No price in the currency leaves the member
+  // rate null so it follows the catalog.
+  let resolvedRate: number | null = null;
+  if (typeof customRate === 'number') {
+    resolvedRate = customRate;
+  } else {
+    const template = await tenantScopedTable(trx, tenant, 'contract_templates')
+      .where({ template_id: templateLine.template_id })
+      .first('currency_code') as { currency_code?: string } | undefined;
+    if (template?.currency_code) {
+      const catalog = await fetchCurrencyCatalogRates(trx, tenant, [serviceId], 'fixed', template.currency_code);
+      resolvedRate = catalog.modeDefaults.get(serviceId) ?? catalog.currentPrices.get(serviceId) ?? null;
+    }
+  }
 
   if (configurationType === 'Usage' && resolvedTypeConfig.base_rate === undefined && resolvedRate !== null) {
     resolvedTypeConfig = { ...resolvedTypeConfig, base_rate: resolvedRate };
@@ -575,6 +588,8 @@ async function removeServiceFromTemplateLine(
   await tenantScopedTable(trx, tenant, 'contract_template_line_services')
     .where({ template_line_id: contractLineId, service_id: serviceId })
     .delete();
+  // The service's per-currency prices go with it (price rows carry no FK on service_id).
+  await deleteTemplateServicePrices(trx, tenant, contractLineId, serviceId);
 }
 
 async function removeServiceFromLiveContractLine(

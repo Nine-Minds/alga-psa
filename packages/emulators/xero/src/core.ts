@@ -337,15 +337,33 @@ export class XeroEmulatorCore implements EmulatorCore {
     }
     this.validateInvoiceLineCatalogRefs(payload);
     this.validateInvoiceLineTotals(payload);
-    const invoiceId = existingId ?? this.newId('inv');
-    this.invoiceNumberCounter += 1;
-    const existing = existingId ? data.invoices.get(existingId) : undefined;
+    const sentNumber =
+      typeof payload.InvoiceNumber === 'string' && payload.InvoiceNumber !== '' ? payload.InvoiceNumber : undefined;
+    // Live Xero upserts: a POST with no InvoiceID whose InvoiceNumber matches an existing
+    // invoice updates that invoice rather than creating a second one (or failing).
+    let matchedId = existingId;
+    if (!matchedId && sentNumber !== undefined) {
+      for (const other of data.invoices.values()) {
+        if (other.InvoiceNumber === sentNumber) {
+          matchedId = String(other.InvoiceID);
+          break;
+        }
+      }
+    }
+    const invoiceId = matchedId ?? this.newId('inv');
+    const existing = matchedId ? data.invoices.get(matchedId) : undefined;
+    // InvoiceNumber is returned exactly as sent; the sequence is only consumed when it is absent
+    // and the invoice has no number yet (an update by InvoiceID that omits it keeps the stored one).
+    let invoiceNumber: unknown = sentNumber ?? existing?.InvoiceNumber;
+    if (invoiceNumber === undefined) {
+      this.invoiceNumberCounter += 1;
+      invoiceNumber = `INV-${String(this.invoiceNumberCounter).padStart(4, '0')}`;
+    }
     const invoice: Record<string, unknown> = {
       ...existing,
       ...payload,
       InvoiceID: invoiceId,
-      InvoiceNumber:
-        payload.InvoiceNumber ?? existing?.InvoiceNumber ?? `INV-${String(this.invoiceNumberCounter).padStart(4, '0')}`,
+      InvoiceNumber: invoiceNumber,
       Status: payload.Status ?? existing?.Status ?? 'DRAFT',
       LineItems: (Array.isArray(payload.LineItems) ? payload.LineItems : []).map((line: Record<string, unknown>) => ({
         ...line,

@@ -2590,10 +2590,13 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "AI",
       "API",
       "CSV",
       "Dashboard",
+      "Datto RMM",
       "Email",
       "Excel",
       "HTML",
@@ -2605,6 +2608,7 @@
       "PDF",
       "Portal",
       "Realm",
+      "Sites",
       "SLA",
       "SMS",
       "SSO",

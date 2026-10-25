@@ -17,7 +17,7 @@ import type {
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { blockNoteToPlainText } from '@alga-psa/formatting/blocknoteUtils';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress, toISODate, toPlainDate } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -81,6 +81,31 @@ const normalizeDateLikeValue = (value: unknown): string | null => {
   return null;
 };
 
+/**
+ * Service periods are calendar dates, not instants. Keep the date as written
+ * (`2026-03-01T00:00:00+05:00` is March 1st, not the UTC day before it) and emit
+ * a date-only `YYYY-MM-DD` so the renderer's date-only path never shifts a day.
+ * Date objects carry their UTC calendar day, matching how the DB layer builds them.
+ */
+const normalizeServicePeriodDate = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : toISODate(toPlainDate(value));
+  }
+  const trimmed = normalizeDateLikeValue(value);
+  if (!trimmed) {
+    return null;
+  }
+  const dateOnlyMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/);
+  if (dateOnlyMatch) {
+    try {
+      return toISODate(toPlainDate(dateOnlyMatch[1]));
+    } catch {
+      return trimmed;
+    }
+  }
+  return trimmed;
+};
+
 const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): RendererRecurringDetailPeriod[] | undefined => {
   const candidate = item.recurringDetailPeriods ?? item.recurring_detail_periods;
   if (!Array.isArray(candidate) || candidate.length === 0) {
@@ -91,12 +116,12 @@ const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): Rendere
     .filter((detail): detail is Record<string, unknown> => !!detail && typeof detail === 'object')
     .map((detail) => ({
       servicePeriodStart:
-        normalizeDateLikeValue(detail.servicePeriodStart) ??
-        normalizeDateLikeValue(detail.service_period_start) ??
+        normalizeServicePeriodDate(detail.servicePeriodStart) ??
+        normalizeServicePeriodDate(detail.service_period_start) ??
         null,
       servicePeriodEnd:
-        normalizeDateLikeValue(detail.servicePeriodEnd) ??
-        normalizeDateLikeValue(detail.service_period_end) ??
+        normalizeServicePeriodDate(detail.servicePeriodEnd) ??
+        normalizeServicePeriodDate(detail.service_period_end) ??
         null,
       billingTiming:
         detail.billingTiming === 'advance' || detail.billingTiming === 'arrears'
@@ -206,21 +231,43 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, l
 const isRecurringItem = (item: WasmInvoiceLineItem): boolean =>
   (item.recurringDetailPeriods?.length ?? 0) > 0 || !!item.billingTiming;
 
-const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
-  if (!location) return null;
-  const lines: string[] = [];
-  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = displayAddressField(field);
-    if (trimmed) lines.push(trimmed);
+/**
+ * The per-line "Service Period" cell text. Reuses the invoice-level label
+ * builder (named month, reading-language locale, UTC-pinned) so both read the
+ * same. One-time lines carry no recurring marker and stay null (blank cell).
+ */
+const buildLineServicePeriodLabel = (
+  start: string | null,
+  end: string | null,
+  billingTiming: unknown,
+  detailPeriods: RendererRecurringDetailPeriod[] | undefined,
+  locale?: string
+): string | null => {
+  const isRecurring = (detailPeriods?.length ?? 0) > 0 || !!billingTiming;
+  if (!isRecurring || !start || !end) {
+    return null;
   }
-  const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(displayAddressField)
-    .filter((value) => value.length > 0)
-    .join(', ');
-  if (cityLine) lines.push(cityLine);
-  const country = displayCountry(location.country_name, location.country_code);
-  if (country) lines.push(country);
-  return lines.length > 0 ? lines.join('\n') : null;
+  return buildRecurringServicePeriodLabel(start, end, locale);
+};
+
+export const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
+  if (!location) return null;
+  const cityLine = formatPostalAddress([
+    displayAddressField(location.city),
+    displayAddressField(location.state_province),
+    displayAddressField(location.postal_code),
+  ]);
+  const block = formatPostalAddress(
+    [
+      displayAddressField(location.address_line1),
+      displayAddressField(location.address_line2),
+      displayAddressField(location.address_line3),
+      cityLine,
+      displayCountry(location.country_name, location.country_code),
+    ],
+    { separator: '\n' },
+  );
+  return block || null;
 };
 
 const UNASSIGNED_LOCATION_GROUP_KEY = '__unassigned__';
@@ -623,13 +670,13 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => {
         const normalizedDetailPeriods = normalizeRecurringDetailPeriods(item as unknown as Record<string, unknown>);
         const summaryStart =
-          normalizeDateLikeValue((item as any).servicePeriodStart) ??
-          normalizeDateLikeValue((item as any).service_period_start) ??
+          normalizeServicePeriodDate((item as any).servicePeriodStart) ??
+          normalizeServicePeriodDate((item as any).service_period_start) ??
           normalizedDetailPeriods?.[0]?.servicePeriodStart ??
           null;
         const summaryEnd =
-          normalizeDateLikeValue((item as any).servicePeriodEnd) ??
-          normalizeDateLikeValue((item as any).service_period_end) ??
+          normalizeServicePeriodDate((item as any).servicePeriodEnd) ??
+          normalizeServicePeriodDate((item as any).service_period_end) ??
           normalizedDetailPeriods?.[normalizedDetailPeriods.length - 1]?.servicePeriodEnd ??
           null;
         const summaryBillingTiming =
@@ -654,6 +701,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,
+          servicePeriodLabel: buildLineServicePeriodLabel(summaryStart, summaryEnd, summaryBillingTiming, normalizedDetailPeriods, locale),
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
           ...((item as any).item_type === 'project'
@@ -724,6 +772,19 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             quantity: Number(item.quantity ?? 0),
             unitPrice: Number(item.unitPrice ?? 0),
             total: Number(item.total ?? 0),
+            ...(item.servicePeriodLabel === undefined
+              ? (() => {
+                  const record = item as unknown as Record<string, unknown>;
+                  const detailPeriods = normalizeRecurringDetailPeriods(record);
+                  const start = normalizeServicePeriodDate(item.servicePeriodStart) ?? detailPeriods?.[0]?.servicePeriodStart ?? null;
+                  const end = normalizeServicePeriodDate(item.servicePeriodEnd) ?? detailPeriods?.[detailPeriods.length - 1]?.servicePeriodEnd ?? null;
+                  return {
+                    servicePeriodStart: start,
+                    servicePeriodEnd: end,
+                    servicePeriodLabel: buildLineServicePeriodLabel(start, end, item.billingTiming, detailPeriods, locale),
+                  };
+                })()
+              : {}),
         }));
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);

@@ -104,6 +104,15 @@ export const invoiceWrittenOffEventPayloadSchema = BaseDomainEventPayloadSchema.
 
 export type InvoiceWrittenOffEventPayload = z.infer<typeof invoiceWrittenOffEventPayloadSchema>;
 
+/**
+ * Where a recorded payment came from. Consumers that act on payments (e.g. the
+ * confirmation email) allow-list on this value; a missing or unknown value must
+ * be treated as "do not act".
+ */
+export const PAYMENT_RECORDED_SOURCES = ['online_payment', 'manual', 'accounting_sync'] as const;
+export const paymentRecordedSourceSchema = z.enum(PAYMENT_RECORDED_SOURCES);
+export type PaymentRecordedSource = z.infer<typeof paymentRecordedSourceSchema>;
+
 export const paymentRecordedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   paymentId: paymentIdSchema,
   clientId: clientIdSchema.optional(),
@@ -113,6 +122,7 @@ export const paymentRecordedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
   method: z.string().min(1),
   receivedByUserId: userIdSchema.optional(),
   gatewayTransactionId: z.string().optional(),
+  source: paymentRecordedSourceSchema.optional(),
 }).describe('Payload for PAYMENT_RECORDED');
 
 export type PaymentRecordedEventPayload = z.infer<typeof paymentRecordedEventPayloadSchema>;

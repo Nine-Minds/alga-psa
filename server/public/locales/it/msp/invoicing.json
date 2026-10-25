@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fattura finalizzata, ma un passaggio successivo non è stato completato: {{steps}}. La fattura è finalizzata; puoi ritentare quel passaggio.",
+      "steps": {
+        "credit_auto_apply": "applicazione automatica del credito",
+        "project_deposit_credits": "crediti di acconto del progetto",
+        "workflow_events": "eventi del workflow",
+        "accounting_export": "esportazione contabile",
+        "replenishment_status": "stato del rifornimento prepagato",
+        "autopay": "pagamento automatico"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Annulla",
       "confirm": "Annulla fattura",
       "voiding": "Annullamento…"
+    },
+    "history": {
+      "title": "Cronologia",
+      "empty": "Nessuna cronologia registrata.",
+      "loadFailed": "Impossibile caricare la cronologia della fattura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizzata",
+        "invoice_unfinalized": "Riaperta",
+        "invoice_deleted": "Eliminata"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "nessuno"
     }
   },
   "templateEditor": {
@@ -1377,7 +1401,7 @@
       "mediaSource": "Origine immagine",
       "mediaSourceLogo": "Logo aziendale",
       "mediaSourceCustom": "Immagine personalizzata",
-      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo della scheda cliente della tua azienda.",
       "mediaSourceUrl": "URL di origine",
       "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rinomina",
@@ -2382,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Sfoglia documenti",
-      "hiddenFromClients": "{{document}} è nascosto ai clienti. Non comparirà nei preventivi o nelle fatture visualizzati tramite il portale clienti.",
+      "hiddenFromClients": "{{document}} è nascosto ai clienti, che quindi non possono aprirlo nel portale clienti. Compare comunque nelle fatture e nei PDF dei preventivi che lo usano.",
       "updating": "Aggiornamento...",
       "markVisible": "Contrassegna come visibile ai clienti",
       "visibleInPortal": "Visibile nel portale clienti",
@@ -2431,11 +2455,13 @@
     "description": "Progetta i layout usati per generare i PDF e le anteprime di {{type}}.",
     "availableLayouts": "Layout disponibili",
     "actions": {
-      "newLayout": "Nuovo layout"
+      "newLayout": "Nuovo layout",
+      "setDefaultForClass": "Imposta come predefinito per {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origine"
+      "source": "Origine",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2467,7 +2493,10 @@
         "details": "Dettagli del layout"
       },
       "fields": {
-        "version": "Versione"
+        "version": "Versione",
+        "labelClass": "Classe di etichetta",
+        "labelFields": "Campi mostrati sull'etichetta",
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
@@ -2513,7 +2542,8 @@
       "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
       "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
       "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
-      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente"
+      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente",
+      "invoiceRead": "Permesso negato: richiesta lettura fatture"
     },
     "invoice": {
       "notFound": "Fattura non trovata",
@@ -2535,7 +2565,9 @@
       "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
       "missingField": "Manca un campo obbligatorio della fattura.",
       "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}.",
-      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente."
+      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente.",
+      "deleteNotDraft": "È possibile eliminare solo le fatture in bozza; annulla invece la fattura.",
+      "deleteHasPayments": "Le fatture con pagamenti registrati non possono essere eliminate."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
