@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792900041072"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/scheduling/actionGuardWiring.test.ts (7 tests) 7ms 13 MB heap used
+ ✓ |node| src/test/unit/api/projectTaskEffectiveService.contract.test.ts (4 tests) 2ms 14 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  03:47:21
+   Duration  4.87s (transform 62ms, setup 77ms, collect 16ms, tests 9ms, environment 0ms, prepare 39ms)
+

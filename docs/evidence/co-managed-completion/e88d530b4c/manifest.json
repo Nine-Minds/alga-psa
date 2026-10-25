@@ -91,6 +91,14 @@
       "kind": "functional",
       "summary": "Authenticated /api/files/:fileId/download returned500 (tenant context not found) on e88d build. Source fix88b592d776 passes regression and negative control; production rebuild/HTTP verification pending. Native comment canonical /api/documents/download/:fileId returned200 and exact original bytes.",
       "evidence": "lead-acceptance-20261025/result.json"
+    },
+    {
+      "id": "shared-time-timesheet-rows-missing",
+      "kind": "functional",
+      "summary": "Production e88d counts commercial shared effort but Grid has no work items and List0entries. ae3d026d6f source repair restores rows in development and passes source/authority regression checks; production rebuild and final typecheck pending.",
+      "repairCommit": "ae3d026d6f",
+      "productionVerified": false,
+      "evidence": "lead-acceptance-20261025/result.json"
     }
   ],
   "productionPrerequisites": [

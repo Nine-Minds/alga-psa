@@ -8,6 +8,13 @@ Use an assigned MSP technician, a customer technician, an MSP timesheet approver
 
 The last guide recorded October 16–November 1 time-period coverage and a successful 60-minute commercial entry. It also recorded a classic timesheet grid that omitted shared rows despite totals, and a date-after-service change that could leave an invalid contract line without a visible save error. These are unresolved review concerns here, not waived pass criteria.
 
+The October 25 production check reproduced the missing rows. A subsequent source
+repair reuses the authorized time-entry projection for work-item identities;
+development Grid and List now show the saved rows, including the new 15-minute
+entry. PostgreSQL checks cover deduplication, retained references, exclusions
+and masks. Production rebuild and verification remain required. This does not
+establish approval or invoice-generation acceptance.
+
 ## Risks to check
 
 - Lost billable MSP time or invisible timesheet rows.
@@ -39,7 +46,7 @@ Expected: shared rows are visible and identifiable wherever totals include them.
 
 ## 4. Reconcile commercial billing
 
-Use the prepared client contract and service in [Billing](http://feature-co-managed-it.localhost:23374/msp/billing). Review eligible approved time and generate a draft invoice through the ordinary billing workflow only when that setup is available. Open the resulting invoice and trace its source time back to the review entry.
+Use the prepared client contract and service in [Invoicing](http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing). The Billing root can open Quotes; select **Invoicing** in the sidebar. Review eligible approved time and generate a draft invoice through the ordinary billing workflow only when that setup is available. Open the resulting invoice and trace its source time back to the review entry.
 
 Expected: MSP commercial time reaches the correct MSP client and contract line once; customer operational entries never become sponsor billable time. The draft, approved minutes and source entry must reconcile. Do not infer this result from a ticket's combined effort total.
 

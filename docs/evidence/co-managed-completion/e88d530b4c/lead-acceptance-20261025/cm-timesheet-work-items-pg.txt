@@ -1,0 +1,16 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1461 tests | 1458 skipped) 16272ms 208 MB heap used
+   ✓ native time sheet details omit excluded effort and withhold comments about partially visible sheets  2058ms
+   ✓ native time sheet details respect field masks for notes, sheet totals, periods and free-text comments  308ms
+   ✓ MSP timesheet work items include shared references once and retain admitted evidence after revocation  648ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 1458 skipped (1461)
+   Start at  03:44:46
+   Duration  27.45s (transform 6.04s, setup 92ms, collect 6.66s, tests 16.27s, environment 0ms, prepare 53ms)
+

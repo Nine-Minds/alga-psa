@@ -121,6 +121,15 @@
         "productionVerified": false
       },
       "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/live-repair-development/recording.json"
+    },
+    {
+      "area": "Native timesheet projection repair",
+      "mode": "development",
+      "sourceBase": "6301138a8f53b07e03424e03da59ae3ab960dfcc",
+      "dirtySourceFile": "packages/scheduling/src/actions/timeEntryWorkItemActions.ts",
+      "repairCommit": "ae3d026d6f",
+      "observed": "Grid shared rows restored; List5entries,total4:15, new entry9bcd33ca present with15min. No old approval/invoice changed.",
+      "evidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/09-timesheet-row-verified-development/recording.json"
     }
   ],
   "remaining": [
@@ -131,17 +140,20 @@
     "Isolated restore and destination-paid independent activation remain unverified.",
     "Legacy native file download route source repair awaits new production build and HTTP verification.",
     "PR reports CONFLICTING/DIRTY; no broad merge attempted.",
-    "The14 recordings preserve actual e88d build provenance; they are partial scenarios, not complete current-repair acceptance walkthroughs."
+    "The14 recordings preserve actual e88d build provenance; they are partial scenarios, not complete current-repair acceptance walkthroughs.",
+    "Final production rebuild and whole-server typecheck must cover the last timesheet repair ae3d026d6f. Open Review transient browser-backend failure recovered on retry and directly returned QA; current production runtime is still e88d."
   ],
   "validation": {
     "nodeTooling": "4/4 pass; synthetic renderer fixtures are tooling tests only",
     "fileDownloadRegression": "4/4 pass; removing runWithTenant reproduces authorized500 failure",
     "microsoftOidcSupportingTests": "11/11 pass in isolated emulator/Auth.js, including correctly signed expired token rejection. Not deployed or realMicrosoft acceptance.",
-    "fullServerTypecheck": "PASS: NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit exited0. Prior5GiB-capped run exhausted heap;12GiB rerun started only after measured14.12GiB headroom.",
+    "fullServerTypecheck": "PASS at6301138a8f with12GiB heap. Final whole-server rerun still required after the later scheduling work-item repair ae3d026d6f; do not treat the earlier pass as validation of that last change.",
     "liveRefreshPostgreSQL": "4/4 focused production-comment cases pass, including after-commit/rollback/retry and qualified identity. Missing-hook negative control fails as expected.",
     "workerBuilds": "Temporal and workflow-worker builds both pass; compiled input lists exclude the two changed app-only modules.",
-    "workerColdRestart": "Both workers cold-restarted after successful builds, HTTP200; see worker-provenance.json and worker-source-input-audit.json."
+    "workerColdRestart": "Both workers cold-restarted after successful builds, HTTP200; see worker-provenance.json and worker-source-input-audit.json.",
+    "timesheetWorkItemProjection": "3/3 PostgreSQL cases and11 native/scheduling contract tests pass. Exact previous630 loader fails all3 strengthened cases. Dev Grid now shows shared rows and List5entries/4:15 including entry9bcd33ca/15min; production remains old e88d and must be rebuilt."
   },
   "liveRefreshRepairCommit": "c3fb35abf9",
-  "completedAt": "2026-10-25T03:36:11.947177+00:00"
+  "completedAt": "2026-10-25T03:36:11.947177+00:00",
+  "timesheetProjectionRepairCommit": "ae3d026d6f"
 }

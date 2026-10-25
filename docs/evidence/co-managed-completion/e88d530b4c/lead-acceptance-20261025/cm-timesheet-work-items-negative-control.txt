@@ -1,0 +1,159 @@
+Full unedited log: http://100.82.172.57:8874/evidence/lead-acceptance-20261025/validation/cm-timesheet-work-items-negative-control.log
+
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+[Skipped-test listing omitted; failure details follow.]
+   ↓ requester task email suppresses delayed delivery after private changes
+   ↓ requester task email suppresses delayed delivery after deleted changes
+   ↓ requester task email suppresses delayed delivery after project_hidden changes
+   ↓ requester task email suppresses delayed delivery after role changes
+   ↓ requester task email suppresses delayed delivery after contact changes
+   ↓ requester task email suppresses delayed delivery after company changes
+   ↓ requester task email suppresses delayed delivery after user_inactive changes
+   ↓ requester task email suppresses delayed delivery after retargeted changes
+   ↓ requester task email never enrolls private threads and keeps local public delivery after relationship departure
+   ↓ requester task email retries with stable identity and reloaded current content without duplicate concurrent sends
+   ↓ task thread disclosure preserves canonical identities and files, bumps revisions and emits metadata-only task invalidations
+   ↓ task thread disclosure requires the root author and a current full snapshot, including pending attachments
+   ↓ task thread private disclosure copies posted files with historical authors and tombstones and retries one canonical publication
+   ↓ task thread private disclosure resumes failed byte transfer and cleans only abandoned task disclosure objects
+   ↓ task thread private disclosure refuses corrupted bytes and forged transfer paths without canonical publication
+   ↓ task thread disclosure removes MSP live visibility while preserving prior participation and attachment history
+   ↓ task thread private disclosure rechecks the session after transport before publishing any customer content
+   ↓ archive boundary paginates authorized work without hidden-only pages or candidate counts
+   ↓ archive boundary paginates history after private-source and time-entry policy admission
+   ↓ archive boundary downloads task bytes through the qualified route and rejects ambiguous parent identities
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > native time sheet details omit excluded effort and withhold comments about partially visible sheets
+AssertionError: expected [ { …(11) }, { …(6) } ] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+  [
+-   ObjectContaining {
++   {
++     "description": "Private detailed work",
++     "is_billable": true,
++     "name": "Verify rollout",
++     "phase_name": "Delivery",
++     "project_name": "Joint rollout",
++     "service_id": null,
++     "service_name": null,
++     "service_source": null,
++     "ticket_number": undefined,
++     "type": "project_task",
++     "work_item_id": "36487a82-9b11-483b-ae30-3cd1df55da63",
++   },
++   {
++     "description": "",
++     "is_billable": false,
+      "name": "Visible planning",
++     "ticket_number": undefined,
+      "type": "non_billable_category",
++     "work_item_id": "__non_billable__",
+    },
+  ]
+
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:14378:65
+    14376|   expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id…
+    14377|   const { fetchWorkItemsForTimeSheet } = await import('../../../../../…
+    14378|   expect(await fetchWorkItemsForTimeSheet(entry.time_sheet_id)).toEqua…
+       |                                                                 ^
+    14379|   expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toE…
+    14380|   await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, conte…
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:14266:5
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13821:5
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13336:11
+ ❯ withTrackedTaskBrowser ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:12074:9
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13177:11
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13061:5
+ ❯ withSharedProjectTaskFixture ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:11205:3
+ ❯ withOperationalTimeFixture ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13056:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > native time sheet details respect field masks for notes, sheet totals, periods and free-text comments
+AssertionError: expected [ { …(11) } ] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+  [
+-   ObjectContaining {
+-     "description": "",
+-     "name": "",
++   {
++     "description": "Private detailed work",
++     "is_billable": true,
++     "name": "Verify rollout",
++     "phase_name": "Delivery",
++     "project_name": "Joint rollout",
++     "service_id": null,
++     "service_name": null,
++     "service_source": null,
++     "ticket_number": undefined,
++     "type": "project_task",
++     "work_item_id": "887f66f0-9f3a-40dd-a8cf-2f41bd11ade8",
+    },
+  ]
+
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:14395:65
+    14393|   expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id…
+    14394|   const { fetchWorkItemsForTimeSheet } = await import('../../../../../…
+    14395|   expect(await fetchWorkItemsForTimeSheet(entry.time_sheet_id)).toEqua…
+       |                                                                 ^
+    14396|   expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toE…
+    14397|   await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, conte…
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:14266:5
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13821:5
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13336:11
+ ❯ withTrackedTaskBrowser ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:12074:9
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13177:11
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13061:5
+ ❯ withSharedProjectTaskFixture ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:11205:3
+ ❯ withOperationalTimeFixture ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:13056:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > MSP timesheet work items include shared references once and retain admitted evidence after revocation
+AssertionError: expected [] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+- [
+-   ObjectContaining {
+-     "name": "Customer issue",
+-     "type": "co_managed",
+-     "work_item_id": "f95fcd86-b978-4677-90d4-0895efea90e6",
+-   },
+- ]
++ []
+
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:18844:18
+    18842|   await f.save({ entry_id: '', start_time: '2026-09-08T10:00:00Z', end…
+    18843|   const before = await fetchWorkItemsForTimeSheet(f.sheetId);
+    18844|   expect(before).toEqual([expect.objectContaining({ work_item_id: f.re…
+       |                  ^
+    18845|   await (await import('../../../../../packages/co-managed/src/ticketHa…
+    18846|     { operationId: randomUUID(), expectedRevision: 1, note: 'End live …
+ ❯ withTrackedTaskBrowser ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:12074:9
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:18819:11
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:18691:5
+ ❯ withSharedTicketMutationFixture ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:4185:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1458 skipped (1461)
+   Start at  03:52:40
+   Duration  39.74s (transform 6.40s, setup 320ms, collect 6.98s, tests 26.81s, environment 0ms, prepare 149ms)
+
