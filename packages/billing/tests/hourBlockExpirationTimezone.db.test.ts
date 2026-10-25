@@ -69,9 +69,15 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
+// The expected offsets are the zones' late-August 2026 offsets (DST in effect
+// where applicable), matching every fixture date in this file. Probe at that
+// fixed instant rather than wall-clock "now", which would flip the expected
+// offset whenever CI runs outside daylight-saving time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 async function seedBase() {

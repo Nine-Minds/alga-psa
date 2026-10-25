@@ -162,9 +162,15 @@ async function insertBlock(
 // The burn engine's date normalization is process-timezone-dependent, so the
 // timezone regression tests pin TZ explicitly and guard that Node honored it
 // before asserting on dates.
+// The expected offsets are the zones' late-August 2026 offsets (DST in effect
+// where applicable), matching every fixture date in this file. Probe at that
+// fixed instant rather than wall-clock "now", which would flip the expected
+// offset whenever CI runs outside daylight-saving time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
