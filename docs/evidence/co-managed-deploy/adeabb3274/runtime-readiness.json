@@ -1,0 +1,100 @@
+{
+  "observedAt": "2026-10-25T01:53:49Z",
+  "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "pr": "https://github.com/Nine-Minds/alga-psa/pull/3363",
+  "prHeadAtObservation": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "scope": "Deployment readiness and authenticated entry only; product acceptance and recording acceptance remain unverified.",
+  "registration": {
+    "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "commandlessDevServerEnsure": "created=false; reused canonical dev-server:24",
+    "devServerCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "devServerUrl": "http://feature-co-managed-it.localhost:3374",
+    "productionService": "review-app:24",
+    "productionCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "productionUrl": "http://feature-co-managed-it.localhost:23374",
+    "guideCwd": "/home/robert/card-reviews/co-managed-it-3363"
+  },
+  "productionBuild": {
+    "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+    "buildLog": "/home/robert/.alga-dev/card-services/card-service_964ce5e0-45a5-41b2-8e2c-73903742a85a_review-app_24/service.log",
+    "buildLogStartedAt": "2026-10-25T01:35:06Z",
+    "buildOutputDir": "server/.next-review",
+    "buildId": "build-1792892121948",
+    "buildIdTimestampUtc": "2026-10-25T01:35:21Z",
+    "http": {
+      "GET /api/health": { "status": 200, "body": { "status": "ok", "version": "1.0.0" } },
+      "GET /auth/msp/signin": { "status": 200, "bodyBytes": 40811 },
+      "GET /msp/tickets": "Rendered in authenticated review browser as Tickets | AlgaPSA"
+    },
+    "process": {
+      "pid": 1749529,
+      "startedAtLocal": "2026-10-24 21:50:44 -0400",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "next-server (v16.3.8)"
+    }
+  },
+  "openReview": {
+    "signedInAs": "qa@emeraldcity.oz",
+    "url": "http://feature-co-managed-it.localhost:23374/msp/tickets",
+    "browserSession": {
+      "email": "qa@emeraldcity.oz",
+      "username": "qa",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "tenantSlug": "24ac76904580"
+    },
+    "displayedOrganization": "Emerald City"
+  },
+  "development": {
+    "http": { "GET /auth/msp/signin": { "status": 200, "bodyBytes": 56835 } },
+    "finding": "Development readiness is separate from production acceptance."
+  },
+  "workers": {
+    "temporal": {
+      "url": "http://127.0.0.1:8375/health",
+      "http": 200,
+      "health": "healthy",
+      "pid": 1949060,
+      "startedAtLocal": "2026-10-24 14:58:47 -0400",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "entry": "ee/temporal-workflows/dist/ee/temporal-workflows/src/worker.js",
+      "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+      "healthQueues": ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs", "sla-workflows"],
+      "observedBehavior": "TemporalJobRunner started; schedule reconciliation reported ensured=0, converged=0, skipped=0, failed=0."
+    },
+    "workflow": {
+      "url": "http://127.0.0.1:4374/health",
+      "http": 200,
+      "health": "ready",
+      "pid": 1949120,
+      "startedAtLocal": "2026-10-24 14:58:47 -0400",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "entry": "services/workflow-worker/dist/services/workflow-worker/src/index.js",
+      "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
+      "healthWorkers": ["temporal", "eventStream", "dataStoreSweep"],
+      "observedBehavior": "Log shows workflow-runtime-v2 consumer reading workflow:events:global and polling; no global messages were pending during captured interval."
+    },
+    "compiledInputAudit": {
+      "path": "/home/robert/card-reviews/co-managed-it-3363/evidence/takeover-20261025T0134Z/worker-input-audit.json",
+      "observedAt": "2026-10-25T01:36:06Z",
+      "temporalSourcesChecked": 1473,
+      "temporalMismatches": 0,
+      "workflowSourcesChecked": 602,
+      "workflowMismatches": 0,
+      "limitation": "Input consistency audit plus live behavior and entry hashes; workers were not cold-restarted in this round."
+    }
+  },
+  "guideServer": {
+    "url": "http://100.82.172.57:8874/",
+    "http": 200,
+    "servedIndexBytes": 31457
+  },
+  "acceptance": {
+    "productAcceptance": "not run in this deploy-repair pass",
+    "genuineWalkthroughRecordings": "0/14; existing pages and blocked JSON/VTT scaffolds do not count",
+    "remaining": [
+      "Execute all acceptance areas against production with correct separate actors and reload-persisted results.",
+      "Regenerate guide pages after acceptance evidence is current.",
+      "Record fourteen independent genuine browser walkthroughs with WebM, VTT, JSON, playback, and chapter seeking."
+    ]
+  }
+}
