@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import React from 'react';
+import { TicketConversationAttachments } from '../../../../../packages/tickets/src/components/ticket/TicketConversationAttachments';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -30,9 +31,15 @@ vi.mock('../../../components/co-managed/CoManagedTicketSection', () => ({ defaul
 vi.mock('../../../components/co-managed/CoManagedEffortSummary', () => ({ default: () => <div id="effort-stub" /> }));
 vi.mock('../../../components/co-managed/CoManagedThreadDisclosure', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/SharedCommentAttachmentPicker', () => ({ default: () => null }));
+vi.mock('@alga-psa/tickets/components', async () => import('../../../../../packages/tickets/src/components/ticket/TicketConversationAttachments'));
+vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: ({ resource, comment }: any) => (
+  <a href={`/attachments/${resource.tenant}/${resource.relationshipId}/${resource.id}/${comment.storeTenant}/${comment.threadId}/${comment.commentId}`}>Shared evidence file</a>
+) }));
 vi.mock('../../../components/co-managed/useCoManagedSharedTimeConfig', () => ({ useCoManagedSharedTimeConfig: () => ({}) }));
 vi.mock('@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient', () => ({
-  default: (props: any) => { probe.source = useTicketDataSource(); probe.props = props; return <div id="container-stub" />; },
+  default: (props: any) => { probe.source = useTicketDataSource(); probe.props = props; return <div id="container-stub">
+    {props.ticketData.comments.map((comment: any) => <TicketConversationAttachments key={`${comment.tenant}:${comment.comment_id}`} ticketId={props.ticketData.ticket.ticket_id} comment={comment} />)}
+  </div>; },
 }));
 
 const probe: { source: TicketDataSource | null; props: any } = { source: null, props: null };
@@ -292,6 +299,16 @@ describe('T008 composer and attachments', () => {
 });
 
 describe('T012 MSP shared route', () => {
+  it('renders customer and MSP-private comment attachments through the native comment slot and omits tombstones', async () => {
+    mocks.page.mockResolvedValue({ items: [item(), own({ storeTenant: 'msp-home' }), item({ commentId: 'deleted', deleted: true })],
+      nextBefore: null, actor, writeAudiences: ['shared_it'], draftAttachments: { audiences: [], maxBytes: 1, maxFiles: 1 } });
+    render(<SharedTicketScreen resource={resource} initialDetails={baseDetails()} />);
+    const links = await screen.findAllByRole('link', { name: 'Shared evidence file' });
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      '/attachments/customer-a/relationship-a/ticket-a/customer-a/t1/c1',
+      '/attachments/customer-a/relationship-a/ticket-a/msp-home/town/own',
+    ]);
+  });
   it('renders the native container under the shared data source, with the section slot and a read-only viewer frozen', async () => {
     mocks.details.mockResolvedValue(baseDetails(false));
     render(<SharedTicketScreen resource={resource} initialDetails={baseDetails(false)} />);

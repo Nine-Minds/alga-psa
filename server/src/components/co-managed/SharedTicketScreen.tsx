@@ -15,6 +15,7 @@ import { loadSharedConversation, type SharedConversationSnapshot } from '@/lib/c
 import { buildSharedTicketScreenData, mapConversationItem } from '@/lib/co-managed/sharedTicketMapping';
 import type { SharedTicketDetailsResult } from '@/lib/co-managed/sharedTicketDataTypes';
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
+import CoManagedTicketAttachmentsProvider from './CoManagedTicketAttachmentsProvider';
 import { createSharedTicketDataSource } from './sharedTicketDataSource';
 import { useCoManagedSharedTimeConfig } from './useCoManagedSharedTimeConfig';
 import { DEFAULT_CUSTOMER_TICKETS_HREF } from '@/lib/co-managed/ticketListReturn';
@@ -101,7 +102,9 @@ export default function SharedTicketScreen({ resource, initialDetails, backHref 
 
   return (
     <TicketDataSourceProvider dataSource={dataSource}>
-      <MspTicketDetailsContainerClient key={version} ticketData={ticketData as never} />
+      <CoManagedTicketAttachmentsProvider resource={resource}>
+        <MspTicketDetailsContainerClient key={version} ticketData={ticketData as never} />
+      </CoManagedTicketAttachmentsProvider>
       {disclosure && (
         <CoManagedThreadDisclosure resource={resource} thread={disclosure.thread} actor={disclosure.actor} audiences={disclosure.audiences}
           onClosed={disclosure.cancel} onSaved={() => { disclosure.settle(); void load(true); }} />
