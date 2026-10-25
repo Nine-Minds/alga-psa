@@ -134,3 +134,6 @@
 
 - **Vendor conversation link.** The ticket-conversations branch is not merged, so the RMA ships without a link from the vendor email thread to the case. When it merges: link the thread to the ticket and mirror `rma_reference`, and retire the `generic` external-link mirror.
 - Overlap with C3: the RMA detail is still the `?rmaId=` dialog C3 added; C5 extends it (`RmaWarrantyPanel`) and does not add an `[id]` route.
+
+## Test status at hand-off
+Implemented: T001-T007, T009, T013-T015, T025, T027 (T004-T006, T009, T013-T015, T025, T027 live in the files named by `actualTestFile`, not the planned paths; T013-T015 and T027 are covered by the two inventory DB tests). T028/T031/T032/T034 written but not run. Not written: T008, T010-T012, T016-T024, T026, T029, T030; behaviours are partly covered by `rmaWarrantyActions.db.test.ts`. T033 needs bwip-js/jsqr/@zxing which are missing in this worktree (10 pre-existing label/barcode test failures, same without this branch).
