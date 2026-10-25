@@ -764,7 +764,7 @@ async function runCippClient(options: {
           ? {
               code: 'cipp_auth_rejected',
               severity: 'fail',
-              text: 'CIPP rejected the API credential for this tenant. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.',
+              text: 'CIPP rejected the legacy API key for this tenant. Reconnect with a CIPP API client from the Connection tab (create one in CIPP > Integrations > CIPP-API).',
               messageKey: 'cippAuthRejected',
             }
           : error?.reason

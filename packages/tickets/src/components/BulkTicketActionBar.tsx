@@ -10,7 +10,9 @@ import {
   Flag,
   Tag,
   CalendarClock,
+  Printer,
 } from 'lucide-react';
+import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 
 interface BulkTicketActionBarProps {
@@ -32,6 +34,7 @@ interface BulkTicketActionBarProps {
   onTags: () => void;
   onDueDate: () => void;
   onDelete: () => void;
+  onPrintLabels: () => void;
   onClear: () => void;
   idPrefix?: string;
 }
@@ -55,6 +58,7 @@ export default function BulkTicketActionBar({
   onTags,
   onDueDate,
   onDelete,
+  onPrintLabels,
   onClear,
   idPrefix = 'ticket-bulk-action-bar',
 }: BulkTicketActionBarProps) {
@@ -91,6 +95,17 @@ export default function BulkTicketActionBar({
       onClick: onMove,
     });
   }
+  const printTooMany = count > MAX_LABELS_PER_REQUEST;
+  actions.push({
+    id: 'print-labels',
+    label: t('bulk.actionBar.printLabels', 'Print labels'),
+    icon: <Printer className="h-4 w-4" />,
+    onClick: onPrintLabels,
+    disabled: printTooMany,
+    title: printTooMany
+      ? t('bulk.actionBar.printLabelsLimit', 'You can print at most {{max}} labels at a time', { max: MAX_LABELS_PER_REQUEST })
+      : undefined,
+  });
   actions.push({
     id: 'delete',
     label: t('bulk.actionBar.delete', 'Delete'),

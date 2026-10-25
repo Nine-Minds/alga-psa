@@ -248,7 +248,8 @@
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
-    "createWorkflowFromTicket": "Workflow maken van ticket"
+    "createWorkflowFromTicket": "Workflow maken van ticket",
+    "printWorkTag": "Werklabel afdrukken"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -667,7 +668,7 @@
     "bundleMasterLabel": "Hoofdticket selecteren",
     "bundleMasterPlaceholder": "Hoofdticket selecteren...",
     "bundleSyncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
     "bundleSelectAtLeastTwo": "Selecteer ten minste twee tickets om te bundelen.",
     "bundleSelectMaster": "Selecteer een hoofdticket.",
     "bundleSuccess": "Tickets gebundeld",
@@ -740,8 +741,8 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
-      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
+      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status. Workflowvelden zijn alleen in de modus Sync Updates vergrendeld. Inkomende reacties op kindtickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
       "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
@@ -792,7 +793,9 @@
       "more": "Meer",
       "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
       "selectedCount_few": "{{count}} geselecteerd",
-      "selectedCount_many": "{{count}} geselecteerd"
+      "selectedCount_many": "{{count}} geselecteerd",
+      "printLabels": "Labels afdrukken",
+      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",
@@ -1707,9 +1710,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. In de modus Sync Updates sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. In de modus Link Only beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
       "title": "Bundel",
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflowvelden zijn vergrendeld; werk vanuit het masterticket.",
+      "childLinkedNotice": "Het is gekoppeld aan de master en wordt zelfstandig beheerd.",
       "multipleClients": "Meerdere klanten",
       "mode": "Modus: {{mode}}",
       "unbundle": "Ontbundelen",
@@ -1745,7 +1750,15 @@
       "applyResolutionHelpNoComment": "Sluit het onderliggende ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
       "reopenMasterLabel": "Toevoegen en hoofdticket heropenen",
       "reopenMasterHelp": "Heropent alleen het hoofdticket. Al gesloten onderliggende tickets in deze bundel blijven gesloten; heropeningsmeldingen en SLA gelden voor het hoofdticket.",
-      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
+      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie.",
+      "modeSwitchDialogIntro": "Het hoofdticket is gesloten. Kies wat er met de open onderliggende tickets moet gebeuren wanneer de bundel naar Sync Updates overschakelt.",
+      "modeSwitchConfirm": "Overschakelen naar Sync Updates",
+      "keepClosedSwitchLabel": "Overschakelen en hoofdticket gesloten houden",
+      "keepClosedSwitchHelp": "Open onderliggende tickets blijven open met een eigen SLA-klok. De bundel wordt als inconsistent weergegeven totdat ze zijn opgelost.",
+      "applyResolutionSwitchLabel": "Overschakelen en de oplossing van het hoofdticket op open onderliggende tickets toepassen",
+      "applyResolutionSwitchHelp": "Sluit elk open onderliggend ticket met status {{status}} en plaatst de oplossing van het hoofdticket als openbare opmerking erbij.",
+      "applyResolutionSwitchHelpNoComment": "Sluit elk open onderliggend ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
+      "reopenMasterSwitchLabel": "Overschakelen en hoofdticket heropenen"
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd.",

@@ -1,14 +1,16 @@
 import {
+  MAX_LABELS_PER_REQUEST,
   LABEL_CLASSES,
   LABEL_CLASS_ENTITY_TYPE,
   isLabelClass,
   type IUserWithRoles,
   type LabelClass,
+  type LabelRequestContext,
   type LabelPrintFailure,
   type LabelViewModel,
   type LabelViewModelProvider,
 } from '@alga-psa/types';
-import type { LabelBatchLayout, LabelPrintItem } from '@alga-psa/billing/services';
+import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@alga-psa/billing/services';
 
 /**
  * Composition root for label printing: the one place that knows the record owners (through their
@@ -16,13 +18,16 @@ import type { LabelBatchLayout, LabelPrintItem } from '@alga-psa/billing/service
  *
  * Invariants, in order of execution:
  *  1. Authorization comes first. Providers enforce RBAC and record-level permission and return `null`
- *     for "missing" and "not permitted" alike; ANY null (and a caller who is not an MSP user) yields
- *     the same uniform not-found result, so an unauthorized request reveals nothing about a record.
- *  2. Rendering and printing are read-only: nothing is written, no event is published.
+ *     for "missing" and "not permitted" alike. A caller who is not an MSP user, a single record that is
+ *     null, and a batch where EVERY record is null all yield the same uniform not-found result.
+ *     In a mixed batch, null records are skipped and only their COUNT is returned (`skipped`) - never
+ *     which ids or why - so an unauthorized request reveals nothing about a record.
+ *  2. Rendering and printing are read-only: nothing is written, no event is published, nothing recorded.
  *  3. QR content is only the canonical recordUrl (the renderer re-checks it).
+ *  4. A render failure stays all-or-nothing (422) and lists every failing record.
  */
 
-export const MAX_LABELS_PER_REQUEST = 200;
+export { MAX_LABELS_PER_REQUEST };
 
 const DEFAULT_LAYOUT: LabelBatchLayout = {
   kind: 'one-per-page',
@@ -34,12 +39,32 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface PrintLabelsRequest {
   labelClass: unknown;
   ids: unknown;
+  /** A tenant custom `work-tag` template id, or a standard code. Supersedes `templateCode`. */
+  templateId?: unknown;
+  /** Alias of `templateId` for standard codes (C1 request shape). */
   templateCode?: unknown;
   layout?: unknown;
+  /** Single ticket only: print-time edits of the item and reason lines. Never persisted. */
+  overrides?: unknown;
+  /** Single ticket only: which linked asset to print when several are linked. Ignored when invalid. */
+  linkedAssetId?: unknown;
+}
+
+export const MAX_OVERRIDE_LENGTH = 120;
+
+/** Plain text, control characters stripped (whitespace controls become spaces), trimmed, capped. */
+export function sanitizeLabelOverride(value: string): string | null {
+  const cleaned = value
+    .replace(/[\t\n\r\u000b\u000c\u0085\u2028\u2029]+/g, ' ')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  const capped = Array.from(cleaned).slice(0, MAX_OVERRIDE_LENGTH).join('').trim();
+  return capped.length > 0 ? capped : null;
 }
 
 export type PrintLabelsResult =
-  | { ok: true; pdf: Buffer; labels: number; sheets: number }
+  | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number }
   | { ok: false; status: 400 | 404 | 422 | 500; message: string; failures?: LabelPrintFailure[] };
 
 export interface PrintLabelsDeps {
@@ -53,6 +78,17 @@ export interface PrintLabelsDeps {
    * Describes a layout / render error that is the caller's fault (422) rather than ours (500), with the
    * records that could not print when the renderer names them; null for anything else (rethrown).
    */
+  /** Resolves explicit templateId -> tenant class default -> class standard. Read-only. */
+  resolveTemplate: (tenant: string, labelClass: LabelClass, templateId: string | null) => Promise<ResolvedLabelTemplate>;
+  /**
+   * Linked-asset tag + serial suffix per ticket, behind the asset kernel check (assets package). Tickets
+   * never import assets, so the composition root merges this into ticket view models.
+   */
+  getLinkedAssetParts: (
+    context: LabelRequestContext,
+    ticketIds: readonly string[],
+    chosen: Record<string, string>
+  ) => Promise<Record<string, { assetId: string; assetTag: string | null; serialSuffix: string | null } | null>>;
   describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
 }
 
@@ -76,9 +112,41 @@ export async function printLabels(
   ) {
     return { ok: false, status: 400, message: `ids must be 1 to ${MAX_LABELS_PER_REQUEST} record ids.` };
   }
-  if (request.templateCode !== undefined && typeof request.templateCode !== 'string') {
-    return { ok: false, status: 400, message: 'templateCode must be a string.' };
+  for (const [name, value] of [['templateId', request.templateId], ['templateCode', request.templateCode]] as const) {
+    if (value !== undefined && typeof value !== 'string') {
+      return { ok: false, status: 400, message: `${name} must be a string.` };
+    }
   }
+  const requestedTemplate =
+    (typeof request.templateId === 'string' && request.templateId) ||
+    (typeof request.templateCode === 'string' && request.templateCode) ||
+    null;
+
+  // Overrides edit one ticket's own tag: single ticket only, plain text, bounded.
+  let overrides: { title?: string | null; detail?: string | null } | null = null;
+  if (request.overrides !== undefined && request.overrides !== null) {
+    const raw = request.overrides as Record<string, unknown>;
+    if (typeof raw !== 'object' || Array.isArray(raw)) {
+      return { ok: false, status: 400, message: 'overrides must be an object.' };
+    }
+    if (labelClass !== 'ticket-work-tag' || ids.length !== 1) {
+      return { ok: false, status: 400, message: 'overrides are only accepted when printing a single ticket.' };
+    }
+    overrides = {};
+    for (const key of ['title', 'detail'] as const) {
+      if (raw[key] === undefined) continue;
+      if (typeof raw[key] !== 'string') {
+        return { ok: false, status: 400, message: `overrides.${key} must be a string.` };
+      }
+      overrides[key] = sanitizeLabelOverride(raw[key] as string);
+    }
+  }
+  // Absent unless it is a well-formed id on a single-ticket print. Whether it is linked to the ticket and
+  // readable is decided in the assets package; a bad value is ignored silently, never an error.
+  const linkedAssetId =
+    labelClass === 'ticket-work-tag' && ids.length === 1 && typeof request.linkedAssetId === 'string' && UUID.test(request.linkedAssetId)
+      ? request.linkedAssetId
+      : null;
 
   // MSP users only. A client-portal user gets the same answer as a missing record.
   if (caller.user.user_type !== 'internal') {
@@ -91,17 +159,46 @@ export async function printLabels(
     return { ok: false, status: 422, message: `Labels of class "${labelClass}" are not available yet.` };
   }
 
-  const viewModels = await provider.getLabelViewModels(
-    { tenant: caller.tenant, user: caller.user, baseUrl: caller.baseUrl },
-    ids
-  );
-  if (viewModels.length !== ids.length || viewModels.some((vm) => vm === null)) {
-    return NOT_FOUND;
+  // A template of another label class (or an unknown one) is the caller's mistake: 400. It names no record.
+  const template = await deps.resolveTemplate(caller.tenant, labelClass, requestedTemplate);
+  if (!template.ok) {
+    return { ok: false, status: 400, message: template.message };
   }
 
-  const items: LabelPrintItem[] = (viewModels as LabelViewModel[]).map((viewModel) => ({
+  const context: LabelRequestContext = { tenant: caller.tenant, user: caller.user, baseUrl: caller.baseUrl };
+  const providerResults = await provider.getLabelViewModels(context, ids);
+  const readable = providerResults.filter((vm): vm is LabelViewModel => vm !== null);
+  // Skip unreadable records and count them; if nothing is readable the answer is the uniform 404.
+  if (readable.length === 0 || providerResults.length !== ids.length) {
+    return NOT_FOUND;
+  }
+  const skipped = ids.length - readable.length;
+
+  let viewModels = readable;
+  if (labelClass === 'ticket-work-tag') {
+    const parts = await deps.getLinkedAssetParts(
+      context,
+      readable.map((vm) => vm.recordId),
+      linkedAssetId ? { [readable[0].recordId]: linkedAssetId } : {}
+    );
+    viewModels = readable.map((vm) => {
+      const linked = parts[vm.recordId];
+      return linked ? { ...vm, secondaryIdentifier: linked.assetTag, serialSuffix: linked.serialSuffix } : vm;
+    });
+  }
+  if (overrides) {
+    // Only the item and reason lines: url, identifier and codes are never touched.
+    viewModels = viewModels.map((vm) => ({
+      ...vm,
+      ...(overrides.title !== undefined ? { title: overrides.title } : {}),
+      ...(overrides.detail !== undefined ? { detail: overrides.detail } : {}),
+    }));
+  }
+
+  const items: LabelPrintItem[] = viewModels.map((viewModel) => ({
     viewModel,
-    ...(typeof request.templateCode === 'string' ? { templateCode: request.templateCode } : {}),
+    templateCode: template.templateCode,
+    ...(template.templateAst ? { templateAst: template.templateAst } : {}),
   }));
 
   try {
@@ -110,7 +207,7 @@ export async function printLabels(
       items,
       (request.layout as LabelBatchLayout | undefined) ?? DEFAULT_LAYOUT
     );
-    return { ok: true, pdf, labels, sheets };
+    return { ok: true, pdf, labels, sheets, skipped };
   } catch (error) {
     const clientError = deps.describeClientError(error);
     if (clientError) {

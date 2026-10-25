@@ -2455,11 +2455,13 @@
     "description": "Configure los diseños utilizados para generar los PDF y las vistas previas de {{type}}.",
     "availableLayouts": "Diseños disponibles",
     "actions": {
-      "newLayout": "Nuevo diseño"
+      "newLayout": "Nuevo diseño",
+      "setDefaultForClass": "Establecer como predeterminada para {{class}}"
     },
     "columns": {
       "name": "Nombre",
-      "source": "Fuente"
+      "source": "Fuente",
+      "labelClass": "Clase"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Estándar)",
@@ -2491,7 +2493,10 @@
         "details": "Detalles del diseño"
       },
       "fields": {
-        "version": "Versión"
+        "version": "Versión",
+        "labelClass": "Clase de etiqueta",
+        "labelFields": "Campos que se muestran en la etiqueta",
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"

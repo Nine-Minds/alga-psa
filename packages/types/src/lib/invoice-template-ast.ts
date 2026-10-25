@@ -1,4 +1,5 @@
 import type { TemplatePrintSettings } from './invoice-print-settings';
+import type { LabelClass, TemplateLabelSettings } from './labels';
 
 export const TEMPLATE_AST_VERSION = 1 as const;
 
@@ -25,6 +26,10 @@ export interface TemplateAstMetadata {
   locale?: string;
   currencyCode?: string;
   printSettings?: TemplatePrintSettings;
+  /** `work-tag` documents only: which label class the template prints. Read-time default: ticket-work-tag. */
+  labelClass?: LabelClass;
+  /** `work-tag` documents only: label field visibility. */
+  labelSettings?: TemplateLabelSettings;
 }
 
 /**

@@ -12851,8 +12851,8 @@ components:
       enum:
         - ticket.created
         - ticket.updated
-        - ticket.status_changed
         - ticket.assigned
+        - ticket.status_changed
         - ticket.closed
         - ticket.comment.added
         - ticket.response_state_changed
@@ -12862,8 +12862,8 @@ components:
       enum:
         - ticket.created
         - ticket.updated
-        - ticket.status_changed
         - ticket.assigned
+        - ticket.status_changed
         - ticket.closed
         - ticket.comment.added
         - ticket.response_state_changed
@@ -12880,27 +12880,21 @@ components:
         - project.task.completed
         - client.created
         - client.updated
+        - client.deactivated
+        - client.deleted
         - contact.created
         - contact.updated
-        - time.entry.created
-        - time.entry.updated
-        - time.entry.approved
-        - invoice.created
-        - invoice.finalized
-        - invoice.sent
-        - invoice.paid
-        - asset.created
-        - asset.updated
-        - asset.maintenance.scheduled
-        - asset.maintenance.completed
-        - system.backup.completed
-        - system.backup.failed
-        - system.maintenance.started
-        - system.maintenance.completed
-        - workflow.execution.started
-        - workflow.execution.completed
-        - workflow.execution.failed
-        - custom.event
+        - contact.deactivated
+        - contact.deleted
+        - client_location.created
+        - client_location.updated
+        - client_location.deactivated
+        - client_location.deleted
+      description: Public webhook event name from the single event registry (ticket.*,
+        project.*, client.*, contact.*, client_location.*). Webhooks created
+        earlier may still store retired names (time.entry.*, invoice.*, asset.*,
+        system.*, workflow.*, custom.event); those are returned as stored, never
+        deliver, and are rejected when newly added.
     CreateWebhookBodyV1:
       type: object
       properties:
@@ -13028,6 +13022,32 @@ components:
                   - priority_id
                   - priority_name
                   - tags
+            client:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - changed_fields
+            contact:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - changed_fields
+            client_location:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - changed_fields
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13046,7 +13066,9 @@ components:
             contact_email, assigned_to, assigned_to_name, start_date, end_date,
             budgeted_hours, url, changes, phases, task_counts, task_id,
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
-            due_date, priority_id, priority_name, tags."
+            due_date, priority_id, priority_name, tags; client: changed_fields;
+            contact: client_id, changed_fields; client_location: client_id,
+            changed_fields."
         payload_transformation:
           type: object
           additionalProperties: {}
@@ -13225,7 +13247,8 @@ components:
         event_types:
           type: array
           items:
-            $ref: "#/components/schemas/WebhookEventTypeV1"
+            type: string
+          description: Event names as stored; may include retired legacy names (inert).
         security:
           type:
             - object
@@ -13335,6 +13358,32 @@ components:
                   - priority_id
                   - priority_name
                   - tags
+            client:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - changed_fields
+            contact:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - changed_fields
+            client_location:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - changed_fields
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13353,7 +13402,9 @@ components:
             contact_email, assigned_to, assigned_to_name, start_date, end_date,
             budgeted_hours, url, changes, phases, task_counts, task_id,
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
-            due_date, priority_id, priority_name, tags."
+            due_date, priority_id, priority_name, tags; client: changed_fields;
+            contact: client_id, changed_fields; client_location: client_id,
+            changed_fields."
         payload_transformation:
           type:
             - object
@@ -13670,7 +13721,8 @@ components:
         event_types:
           type: array
           items:
-            $ref: "#/components/schemas/WebhookEventTypeV1"
+            type: string
+          description: Event names as stored; may include retired legacy names (inert).
       required:
         - webhook_id
         - event_types
@@ -18401,6 +18453,74 @@ components:
           items:
             type: object
             additionalProperties: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+        meta:
+          type: object
+          additionalProperties: {}
+        _links:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    ContractListItemV1:
+      type: object
+      properties:
+        contract_id:
+          type: string
+          format: uuid
+        contract_name:
+          type: string
+        start_date:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Earliest start_date across the contract's client assignments
+            (client_contracts); MIN ignores assignments with a null start_date.
+            Falls back to the contract's own stored start_date only when the
+            contract has no assignments.
+        end_date:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Latest end_date across the contract's client assignments
+            (client_contracts); MAX ignores assignments with a null (open-ended)
+            end_date. Falls back to the contract's own stored end_date only when
+            the contract has no assignments.
+        total_plans:
+          type: integer
+          description: Count of contract lines on the contract.
+        clients_using_contract:
+          type: integer
+          description: Count of distinct clients assigned the contract.
+      required:
+        - contract_id
+        - contract_name
+      description: Contract header as returned by the list endpoint; see
+        contractResponseSchema for the full field set.
+    ContractsApiPaginatedV1:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractListItemV1"
         pagination:
           type: object
           properties:
@@ -56206,7 +56326,8 @@ paths:
     get:
       summary: List available webhook events
       description: Returns the supported webhook event types from
-        webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).
+        webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*,
+        client_location.*).
       tags:
         - Webhooks
       security:
@@ -65396,7 +65517,15 @@ paths:
     put:
       summary: Update ticket bundle settings
       description: Updates the bundle mode and/or reopen-on-child-reply policy for
-        master {id}.
+        master {id}. Children lock status, assignee and priority only in
+        sync_updates mode; link_only children manage their own. Switching to
+        link_only never changes children. Switching to sync_updates while the
+        master is open changes no children. Switching to sync_updates while the
+        master is closed requires on_closed_master (keep_closed,
+        apply_resolution to the still-open children, or reopen_master); omitting
+        it returns 409 naming the allowed choices. Supplying it when switching
+        to sync_updates on an open master returns 400; it is ignored for any
+        other change.
       tags:
         - Work Management v1
       security:
@@ -72606,7 +72735,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/QuotesContractsApiPaginatedV1"
+                $ref: "#/components/schemas/ContractsApiPaginatedV1"
         "400":
           description: Validation or request parsing failure.
           content:
@@ -92060,6 +92189,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92129,6 +92263,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92197,6 +92336,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92265,6 +92409,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92334,6 +92483,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92404,6 +92558,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92474,6 +92633,11 @@ webhooks:
         - schema:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
+          description: Public webhook event name from the single event registry (ticket.*,
+            project.*, client.*, contact.*, client_location.*). Webhooks created
+            earlier may still store retired names (time.entry.*, invoice.*,
+            asset.*, system.*, workflow.*, custom.event); those are returned as
+            stored, never deliver, and are rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:

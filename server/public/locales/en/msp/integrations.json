@@ -425,26 +425,75 @@
           "test": "Test connection",
           "testing": "Testing…"
         },
-        "description": "Enter your CIPP instance URL and an API token to allow Alga to discover and sync Entra data.",
-        "encryptionNote": "The API key is encrypted at rest and is never shown again after saving.",
+        "description": "Enter the details of a CIPP API client so Alga can discover and sync Entra data.",
+        "encryptionNote": "The client secret is encrypted at rest and is never shown again after saving.",
         "errors": {
           "missingFields": "Both Base URL and API Token are required.",
           "testFirst": "Test the connection before saving.",
-          "unknown": "An unknown error occurred."
+          "unknown": "An unknown error occurred.",
+          "missingApiClientFields": "API URL, Application (client) ID, Client secret and Tenant ID are all required."
         },
         "fields": {
           "apiToken": "API Token",
-          "apiTokenHelp": "In CIPP: Settings → CIPP → API access. Copy the API key, not an Azure client secret.",
+          "apiTokenHelp": "The static API key from an older CIPP version. CIPP no longer issues these; prefer an API client.",
           "apiTokenPlaceholder": "Enter token...",
-          "baseUrl": "CIPP Base URL",
-          "baseUrlHelp": "This is the CIPP-API function app host (for example my-cipp-api.azurewebsites.net), not the CIPP frontend you sign in to.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "CIPP API URL",
+          "baseUrlHelp": "The CIPP API URL, with or without the trailing /api.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "API URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Paste the API URL shown in CIPP. It ends in /api; it works with or without that suffix.",
+          "clientId": "Application (client) ID",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Client secret",
+          "clientSecretPlaceholder": "Enter client secret...",
+          "clientSecretHelp": "CIPP shows the secret only once, when you save the client to Azure. If you no longer have it, create a new secret and enter it here.",
+          "tenantId": "Tenant ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "The Tenant ID shown on the CIPP-API page, next to the client."
         },
         "test": {
           "passed": "CIPP responded. {{count}} tenants visible.",
           "required": "Test the connection before saving."
         },
-        "title": "Connect CIPP"
+        "title": "Connect CIPP",
+        "reconnectTitle": "Reconnect CIPP",
+        "legacyDescription": "Enter your CIPP API URL and a legacy static API key. CIPP no longer issues these keys, so use an API client if you can.",
+        "reconnectNote": "The API URL, Application (client) ID and Tenant ID are filled in from the current connection. Enter the client secret again. The current connection keeps working until the new details pass a test and you save.",
+        "reconnectNoteLegacy": "The API URL is filled in from the current connection. Enter the Application (client) ID, Client secret and Tenant ID from CIPP > Integrations > CIPP-API. The current connection keeps working until the new details pass a test and you save.",
+        "legacyNote": "Legacy API keys are only for connections created before CIPP introduced API clients. Existing connections keep working.",
+        "legacyEncryptionNote": "The API key is encrypted at rest and is never shown again after saving.",
+        "help": {
+          "title": "Where to find these in CIPP",
+          "steps": {
+            "openIntegration": "In CIPP, go to Integrations > CIPP-API.",
+            "createClient": "Choose Create New Client.",
+            "enable": "Enable the client.",
+            "saveToAzure": "Choose Save to Azure.",
+            "copySecret": "Copy the client secret. CIPP shows it only once.",
+            "copyDetails": "Copy the Tenant ID and the API URL from that same page, along with the Application (client) ID."
+          },
+          "tenantIdDelay": "The Tenant ID can take 5 to 15 minutes to appear after the first save. If it is not there yet, wait and refresh the CIPP page.",
+          "restrictions": "If the client uses Allowed IP Ranges, add Alga's egress IPs there. If it uses a Custom Role, the role must allow listtenants, listusers, listgroups, listusergroups and ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Use a legacy API key instead",
+          "useApiClient": "Use a CIPP API client instead (recommended)"
+        },
+        "failure": {
+          "unreachable": "CIPP could not be reached at this URL",
+          "tokenRejected": "Microsoft rejected the API client's sign-in",
+          "apiRefused": "CIPP refused the access token",
+          "legacyRejected": "CIPP rejected the API key",
+          "roleBlocked": "CIPP's Custom Role blocks a permission sync needs",
+          "transport": {
+            "dns": "Could not reach {{host}}: the host name does not resolve. Check the API URL for typos; copy it from CIPP > Integrations > CIPP-API.",
+            "refused": "Could not reach {{host}}: the connection was refused. The host exists but nothing is accepting connections there. Check the API URL and that the CIPP-API function app is running.",
+            "timeout": "Could not reach {{host}}: the request timed out. The host may be down, or a firewall may be dropping our traffic. Check the API URL and try again.",
+            "tls": "Could not reach {{host}}: its TLS certificate was not accepted. Use the https API URL shown in CIPP > Integrations > CIPP-API.",
+            "network": "Could not reach {{host}}: the network request failed before CIPP answered. Check the API URL and try again."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft signed you in, but the managed tenant list could not be read, so nothing was saved. Your permissions were accepted — this usually means the partner tenant is not onboarded to Microsoft 365 Lighthouse or has no active GDAP relationships.",
             "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again."
           },
-          "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
           "details": "Connection details",
           "directCredentialSourceLabel": "Credential Source:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direct"
-          }
+          },
+          "authTypeLabel": "Authentication",
+          "authTypes": {
+            "api_client": "API client",
+            "legacy_api_token": "Legacy API key"
+          },
+          "apiUrlLabel": "API URL",
+          "clientIdLabel": "Application (client) ID",
+          "cippTenantIdLabel": "Tenant ID",
+          "legacyNotice": "This connection uses a legacy CIPP API key. It keeps syncing unchanged. Reconnect to switch to a CIPP API client.",
+          "reconnectCipp": "Reconnect"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga reads tenants through the CIPP instance you already run.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "The CIPP-API function app host, not the CIPP frontend.",
-              "apiKey": "A CIPP API key with tenant list access.",
+              "apiHost": "The API URL, Application (client) ID and Tenant ID from CIPP > Integrations > CIPP-API.",
+              "apiKey": "The API client's secret, which CIPP shows only once.",
               "instance": "A running CIPP instance."
             }
           },

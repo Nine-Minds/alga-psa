@@ -105,9 +105,35 @@ describe('EntraDiagnosticsDialog', () => {
     });
     expect(screen.getByText(/missing \/api or points at the wrong host/)).toBeTruthy();
     // Legacy key path still renders the locale string.
-    expect(screen.getByText(/Rotate the CIPP API key from Settings/)).toBeTruthy();
-    // The allowlist remedy is not replaced by the legacy rotate-the-key text.
-    expect(screen.getAllByText(/Rotate the CIPP API key/)).toHaveLength(1);
+    expect(screen.getByText(/CIPP rejected the legacy API key\. Reconnect with a CIPP API client/)).toBeTruthy();
+    // The allowlist remedy is not replaced by the legacy-key text.
+    expect(screen.getAllByText(/CIPP rejected the legacy API key/)).toHaveLength(1);
+    // The stale "Settings > CIPP > API access" guidance is gone.
+    expect(document.body.textContent).not.toContain('API access');
+  });
+
+  it('renders the token-mint failure with the classified message and its step title', async () => {
+    const mint = 'Microsoft rejected the client secret for this API client (AADSTS7000215). Create a new secret in CIPP > Integrations > CIPP-API.';
+    const scope = 'Microsoft would not issue a token for the CIPP API scope. Check the CIPP-API client configuration.';
+    mocks.runConnection.mockResolvedValue({
+      success: true,
+      data: {
+        ...connectionReport,
+        steps: [
+          ...connectionReport.steps,
+          { id: 'cipp_token_mint', title: 'CIPP API token mint', status: 'fail' },
+        ],
+        recommendations: [
+          { code: 'cipp_token_mint_failed', severity: 'fail', text: mint, messageKey: 'cippTokenMintFailed' },
+          { code: 'cipp_token_scope_rejected', severity: 'fail', text: scope, messageKey: 'cippTokenScopeRejected' },
+        ],
+      },
+    });
+    render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    // The specific classified text (AADSTS code, remedy) survives; no generic locale copy replaces it.
+    await waitFor(() => expect(screen.getByText(mint)).toBeTruthy());
+    expect(screen.getByText(scope)).toBeTruthy();
+    expect(screen.getAllByText('CIPP API token mint').length).toBeGreaterThan(0);
   });
 
   it('renders the overall badge, steps, and recommendations from a fixture', async () => {

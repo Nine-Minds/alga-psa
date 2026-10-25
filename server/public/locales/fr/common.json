@@ -1580,7 +1580,31 @@
     }
   },
   "labels": {
-    "printColumns": "Colonnes à imprimer"
+    "printColumns": "Colonnes à imprimer",
+    "dialog": {
+      "assetTitle": "Imprimer les étiquettes d'actifs",
+      "count_one": "{{count}} sélectionné",
+      "count_other": "{{count}} sélectionnés",
+      "failed": "Les étiquettes n'ont pas pu être imprimées.",
+      "item": "Élément",
+      "layout": "Mise en page",
+      "linkedAsset": "Actif lié",
+      "noAsset": "Aucun actif",
+      "notFound": "Ces enregistrements n'ont pas pu être ouverts.",
+      "openPdf": "Ouvrir le PDF",
+      "printed_one": "{{count}} étiquette imprimée.",
+      "printed_other": "{{count}} étiquettes imprimées.",
+      "printing": "Préparation…",
+      "print": "Imprimer",
+      "reason": "Motif",
+      "skipFailures": "Ignorer ceux-ci et imprimer le reste",
+      "skipped_one": "{{count}} enregistrement a été ignoré car il n'a pas pu être ouvert.",
+      "skipped_other": "{{count}} enregistrements ont été ignorés car ils n'ont pas pu être ouverts.",
+      "template": "Modèle",
+      "ticketTitle": "Imprimer les étiquettes de travail",
+      "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
+      "useTemplate": "Utiliser {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Vérification des dépendances",

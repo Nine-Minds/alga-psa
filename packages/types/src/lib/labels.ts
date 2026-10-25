@@ -16,12 +16,39 @@ export function isLabelClass(value: unknown): value is LabelClass {
   return typeof value === 'string' && (LABEL_CLASSES as readonly string[]).includes(value);
 }
 
+/**
+ * Fields a tenant label template may hide (`metadata.labelSettings.hiddenFields`). Never includes
+ * `url` or `identifier`: a label must always carry its QR and its human-readable identifier.
+ */
+export const LABEL_HIDEABLE_FIELDS = [
+  'clientName',
+  'title',
+  'detail',
+  'secondaryIdentifier',
+  'serialSuffix',
+  'tenantLogo',
+  'tenantName',
+] as const;
+export type LabelHideableField = (typeof LABEL_HIDEABLE_FIELDS)[number];
+
+export interface TemplateLabelSettings {
+  hiddenFields?: LabelHideableField[];
+}
+
 /** The record type each label class prints. */
 export const LABEL_CLASS_ENTITY_TYPE: Record<LabelClass, RecordEntityType> = {
   'ticket-work-tag': 'ticket',
   'asset-identity': 'asset',
   'stock-unit-identity': 'stock_unit',
 };
+
+export interface LabelTenantClient {
+  name: string | null;
+  /** A `data:` URL (inlined by the PDF service so Puppeteer needs no session), or null. */
+  logoUrl: string | null;
+  /** Text brand line: the name, but only when there is no logo. Filled by the renderer. */
+  brandText?: string | null;
+}
 
 /**
  * One uniform shape for every label class (decision: one generic `work-tag` document type).
@@ -47,7 +74,9 @@ export interface LabelViewModel {
   /** Last characters of the serial number, never the whole serial. */
   serialSuffix: string | null;
   /** Filled by the renderer, not by providers. */
-  tenantClient?: { name: string | null; logoUrl: string | null } | null;
+  tenantClient?: LabelTenantClient | null;
+  /** Filled by the renderer from the (already visibility-filtered) fields above: "Asset {tag}", "S/N ...{suffix}". */
+  display?: { assetLine: string | null; serialLine: string | null } | null;
 }
 
 export interface LabelRequestContext {
@@ -78,13 +107,13 @@ export interface LabelViewModelProvider {
 
 /**
  * One record that cannot be printed with the requested template (e.g. an RMM-imported asset tag too
- * long for Code 128 at the minimum module width). Batches are all-or-nothing: when any record fails,
- * nothing prints and the 422 response lists EVERY failing record, so the caller can drop them or
+ * long for Code 128 at the minimum module width). Render failures are all-or-nothing: when any record
+ * fails, nothing prints and the 422 response lists EVERY failing record, so the caller can drop them or
  * reprint them with `suggestedTemplateCode`. Only returned for records the caller was authorized to
- * read (authorization runs first and fails the whole request as not found).
+ * read (authorization runs first; unreadable records are skipped and counted, never listed).
  */
 export interface LabelPrintFailure {
-  /** Zero-based position in the request's `ids`. */
+  /** Zero-based position among the labels actually printed (after unreadable records were skipped). */
   index: number;
   recordId: string;
   identifier: string;
@@ -93,3 +122,6 @@ export interface LabelPrintFailure {
   /** A standard template of the same label class that can print this record, when there is one. */
   suggestedTemplateCode?: string;
 }
+
+/** Largest batch one print request accepts. Batches are never split; the UIs disable above this. */
+export const MAX_LABELS_PER_REQUEST = 200;
