@@ -130,6 +130,52 @@ async function seedTimeEntry(
   return entryId;
 }
 
+
+/**
+ * MSP time on a customer's shared work: the entry points at a retained
+ * co-managed work reference, which carries the MSP client it bills to.
+ */
+async function seedCoManagedTimeEntry(
+  clientId: string,
+  serviceId: string,
+  workDate: string,
+): Promise<string> {
+  const referenceId = uuidv4();
+  await table('co_managed_time_work_references').insert({
+    tenant: tenantId,
+    reference_id: referenceId,
+    customer_tenant: uuidv4(),
+    relationship_id: uuidv4(),
+    source_kind: 'ticket',
+    source_id: uuidv4(),
+    client_id: clientId,
+    ticket_number: 'CUST-7',
+    title: 'Customer shared work',
+  });
+  const entryId = uuidv4();
+  await table('time_entries').insert({
+    entry_id: entryId,
+    tenant: tenantId,
+    user_id: userId,
+    work_item_id: referenceId,
+    work_item_type: 'co_managed',
+    co_managed_work_reference_id: referenceId,
+    billing_mode: 'commercial',
+    service_id: serviceId,
+    start_time: `${workDate}T10:00:00Z`,
+    end_time: `${workDate}T11:00:00Z`,
+    billable_duration: 60,
+    approval_status: 'APPROVED',
+    work_date: workDate,
+    work_timezone: 'UTC',
+    contract_line_id: null,
+    invoiced: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  return entryId;
+}
+
 describe('billing profiles S5 — unresolved-item carve-out (T049, T050, T052)', () => {
   let clientId: string;
   let ticketId: string;
@@ -334,5 +380,35 @@ describe('billing profiles S5 — unresolved-item carve-out (T049, T050, T052)',
     // Leaving the acceptance would record a decision that is no longer in force.
     expect(row.catalog_pricing_acknowledged_at).toBeNull();
     expect(row.catalog_pricing_acknowledged_by).toBeNull();
+  }, HOOK_TIMEOUT);
+
+  // The review resolves the client through the billing work context, so MSP
+  // time on retained co-managed work reaches the queue like ticket time does.
+  it('lists uncovered and ambiguous time on co-managed work for its MSP client only', async () => {
+    const uncoveredEntryId = await seedCoManagedTimeEntry(clientId, uncoveredServiceId, '2025-05-20');
+    const ambiguousEntryId = await seedCoManagedTimeEntry(clientId, ambiguousServiceId, '2025-05-21');
+    const otherClientId = uuidv4();
+    await table('clients').insert({
+      tenant: tenantId,
+      client_id: otherClientId,
+      client_name: 'Unrelated MSP Client',
+      billing_cycle: 'monthly',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    const otherEntryId = await seedCoManagedTimeEntry(otherClientId, uncoveredServiceId, '2025-05-22');
+
+    const rows: any = await getUnresolvedChargeReview({
+      clientId,
+      windowStart: WINDOW_START,
+      windowEnd: WINDOW_END,
+    });
+
+    const uncovered = rows.find((row: any) => row.recordId === uncoveredEntryId);
+    expect(uncovered).toMatchObject({ kind: 'time_entry', reason: 'no_match', billsAtCatalogRate: true, quantity: 60 });
+    const ambiguous = rows.find((row: any) => row.recordId === ambiguousEntryId);
+    expect(ambiguous).toMatchObject({ reason: 'ambiguous', billsAtCatalogRate: false });
+    expect(ambiguous.eligibleContractLines).toHaveLength(2);
+    expect(rows.some((row: any) => row.recordId === otherEntryId)).toBe(false);
   }, HOOK_TIMEOUT);
 });

@@ -11,6 +11,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getEligibleContractLines } from '../lib/contractLineDisambiguation';
+import { joinTimeEntryBillingWorkContext } from '../lib/billing/timeEntryWorkContext';
 
 /**
  * The unresolved-item review queue and its two remedies (F068, F069, F137–F142).
@@ -122,14 +123,9 @@ export const getUnresolvedChargeReview = withAuth(async (
     db.tenantJoin(timeQuery, 'service_catalog as sc', 'sc.service_id', 'te.service_id', {
       type: 'left',
     });
-    db.tenantJoin(timeQuery, 'tickets as t', 't.ticket_id', 'te.work_item_id', { type: 'left' });
-    db.tenantJoin(timeQuery, 'project_tasks as pt', 'pt.task_id', 'te.work_item_id', {
-      type: 'left',
-    });
-    db.tenantJoin(timeQuery, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id', {
-      type: 'left',
-    });
-    db.tenantJoin(timeQuery, 'projects as p', 'p.project_id', 'pp.project_id', { type: 'left' });
+    // The client comes from the same owner/type-qualified work the billing engine
+    // bills, so tickets, project tasks and retained co-managed work all resolve.
+    joinTimeEntryBillingWorkContext(knex, tenant, timeQuery, 'te');
 
     const timeRows = await timeQuery
       .whereNull('te.contract_line_id')
@@ -138,9 +134,7 @@ export const getUnresolvedChargeReview = withAuth(async (
       .where('te.billable_duration', '>', 0)
       .where('te.start_time', '>=', input.windowStart)
       .where('te.start_time', '<', input.windowEnd)
-      .where(function (this: Knex.QueryBuilder) {
-        this.where('t.client_id', input.clientId).orWhere('p.client_id', input.clientId);
-      })
+      .where('billing_work.client_id', input.clientId)
       .select(
         'te.entry_id',
         'te.service_id',

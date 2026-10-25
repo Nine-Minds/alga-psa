@@ -1417,6 +1417,70 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
   expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
 }, HOOK_TIMEOUT);
 
+it('recurring due-work counts unapproved MSP time on co-managed work as an approval blocker for its contract line', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-blocked-co-managed-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Blocked Co-managed Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Blocked Co-managed Service',
+    planName: 'Approval Blocked Co-managed Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked-co-managed:v1`,
+    sourceRunKey: 'integration-approval-blocked-co-managed',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(plan.records[0]);
+
+  await createCoManagedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-14T10:00:00.000Z',
+    endTime: '2025-02-14T11:00:00.000Z',
+    approvalStatus: 'SUBMITTED',
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Blocked Co-managed Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Blocked Co-managed Client',
+  );
+
+  expect(blockedCandidate).toMatchObject({
+    canGenerate: false,
+    approvalBlockedEntryCount: 1,
+  });
+  expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
+}, HOOK_TIMEOUT);
+
 it('parity: recurring due-work blocks uniquely assignable unassigned hourly time inside the half-open service period and ignores the exclusive end date', async () => {
   setupCommonMocks({ tenantId, userId: 'approval-unique-unassigned-user', permissionCheck: () => true });
 
@@ -6459,6 +6523,59 @@ async function createApprovedTimeEntryForContractLine(params: {
   }
 
   return entry;
+}
+
+
+/** MSP commercial time on a customer's shared work, attributed to its MSP client
+ * through a retained co-managed work reference rather than a local ticket. */
+async function createCoManagedTimeEntryForContractLine(params: {
+  clientId: string;
+  serviceId: string;
+  contractLineId?: string | null;
+  startTime: string;
+  endTime: string;
+  approvalStatus: 'APPROVED' | 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED';
+}) {
+  const userId = await createUser(db, tenantId, {
+    user_type: 'internal',
+    email: `${uuidv4()}@time-entry.test`,
+  });
+  const referenceId = uuidv4();
+  await tenantTable(db, tenantId, 'co_managed_time_work_references').insert({
+    tenant: tenantId,
+    reference_id: referenceId,
+    customer_tenant: uuidv4(),
+    relationship_id: uuidv4(),
+    source_kind: 'ticket',
+    source_id: uuidv4(),
+    client_id: params.clientId,
+    ticket_number: 'CUST-9',
+    title: 'Customer shared ticket',
+  });
+  const entryId = uuidv4();
+  const start = new Date(params.startTime);
+  const end = new Date(params.endTime);
+  await tenantTable(db, tenantId, 'time_entries').insert({
+    tenant: tenantId,
+    entry_id: entryId,
+    user_id: userId,
+    work_item_id: referenceId,
+    work_item_type: 'co_managed',
+    co_managed_work_reference_id: referenceId,
+    billing_mode: 'commercial',
+    service_id: params.serviceId,
+    contract_line_id: params.contractLineId ?? null,
+    start_time: start,
+    end_time: end,
+    billable_duration: Math.round((end.getTime() - start.getTime()) / 60000),
+    approval_status: params.approvalStatus,
+    work_date: params.startTime.slice(0, 10),
+    work_timezone: 'UTC',
+    invoiced: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  return { entry_id: entryId };
 }
 
 async function createUsageRecordForContractLine(params: {

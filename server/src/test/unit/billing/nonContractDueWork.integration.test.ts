@@ -275,8 +275,7 @@ describe('non-contract due-work reader', () => {
       service_id: 'svc-time',
       approval_status: 'APPROVED',
       billable_duration: 120,
-      project_client_id: 'client-1',
-      ticket_client_id: null,
+      work_client_id: 'client-1',
     }];
     unresolvedSpy.mockResolvedValueOnce([
       {
@@ -413,8 +412,7 @@ describe('non-contract due-work reader', () => {
       service_id: 'svc-time',
       approval_status: 'APPROVED',
       billable_duration: 60,
-      project_client_id: 'client-1',
-      ticket_client_id: null,
+      work_client_id: 'client-1',
     }];
 
     await getAvailableRecurringDueWork({ page: 1, pageSize: 10 });
@@ -440,7 +438,7 @@ describe('non-contract due-work reader', () => {
       start_time: '2025-04-02T14:00:00.000Z',
       end_time: '2025-04-02T15:00:00.000Z',
     }],
-    ['owned by another client', { project_client_id: 'client-2' }],
+    ['owned by another client', { work_client_id: 'client-2' }],
     ['owned by another tenant', { tenant: 'tenant-2' }],
   ])('T045: does not hydrate a time source that is %s', async (_label, overrides) => {
     mocks.rowsByTable.time_entries = [{
@@ -453,8 +451,7 @@ describe('non-contract due-work reader', () => {
       service_id: 'svc-time',
       approval_status: 'APPROVED',
       billable_duration: 60,
-      project_client_id: 'client-1',
-      ticket_client_id: null,
+      work_client_id: 'client-1',
       ...overrides,
     }];
 

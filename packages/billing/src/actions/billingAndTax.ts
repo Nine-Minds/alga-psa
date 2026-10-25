@@ -8,6 +8,7 @@ import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { resolveInvoiceDueDate } from '../lib/billing/invoiceDueDate';
+import { joinTimeEntryBillingWorkContext } from '../lib/billing/timeEntryWorkContext';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -819,8 +820,7 @@ type PotentialUnresolvedTimeEntry = {
     entry_id: string;
     start_time: Date | string;
     end_time: Date | string;
-    project_client_id?: string | null;
-    ticket_client_id?: string | null;
+    work_client_id?: string | null;
 };
 
 type PotentialUnresolvedUsageRecord = {
@@ -900,34 +900,9 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
     const clientIds = Array.from(windowsByClientId.keys());
     const db = tenantDb(trx, tenant);
     const potentialTimeEntriesQuery = db.table('time_entries');
-    db.tenantJoin(
-        potentialTimeEntriesQuery,
-        'project_tasks',
-        'time_entries.work_item_id',
-        'project_tasks.task_id',
-        { type: 'left' },
-    );
-    db.tenantJoin(
-        potentialTimeEntriesQuery,
-        'project_phases',
-        'project_tasks.phase_id',
-        'project_phases.phase_id',
-        { type: 'left' },
-    );
-    db.tenantJoin(
-        potentialTimeEntriesQuery,
-        'projects',
-        'project_phases.project_id',
-        'projects.project_id',
-        { type: 'left' },
-    );
-    db.tenantJoin(
-        potentialTimeEntriesQuery,
-        'tickets',
-        'time_entries.work_item_id',
-        'tickets.ticket_id',
-        { type: 'left' },
-    );
+    // Resolve each entry's client through the same work context the billing
+    // engine uses, so retained co-managed work is not dropped before pricing.
+    joinTimeEntryBillingWorkContext(trx as Knex, tenant, potentialTimeEntriesQuery);
 
     const [potentialTimeEntries, potentialUsageRecords] = await Promise.all([
         potentialTimeEntriesQuery
@@ -943,8 +918,7 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
                 'time_entries.entry_id',
                 'time_entries.start_time',
                 'time_entries.end_time',
-                'projects.client_id as project_client_id',
-                'tickets.client_id as ticket_client_id',
+                'billing_work.client_id as work_client_id',
             ) as Promise<PotentialUnresolvedTimeEntry[]>,
         db.table('usage_tracking')
             .where('usage_tracking.tenant', tenant)
@@ -981,8 +955,7 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
     for (const entry of potentialTimeEntries) {
         const startMs = toTimestampMs(entry.start_time);
         const endMs = toTimestampMs(entry.end_time);
-        addMatchingPeriods(entry.project_client_id, startMs, endMs);
-        addMatchingPeriods(entry.ticket_client_id, startMs, endMs);
+        addMatchingPeriods(entry.work_client_id, startMs, endMs);
     }
 
     for (const record of potentialUsageRecords) {

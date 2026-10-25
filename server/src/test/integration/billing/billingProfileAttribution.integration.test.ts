@@ -249,6 +249,49 @@ async function chargesFor(invoiceId: string) {
     .select('item_id', 'description', 'net_amount', 'billing_profile_id', 'billing_profile_source');
 }
 
+
+/** MSP time on a customer's shared work, billed through its retained work reference. */
+async function seedCoManagedTime(options: {
+  clientId: string; serviceId: string; workDate: string; minutes: number;
+  approvalStatus?: string; contractLineId?: string | null;
+}): Promise<{ entryId: string; referenceId: string }> {
+  const referenceId = uuidv4();
+  await table('co_managed_time_work_references').insert({
+    tenant: tenantId,
+    reference_id: referenceId,
+    customer_tenant: uuidv4(),
+    relationship_id: uuidv4(),
+    source_kind: 'ticket',
+    source_id: uuidv4(),
+    client_id: options.clientId,
+    ticket_number: 'CUST-42',
+    title: 'Customer shared ticket',
+  });
+  const entryId = uuidv4();
+  const endMinutes = 10 * 60 + options.minutes;
+  await table('time_entries').insert({
+    entry_id: entryId,
+    tenant: tenantId,
+    user_id: userId,
+    work_item_id: referenceId,
+    work_item_type: 'co_managed',
+    co_managed_work_reference_id: referenceId,
+    billing_mode: 'commercial',
+    service_id: options.serviceId,
+    start_time: `${options.workDate}T10:00:00Z`,
+    end_time: `${options.workDate}T${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}:00Z`,
+    billable_duration: options.minutes,
+    approval_status: options.approvalStatus ?? 'APPROVED',
+    work_date: options.workDate,
+    work_timezone: 'UTC',
+    contract_line_id: options.contractLineId ?? null,
+    invoiced: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  return { entryId, referenceId };
+}
+
 describe('billing profiles S2 — charge attribution and snapshots (T004, T010, T014, T016, T017)', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -1048,4 +1091,41 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       new Set([northPlant, southPlant]),
     );
   }, HOOK_TIMEOUT);
+
+  // Retained co-managed work resolves its MSP client through the billing work
+  // context everywhere billing looks for a client, not only in the engine.
+  it('lists uncovered co-managed catalog time as due work and invoices it once at the catalog rate', async () => {
+    const { clientId } = await seedClient('Co-managed Catalog Client');
+    await ensureDefaultBillingProfile({ db, tenantId }, clientId, { name: 'Co-managed Default' });
+    const serviceId = await createTestService({ db, tenantId, clientId } as any, {
+      service_name: 'Co-managed Catalog Consulting',
+      billing_method: 'per_unit',
+      default_rate: HOURLY_RATE_CENTS,
+      unit_of_measure: 'hour',
+      tax_region: 'US-NY',
+    });
+    await ensureUsdServicePrice({ db, tenantId }, serviceId, HOURLY_RATE_CENTS);
+    const { entryId } = await seedCoManagedTime({ clientId, serviceId, workDate: '2025-01-15', minutes: 30 });
+
+    const dueWork = await getAvailableRecurringDueWork({
+      dateRange: { from: JANUARY_START, to: FEBRUARY_START }, pageSize: 100,
+    } as any) as any;
+    const member = dueWork.invoiceCandidates.flatMap((candidate: any) => candidate.members)
+      .find((candidate: any) => String(candidate.scheduleKey).endsWith(`:unresolved:time:${entryId}`));
+    expect(member).toMatchObject({ clientId, contractId: null, contractLineId: null, canGenerate: true });
+
+    transactionControl.useRealTransactions = true;
+    const run = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{ groupKey: 'co-managed-catalog', selectorInputs: [member.selectorInput], billingCycleId: null }],
+    });
+    expect(run).toMatchObject({ invoicesCreated: 1, failedCount: 0 });
+    const invoice = await table('invoices').where({ client_id: clientId }).orderBy('created_at', 'desc').first();
+    const sources = await table('invoice_time_entries').where({ invoice_id: invoice.invoice_id }).select('entry_id');
+    expect(sources).toEqual([{ entry_id: entryId }]);
+    const charges = await chargesFor(invoice.invoice_id);
+    expect(charges).toHaveLength(1);
+    expect(Number(charges[0].net_amount)).toBe(HOURLY_RATE_CENTS / 2);
+    expect(await table('time_entries').where({ entry_id: entryId }).first('invoiced')).toEqual({ invoiced: true });
+  }, HOOK_TIMEOUT);
+
 });

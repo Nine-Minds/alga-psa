@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { joinTimeEntryBillingWorkContext } from '../lib/billing/timeEntryWorkContext';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import type { ISO8601String, IRecurringDueWorkWarning } from '@alga-psa/types';
 
@@ -228,27 +229,10 @@ async function countContractLineUnapprovedTimeEntries(params: {
         });
       }
     })
-    .where(function matchWorkItemShape(this: Knex.QueryBuilder) {
-      this.where(function matchProjectTask(this: Knex.QueryBuilder) {
-        this.where('time_entries.work_item_type', '=', 'project_task').whereNotNull(
-          'project_tasks.task_id',
-        );
-      }).orWhere(function matchTicket(this: Knex.QueryBuilder) {
-        this.where('time_entries.work_item_type', '=', 'ticket').whereNotNull(
-          'tickets.ticket_id',
-        );
-      });
-    })
-    .where(function matchClient(this: Knex.QueryBuilder) {
-      this.where('projects.client_id', row.clientId).orWhere(
-        'tickets.client_id',
-        row.clientId,
-      );
-    });
-  db.tenantJoin(query, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
-  db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
-  db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
-  db.tenantJoin(query, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
+    // Client attribution comes from the billing work context, so ticket,
+    // project-task and retained co-managed work are all counted as blockers.
+    .where('billing_work.client_id', row.clientId);
+  joinTimeEntryBillingWorkContext(knex, tenant, query);
 
   applyNonApprovedStatusFilter(query, 'time_entries.approval_status');
 
