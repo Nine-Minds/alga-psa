@@ -20,7 +20,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 
 export type AssetAuthUser = {
   user_id: string;
-  user_type: 'internal' | 'client';
+  user_type: AuthorizationSubject['userType'];
   clientId?: string | null;
   roles?: Array<{ role_id?: string } | string>;
 };
