@@ -10,9 +10,15 @@ Render to a temporary directory first. The renderer validates the supplied revis
 
 ```sh
 node docs/guides/co-managed-it/render.cjs /tmp/co-managed-guides \
-  --revision "$CANDIDATE_REVISION" \
+  --revision "$RECORDED_RUNTIME_REVISION" \
+  --publication-revision "$PUBLISHED_GUIDE_REVISION" \
   --coverage /absolute/path/to/video-coverage.json
 ```
+
+`--publication-revision` is optional and defaults to `--revision`. Use it for
+a later documentation-only publication: source links and the guide header use
+the publication SHA, while media validation and recording metadata retain the
+actual runtime SHA. It never promotes scenario acceptance.
 
 The output directory represents the review packet's `guides/` directory and
 contains the collection guide and 12 section guides. Coverage `recordingPaths`

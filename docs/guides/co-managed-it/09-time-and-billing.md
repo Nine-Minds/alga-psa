@@ -6,14 +6,18 @@ MSP commercial effort stays in the MSP workspace. Customer operational effort st
 
 Use an assigned MSP technician, a customer technician, an MSP timesheet approver and a billing operator. Prepare a current time period and a valid service/contract line for the sponsor's client. Start on [shared ticket 000002](http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500), or a disposable shared task.
 
-The last guide recorded October 16–November 1 time-period coverage and a successful 60-minute commercial entry. It also recorded a classic timesheet grid that omitted shared rows despite totals, and a date-after-service change that could leave an invalid contract line without a visible save error. These are unresolved review concerns here, not waived pass criteria.
+The October 25 production check at source `cd28aa9531f7` (build
+`build-1792904848073`) verifies the repaired native timesheet projection: Grid
+shows both shared work rows, and List shows five entries totaling 4:15, including
+the exact 15-minute commercial entry `9bcd33ca`. A new customer entry
+`1a9812cb` persisted after reload as five minutes of operational effort, with
+zero billable minutes and no service or contract line. The separate recording
+for this guide retains those outcomes and the actual build revision.
 
-The October 25 production check reproduced the missing rows. A subsequent source
-repair reuses the authorized time-entry projection for work-item identities;
-development Grid and List now show the saved rows, including the new 15-minute
-entry. PostgreSQL checks cover deduplication, retained references, exclusions
-and masks. Production rebuild and verification remain required. This does not
-establish approval or invoice-generation acceptance.
+These checks close the demonstrated missing-row display failure. Approval,
+invoice generation, timer recovery, and the previously reported invalid
+contract-line behavior after a date change remain unaccepted. Do not infer
+those results from correct rows or totals.
 
 ## Risks to check
 

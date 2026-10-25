@@ -1,0 +1,184 @@
+[
+  {
+    "guide": "index.html",
+    "checkedAt": "2026-10-25T06:19:09.061Z",
+    "played": {
+      "time": 0.559149,
+      "duration": 46.12,
+      "width": 1440,
+      "cues": 11
+    },
+    "seekTarget": 5.547,
+    "seekActual": 5.547,
+    "passed": true
+  },
+  {
+    "guide": "guides/index.html",
+    "checkedAt": "2026-10-25T06:19:09.729Z",
+    "played": {
+      "time": 0.545602,
+      "duration": 26.32,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 5.458,
+    "seekActual": 5.458,
+    "passed": true
+  },
+  {
+    "guide": "guides/01-onboarding.html",
+    "checkedAt": "2026-10-25T06:19:10.432Z",
+    "played": {
+      "time": 0.548406,
+      "duration": 55.64,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 13.471,
+    "seekActual": 13.471,
+    "passed": true
+  },
+  {
+    "guide": "guides/02-licensing-and-seats.html",
+    "checkedAt": "2026-10-25T06:19:11.073Z",
+    "played": {
+      "time": 0.555034,
+      "duration": 17.6,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 5.239,
+    "seekActual": 5.239,
+    "passed": true
+  },
+  {
+    "guide": "guides/03-access-policies.html",
+    "checkedAt": "2026-10-25T06:19:11.695Z",
+    "played": {
+      "time": 0.553792,
+      "duration": 17.24,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 8.762,
+    "seekActual": 8.762,
+    "passed": true
+  },
+  {
+    "guide": "guides/04-delegated-administration.html",
+    "checkedAt": "2026-10-25T06:19:12.328Z",
+    "played": {
+      "time": 0.548124,
+      "duration": 17.2,
+      "width": 1440,
+      "cues": 3
+    },
+    "seekTarget": 8.212,
+    "seekActual": 8.212,
+    "passed": true
+  },
+  {
+    "guide": "guides/05-ticket-queue.html",
+    "checkedAt": "2026-10-25T06:19:12.962Z",
+    "played": {
+      "time": 0.54502,
+      "duration": 23.96,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 5.808,
+    "seekActual": 5.808,
+    "passed": true
+  },
+  {
+    "guide": "guides/06-projects-and-tasks.html",
+    "checkedAt": "2026-10-25T06:19:13.595Z",
+    "played": {
+      "time": 0.545504,
+      "duration": 29.68,
+      "width": 1440,
+      "cues": 6
+    },
+    "seekTarget": 7.588,
+    "seekActual": 7.588,
+    "passed": true
+  },
+  {
+    "guide": "guides/07-conversations-and-files.html",
+    "checkedAt": "2026-10-25T06:19:14.268Z",
+    "played": {
+      "time": 0.543987,
+      "duration": 42.04,
+      "width": 1440,
+      "cues": 8
+    },
+    "seekTarget": 15.426,
+    "seekActual": 15.426,
+    "passed": true
+  },
+  {
+    "guide": "guides/08-sla.html",
+    "checkedAt": "2026-10-25T06:19:14.933Z",
+    "played": {
+      "time": 0.555013,
+      "duration": 27.92,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 5.322,
+    "seekActual": 5.322,
+    "passed": true
+  },
+  {
+    "guide": "guides/09-time-and-billing.html",
+    "checkedAt": "2026-10-25T06:19:15.563Z",
+    "played": {
+      "time": 0.554012,
+      "duration": 31.28,
+      "width": 1440,
+      "cues": 7
+    },
+    "seekTarget": 8.277,
+    "seekActual": 8.276999,
+    "passed": true
+  },
+  {
+    "guide": "guides/10-departure-and-archives.html",
+    "checkedAt": "2026-10-25T06:19:16.206Z",
+    "played": {
+      "time": 0.549087,
+      "duration": 20,
+      "width": 1440,
+      "cues": 2
+    },
+    "seekTarget": 8.707,
+    "seekActual": 8.707,
+    "passed": true
+  },
+  {
+    "guide": "guides/11-export-restore-and-upgrade.html",
+    "checkedAt": "2026-10-25T06:19:16.872Z",
+    "played": {
+      "time": 0.556907,
+      "duration": 12.84,
+      "width": 1440,
+      "cues": 3
+    },
+    "seekTarget": 6.863,
+    "seekActual": 6.863,
+    "passed": true
+  },
+  {
+    "guide": "guides/12-customer-integrations.html",
+    "checkedAt": "2026-10-25T06:19:17.532Z",
+    "played": {
+      "time": 0.549813,
+      "duration": 23.44,
+      "width": 1440,
+      "cues": 4
+    },
+    "seekTarget": 5.377,
+    "seekActual": 5.377,
+    "passed": true
+  }
+]

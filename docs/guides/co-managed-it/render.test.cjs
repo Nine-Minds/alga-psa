@@ -66,9 +66,24 @@ function fixture({ completed = false, corrupt = null } = {}) {
   return { root, coveragePath, outputPath };
 }
 
-function render(fixtureData) {
-  return spawnSync(process.execPath, [path.join(sourceRoot, 'render.cjs'), fixtureData.outputPath, '--revision', revision, '--coverage', fixtureData.coveragePath], { encoding: 'utf8' });
+function render(fixtureData, extra = []) {
+  return spawnSync(process.execPath, [path.join(sourceRoot, 'render.cjs'), fixtureData.outputPath, '--revision', revision, '--coverage', fixtureData.coveragePath, ...extra], { encoding: 'utf8' });
 }
+
+test('a later guide publication preserves actual recording and build identities', t => {
+  const f = fixture({ completed: true });
+  t.after(() => fs.rmSync(f.root, { recursive: true, force: true }));
+  const publication = 'abcdefabcdefabcdefabcdefabcdefabcdefabcd';
+  const result = render(f, ['--publication-revision', publication]);
+  assert.equal(result.status, 0, result.stderr);
+  const html = fs.readFileSync(path.join(f.outputPath, '01-onboarding.html'), 'utf8');
+  assert.match(html, new RegExp(`Guide publication revision:</strong> <code>${publication}`));
+  assert.match(html, new RegExp(`Recorded runtime revision:</strong> <code>${revision}`));
+  const metadata = JSON.parse(fs.readFileSync(path.join(f.outputPath, '01-onboarding-walkthrough.json'), 'utf8'));
+  assert.equal(metadata.testedRevision, revision);
+  assert.equal(metadata.build.sourceRevision, revision);
+  assert.equal(metadata.runtime.sourceRevision, revision);
+});
 
 test('blocked rows keep timestamp and playback claims prohibited', t => {
   const f = fixture({ corrupt: 'blocked-claims-recorded' });

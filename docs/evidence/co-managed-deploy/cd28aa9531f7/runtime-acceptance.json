@@ -1,271 +1,255 @@
 {
-  "observedAt": "2026-10-25T06:10:00Z",
+  "observedAt": "2026-10-25T06:23:08.317739+00:00",
   "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "checkoutRevisionAtCapture": "149cbe06d1d8854c3f03a68b729fdf1a71ccc20d",
   "buildId": "build-1792904848073",
-  "evidenceScope": "Partial product acceptance against the cd28 production distribution, now registered as canonical review-app on :23374; no full PLAN pass claimed.",
+  "evidenceScope": "Current cd28 production, bounded real-product checks; no full PLAN or release pass. Documentation publication does not relabel runtime.",
   "runtime": {
-    "origin": "http://feature-co-managed-it.localhost:23374",
+    "attemptedAt": "2026-10-25T05:50:46Z",
+    "supportedBoardLifecycle": true,
+    "serviceName": "review-app",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+    "distribution": "server/.next-review-candidate-racefix",
     "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
-    "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
     "buildId": "build-1792904848073",
-    "liveNextProcessPid": 4168956,
-    "liveNextProcessCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
-    "isolatedCandidateOrigin": "http://feature-co-managed-it.localhost:23376",
-    "canonicalReviewAppSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
-    "isolatedNextProcessPid": 3876055,
-    "canonicalHealthStatus": 200,
-    "observedAt": "2026-10-25T05:56:57Z"
+    "port": 23374,
+    "readiness": {
+      "path": "/api/health",
+      "httpStatus": 200
+    },
+    "openReview": {
+      "status": "pass",
+      "signedInAs": "qa@emeraldcity.oz",
+      "entryUrl": "http://feature-co-managed-it.localhost:23374/msp/tickets",
+      "annotation": "workflow annotation af7e3735-5de8-4d34-91e4-8c5b5a16421f"
+    },
+    "fallbacksPreserved": {
+      "23375": "HTTP 200",
+      "23376": "HTTP 200"
+    },
+    "note": "The board command timed out client-side after successful service resume and QA sign-in; the durable board annotation and live health confirm the review entry completed.",
+    "liveNextPid": 4168956,
+    "lastHealthCheckedAt": "2026-10-25T05:56:01Z",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "processPid": 4168956,
+    "processStartedAt": "2026-10-25T05:50:36Z"
   },
   "results": [
     {
-      "area": "Production candidate provenance",
+      "area": "Canonical deployment and QA entry",
       "status": "pass",
-      "actor": null,
-      "route": "/api/health",
-      "action": "Verified launcher-written revision stamp, BUILD_ID, live process CWD and HTTP health. Launcher writes the stamp after its post-build HEAD and tracked-source fingerprint checks.",
-      "result": {
-        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
-        "buildId": "build-1792904848073",
-        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "canonicalHttpStatus": 200,
-        "isolatedCandidateHttpStatus": 200,
-        "processCwd": "/home/robert/alga-copies/feature-co-managed-it/server"
-      }
+      "result": "Canonical review-app serves cd28/build1792904848073; supported Open Review has returned qa@emeraldcity.oz on :23374. Commandless dev-server ensure reuses the registered current-checkout launcher. Latest health probes are recorded separately.",
+      "evidence": "runtime-provenance.json"
     },
     {
-      "area": "Authenticated candidate routes",
-      "status": "partial-pass",
-      "actor": "qa@emeraldcity.oz",
-      "route": "/msp/tickets; /msp/tickets/customer",
-      "action": "Signed in through the normal credentials form directly against :23376 and opened both product routes.",
-      "result": "Both pages rendered with HTTP 200; this does not establish full runtime acceptance."
-    },
-    {
-      "area": "Supported Open Review entry",
-      "status": "pass",
-      "actor": "qa@emeraldcity.oz",
-      "route": "/msp/tickets",
-      "action": "Promoted the already-built candidate distribution to canonical review-app using board conclude/ensure; retained :23375 and :23376. Open Review resumed the registration and authenticated QA.",
-      "result": "Verified by board event annotation: workflow-open-review authenticated qa@emeraldcity.oz at http://feature-co-managed-it.localhost:23374/msp/tickets. Canonical review-app is running the cd28 distribution and /api/health returns 200. :23375 and :23376 fallbacks remain healthy."
-    },
-    {
-      "area": "Customer account boundary",
-      "status": "partial-pass",
-      "actor": "alice@whiterabbit.test",
-      "route": "/msp/account; /msp/account/users",
-      "action": "Opened the account root and child route.",
-      "result": "Both showed \u201cPage not available in your current product experience\u201d; no account content was exposed. Remaining account routes and PSA control behavior were not checked."
-    },
-    {
-      "area": "Shared comment after-commit refresh",
-      "status": "partial-pass",
+      "area": "Fresh onboarding and multipart gate",
+      "status": "bounded-pass",
       "actors": [
         "qa@emeraldcity.oz",
-        "alice@whiterabbit.test"
+        "current.20261025@cmreview.test"
       ],
-      "route": "/msp/co-management/tickets/... and /msp/tickets/{ticketId}",
-      "action": "QA submitted a shared comment while Alice had the native ticket detail open.",
-      "result": "The comment appeared in Alice\u2019s already-open view after commit and was present after reload."
+      "result": "Normal product provisioning operation4942f536 created customer5cc14abe; worker delivered original invitation, administrator claimed normally. Ordinary multipart createBoard without next-action returned500 while pending, with zero sentinel boards. Acceptance succeeded; ordinary onboarding writes completed and survived reload.",
+      "evidence": [
+        "receipts/01-current-acceptance-final/pending-state.txt",
+        "receipts/01-current-acceptance-final/accepted-state.txt"
+      ],
+      "limit": "Other mutation families and complete credential matrix remain separate."
     },
     {
-      "area": "Native time detail projection",
-      "status": "partial-pass",
-      "actor": "qa@emeraldcity.oz",
-      "route": "/msp/co-management/tickets/...",
-      "action": "Read the shared ticket detail time summary.",
-      "result": "Customer 0 hours, MSP 3.25 hours, combined 3.25 hours displayed. Native timesheet list projection and approval/billing flows remain unverified."
+      "area": "Account route boundary",
+      "status": "bounded-pass",
+      "actors": [
+        "alice@whiterabbit.test",
+        "qa@emeraldcity.oz"
+      ],
+      "result": "Customer account root, billing child and excluded accounting integration surface rendered unavailable; QA PSA Account Management rendered.",
+      "recording": "account-boundary"
     },
     {
-      "area": "Worker invitation mail configuration",
-      "status": "focused-regression-pass",
-      "test": "scripts/tests/co-managed-worker-env.test.mjs",
-      "result": "1/1 passed."
+      "area": "Shared tickets, scope, task and delegation",
+      "status": "bounded-pass",
+      "result": "Board View scope persisted after reload and Collaborate was restored; existing delegated board description changed/reloaded/restored. Shared task edit/reload/restoration and project revocation/current MSP denial/restoration passed. Queue bulk handback and customer escalation restored ticket000002 to MSP responsibility; independent SLA display observed.",
+      "evidence": [
+        "receipts/06-task-boundaries-final/state.txt",
+        "receipts/05-customer-ticket-loop/work-state.txt"
+      ],
+      "limit": "Complete assignment, field-mask, delegated approval/revocation and queue/export matrix not established."
     },
     {
-      "area": "Legacy file-download tenant context",
-      "status": "focused-regression-pass",
-      "test": "server/src/test/unit/api/fileDownloadTenantContext.test.ts",
-      "result": "4/4 passed."
+      "area": "Conversations, distinct live recipient and task files",
+      "status": "bounded-pass",
+      "result": "QA Shared IT comment appeared in already-open distinct Alice recipient without navigation/reload; new shared and each-organization private notes persisted with cross-private body denial. QA private task file downloads exact bytes; Alice shared file exact bytes and captured MSP-private URL404.",
+      "evidence": "receipts/07-current-task-file-boundaries/file-results.json",
+      "limit": "Requester, removal, disclosure and full retained attachment matrix remain unaccepted."
     },
     {
-      "area": "After-commit live update helper",
-      "status": "focused-regression-pass",
-      "test": "packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts",
-      "result": "18/18 passed; co-managed real product refresh also passed in the two-actor check above."
+      "area": "Operational and native commercial time projections",
+      "status": "bounded-pass",
+      "result": "New Alice5minute entry1a9812cb persisted project_task/operational, billable0, service/contract_line null. QA native Grid shows both shared work rows; List5entries totaling4:15 includes exact15minute commercial entry9bcd33ca.",
+      "evidence": "receipts/09-current-operational-time/persisted.txt",
+      "limit": "No whole-sheet approval, existing financial record or invoice changed. Full approval/billing/timer/date-contract behavior remains unaccepted."
     },
     {
-      "area": "Compiled worker build and health",
-      "status": "partial-pass",
-      "result": {
-        "temporalWorker": {
-          "build": "npm run build passed",
-          "childPid": 4008993,
-          "startedAt": "2026-10-25T05:33:49Z",
-          "health": "HTTP 200; five queues RUNNING",
-          "boardReadinessProbe": {
-            "port": 8375,
-            "path": "/health",
-            "registered": true,
-            "httpStatus": 200
-          }
-        },
-        "workflowWorker": {
-          "build": "npm run build passed",
-          "childPid": 4012279,
-          "startedAt": "2026-10-25T05:34:09Z",
-          "health": "HTTP 200; temporal/eventStream/dataStoreSweep ready",
-          "boardReadinessProbe": {
-            "port": 4374,
-            "path": "/health",
-            "registered": true,
-            "httpStatus": 200
-          },
-          "postStartBusinessEffect": {
-            "status": "observed",
-            "workerId": "runtime-v2-events-1792906452222",
-            "events": [
-              "TICKET_COMMENT_ADDED",
-              "TICKET_MESSAGE_ADDED"
-            ],
-            "result": "Fresh event worker received and processed the ticket events for the co-managed tenant; stream acknowledgements are logged. Zero workflows matched, so no downstream workflow side effect is claimed."
-          }
-        }
-      },
-      "limitation": "Workflow event processing and acknowledgements were observed after fresh start. Temporal worker is built and healthy with all five queues RUNNING; a post-start Temporal business effect remains unverified."
+      "area": "Post-start Temporal business effect and native regression",
+      "status": "pass",
+      "result": "Product-created native ticket f59a8dcf triggered Temporal run13410755 SUCCEEDED at06:09:22Z after worker05:33:49Z cold start. Both SMOKE-SILENT and SMOKE-CC comments persisted and appeared after fresh reload. Published workflow bdfbb4ba was temporarily resumed via UI and restored Paused. Native comment/file also persisted.",
+      "evidence": "receipts/main-worker-business-confirmed/worker-business-effect.txt"
     },
     {
-      "area": "PLAN acceptance remaining",
-      "status": "blocked",
-      "result": "The following candidate-runtime scenarios are not yet complete: multipart pending enforcement and acceptance/onboarding; Microsoft OIDC negative cases and real sign-in; customer provider persistence and inbound/reply/deduplication/revocation; full account-root/child-route and PSA control matrix; ticket/task audience and attachment boundaries; revocation; commercial vs operational time; native timesheet rows and approval/billing; live recipient refresh; native PSA ticket/comment/attachment/project/time/workflow regression. Distinguish simulator tests from live Microsoft/provider delivery; neither is claimed here."
+      "area": "Native file tenant authorization",
+      "status": "pass",
+      "result": "Fresh isolated QA and Alice contexts independently checked current session identities. Both /api/files and /api/documents download routes returned200/exact41bytes for QA and404 for foreign Alice.",
+      "evidence": "receipts/main-native-download-control/download-authority.json",
+      "automationCorrection": "An earlier in-context cookie swap retained QA and returned200. That probe was invalid as a foreign-tenant test; it is not a demonstrated product leak. The isolated controls supersede it."
     },
     {
-      "area": "Current runtime guide recordings",
-      "status": "blocked",
-      "result": "0/14 current-build recordings complete. All 14 current destinations are unique and candidate revision scoped; historical e88d530b4c media remains separately identified."
+      "area": "Export and disposable departure",
+      "status": "bounded-pass",
+      "result": "Alice encrypted backup210750bytes SHA256 c69b37c55f49ea1b5875a4957ece31cd35ab8c0629147c3ca1570da10b4ef7b7 downloaded; encrypted archive stays private. New disposable customer ended through own controls, released1seat and sealed1archive manifest; retained native read rendered. White Rabbit remains active.",
+      "evidence": "receipts/10-current-departure/closure-state.txt",
+      "limit": "Full retained file/history archive on participated departure remains unaccepted. Isolated restore is documented separately; paid activation/native destination login remain unaccepted."
+    },
+    {
+      "area": "Fourteen current-build recordings",
+      "status": "media-pass-scenarios-partial",
+      "result": "Main, collection and twelve section guides each have separate actual cd28 WebM/VTT/JSON. Every published page has exactly one current player and verified playback, chapter seeking, HTTP206 media ranges, JSON200 and VTT200. Historical media preserved.",
+      "evidence": [
+        "video-coverage.json",
+        "published-guide-verification.json"
+      ],
+      "fullyAcceptedGuideScenarios": 0
+    },
+    {
+      "area": "Isolated installation restore",
+      "status": "bounded-pass",
+      "result": "Actual operator CLI inspected the current encrypted export and restored package75b8b30d into newtenant1f7161e2. Retry returned the original receipt. Destination suspended pending activation, onlyuser inactive,0live relationships;2tickets/1project/1task/22comments restored. Shared27byte file matches archive checksum, private file absent. Wrong passphrase and tampered archive rejected.",
+      "evidence": [
+        "receipts/portable-restore/restore-receipt.json",
+        "receipts/portable-restore/destination-state.txt",
+        "receipts/portable-restore/file-verification.json",
+        "receipts/portable-restore/negative-inspection.json"
+      ],
+      "limit": "No destination-owned paid entitlement supplied; activation, native destination login and complete credential recovery remain unaccepted."
     }
-  ],
-  "limitations": [
-    "Full PLAN scenario acceptance remains incomplete.",
-    "Current-build recordings remain 0/14.",
-    "A post-start Temporal business effect with a matched execution is not yet demonstrated.",
-    "The in-app browser recording/control runtime failed to initialize in this session."
   ],
   "remainingPlanScenarios": [
     {
-      "area": "Multipart enforcement and onboarding",
-      "status": "not-run-on-current-candidate",
-      "actorRequirement": "distinct pre-acceptance, accepting, and admitted actors; current actors/accounts may be used without credential changes",
-      "persistedReloadEvidence": null,
-      "blocker": "Not executed as a full candidate journey yet. Canonical QA Open Review is now verified; prior e88d evidence is not a substitute."
-    },
-    {
-      "area": "Microsoft OIDC and customer provider/inbound mail",
-      "status": "not-run-on-candidate",
-      "simulator": "not-run on this candidate",
-      "liveProvider": "not run; requires the configured Microsoft authority/provider and controlled callback/inbound sender",
-      "requiredCases": [
-        "issuer",
-        "audience",
-        "expiry",
-        "nonce",
-        "PKCE",
-        "replay",
-        "provider persistence",
-        "inbound/reply",
-        "duplicate delivery",
-        "revocation",
-        "cross-tenant denial"
-      ],
-      "externalBlocker": "No live Microsoft/provider acceptance is claimed; live issuer, callback and inbound sender dependencies have not been exercised."
-    },
-    {
-      "area": "Customer authorization and audience boundaries",
-      "status": "partial",
-      "observed": "account root and /msp/account/users rendered unavailable; an MSP-only Customer Tickets action was denied",
-      "remaining": [
-        "all child-route matrix",
-        "authorized PSA behavior",
-        "ticket/task audience partition",
-        "attachment download and cross-tenant denial",
-        "revocation with retained history"
-      ]
-    },
-    {
-      "area": "Timesheets and commercial/operational time",
-      "status": "partial",
-      "observed": "shared ticket detail displayed Customer 0 hours, MSP 3.25 hours, combined 3.25 hours",
-      "remaining": [
-        "native timesheet row persisted/reloaded",
-        "approval and billing lifecycle",
-        "operational vs commercial attribution",
-        "revocation behavior"
-      ]
-    },
-    {
-      "area": "Native regressions",
-      "status": "not-run-on-current-candidate",
+      "area": "Microsoft OIDC and customer-owned providers/inbound",
+      "status": "external-dependency-and-not-run",
       "required": [
-        "native ticket list state and SSR",
-        "native comment",
-        "native attachment",
-        "project/task flows",
-        "time/workflow behavior",
-        "customer client tab"
+        "real application callback/sign-in",
+        "issuer/audience/expiry/nonce/PKCE/replay negatives",
+        "provider persist",
+        "inbound/reply/dedup/revocation/cross-tenant denial"
       ],
-      "blocker": "QA Open Review succeeded on the candidate, but the required native list and mutation journeys have not been run/reloaded at this build."
+      "detail": "No approved live Microsoft tenant/app/customer test account was supplied. Existing loopback SMTP invitation delivery is not Microsoft/provider acceptance. Production emulator gate was not bypassed."
     },
     {
-      "area": "Current-runtime guide recordings",
-      "status": "blocked",
-      "required": 14,
-      "complete": 0,
-      "blocker": "Browser recording connection could not be initialized; no WebM/VTT/recording JSON was captured for the current build. Historical media is kept separate."
+      "area": "Collaboration completeness",
+      "status": "partial",
+      "required": [
+        "full requester/disclosure/removal coverage",
+        "complete field-mask/assignment/delegation revocation matrix",
+        "retained shared participation/files on departure"
+      ]
+    },
+    {
+      "area": "Financial and recovery completeness",
+      "status": "partial",
+      "required": [
+        "time approval and invoice reconciliation",
+        "timer retry/date-contract behavior",
+        "paid destination activation and native recovery/credential comparison"
+      ]
+    },
+    {
+      "area": "Whole-card gate",
+      "status": "incomplete",
+      "detail": "Generated requirement census and verifier retain incomplete rows; current CI and mergeability gates remain unsatisfied. No readiness rule or source-only row status was relaxed."
     }
   ],
   "externalBlockers": [
     {
-      "dependency": "Microsoft identity authority and provider callbacks",
-      "status": "not exercised",
-      "detail": "no live-provider result claimed"
-    },
-    {
-      "dependency": "Inbound mail delivery path",
-      "status": "not exercised",
-      "detail": "no live-provider result claimed"
-    },
-    {
-      "dependency": "Current-build browser capture across all fourteen guides",
-      "status": "incomplete",
-      "detail": "requires working canonical Open Review and genuine browser recording artifacts"
+      "area": "Microsoft OIDC and customer-owned providers/inbound",
+      "status": "external-dependency-and-not-run",
+      "required": [
+        "real application callback/sign-in",
+        "issuer/audience/expiry/nonce/PKCE/replay negatives",
+        "provider persist",
+        "inbound/reply/dedup/revocation/cross-tenant denial"
+      ],
+      "detail": "No approved live Microsoft tenant/app/customer test account was supplied. Existing loopback SMTP invitation delivery is not Microsoft/provider acceptance. Production emulator gate was not bypassed."
     }
   ],
   "temporalBusinessEffect": {
-    "status": "unverified",
-    "detail": "The workflow worker processed ticket comment/message events but matched zero authored workflows. A matched Temporal execution with a persisted business effect after its fresh start is still required."
+    "status": "verified",
+    "runId": "13410755-824b-46ac-8029-aa4f9ccef66b",
+    "engine": "temporal",
+    "runStatus": "SUCCEEDED",
+    "startedAt": "2026-10-25T06:09:22.304Z",
+    "triggerTicket": "f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+    "workflowRestoredPaused": true,
+    "workerChildStartedAt": "2026-10-25T05:33:49Z",
+    "persistedCommentIds": [
+      "fe02878d-0d90-402c-8118-39507d1a2097",
+      "b86a75b3-d838-4083-8107-4d06fc4cbfae"
+    ],
+    "evidence": "receipts/main-worker-business-confirmed/worker-business-effect.txt"
   },
   "browserCapture": {
-    "status": "blocked-tooling",
-    "detail": "Browser plugin bootstrap failed before tab discovery (Node REPL import of node:process was rejected; no authenticated tab or recording was accessed). No current media is claimed."
+    "status": "recorded-and-verified",
+    "method": "isolated system Chrome/Playwright; real product interactions; no synthetic media",
+    "guides": 14,
+    "mediaReady": true,
+    "fullScenarioAcceptance": false
   },
-  "postStartTemporalInvestigation": {
-    "observedAt": "2026-10-25T05:56:57Z",
-    "workerChildPid": 4008993,
-    "workerStartedAt": "2026-10-25T05:33:49Z",
-    "health": "HTTP 200; five queues RUNNING",
-    "businessEffect": "not demonstrated",
-    "candidateTriggersChecked": {
-      "publishedAuthoredWorkflowsForTenant": 0,
-      "publishedWorkflowsGlobal": 0,
-      "tenantSlaPolicies": 0
-    },
-    "method": "read-only query of workflow_definitions and sla_policies in the co-managed candidate database; no configuration or credentials were changed",
-    "conclusion": "A real matched product-triggered Temporal effect requires an enabled workflow or applicable SLA policy and a real authenticated product action. Neither exists in the observed candidate tenant state, and browser control could not initialize; unmatched-event acknowledgements are not counted."
+  "health": {
+    "checkedAt": "2026-10-25T06:21:17.222560+00:00",
+    "probes": [
+      {
+        "port": 3374,
+        "path": "/auth/msp/signin",
+        "http": 200
+      },
+      {
+        "port": 23374,
+        "path": "/api/health",
+        "http": 200
+      },
+      {
+        "port": 23375,
+        "path": "/api/health",
+        "http": 200
+      },
+      {
+        "port": 23376,
+        "path": "/api/health",
+        "http": 200
+      },
+      {
+        "port": 8375,
+        "path": "/health",
+        "http": 200
+      },
+      {
+        "port": 4374,
+        "path": "/health",
+        "http": 200
+      },
+      {
+        "port": 8874,
+        "path": "/",
+        "http": 200
+      }
+    ]
   },
-  "clearedChecks": [
-    {
-      "dependency": "Supported Open Review canonical service",
-      "status": "verified",
-      "detail": "Board annotation confirms qa@emeraldcity.oz entered /msp/tickets on :23374; canonical service readiness is HTTP 200 and serves build-1792904848073."
-    }
+  "limitations": [
+    "All14 guide scenarios are partial; media completion is not acceptance.",
+    "Microsoft/provider/inbound, complete billing, paid activation and native recovered-workspace comparison are not accepted.",
+    "Full requirement census remains fail-closed; PR is draft/conflicting."
+  ],
+  "automationNotes": [
+    "Original invitation form automatically signed in successfully; an obsolete success-button wait timed out. Pending scope/acceptance continuation and persistence receipts establish the outcome.",
+    "Foreign native download checks use isolated contexts after a cookie-swap probe failed identity preconditions."
   ]
 }

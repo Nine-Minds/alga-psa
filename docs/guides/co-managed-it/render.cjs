@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Render source-grounded review guides with validated recordings or blocked scaffolds.
-// Usage: node render.cjs /absolute/output/directory --revision <sha> --coverage /absolute/coverage.json
+// --revision identifies the recorded runtime; --publication-revision optionally
+// identifies a later documentation-only publication without relabelling media.
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
@@ -25,9 +26,11 @@ if (path.resolve(outputRoot) === sourceRoot || path.resolve(outputRoot) === repo
   throw new Error('Render to a separate directory; keep guide sources separate.');
 }
 const revision = option('--revision');
+const publicationRevision = args.includes('--publication-revision') ? option('--publication-revision') : revision;
 const coverageFile = option('--coverage');
 if (args.length) throw new Error(`Unknown argument: ${args[0]}`);
 if (!/^[0-9a-f]{7,40}$/i.test(revision)) throw new Error('Candidate revision must be a 7–40 character hexadecimal git SHA.');
+if (!/^[0-9a-f]{7,40}$/i.test(publicationRevision)) throw new Error('Publication revision must be a 7–40 character hexadecimal git SHA.');
 if (!path.isAbsolute(coverageFile)) throw new Error('--coverage must be an absolute path.');
 const coverage = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
 if (coverage.candidateRevision !== revision) {
@@ -161,7 +164,7 @@ const md = new Marked({async:false, renderer:{html:({text}) => escape(text)}, wa
     } else {
       const sourcePath = path.relative(repoRoot, resolved).split(path.sep).join('/');
       if (sourcePath.startsWith('..')) throw new Error(`Link escapes repository: ${href}`);
-      token.href = `https://github.com/Nine-Minds/alga-psa/blob/${revision}/${sourcePath}${suffix}`;
+      token.href = `https://github.com/Nine-Minds/alga-psa/blob/${publicationRevision}/${sourcePath}${suffix}`;
     }
   }
 }});
@@ -295,7 +298,7 @@ for (const file of files) {
   const output = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Co-Managed IT</title><meta name="description" content="${escape(title)}: Co-Managed IT human review steps, prerequisites and expected outcomes."><link rel="stylesheet" href="styles.css"></head>
 <body><a class="skip" href="#content">Skip to guide</a><header><p>CO-MANAGED IT · HUMAN REVIEW</p><nav aria-label="Guide navigation">${isParent?'':'<a href="index.html">All section guides</a>'}<a href="/">Ticket-screen walkthrough</a></nav></header>
-<main id="content"><aside class="provenance"><strong>Candidate source revision:</strong> <code>${revision}</code>. This is a regenerated source guide, not runtime acceptance evidence. Recording status for this guide: <strong>${row.status}</strong>.</aside><aside class="runtime-status"><strong>Runtime status:</strong> ${escape(runtimeSummary)}</aside>${body}${recording.html}</main>
+<main id="content"><aside class="provenance"><strong>Guide publication revision:</strong> <code>${publicationRevision}</code>. <strong>Recorded runtime revision:</strong> <code>${revision}</code>. Recording status for this guide: <strong>${row.status}</strong>. Publication does not change the recorded build or establish full scenario acceptance.</aside><aside class="runtime-status"><strong>Runtime status:</strong> ${escape(runtimeSummary)}</aside>${body}${recording.html}</main>
 <footer><nav aria-label="Footer navigation">${isParent?'':'<a href="index.html">Back to all guides</a>'}<a href="/">Ticket-screen walkthrough and recorded evidence</a></nav><p>Record Pass, Fail, Blocked or Not run for each flow. Reading a guide does not record approval.</p></footer></body></html>
 `;
   fs.writeFileSync(path.join(outputRoot,isParent?'index.html':file.replace(/\.md$/,'.html')),output);

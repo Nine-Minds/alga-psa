@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:06:55.569Z",
+  "durationSeconds": 42.04,
+  "guide": "guides/07-conversations-and-files.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:07:09.733Z",
+      "seconds": 14.164,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:10.995Z",
+      "seconds": 15.426,
+      "title": "MSP shared IT contribution",
+      "actor": "qa",
+      "result": "Committed through native composer",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:11.021Z",
+      "seconds": 15.452,
+      "title": "Distinct customer live display",
+      "actor": "qa",
+      "result": "Visible without recipient reload",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:16.912Z",
+      "seconds": 21.343,
+      "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "alice",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:16.921Z",
+      "seconds": 21.352,
+      "title": "Customer refreshed shared note and private denial",
+      "actor": "alice",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:18.820Z",
+      "seconds": 23.251,
+      "title": "Customer private write after fresh reload",
+      "actor": "alice",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:23.842Z",
+      "seconds": 28.273,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:07:23.850Z",
+      "seconds": 28.281,
+      "title": "MSP refreshed own note and customer-private denial",
+      "actor": "qa",
+      "result": "Passed",
+      "sourceClip": "07-conversations-final"
+    },
+    {
+      "at": "2026-10-25T06:08:25.083Z",
+      "seconds": 34.696,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-current-task-file-boundaries"
+    },
+    {
+      "at": "2026-10-25T06:08:26.602Z",
+      "seconds": 36.215,
+      "title": "MSP task file publication and private download",
+      "actor": "qa",
+      "result": "Exact original bytes",
+      "sourceClip": "07-current-task-file-boundaries"
+    },
+    {
+      "at": "2026-10-25T06:08:31.371Z",
+      "seconds": 40.984,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "alice",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "07-current-task-file-boundaries"
+    },
+    {
+      "at": "2026-10-25T06:08:31.438Z",
+      "seconds": 41.051,
+      "title": "Customer task file authority",
+      "actor": "alice",
+      "result": {
+        "sharedHttp": 200,
+        "exactSharedBytes": true,
+        "mspPrivateHttp": 404,
+        "privateNoteAbsent": true
+      },
+      "sourceClip": "07-current-task-file-boundaries"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+    },
+    {
+      "action": "MSP shared IT contribution",
+      "result": "Committed through native composer"
+    },
+    {
+      "action": "Distinct customer live display",
+      "result": "Visible without recipient reload"
+    },
+    {
+      "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Customer refreshed shared note and private denial",
+      "result": "Passed"
+    },
+    {
+      "action": "Customer private write after fresh reload",
+      "result": "Passed"
+    },
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+    },
+    {
+      "action": "MSP refreshed own note and customer-private denial",
+      "result": "Passed"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "MSP task file publication and private download",
+      "result": "Exact original bytes"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Customer task file authority",
+      "result": {
+        "sharedHttp": 200,
+        "exactSharedBytes": true,
+        "mspPrivateHttp": 404,
+        "privateNoteAbsent": true
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 15.426,
+      "title": "07 conversations final"
+    },
+    {
+      "start": 15.426,
+      "end": 21.352,
+      "title": "MSP shared IT contribution"
+    },
+    {
+      "start": 21.352,
+      "end": 23.251,
+      "title": "Customer refreshed shared note and private denial"
+    },
+    {
+      "start": 23.251,
+      "end": 28.281,
+      "title": "Customer private write after fresh reload"
+    },
+    {
+      "start": 28.281,
+      "end": 29.28,
+      "title": "MSP refreshed own note and customer-private denial"
+    },
+    {
+      "start": 29.28,
+      "end": 36.215,
+      "title": "07 current task file boundaries"
+    },
+    {
+      "start": 36.215,
+      "end": 41.051,
+      "title": "MSP task file publication and private download"
+    },
+    {
+      "start": 41.051,
+      "end": 42.04,
+      "title": "Customer task file authority"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/07-conversations-final/recording.json",
+      "evidence/takeover-cd28-production/07-current-task-file-boundaries/recording.json"
+    ]
+  },
+  "limitations": [
+    "Three-audience staff text checks passed; requester, attachments, edit/delete and whole-thread disclosure remain outside this recording.",
+    "Posted task shared/private file publication and two-organization byte authorization verified. Removal, whole-thread disclosure, requester and portable/archive integration require additional checks.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

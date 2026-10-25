@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:18:35.598Z",
+  "durationSeconds": 31.28,
+  "guide": "guides/09-time-and-billing.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:18:41.433Z",
+      "seconds": 5.836,
+      "title": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+      "actor": "alice",
+      "result": "ort\nCM Lead phase\n1 task\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 1 Done\nTo Do\n1\nTask Actions\nCM Lead shared task\nNot assigned\nNo due date\n2\nIn Progress\n0\nDone\n0",
+      "sourceClip": "09-current-operational-time"
+    },
+    {
+      "at": "2026-10-25T06:18:43.875Z",
+      "seconds": 8.277,
+      "title": "Customer native task time launcher",
+      "actor": "alice",
+      "result": "e to\nCM Lead customer project 20261025 > CM Lead phase\nDuplicate to\nSelect duplicate destination...\nStart Date\nDue Date\nEstimated Hours\nActual Hours\n0.08333333333333333\n\nCalculated from linked time entries\n\nCreated At: Oct 24, 2026, 10:58 PM\n\nAssigned To\nNot assigned\nAdditional Agents\nSelect additional agents...\nTags\nChecklist\nDependencies\n\nNo other tasks available for dependencies\n\nAssociated Tickets\nLink Ticket\nCreate Ticket\nAttachments\nNew\nUpload\nLink\nPasswords\nNew password\nAttach existing\n\nNo passwords attached yet.\n\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0.08 hours\nMSP\n0 hours\nCombined\n0.08 hours\nComments\nInternal Only\nOldest first\nAdd Comment\nQT\n\nQA Tester\n\nOz\n\nShared IT teams\n\nabout 3 hours ago\n\nCM-LEAD shared task note 20261025\n\nReact\nQT\n\nQA Tester\n\nOz\n\nShared IT teams\n\n12 minutes ago\n\nCM-CURRENT shared task note 20261025\n\nReact\nCancel\nDelete\nAdd Time Entry\nUpdate\nDialog Content\nAdd New Time Entry for CM Lead shared task\nDate *\n\nTime sheet: Oct 25, 2026 – Oct 31, 2026 · Draft\n\nStart Time\nEnd Time\nDuration\nh\nm\nNotes\nCancel\nSave",
+      "sourceClip": "09-current-operational-time"
+    },
+    {
+      "at": "2026-10-25T06:18:47.249Z",
+      "seconds": 11.651,
+      "title": "Customer operational time save followed by reload",
+      "actor": "alice",
+      "result": "Persistence read follows",
+      "sourceClip": "09-current-operational-time"
+    },
+    {
+      "at": "2026-10-25T06:05:34.125Z",
+      "seconds": 19.266,
+      "title": "/msp/time-entry/timesheet/493ca20e-3b6b-4cfd-9757-8655155da311",
+      "actor": "qa",
+      "result": "\n\nSMOKE callout count change 142333\nCo Managed\n\t\n01:00\n\t\n01:00\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\n\nPrinter offline in accounts\nCo Managed\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\nWeekly Total\t\n02:00\n\t\n01:00\n\t\n01:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%",
+      "sourceClip": "09-timesheet-production"
+    },
+    {
+      "at": "2026-10-25T06:05:37.629Z",
+      "seconds": 22.77,
+      "title": "Native timesheet projection",
+      "actor": "qa",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBack\nTime Sheet\nOct 16 - 23, 2026\nPage 1 of 2\nStatus:\nIn Progress\nSuggestions\n3\nGrid\nList\nSubmit Time Sheet\nAdd Item\t\nFRI\n10/16\n\t\nSAT\n10/17\n\t\nSUN\n10/18\n\t\nMON\n10/19\n\t\nTUE\n10/20\n\t\nWED\n10/21\n\t\nTHU\n10/22\n\t\nFRI\n10/23\n\n\nSMOKE callout count change 142333\nCo Managed\n\t\n01:00\n\t\n01:00\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\n\nPrinter offline in accounts\nCo Managed\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\nWeekly Total\t\n02:00\n\t\n01:00\n\t\n01:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%",
+      "sourceClip": "09-timesheet-production"
+    },
+    {
+      "at": "2026-10-25T06:05:39.991Z",
+      "seconds": 25.131999999999998,
+      "title": "Exact new commercial entry row",
+      "actor": "qa",
+      "result": "entry9bcd33ca visible with15minutes",
+      "sourceClip": "09-timesheet-production"
+    },
+    {
+      "at": "2026-10-25T06:05:40.048Z",
+      "seconds": 25.189,
+      "title": "List projection",
+      "actor": "qa",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBack\nTime Sheet\nFri, Oct 16 - Sat, Oct 31\nStatus:\nIn Progress\nSuggestions\n3\nGrid\nList\nSubmit Time Sheet\nAdd Item\n5 entries\nTotal: 04:15\nBillable: 04:15\n\tWork Item\tTime Entry\tDuration\tBillable Duration\tActions\t\n\tFri, Oct 16\t2 entries\t02:00\t02:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\n\t\nPrinter offline in accounts\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tSat, Oct 17\t1 entry\t01:00\t01:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tSun, Oct 18\t1 entry\t01:00\t01:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tMon, Oct 19\tNo entries\t\t\t\nEntry\n\tTue, Oct 20\tNo entries\t\t\t\nEntry\n\tWed, Oct 21\tNo entries\t\t\t\nEntry\n\tThu, Oct 22\tNo entries\t\t\t\nEntry\n\tFri, Oct 23\tNo entries\t\t\t\nEntry\n\tSat, Oct 24\tNo entries\t\t\t\nEntry\n\tSun, Oct 25\t1 entry\t00:15\t00:15\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 04:15\n\t00:15\t00:15\t\n\tMon, Oct 26\tNo entries\t\t\t\nEntry\n\tTue, Oct 27\tNo entries\t\t\t\nEntry\n\tWed, Oct 28\tNo entries\t\t\t\nEntry\n\tThu, Oct 29\tNo entries\t\t\t\nEntry\n\tFri, Oct 30\tNo entries\t\t\t\nEntry\n\tSat, Oct 31\tNo entries\t\t\t\nEntry\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%",
+      "sourceClip": "09-timesheet-production"
+    },
+    {
+      "at": "2026-10-25T06:05:45.188Z",
+      "seconds": 30.329,
+      "title": "/msp/billing",
+      "actor": "qa",
+      "result": "RICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nQuotes\nNew Quote\nActive (0)\nSent (0)\nClosed (0)\nApproval Queue\nNo quotes in this category.",
+      "sourceClip": "09-timesheet-production"
+    },
+    {
+      "at": "2026-10-25T06:05:45.189Z",
+      "seconds": 30.33,
+      "title": "Billing entry surface",
+      "actor": "qa",
+      "result": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nQuotes\nNew Quote\nActive (0)\nSent (0)\nClosed (0)\nApproval Queue\nNo quotes in this category.",
+      "sourceClip": "09-timesheet-production"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+      "result": "ort\nCM Lead phase\n1 task\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 1 Done\nTo Do\n1\nTask Actions\nCM Lead shared task\nNot assigned\nNo due date\n2\nIn Progress\n0\nDone\n0"
+    },
+    {
+      "action": "Customer native task time launcher",
+      "result": "e to\nCM Lead customer project 20261025 > CM Lead phase\nDuplicate to\nSelect duplicate destination...\nStart Date\nDue Date\nEstimated Hours\nActual Hours\n0.08333333333333333\n\nCalculated from linked time entries\n\nCreated At: Oct 24, 2026, 10:58 PM\n\nAssigned To\nNot assigned\nAdditional Agents\nSelect additional agents...\nTags\nChecklist\nDependencies\n\nNo other tasks available for dependencies\n\nAssociated Tickets\nLink Ticket\nCreate Ticket\nAttachments\nNew\nUpload\nLink\nPasswords\nNew password\nAttach existing\n\nNo passwords attached yet.\n\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0.08 hours\nMSP\n0 hours\nCombined\n0.08 hours\nComments\nInternal Only\nOldest first\nAdd Comment\nQT\n\nQA Tester\n\nOz\n\nShared IT teams\n\nabout 3 hours ago\n\nCM-LEAD shared task note 20261025\n\nReact\nQT\n\nQA Tester\n\nOz\n\nShared IT teams\n\n12 minutes ago\n\nCM-CURRENT shared task note 20261025\n\nReact\nCancel\nDelete\nAdd Time Entry\nUpdate\nDialog Content\nAdd New Time Entry for CM Lead shared task\nDate *\n\nTime sheet: Oct 25, 2026 – Oct 31, 2026 · Draft\n\nStart Time\nEnd Time\nDuration\nh\nm\nNotes\nCancel\nSave"
+    },
+    {
+      "action": "Customer operational time save followed by reload",
+      "result": "Persistence read follows"
+    },
+    {
+      "action": "/msp/time-entry/timesheet/493ca20e-3b6b-4cfd-9757-8655155da311",
+      "result": "\n\nSMOKE callout count change 142333\nCo Managed\n\t\n01:00\n\t\n01:00\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\n\nPrinter offline in accounts\nCo Managed\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\nWeekly Total\t\n02:00\n\t\n01:00\n\t\n01:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%"
+    },
+    {
+      "action": "Native timesheet projection",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBack\nTime Sheet\nOct 16 - 23, 2026\nPage 1 of 2\nStatus:\nIn Progress\nSuggestions\n3\nGrid\nList\nSubmit Time Sheet\nAdd Item\t\nFRI\n10/16\n\t\nSAT\n10/17\n\t\nSUN\n10/18\n\t\nMON\n10/19\n\t\nTUE\n10/20\n\t\nWED\n10/21\n\t\nTHU\n10/22\n\t\nFRI\n10/23\n\n\nSMOKE callout count change 142333\nCo Managed\n\t\n01:00\n\t\n01:00\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\n\nPrinter offline in accounts\nCo Managed\n\t\n01:00\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\nWeekly Total\t\n02:00\n\t\n01:00\n\t\n01:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\n\t\n00:00\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%"
+    },
+    {
+      "action": "Exact new commercial entry row",
+      "result": "entry9bcd33ca visible with15minutes"
+    },
+    {
+      "action": "List projection",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBack\nTime Sheet\nFri, Oct 16 - Sat, Oct 31\nStatus:\nIn Progress\nSuggestions\n3\nGrid\nList\nSubmit Time Sheet\nAdd Item\n5 entries\nTotal: 04:15\nBillable: 04:15\n\tWork Item\tTime Entry\tDuration\tBillable Duration\tActions\t\n\tFri, Oct 16\t2 entries\t02:00\t02:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\n\t\nPrinter offline in accounts\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tSat, Oct 17\t1 entry\t01:00\t01:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tSun, Oct 18\t1 entry\t01:00\t01:00\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 05:00\n\t01:00\t01:00\t\n\tMon, Oct 19\tNo entries\t\t\t\nEntry\n\tTue, Oct 20\tNo entries\t\t\t\nEntry\n\tWed, Oct 21\tNo entries\t\t\t\nEntry\n\tThu, Oct 22\tNo entries\t\t\t\nEntry\n\tFri, Oct 23\tNo entries\t\t\t\nEntry\n\tSat, Oct 24\tNo entries\t\t\t\nEntry\n\tSun, Oct 25\t1 entry\t00:15\t00:15\t\nEntry\n\t\nSMOKE callout count change 142333\nCo Managed\n\t\n04:00 - 04:15\n\t00:15\t00:15\t\n\tMon, Oct 26\tNo entries\t\t\t\nEntry\n\tTue, Oct 27\tNo entries\t\t\t\nEntry\n\tWed, Oct 28\tNo entries\t\t\t\nEntry\n\tThu, Oct 29\tNo entries\t\t\t\nEntry\n\tFri, Oct 30\tNo entries\t\t\t\nEntry\n\tSat, Oct 31\tNo entries\t\t\t\nEntry\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%"
+    },
+    {
+      "action": "/msp/billing",
+      "result": "RICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nQuotes\nNew Quote\nActive (0)\nSent (0)\nClosed (0)\nApproval Queue\nNo quotes in this category."
+    },
+    {
+      "action": "Billing entry surface",
+      "result": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nBilling\nQuotes\nNew Quote\nActive (0)\nSent (0)\nClosed (0)\nApproval Queue\nNo quotes in this category."
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 8.277,
+      "title": "09 current operational time"
+    },
+    {
+      "start": 8.277,
+      "end": 11.651,
+      "title": "Customer native task time launcher"
+    },
+    {
+      "start": 11.651,
+      "end": 13.44,
+      "title": "Customer operational time save followed by reload"
+    },
+    {
+      "start": 13.44,
+      "end": 22.77,
+      "title": "09 timesheet production"
+    },
+    {
+      "start": 22.77,
+      "end": 25.131,
+      "title": "Native timesheet projection"
+    },
+    {
+      "start": 25.131,
+      "end": 30.33,
+      "title": "Exact new commercial entry row"
+    },
+    {
+      "start": 30.33,
+      "end": 31.28,
+      "title": "Billing entry surface"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/09-current-operational-time/recording.json",
+      "evidence/takeover-cd28-production/09-timesheet-production/recording.json"
+    ]
+  },
+  "limitations": [
+    "Native customer operational time launcher exercised; exact persisted receipt determines write outcome. Full-sheet approvals and invoicing remain separate.",
+    "Native timesheet and billing navigation/projections inspected. No whole sheet, older entries or existing invoice was changed. Approval and generation require a fully isolated eligible billing window.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

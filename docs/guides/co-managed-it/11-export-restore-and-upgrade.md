@@ -23,6 +23,15 @@ Expected: a complete encrypted download, not a success page mistaken for the arc
 
 Repeat export after departure on its prepared fixture to confirm the customer can still recover its own data. Do not put passphrases or decrypted credentials in screenshots, review evidence or shell arguments.
 
+The October 25 operator check restored the current production export into a
+new isolated tenant (`1f7161e2`). It retained two tickets, one project, one task,
+22 comments and one shared file with matching archive checksum; its only user
+remains inactive and the tenant is suspended pending activation. Retrying
+returned the original receipt. Wrong passphrases and a tampered archive were
+rejected. This is operator restore evidence, separate from the export video.
+Destination paid activation, native login and full credential recovery remain
+unaccepted.
+
 ## 2. Inspect and restore on an isolated destination
 
 The installation operator runs the following from the destination checkout's `server/` directory, with its documented destination configuration loaded. Replace placeholders before execution. These commands prompt for the archive passphrase.

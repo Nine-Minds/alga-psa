@@ -1,9 +1,9 @@
 # Co-Managed IT acceptance plan
 
 Status: **Partial production acceptance; review remains incomplete.**
-Recorded application: `e88d530b4c0fadfa40d3c0a77cf7102745187219`, production
-`build-1792894631786` (PR #3363). Later source repairs require their own runtime
-verification; retain this actual build provenance.
+Current recorded application: `cd28aa9531f7bd465711f90b92bf8592185d9c77`,
+production `build-1792904848073` (PR #3363). Historical `e88d530b4c` and `2192c83e0a`
+recordings remain separate. Later evidence commits do not relabel this build.
 
 This plan makes the existing approved scope actionable; it does not replace it.
 The approved authority is [the foundation plan](../2026-09-06-co-managed-it-plan.md),
@@ -53,19 +53,26 @@ October 25 execution verified a fresh invitation/acceptance journey, multipart
 pending rejection, customer account-root/child denial, two-organization note
 separation, reversible scope/delegated changes, responsibility/SLA transitions,
 customer project/task sharing and revocation, shared/private task files,
-separate commercial and operational time, encrypted export and a disposable
-departure. See the [bounded runtime results](../../evidence/co-managed-completion/e88d530b4c/lead-acceptance-20261025/result.json).
+customer operational time, native shared timesheet rows, encrypted export and a
+disposable departure. A product-created native ticket triggered a matched
+Temporal workflow after the worker's cold start; the run succeeded and both
+expected comments survived reload. The workflow was restored to Paused.
+The actual operator CLI also inspected and restored the customer backup into
+a new suspended tenant, verified inactive users and file checksum, replayed
+the original receipt, and rejected wrong-passphrase/tampered inspection.
+See the [current bounded runtime results](../../evidence/co-managed-deploy/cd28aa9531f7/runtime-acceptance.json).
 
 All fourteen guides have genuine separate recordings with browser-verified
 playback and chapter seeking. Their scenarios remain **partial**, and their
 metadata retains the recorded build revision. Playable media does not complete
-acceptance. Distinct-recipient live delivery, full task/file/disclosure coverage,
+acceptance. Current production checks verify distinct-recipient live delivery,
+both native download routes with isolated owner/foreign sessions, and shared
+rows in the native Grid and List timesheets. Full task/file/disclosure coverage,
 customer providers/inbound/directory, real Microsoft sign-in, complete time
-approval/billing, isolated restore and paid activation remain unverified or
-blocked. The demonstrated legacy file-download tenant-context repair and
-after-commit live-comment refresh repair await their new production build.
-The live repair has a successful development two-actor check; that does not
-replace production verification. GitHub reports the branch CONFLICTING/DIRTY.
+approval/billing, paid activation and native recovered-workspace comparison remain unverified or
+blocked. Each guide has a separate current-build recording with verified
+playback and chapter seeking, and explicit scenario limitations. GitHub
+reports the branch CONFLICTING/DIRTY.
 
 Keep the completion gate false, retain unverified census statuses, and continue
 through normal board service admission. No unrelated-card stop, credential

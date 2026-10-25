@@ -1,0 +1,384 @@
+{
+  "guide": "index.html",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "status": "complete",
+  "recordedAt": "2026-10-25T06:04:38.138Z",
+  "durationSeconds": 46.12,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:04:43.677Z",
+      "seconds": 5.54,
+      "title": "/msp/account",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:43.685Z",
+      "seconds": 5.547,
+      "title": "Customer denied /msp/account",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:48.556Z",
+      "seconds": 10.418,
+      "title": "/msp/account/billing",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:48.559Z",
+      "seconds": 10.421,
+      "title": "Customer denied /msp/account/billing",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:53.479Z",
+      "seconds": 15.341,
+      "title": "/msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:53.482Z",
+      "seconds": 15.344,
+      "title": "Customer denied /msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:58.377Z",
+      "seconds": 20.239,
+      "title": "/msp/account",
+      "actor": "qa",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:04:58.381Z",
+      "seconds": 20.243,
+      "title": "Authorized PSA account",
+      "actor": "qa",
+      "result": "Account Management rendered",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T06:10:55.038Z",
+      "seconds": 26.826,
+      "title": "/msp/tickets/f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+      "actor": "qa",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T06:10:55.835Z",
+      "seconds": 27.622,
+      "title": "Native ticket trigger and Temporal business effects after reload",
+      "actor": "qa",
+      "result": {
+        "ticketId": "f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+        "runId": "13410755-824b-46ac-8029-aa4f9ccef66b",
+        "comments": 2,
+        "workflowStateRestored": "paused"
+      },
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T06:11:00.856Z",
+      "seconds": 32.643,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T06:11:00.856Z",
+      "seconds": 32.643,
+      "title": "Workflow paused state restored",
+      "actor": "qa",
+      "result": "Smoke workflow shows Paused",
+      "sourceClip": "main-worker-business-confirmed"
+    },
+    {
+      "at": "2026-10-25T06:13:38.796Z",
+      "seconds": 39.975,
+      "title": "/msp/tickets/f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+      "actor": "qa",
+      "result": " policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\nTXT\ncm-current-native-file.txt\n41 B\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "main-native-download-control"
+    },
+    {
+      "at": "2026-10-25T06:13:38.796Z",
+      "seconds": 39.975,
+      "title": "Isolated qa download authority",
+      "actor": "qa",
+      "result": [
+        {
+          "who": "qa",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+          "http": 200,
+          "bytes": 41,
+          "originalBytes": true
+        },
+        {
+          "who": "qa",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+          "http": 200,
+          "bytes": 41,
+          "originalBytes": true
+        }
+      ],
+      "sourceClip": "main-native-download-control"
+    },
+    {
+      "at": "2026-10-25T06:13:43.946Z",
+      "seconds": 45.125,
+      "title": "/msp/tickets",
+      "actor": "alice",
+      "result": "Actions\n\n\n\t\nSMOKE callout count change 142333\n000002\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n\n\t\nPrinter offline in accounts\n000001\n·\nNo Category\n\t\nIn Progress\n\t\nCritical\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n2 items total\n\n10 items/page",
+      "sourceClip": "main-native-download-control"
+    },
+    {
+      "at": "2026-10-25T06:13:43.946Z",
+      "seconds": 45.125,
+      "title": "Isolated alice download authority",
+      "actor": "alice",
+      "result": [
+        {
+          "who": "alice",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+          "http": 404,
+          "bytes": 9,
+          "originalBytes": false
+        },
+        {
+          "who": "alice",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+          "http": 404,
+          "bytes": 31,
+          "originalBytes": false
+        }
+      ],
+      "sourceClip": "main-native-download-control"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/account",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account/billing",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account/billing",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/settings/integrations?category=accounting",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/settings/integrations?category=accounting",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription"
+    },
+    {
+      "action": "Authorized PSA account",
+      "result": "Account Management rendered"
+    },
+    {
+      "action": "/msp/tickets/f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Native ticket trigger and Temporal business effects after reload",
+      "result": {
+        "ticketId": "f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+        "runId": "13410755-824b-46ac-8029-aa4f9ccef66b",
+        "comments": 2,
+        "workflowStateRestored": "paused"
+      }
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t"
+    },
+    {
+      "action": "Workflow paused state restored",
+      "result": "Smoke workflow shows Paused"
+    },
+    {
+      "action": "/msp/tickets/f59a8dcf-1a0f-42a3-a054-70b11a1163d9",
+      "result": " policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\nTXT\ncm-current-native-file.txt\n41 B\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Isolated qa download authority",
+      "result": [
+        {
+          "who": "qa",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+          "http": 200,
+          "bytes": 41,
+          "originalBytes": true
+        },
+        {
+          "who": "qa",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+          "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+          "http": 200,
+          "bytes": 41,
+          "originalBytes": true
+        }
+      ]
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "Actions\n\n\n\t\nSMOKE callout count change 142333\n000002\n·\nSMOKE customer cat 20261016\n\t\nOpen\n\t\nHigh\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n\n\t\nPrinter offline in accounts\n000001\n·\nNo Category\n\t\nIn Progress\n\t\nCritical\n\t\nService Desk\n\t\nWR\nWhite Rabbit IT\n\t\nOpen menu\n\n2 items total\n\n10 items/page"
+    },
+    {
+      "action": "Isolated alice download authority",
+      "result": [
+        {
+          "who": "alice",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+          "http": 404,
+          "bytes": 9,
+          "originalBytes": false
+        },
+        {
+          "who": "alice",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+          "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+          "http": 404,
+          "bytes": 31,
+          "originalBytes": false
+        }
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.547,
+      "title": "account boundary"
+    },
+    {
+      "start": 5.547,
+      "end": 10.421,
+      "title": "Customer denied /msp/account"
+    },
+    {
+      "start": 10.421,
+      "end": 15.344,
+      "title": "Customer denied /msp/account/billing"
+    },
+    {
+      "start": 15.344,
+      "end": 20.243,
+      "title": "Customer denied /msp/settings/integrations?category=accounting"
+    },
+    {
+      "start": 20.243,
+      "end": 21.24,
+      "title": "Authorized PSA account"
+    },
+    {
+      "start": 21.24,
+      "end": 27.622,
+      "title": "main worker business confirmed"
+    },
+    {
+      "start": 27.622,
+      "end": 32.643,
+      "title": "Native ticket trigger and Temporal business effects after reload"
+    },
+    {
+      "start": 32.643,
+      "end": 33.64,
+      "title": "Workflow paused state restored"
+    },
+    {
+      "start": 33.64,
+      "end": 39.975,
+      "title": "main native download control"
+    },
+    {
+      "start": 39.975,
+      "end": 45.125,
+      "title": "Isolated qa download authority"
+    },
+    {
+      "start": 45.125,
+      "end": 46.12,
+      "title": "Isolated alice download authority"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/account-boundary/recording.json",
+      "evidence/takeover-cd28-production/main-worker-business-confirmed/recording.json",
+      "evidence/takeover-cd28-production/main-native-download-control/recording.json"
+    ]
+  },
+  "limitations": [
+    "Native UI event, succeeded Temporal execution and two persisted root comments verified after fresh worker start. This is not customer workflow entitlement or email-delivery acceptance.",
+    "Authenticated owner exact-byte control and isolated foreign-tenant denial on both byte routes. Initial cookie-switch probe used a stale QA session; its200 is not a foreign authorization result.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ],
+  "recordingPaths": {
+    "webm": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.webm",
+    "chapterVtt": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.vtt",
+    "recordingJson": "current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "main/walkthrough.webm",
+    "chapterVtt": "main/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

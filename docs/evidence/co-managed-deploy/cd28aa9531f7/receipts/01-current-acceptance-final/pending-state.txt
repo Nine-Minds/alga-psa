@@ -1,0 +1,10 @@
+       state        | accepted_at 
+--------------------+-------------
+ pending_acceptance | 
+(1 row)
+
+ forbidden_board_rows 
+----------------------
+                    0
+(1 row)
+

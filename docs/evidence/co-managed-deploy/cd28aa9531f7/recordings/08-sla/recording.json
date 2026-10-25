@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:08:08.995Z",
+  "durationSeconds": 27.92,
+  "guide": "guides/08-sla.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:08:14.314Z",
+      "seconds": 5.319,
+      "title": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "actor": "qa",
+      "result": "kets\nFilters\nView\n\nLoading…\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nLoading customer seat capacity…\n\nRefresh status",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T06:08:14.317Z",
+      "seconds": 5.322,
+      "title": "Sponsor priority mapping",
+      "actor": "qa",
+      "result": " priority for Urgent\nNot mapped\nSave access\nReload current access\nDelegated administration\n\nCustomer-approved assistance with selected settings and user records.\n\nRefresh access\nCustomer workspace: White Rabbit IT · MSP: Oz\nService Desk\n\nEdit board display settings · QA Tester\n\nBoard name\nDescription\nEnable live ticket timer\nSave changes\nShared tickets\nFilters\nView\n\nLoading…\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nLoading customer seat capacity…\n\nRefresh status",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T06:08:20.862Z",
+      "seconds": 11.867,
+      "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "qa",
+      "result": "-1792908414869 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 2:07 AM\n\nCM-CURRENT-LIVE-1792908414869 MSP PRIVATE\n\nShow all activity\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity…\n\n00:00:00\nWork description\nAdd time entry\nLoading time entries…",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T06:08:26.819Z",
+      "seconds": 17.824,
+      "title": "MSP handback and separate clocks",
+      "actor": "qa",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n← Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted · Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (15)\nReplies (15)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nOCT 24\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 11:24 PM\n\nCM-LEAD LIVE H",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T06:08:31.703Z",
+      "seconds": 22.708,
+      "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "alice",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "05-customer-ticket-loop"
+    },
+    {
+      "at": "2026-10-25T06:08:35.977Z",
+      "seconds": 26.982,
+      "title": "Customer escalation restored",
+      "actor": "alice",
+      "result": "Persisted reload",
+      "sourceClip": "05-customer-ticket-loop"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "result": "kets\nFilters\nView\n\nLoading…\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nLoading customer seat capacity…\n\nRefresh status"
+    },
+    {
+      "action": "Sponsor priority mapping",
+      "result": " priority for Urgent\nNot mapped\nSave access\nReload current access\nDelegated administration\n\nCustomer-approved assistance with selected settings and user records.\n\nRefresh access\nCustomer workspace: White Rabbit IT · MSP: Oz\nService Desk\n\nEdit board display settings · QA Tester\n\nBoard name\nDescription\nEnable live ticket timer\nSave changes\nShared tickets\nFilters\nView\n\nLoading…\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nLoading customer seat capacity…\n\nRefresh status"
+    },
+    {
+      "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "-1792908414869 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 2:07 AM\n\nCM-CURRENT-LIVE-1792908414869 MSP PRIVATE\n\nShow all activity\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity…\n\n00:00:00\nWork description\nAdd time entry\nLoading time entries…"
+    },
+    {
+      "action": "MSP handback and separate clocks",
+      "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n← Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted · Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (15)\nReplies (15)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nOCT 24\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 11:24 PM\n\nCM-LEAD LIVE H"
+    },
+    {
+      "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Customer escalation restored",
+      "result": "Persisted reload"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.322,
+      "title": "05 customer ticket loop"
+    },
+    {
+      "start": 5.322,
+      "end": 17.824,
+      "title": "Sponsor priority mapping"
+    },
+    {
+      "start": 17.824,
+      "end": 26.982,
+      "title": "MSP handback and separate clocks"
+    },
+    {
+      "start": 26.982,
+      "end": 27.92,
+      "title": "Customer escalation restored"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/05-customer-ticket-loop/recording.json"
+    ]
+  },
+  "limitations": [
+    "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

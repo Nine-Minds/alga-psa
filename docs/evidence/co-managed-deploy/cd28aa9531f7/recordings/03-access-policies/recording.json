@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:05:28.310Z",
+  "durationSeconds": 17.24,
+  "guide": "guides/03-access-policies.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:05:33.980Z",
+      "seconds": 5.67,
+      "title": "/msp/co-management",
+      "actor": "alice",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+      "sourceClip": "03-access-policies-final"
+    },
+    {
+      "at": "2026-10-25T06:05:37.072Z",
+      "seconds": 8.762,
+      "title": "Customer board View scope saved and reloaded",
+      "actor": "alice",
+      "result": "View",
+      "sourceClip": "03-access-policies-final"
+    },
+    {
+      "at": "2026-10-25T06:05:39.625Z",
+      "seconds": 11.315,
+      "title": "Restored approved Collaborate scope",
+      "actor": "alice",
+      "result": "Reload confirmed",
+      "sourceClip": "03-access-policies-final"
+    },
+    {
+      "at": "2026-10-25T06:05:44.532Z",
+      "seconds": 16.222,
+      "title": "/msp/co-management?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "actor": "qa",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "03-access-policies-final"
+    },
+    {
+      "at": "2026-10-25T06:05:44.599Z",
+      "seconds": 16.289,
+      "title": "MSP staff assignment view",
+      "actor": "qa",
+      "result": "\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+      "sourceClip": "03-access-policies-final"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+    },
+    {
+      "action": "Customer board View scope saved and reloaded",
+      "result": "View"
+    },
+    {
+      "action": "Restored approved Collaborate scope",
+      "result": "Reload confirmed"
+    },
+    {
+      "action": "/msp/co-management?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+      "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    },
+    {
+      "action": "MSP staff assignment view",
+      "result": "\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 8.762,
+      "title": "03 access policies final"
+    },
+    {
+      "start": 8.762,
+      "end": 11.315,
+      "title": "Customer board View scope saved and reloaded"
+    },
+    {
+      "start": 11.315,
+      "end": 16.289,
+      "title": "Restored approved Collaborate scope"
+    },
+    {
+      "start": 16.289,
+      "end": 17.24,
+      "title": "MSP staff assignment view"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/03-access-policies-final/recording.json"
+    ]
+  },
+  "limitations": [
+    "Customer board scope persistence/restoration verified. Independent ticket grants can preserve access; this is not a full revocation or viewer matrix.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "tenant": "1f7161e2-8ec9-4b05-bde8-b9d48e5501e6",
+  "source_tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "package_id": "75b8b30d-edc9-4f84-9f40-537ec291e085",
+  "archive_sha256": "c69b37c55f49ea1b5875a4957ece31cd35ab8c0629147c3ca1570da10b4ef7b7",
+  "source_administrator_user_id": "ea343af6-c05d-471c-987d-635dca584d4a",
+  "administrator_user_id": "7b25817c-6ee7-4565-87dc-ab146bfe2007",
+  "restored_at": "2026-10-25T06:24:01.879Z",
+  "status": "restored; inspect tenant activation state before use"
+}

@@ -1,0 +1,11 @@
+{
+  "destinationTenant": "1f7161e2-8ec9-4b05-bde8-b9d48e5501e6",
+  "fileId": "dc11338e-b8f1-4f1a-98a5-49a2d0b80a40",
+  "originalName": "cm-shared-task.txt",
+  "bytes": 27,
+  "sha256": "cd50facc415106d3433beaa179ee69f490dd891ef47a16e33c7a3613808e82e5",
+  "matchesArchiveChecksum": true,
+  "audience": "shared_it",
+  "remappedTaskId": "359f3260-ecf0-4371-a82c-61fe218468e6",
+  "privateFilesPresent": false
+}

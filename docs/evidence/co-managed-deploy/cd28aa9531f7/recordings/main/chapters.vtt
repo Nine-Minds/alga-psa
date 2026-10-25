@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.547
+account boundary
+
+2
+00:00:05.547 --> 00:00:10.421
+Customer denied /msp/account
+
+3
+00:00:10.421 --> 00:00:15.344
+Customer denied /msp/account/billing
+
+4
+00:00:15.344 --> 00:00:20.243
+Customer denied /msp/settings/integrations?category=accounting
+
+5
+00:00:20.243 --> 00:00:21.240
+Authorized PSA account
+
+6
+00:00:21.240 --> 00:00:27.622
+main worker business confirmed
+
+7
+00:00:27.622 --> 00:00:32.643
+Native ticket trigger and Temporal business effects after reload
+
+8
+00:00:32.643 --> 00:00:33.640
+Workflow paused state restored
+
+9
+00:00:33.640 --> 00:00:39.975
+main native download control
+
+10
+00:00:39.975 --> 00:00:45.125
+Isolated qa download authority
+
+11
+00:00:45.125 --> 00:00:46.120
+Isolated alice download authority

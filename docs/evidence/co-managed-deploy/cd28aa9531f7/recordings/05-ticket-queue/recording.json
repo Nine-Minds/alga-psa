@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:12:30.999Z",
+  "durationSeconds": 23.96,
+  "guide": "guides/05-ticket-queue.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:12:36.806Z",
+      "seconds": 5.808,
+      "title": "/msp/tickets",
+      "actor": "qa",
+      "result": "1014\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 3 (email handlers)\nTIC001013\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 17 items\n\n1\n2\n10 items/page",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:36.807Z",
+      "seconds": 5.808,
+      "title": "Native ticket list",
+      "actor": "qa",
+      "result": "Native route rendered",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:41.766Z",
+      "seconds": 10.767,
+      "title": "/msp/tickets/customer",
+      "actor": "qa",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket · 1 open · 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n↓\n\n\n\t\n000002 · SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:42.034Z",
+      "seconds": 11.035,
+      "title": "Return selected shared ticket",
+      "actor": "qa",
+      "result": "Returned to customer IT",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:47.058Z",
+      "seconds": 16.059,
+      "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "actor": "alice",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:47.060Z",
+      "seconds": 16.061,
+      "title": "Customer sees authoritative returned ticket",
+      "actor": "alice",
+      "result": "Escalate to MSP offered",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:49.161Z",
+      "seconds": 18.162,
+      "title": "Customer re-escalates",
+      "actor": "alice",
+      "result": "Reloaded after save",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:53.986Z",
+      "seconds": 22.987,
+      "title": "/msp/tickets/customer",
+      "actor": "qa",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket · 1 open · 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n↓\n\n\n\t\n000002 · SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+      "sourceClip": "05-ticket-queue"
+    },
+    {
+      "at": "2026-10-25T06:12:53.990Z",
+      "seconds": 22.991,
+      "title": "Restored MSP working queue",
+      "actor": "qa",
+      "result": "Same customer ticket visible",
+      "sourceClip": "05-ticket-queue"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/tickets",
+      "result": "1014\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 3 (email handlers)\nTIC001013\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 17 items\n\n1\n2\n10 items/page"
+    },
+    {
+      "action": "Native ticket list",
+      "result": "Native route rendered"
+    },
+    {
+      "action": "/msp/tickets/customer",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket · 1 open · 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n↓\n\n\n\t\n000002 · SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+    },
+    {
+      "action": "Return selected shared ticket",
+      "result": "Returned to customer IT"
+    },
+    {
+      "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Customer sees authoritative returned ticket",
+      "result": "Escalate to MSP offered"
+    },
+    {
+      "action": "Customer re-escalates",
+      "result": "Reloaded after save"
+    },
+    {
+      "action": "/msp/tickets/customer",
+      "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket · 1 open · 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n↓\n\n\n\t\n000002 · SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+    },
+    {
+      "action": "Restored MSP working queue",
+      "result": "Same customer ticket visible"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.808,
+      "title": "05 ticket queue"
+    },
+    {
+      "start": 5.808,
+      "end": 11.035,
+      "title": "Native ticket list"
+    },
+    {
+      "start": 11.035,
+      "end": 16.061,
+      "title": "Return selected shared ticket"
+    },
+    {
+      "start": 16.061,
+      "end": 18.162,
+      "title": "Customer sees authoritative returned ticket"
+    },
+    {
+      "start": 18.162,
+      "end": 22.991,
+      "title": "Customer re-escalates"
+    },
+    {
+      "start": 22.991,
+      "end": 23.96,
+      "title": "Restored MSP working queue"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/05-ticket-queue/recording.json"
+    ]
+  },
+  "limitations": [
+    "Single selected ticket handback and customer re-escalation verified; multi-item mixed conflicts and CSV not yet executed.",
+    "Recorded against actual production source cd28aa9531f7 (build-1792904848073). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

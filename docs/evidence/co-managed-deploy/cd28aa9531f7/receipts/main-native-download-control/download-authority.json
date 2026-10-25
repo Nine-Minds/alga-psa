@@ -1,0 +1,34 @@
+[
+  {
+    "who": "qa",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+    "http": 200,
+    "bytes": 41,
+    "originalBytes": true
+  },
+  {
+    "who": "qa",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+    "http": 200,
+    "bytes": 41,
+    "originalBytes": true
+  },
+  {
+    "who": "alice",
+    "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "route": "/api/files/137b1916-a533-46dd-85c4-b1e9ade28356/download",
+    "http": 404,
+    "bytes": 9,
+    "originalBytes": false
+  },
+  {
+    "who": "alice",
+    "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "route": "/api/documents/download/137b1916-a533-46dd-85c4-b1e9ade28356",
+    "http": 404,
+    "bytes": 31,
+    "originalBytes": false
+  }
+]

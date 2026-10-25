@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-25T06:21:17.222560+00:00",
+  "probes": [
+    {
+      "port": 3374,
+      "path": "/auth/msp/signin",
+      "http": 200
+    },
+    {
+      "port": 23374,
+      "path": "/api/health",
+      "http": 200
+    },
+    {
+      "port": 23375,
+      "path": "/api/health",
+      "http": 200
+    },
+    {
+      "port": 23376,
+      "path": "/api/health",
+      "http": 200
+    },
+    {
+      "port": 8375,
+      "path": "/health",
+      "http": 200
+    },
+    {
+      "port": 4374,
+      "path": "/health",
+      "http": 200
+    },
+    {
+      "port": 8874,
+      "path": "/",
+      "http": 200
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+                run_id                |  status   |  engine  |         started_at         |                     temporal_workflow_id                     
+--------------------------------------+-----------+----------+----------------------------+--------------------------------------------------------------
+ 13410755-824b-46ac-8029-aa4f9ccef66b | SUCCEEDED | temporal | 2026-10-25 06:09:22.304+00 | workflow-runtime-v2:run:13410755-824b-46ac-8029-aa4f9ccef66b
+(1 row)
+
+              comment_id              | author_type | is_internal |                                note                                
+--------------------------------------+-------------+-------------+--------------------------------------------------------------------
+ fe02878d-0d90-402c-8118-39507d1a2097 | internal    | f           | SMOKE-SILENT workflow comment f59a8dcf-1a0f-42a3-a054-70b11a1163d9
+ b86a75b3-d838-4083-8107-4d06fc4cbfae | internal    | f           | SMOKE-CC workflow comment f59a8dcf-1a0f-42a3-a054-70b11a1163d9
+(2 rows)
+
+ is_paused 
+-----------
+ t
+(1 row)
+

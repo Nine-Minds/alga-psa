@@ -1,0 +1,343 @@
+{
+  "recordedRuntime": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "buildId": "build-1792904848073",
+  "artifacts": [
+    {
+      "guide": "index.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.webm",
+      "bytes": 3763666,
+      "sha256": "631f3743323cd7c6be8669e7150a1e6f503c21038b2dad425ad1adfa7802a58c",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "index.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.vtt",
+      "bytes": 762,
+      "sha256": "9d187b84909682c3c96fc8370fa9da8706a205030f82196cb06c54a6a35260b5",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "index.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/main.json",
+      "bytes": 16401,
+      "sha256": "8760757f2167c16b389b24d3323b5c4583914478a67f3e31628dac238bdba505",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/index.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.webm",
+      "bytes": 2421846,
+      "sha256": "52b68fb9ff84dfbaf3ed78824a5272f7257363a6ae81b5adb1e240923fd7e084",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/index.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.vtt",
+      "bytes": 387,
+      "sha256": "cdf77d63905dbf6869c48f6c00587d536201fc3bd83fbd6dbff94256fde77468",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/index.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/collection.json",
+      "bytes": 9985,
+      "sha256": "481218c3c7ef1910a2650479d2a4e3a2725e3a32d36b1e9afe703bd11bf3cdf6",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.webm",
+      "bytes": 3843210,
+      "sha256": "20e641a79ef4374b622ba8ecd3020bdf20cbf2487221bb654a0560305bb8247e",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.vtt",
+      "bytes": 412,
+      "sha256": "f336ba4aac8072bbbdcaf100609f71cc52060f547c997872728b63bd6daba0a0",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.json",
+      "bytes": 7532,
+      "sha256": "9de59bfeb2c9ba8ed52cd417737446790d952f5b0b9885fa23c80aa8b169b5a0",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.webm",
+      "bytes": 2050234,
+      "sha256": "9220e9b14b40b1cabbfb76a36b5c954cfabd20fc344a155bcb55ab371f8cefdd",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.vtt",
+      "bytes": 299,
+      "sha256": "f039d05be80682024bb1b0bdfc0562f42f383946abeabcfb97fb672e30820ed0",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/02-licensing-and-seats.json",
+      "bytes": 7240,
+      "sha256": "0dce147a79c49652a09b84355e9ff289126d3df0f4f4f217be4d82b70f5545dd",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.webm",
+      "bytes": 1817731,
+      "sha256": "f1aa51b6aa374ffb39256a10b3f31082f614158f1fb64ab86afe9a7703c89f7e",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.vtt",
+      "bytes": 271,
+      "sha256": "67f2ea47ae3b94ddfbf3b60e009898fa9a88916f1711216c86c8b548ba76946c",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/03-access-policies.json",
+      "bytes": 6772,
+      "sha256": "a589b578b8421f191a988d673274d28cf61fbb8189191e106e6118a0259951cb",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.webm",
+      "bytes": 1873359,
+      "sha256": "0f8c0d1dccde8c8b984531a321754f9ac86d358813f216bba11be7a6e56e75ee",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.vtt",
+      "bytes": 201,
+      "sha256": "c6465ba147930800f59c9154aa67a17394547d538a2403edc1244d1f73c1da3c",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/04-delegated-administration.json",
+      "bytes": 4924,
+      "sha256": "2b22805552155fee70ee3526205eb71b94ea0fca2aa2fefc8b4848efa7963086",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.webm",
+      "bytes": 2404931,
+      "sha256": "4267a8695fd736eadbdbc4f46218e49ecff0de9792f85f5cc70b815307b9b485",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.vtt",
+      "bytes": 363,
+      "sha256": "8439d3a5dfadbe297b302174c59fab54721030221b2f87f4b44f958d20b727ce",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/05-ticket-queue.json",
+      "bytes": 7977,
+      "sha256": "496b09cadfcbfc8cc82303dfb5898de34aaae756e69e09bf3ce5eb0470ce0a97",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.webm",
+      "bytes": 2984495,
+      "sha256": "9c604f3f4273ce4210f2f6ec7a01785a9a7a160f8b78b76c68c5d5c55f8141c8",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.vtt",
+      "bytes": 406,
+      "sha256": "b735836b479cac7c064eadb1d3f64154fed7d3ff8609983eed073cb329d81031",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/06-projects-and-tasks.json",
+      "bytes": 8454,
+      "sha256": "e6a323bcb5977cb111535ce7a6ae4088b5352773a6f8ef96d0a92e6237ea0692",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.webm",
+      "bytes": 3711713,
+      "sha256": "f3aad8692012214f3acd6a0a816fdce4315e72c59cead9f968536bd4d81c339b",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.vtt",
+      "bytes": 572,
+      "sha256": "52e1012e4b95b6c528082c598f9f6d847f17704f09285d423c7bfab0af806eef",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/07-conversations-and-files.json",
+      "bytes": 11402,
+      "sha256": "95a97ce75a0fb66c8ec080bee37b94fd7d42effa3e57e9d05577089db927d3f6",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.webm",
+      "bytes": 3160432,
+      "sha256": "03c09839668769d9c624b65a0217831a42fc82a1c9be8340ce7f5dd4aa523629",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.vtt",
+      "bytes": 250,
+      "sha256": "252690517ece45dfa16ce4abdf9f7370b2851e6d8a3aa285086874244d6290dc",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/08-sla.json",
+      "bytes": 12567,
+      "sha256": "b2509b270eafd025380de4a946be13e44ca5b1c67ec2aabef28a967c75e29c8e",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.webm",
+      "bytes": 2467644,
+      "sha256": "3c979aedb0b12b346dbd3404c3c8d19f2af051db966aa5313e292121915e3871",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.vtt",
+      "bytes": 456,
+      "sha256": "e0a2d0d492de37ebf142031ea02451e70c2dcc6f7baa8f8be8234ce7f83798da",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/09-time-and-billing.json",
+      "bytes": 17077,
+      "sha256": "994cdb7ebdb7cb343f789df0e9e3bf1c7ad955b910bbb6a2ba3899c0456d9e09",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.webm",
+      "bytes": 1290512,
+      "sha256": "4f9bb1bcc63941d88ed8b4173db4dce75a687a2de26cc4fc132f6769c2fb9904",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.vtt",
+      "bytes": 137,
+      "sha256": "8b90d7c8d834b84142760a29f037c9fafa75bb3e2e4743ee6dd2347baa4cd366",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/10-departure-and-archives.json",
+      "bytes": 5353,
+      "sha256": "a5bcf244dcb2ae1bc4ad36940b417c64d54fb089d1c177efefd0a87cc97c2455",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.webm",
+      "bytes": 965903,
+      "sha256": "7ee08c7e8aceb539a8932a859c5c967c35ca90e53719df611d4d9440ada1c794",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.vtt",
+      "bytes": 203,
+      "sha256": "0cb356a63259c0168535c97ea5a0d4b08fabe95c0c1f544f00f6e295fa04c883",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/11-export-restore-and-upgrade.json",
+      "bytes": 5584,
+      "sha256": "21f9764608b83354a52e1279931ac2c151c23f32726a0eae6a0abb1477729494",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "kind": "webm",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.webm",
+      "bytes": 2287736,
+      "sha256": "a5038028c79f982c4a14d08f2142086f01385240fb4511ad4a23ca549be02c86",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "kind": "chapterVtt",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.vtt",
+      "bytes": 266,
+      "sha256": "fe41dc7c75294eb92a25d967b0637b3aac0db081529fea5772b8b8fcd133168f",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "kind": "recordingJson",
+      "url": "http://100.82.172.57:8874/guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/12-customer-integrations.json",
+      "bytes": 10269,
+      "sha256": "1bedc4edfdf842d91d2412173d4da02179ab51f1872db1f3ac9690aeb27ca02b",
+      "runtimeRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77"
+    }
+  ],
+  "scope": "14 separate actual product recordings, scenario partial for each. WebM served externally; no encrypted exports, credentials or invitation tokens published."
+}

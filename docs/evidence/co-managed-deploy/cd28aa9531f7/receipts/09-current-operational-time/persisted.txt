@@ -1,0 +1,5 @@
+                tenant                |               entry_id               | work_item_type | billing_mode | billable_duration | service_id | contract_line_id |                       notes                        
+--------------------------------------+--------------------------------------+----------------+--------------+-------------------+------------+------------------+----------------------------------------------------
+ 1f98df77-cd15-44c2-8f4d-42ff52d01e84 | 1a9812cb-5c03-4a0b-8586-42259238a4bb | project_task   | operational  |                 0 |            |                  | CM-CURRENT customer operational 5 minutes 20261025
+(1 row)
+

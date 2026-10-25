@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "testedRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "recordedAt": "2026-10-25T06:08:07.835Z",
+  "durationSeconds": 55.64,
+  "guide": "guides/01-onboarding.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "invited customer admin",
+      "email": "current.20261025@cmreview.test",
+      "tenant": "5cc14abe-484d-4563-bf03-a67804fac775"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T06:08:13.015Z",
+      "seconds": 5.18,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-current-onboarding-provision"
+    },
+    {
+      "at": "2026-10-25T06:08:21.306Z",
+      "seconds": 13.471,
+      "title": "Submitted customer provisioning",
+      "actor": "qa",
+      "result": "s://example.com/phish\" style=\"font-size:30px\">Accept now</a>\tl3-html@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-I\tiris@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-current-onboarding-provision"
+    },
+    {
+      "at": "2026-10-25T06:11:24.951Z",
+      "seconds": 42.472,
+      "title": "Pending customer scope rendered",
+      "result": "Exact administrator session; acceptance available",
+      "sourceClip": "01-current-acceptance-final"
+    },
+    {
+      "at": "2026-10-25T06:11:25.196Z",
+      "seconds": 42.717,
+      "title": "Multipart ordinary action denied before acceptance",
+      "result": {
+        "status": 500,
+        "redirected": false
+      },
+      "sourceClip": "01-current-acceptance-final"
+    },
+    {
+      "at": "2026-10-25T06:11:37.045Z",
+      "seconds": 54.566,
+      "title": "Accepted workspace ordinary setup writes and reload",
+      "result": "Native ticket workspace rendered",
+      "sourceClip": "01-current-acceptance-final"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Submitted customer provisioning",
+      "result": "s://example.com/phish\" style=\"font-size:30px\">Accept now</a>\tl3-html@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-I\tiris@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Pending customer scope rendered",
+      "result": "Exact administrator session; acceptance available"
+    },
+    {
+      "action": "Multipart ordinary action denied before acceptance",
+      "result": {
+        "status": 500,
+        "redirected": false
+      }
+    },
+    {
+      "action": "Accepted workspace ordinary setup writes and reload",
+      "result": "Native ticket workspace rendered"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 13.471,
+      "title": "01 current onboarding provision"
+    },
+    {
+      "start": 13.471,
+      "end": 14.4,
+      "title": "Submitted customer provisioning"
+    },
+    {
+      "start": 14.4,
+      "end": 40.68,
+      "title": "01 current onboarding verified"
+    },
+    {
+      "start": 40.68,
+      "end": 42.472,
+      "title": "01 current acceptance final"
+    },
+    {
+      "start": 42.472,
+      "end": 54.566,
+      "title": "Pending customer scope rendered"
+    },
+    {
+      "start": 54.566,
+      "end": 55.64,
+      "title": "Accepted workspace ordinary setup writes and reload"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.webm",
+    "chapterVtt": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.vtt",
+    "recordingJson": "guides/current/cd28aa9531f7bd465711f90b92bf8592185d9c77/01-onboarding.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-cd28-production/01-current-onboarding-provision/recording.json",
+      "evidence/takeover-cd28-production/01-current-onboarding-verified/recording.json",
+      "evidence/takeover-cd28-production/01-current-acceptance-final/recording.json"
+    ]
+  },
+  "limitations": [
+    "Provisioning, original invitation delivery/claim, multipart pending denial, acceptance and onboarding writes were verified in successive real sessions. The original-invitation clip includes an obsolete success-button wait after automatic sign-in had succeeded; the continuation verifies pending denial and activation. Ordinary PSA/account controls are separate.",
+    "No live Microsoft sign-in or external paid-license validation is established."
+  ]
+}
