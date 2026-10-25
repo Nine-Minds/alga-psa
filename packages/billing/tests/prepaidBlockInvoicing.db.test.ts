@@ -4,6 +4,7 @@ import knexLib from 'knex';
 import type { Knex } from 'knex';
 import { BillingEngine } from '../src/lib/billing/billingEngine';
 import { persistInvoiceCharges } from '../src/services/invoiceService';
+import { applyPrepaidCoverage } from '../src/lib/billing/chargeResolution/prepaidBlockRules';
 
 // Guarded DB test for Prepaid Block invoicing (engine + persistence). Run with
 // HOUR_BLOCK_DB_TESTS=1 (see hourBlockService.db.test.ts for the env vars).
@@ -169,14 +170,17 @@ describe.runIf(enabled)('Prepaid Block invoicing (engine)', () => {
       await allocate(w, active, held, 60);
       await allocate(w, pending, held, 60);
 
+      // The production path: the engine supplies the line's allocation rows
+      // (with block status) and the charge resolver's rule decides coverage.
       const engine = BillingEngine.forTransaction(w.db as any, w.tenant);
-      const result = await (engine as any).applyPrepaidBlockCoverageToTimeEntries(w.lineId, [
-        { entry_id: covered, billable_duration: 60 },
-        { entry_id: partial, billable_duration: 90 },
-        { entry_id: held, billable_duration: 120 },
-        { entry_id: plain, billable_duration: 45 },
-      ]);
-      expect(result.map((e: any) => [e.entry_id, e.billable_duration])).toEqual([
+      const rows = await (engine as any).loadPrepaidCoverageRows(w.lineId, [covered, partial, held, plain]);
+      const result = applyPrepaidCoverage([
+        { sourceId: covered, billableMinutes: 60 },
+        { sourceId: partial, billableMinutes: 90 },
+        { sourceId: held, billableMinutes: 120 },
+        { sourceId: plain, billableMinutes: 45 },
+      ], rows);
+      expect(result.map((e) => [e.sourceId, e.billableMinutes])).toEqual([
         [partial, 30],
         [plain, 45],
       ]);

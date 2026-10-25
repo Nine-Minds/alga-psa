@@ -33,6 +33,18 @@ vi.mock('@alga-psa/db', async () => {
   return { ...actual, createTenantKnex: vi.fn(async () => ({ knex: hoisted.db, tenant: hoisted.tenant })) };
 });
 
+// The wizard publishes CONTRACT_CREATED after commit. Publishing is not what
+// these tests prove, and an unreachable Redis would hang every submission.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+
 const wizard = enabled ? await import('../src/actions/contractWizardActions') : (null as any);
 
 const messageOf = (value: any): string => value?.actionError ?? value?.permissionError ?? '';

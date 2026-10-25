@@ -4,6 +4,7 @@ import knexLib from 'knex';
 import type { Knex } from 'knex';
 import { BillingEngine } from '../src/lib/billing/billingEngine';
 import { persistInvoiceCharges } from '../src/services/invoiceService';
+import { applyPrepaidCoverage } from '../src/lib/billing/chargeResolution/prepaidBlockRules';
 
 // Guarded DB lifecycle tests for Prepaid Block contract blocks (plan sections 4
 // and 9): finalize activation + expiry scheduling, replenishment-deferral
@@ -318,10 +319,13 @@ describe.runIf(enabled)('Prepaid Block lifecycle: draft delete and void', () => 
     const issuance = await db('contract_line_block_issuances').where({ tenant, issuance_id: w.issuanceId }).first();
     expect(issuance).toMatchObject({ status: 'scheduled', block_id: null, invoice_id: null, invoice_charge_id: null });
 
-    // The released minutes are no longer held: the engine prices them in full as overage.
+    // The released minutes are no longer held: the engine supplies no coverage
+    // rows for the entry and the resolver prices it in full as overage.
     const engine = BillingEngine.forTransaction(db as any, tenant);
-    const priced = await (engine as any).applyPrepaidBlockCoverageToTimeEntries(w.lineId, [{ entry_id: gap, billable_duration: 90 }]);
-    expect(priced.map((e: any) => [e.entry_id, e.billable_duration])).toEqual([[gap, 90]]);
+    const rows = await (engine as any).loadPrepaidCoverageRows(w.lineId, [gap]);
+    expect(rows).toEqual([]);
+    const priced = applyPrepaidCoverage([{ sourceId: gap, billableMinutes: 90 }], rows);
+    expect(priced.map((e) => [e.sourceId, e.billableMinutes])).toEqual([[gap, 90]]);
   });
 
   it.each(['exhaustion', 'manual'])('delete cancels a %s issuance instead of re-dueing it', async (kind) => {
