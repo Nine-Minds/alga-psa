@@ -1,0 +1,268 @@
+[
+  {
+    "id": "T001",
+    "description": "Predicates unit: operator semantics table (scalar and set-valued paths, null semantics, nested groups) evaluated in memory",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F017",
+      "F010"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Predicates unit: zod schema accepts valid nested groups and rejects unknown operators, list values for single-value operators, and missing values",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Predicates unit: query-schema validation rejects unknown paths and operators not allowed for an attribute",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F024"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Predicates DB integration: compiler against a migrated schema returns the same rows as the in-memory evaluator for a shared fixture table (comparisons, in/not_in with NULLs, is_empty, tag relation in/not_in/is_empty)",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F015"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Predicates DB integration: self-or-any-child modifier matches a parent through a child on a one-relation and a tag relation, and compiled SQL never crosses tenants",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Workflow: existing conditionModel round-trip and WorkflowConditionBuilder tests pass with types imported from @alga-psa/predicates; temporal-workflows typecheck passes",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Ticket list parity (DB integration): existing suites stay green through the compiler: ticketListBundledClientContactFilter, ticketListAssigneeSort, ticketListActivitySort, api/ticketListLatestActivityApi, ticketClientPortalAbac",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F035",
+      "F037"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Ticket list DB integration: one table-driven case per legacy filter key (board incl. inactive and no-board, status id/name/open-only, priority, category incl. subcategory and no-category, assignee/team/unassigned, assigned-to-me, due date presets, response state, SLA breached) compares compiled results to fixtures",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F031",
+      "F032",
+      "F033",
+      "F035",
+      "F037",
+      "F023"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Ticket list DB integration: contact.tags in / not_in and client.tags in / not_in return correct rows and totals across pages; not_in keeps tickets with no client",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Ticket list DB integration: bundled view includes a master when a child's requester, client or ticket tag matches; individual view does not; tenant isolation holds",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F034"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Contract: tenantScopedAuth source-string test pins tenant correlation in the compiler and the ticket query schema",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Codec unit: legacy tags text resolves to ticket tag definition ids; every legacy key round-trips into an equivalent predicate group",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F040"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "list-views unit: tickets v1 view migrates to v2 (tags text to ids, VIP keys dropped) and passes the strict v2 schema; board default and tenant default views migrate on read",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045",
+      "F041"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Adapter unit: sanitize keeps valid where clauses and drops clauses referencing deleted tag ids with a dropped-reference entry",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Container contract: where survives URL write and parse, SSR parse, returnFilters prev/next, export and select-all scope; a where-only URL outranks the board default",
+    "implemented": false,
+    "featureIds": [
+      "F048",
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Display rules DB integration: replace ordered list and read back; deleting the last mapping keeps a referenced definition and findAllTagsByType still lists it; explicitly deleting the tag cascades its rules",
+    "implemented": false,
+    "featureIds": [
+      "F055",
+      "F057",
+      "F058",
+      "F059",
+      "F054"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Display rules DB integration: migration seeds VIP rules for existing contact and client VIP definitions; onboarding creates both definitions and rules",
+    "implemented": false,
+    "featureIds": [
+      "F056",
+      "F062"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Resolver unit: displayed tags follow rule order, exclude unruled tags, and return none for an audience with no rules",
+    "implemented": false,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Hydration DB integration: getTicketsForList rows carry contact_tags and client_tags filtered by internal rules; a client-audience load returns none without a client rule",
+    "implemented": false,
+    "featureIds": [
+      "F063",
+      "F064"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Hydration DB integration: expanded bundle children include contact name, avatar, logo, ticket tags and chip tags",
+    "implemented": false,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Security DB integration: a client-portal user is denied findTagsByEntityIds / findTagsByEntityId; display-rule writes require settings:update",
+    "implemented": false,
+    "featureIds": [
+      "F074",
+      "F059"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "EntityChip component: renders badges in given order with tag colors, collapses beyond maxBadges into +n with the rest in the tooltip, and fires click-through",
+    "implemented": false,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Ticket columns component: Contact and Client cells render EntityChip with row tags; Contact column is visible by default",
+    "implemented": false,
+    "featureIds": [
+      "F069",
+      "F009"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Dashboard component: Requester tags and Client tags filters write contact.tags / client.tags predicates (any-of and none-of), show active-filter chips from the descriptor table, and clear individually",
+    "implemented": false,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F053"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "E2E (Playwright): tag a contact VIP, see the VIP badge on that requester's ticket rows and ticket header, filter Requester tags: any of VIP, and confirm results; save as a named view and reload",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F064",
+      "F066",
+      "F069",
+      "F070",
+      "F044"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Removal guard: repo search finds no is_vip, is_primary_contact, requester_vip or client_vip references and the flag migration is gone",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ]
+  }
+]
