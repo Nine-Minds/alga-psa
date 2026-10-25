@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -20,7 +21,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 
 export type AssetAuthUser = {
   user_id: string;
-  user_type: 'internal' | 'client';
+  user_type: IUserWithRoles['user_type'];
   clientId?: string | null;
   roles?: Array<{ role_id?: string } | string>;
 };
