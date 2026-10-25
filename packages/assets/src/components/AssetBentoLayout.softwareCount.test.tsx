@@ -47,6 +47,11 @@ vi.mock('./tabs/RelatedAssetsTab', () => ({ RelatedAssetsTab: () => null }));
 vi.mock('./tabs/DocumentsPasswordsTab', () => ({ DocumentsPasswordsTab: () => null }));
 vi.mock('./tabs/ServiceHistoryTab', () => ({ ServiceHistoryTab: () => null }));
 vi.mock('./AssetInventoryProvenance', () => ({ AssetInventoryProvenanceSection: () => null }));
+vi.mock('./custody/CustodyCard', () => ({
+  CustodyCard: ({ id, assetId }: { id: string; assetId: string }) => (
+    <div id={id} data-asset-id={assetId} />
+  ),
+}));
 
 import { AssetBentoLayout } from './AssetBentoLayout';
 
@@ -87,6 +92,15 @@ describe('AssetBentoLayout software tile count', () => {
     open.click();
     expect(onFocusChange).toHaveBeenCalledWith('software');
     expect(document.getElementById('asset-bento-software-empty')).toBeNull();
+  });
+
+  it('mounts the custody tile for the same asset alongside the software tile', async () => {
+    getAssetSoftwareSummary.mockResolvedValue({ total_installed: 3 });
+    renderLayout();
+    expect(await screen.findByText('3 packages reported')).toBeInTheDocument();
+    const custody = document.getElementById('asset-bento-custody');
+    expect(custody).not.toBeNull();
+    expect(custody).toHaveAttribute('data-asset-id', 'a1');
   });
 
   it('shows the empty message when the summary reports zero', async () => {
