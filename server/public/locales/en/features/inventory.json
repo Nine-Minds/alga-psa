@@ -1836,6 +1836,8 @@
       "submit": "Restock"
     },
     "printLabel": "Print label",
+    "printPopupBlocked": "Allow pop-ups to open the label.",
+    "printFailed": "Could not print this label.",
     "printWithTemplate": "Print with {{code}}",
     "claimant": {
       "project": "Project {{number}}",

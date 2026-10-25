@@ -30,7 +30,7 @@ import {
 } from '../../actions';
 import { allowedWarrantyActions, type WarrantyAction } from '../../lib/rma/stateMachine';
 
-const RMA_TAG_CLASS = 'rma-work-tag' as unknown as LabelClass;
+const RMA_TAG_CLASS: LabelClass = 'rma-work-tag';
 
 /** Calendar-date helpers: the server wants YYYY-MM-DD, the DatePicker wants a local Date. */
 export const toYmd = (d?: Date): string =>
