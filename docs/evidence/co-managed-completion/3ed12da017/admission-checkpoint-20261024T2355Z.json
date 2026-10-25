@@ -1,0 +1,238 @@
+{
+  "hosts": [
+    {
+      "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+      "measurement": {
+        "at": 1792886133902,
+        "source": "published",
+        "workspace": {
+          "path": "/home/robert/alga-copies",
+          "freeBytes": 86032355328,
+          "totalBytes": 322122547200
+        },
+        "memory": {
+          "freeBytes": 33356443648,
+          "totalBytes": 134306766848
+        }
+      },
+      "floors": {
+        "diskBytes": 10737418240,
+        "memoryBytes": 8589934592
+      },
+      "lastAdmitAt": "2026-10-24T23:55:05.788Z",
+      "reservations": [
+        {
+          "holderId": "78410914-54bc-4fe7-90d2-df808a38943e",
+          "kind": "run",
+          "projectId": "769f9222-113b-45f0-9b4e-6207fda26f3c",
+          "label": "Draft Implementation",
+          "title": "Client contract assignment dates off by one / UTC today default (alga0002302 #2)",
+          "diskBytes": 0,
+          "memoryBytes": 3221225472,
+          "admittedAt": "2026-10-24T23:09:17.539Z",
+          "settlesAt": "2026-10-24T23:19:17.539Z",
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 0
+          },
+          "state": "settled"
+        },
+        {
+          "holderId": "0f58c7fc-4561-4846-ab32-e359b542ef93",
+          "kind": "run",
+          "projectId": "266cc9e0-544f-4890-8953-092ff9317bbb",
+          "label": "Draft Implementation",
+          "title": "alga-2026-0002683 (4/6): Equipment custody and intake for client-owned devices",
+          "diskBytes": 0,
+          "memoryBytes": 3221225472,
+          "admittedAt": "2026-10-24T23:22:16.338Z",
+          "settlesAt": "2026-10-24T23:32:16.338Z",
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 0
+          },
+          "state": "settled"
+        },
+        {
+          "holderId": "28767e91-d61f-4e23-acfe-79dbe46ff479",
+          "kind": "run",
+          "projectId": "c9e51a64-09e7-4a88-a66e-9b0774d8d8bf",
+          "label": "Smoke Test",
+          "title": "Client picker perf E: contacts/billing/projects/assets/time use async picker",
+          "diskBytes": 0,
+          "memoryBytes": 4294967296,
+          "admittedAt": "2026-10-24T23:33:30.122Z",
+          "settlesAt": "2026-10-24T23:43:30.122Z",
+          "observedMemoryBytes": 433135616,
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 3861831680
+          },
+          "state": "settled"
+        },
+        {
+          "holderId": "0a36ccf7-095f-4a15-a8db-c4333710ea40",
+          "kind": "run",
+          "projectId": "788d772d-1c78-4c30-9240-a7915ec2aa45",
+          "label": "Smoke Test",
+          "title": "Shared contract charge resolution for billing engine and simulator (alga-2026-0002684)",
+          "diskBytes": 0,
+          "memoryBytes": 4294967296,
+          "admittedAt": "2026-10-24T23:46:29.001Z",
+          "settlesAt": "2026-10-24T23:56:29.001Z",
+          "observedMemoryBytes": 331882496,
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 3963084800
+          },
+          "state": "ramping"
+        },
+        {
+          "holderId": "aa81eddd-d9d5-4702-a8ee-957a2913bae2",
+          "kind": "run",
+          "projectId": "9e04b851-07f4-4f95-96d1-7fa103ea4840",
+          "label": "Prepare Human Review",
+          "title": "alga-2026-0002579: UniFi integration (alerts, device sync to assets)",
+          "diskBytes": 4294967296,
+          "memoryBytes": 6442450944,
+          "admittedAt": "2026-10-24T23:48:37.788Z",
+          "settlesAt": "2026-10-25T00:08:37.788Z",
+          "observedMemoryBytes": 287571968,
+          "live": true,
+          "counting": {
+            "diskBytes": 4294967296,
+            "memoryBytes": 6154878976
+          },
+          "state": "ramping"
+        },
+        {
+          "holderId": "dcf5788c-6987-4d63-aa19-bcac9eecf1bc",
+          "kind": "run",
+          "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+          "label": "Draft Implementation",
+          "title": "Co-Managed IT",
+          "diskBytes": 0,
+          "memoryBytes": 3221225472,
+          "admittedAt": "2026-10-24T23:52:54.987Z",
+          "settlesAt": "2026-10-25T00:02:54.987Z",
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 3221225472
+          },
+          "state": "ramping"
+        },
+        {
+          "holderId": "14a9ab0d-7c07-4b3f-8fcc-96548ac0bceb",
+          "kind": "run",
+          "projectId": "e4b66d6a-6348-4715-b207-42a4b6bd16d2",
+          "label": "Draft Implementation",
+          "title": "Contract totals show $0 for Products contracts (CloudVBS)",
+          "diskBytes": 0,
+          "memoryBytes": 3221225472,
+          "admittedAt": "2026-10-24T23:55:05.788Z",
+          "settlesAt": "2026-10-25T00:05:05.788Z",
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 3221225472
+          },
+          "state": "ramping"
+        }
+      ],
+      "waiters": [
+        {
+          "kind": "waiter",
+          "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+          "holderId": "bbd85220-5f05-4e4e-9e2c-967c2cf7f43f",
+          "projectId": "4756e613-0a79-4c76-9330-05c5d902c04b",
+          "label": "Prepare Human Review",
+          "title": "Invoice templates: per-line service periods and currency code (alga0002302 #5,#6)",
+          "diskBytes": 4294967296,
+          "memoryBytes": 6442450944,
+          "since": "2026-10-24T23:50:26.260Z",
+          "heartbeatAt": "2026-10-24T23:55:42.377Z",
+          "reason": "needs 6 GB memory on robert-Desktop-AMD-Ryzen-AI-Max-300-Series (32 GB free, 19 GB reserved, 8 GB floor)",
+          "position": 1
+        },
+        {
+          "kind": "waiter",
+          "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+          "holderId": "eccc12b0-b164-4a6e-b21d-44d1eb8031b0",
+          "projectId": "c87ae11f-b790-4ce7-8ae6-4228278326fd",
+          "label": "Prepare Human Review",
+          "title": "Client page: client-level software inventory view",
+          "diskBytes": 4294967296,
+          "memoryBytes": 6442450944,
+          "since": "2026-10-24T23:54:56.694Z",
+          "heartbeatAt": "2026-10-24T23:55:42.376Z",
+          "reason": "needs 6 GB memory on robert-Desktop-AMD-Ryzen-AI-Max-300-Series (32 GB free, 19 GB reserved, 8 GB floor)",
+          "position": 2
+        }
+      ]
+    },
+    {
+      "host": "robert-x670e-pro-rs",
+      "measurement": {
+        "at": 1792886138050,
+        "source": "published",
+        "workspace": {
+          "path": "/home/robert/alga-copies",
+          "freeBytes": 32336764928,
+          "totalBytes": 118111600640
+        },
+        "memory": {
+          "freeBytes": 26167410688,
+          "totalBytes": 65368133632
+        }
+      },
+      "floors": {
+        "diskBytes": 10737418240,
+        "memoryBytes": 8589934592
+      },
+      "lastAdmitAt": "2026-10-24T23:52:37.022Z",
+      "reservations": [
+        {
+          "holderId": "service:0bff93d4-3409-46c1-a157-033b8eb2e69b:dev-server",
+          "kind": "service",
+          "projectId": "0bff93d4-3409-46c1-a157-033b8eb2e69b",
+          "label": "dev-server",
+          "title": "alga-2026-0002736: CIPP API-client auth (3/3): Entra guide and public docs",
+          "diskBytes": 0,
+          "memoryBytes": 6442450944,
+          "admittedAt": "2026-10-24T23:52:04.792Z",
+          "settlesAt": "2026-10-25T00:52:04.792Z",
+          "live": false,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 6442450944
+          },
+          "state": "ramping"
+        },
+        {
+          "holderId": "f5333b52-75d8-4aa2-9a39-094220efb153",
+          "kind": "run",
+          "projectId": "0bff93d4-3409-46c1-a157-033b8eb2e69b",
+          "label": "Smoke Test",
+          "title": "alga-2026-0002736: CIPP API-client auth (3/3): Entra guide and public docs",
+          "diskBytes": 0,
+          "memoryBytes": 4294967296,
+          "admittedAt": "2026-10-24T23:52:37.022Z",
+          "settlesAt": "2026-10-25T00:02:37.022Z",
+          "observedMemoryBytes": 417398784,
+          "live": true,
+          "counting": {
+            "diskBytes": 0,
+            "memoryBytes": 3877568512
+          },
+          "state": "ramping"
+        }
+      ],
+      "waiters": []
+    }
+  ]
+}

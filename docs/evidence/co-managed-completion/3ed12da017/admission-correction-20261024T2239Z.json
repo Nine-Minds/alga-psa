@@ -1,0 +1,89 @@
+{
+  "capturedAt": "2026-10-24T22:39:33.769Z",
+  "sourceCommand": "alga-dev workflow-resource-holds --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a --pretty",
+  "headContext": {
+    "localHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+    "originFeatureRef": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+    "pr3363Head": "4305dac1a97f004e963c390e585fb1437f79e5f0"
+  },
+  "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+  "measurement": {
+    "at": 1792881573769,
+    "source": "published",
+    "workspace": {
+      "path": "/home/robert/alga-copies",
+      "freeBytes": 82819420160,
+      "totalBytes": 322122547200
+    },
+    "memory": {
+      "freeBytes": 26476032000,
+      "totalBytes": 134306766848
+    }
+  },
+  "floors": {
+    "diskBytes": 10737418240,
+    "memoryBytes": 8589934592
+  },
+  "lastAdmitAt": "2026-10-24T22:37:46.803Z",
+  "reservations": [
+    {
+      "holderId": "e0e75eb3-69fb-4cec-bcfa-b46c00f06d69",
+      "projectId": "4756e613-0a79-4c76-9330-05c5d902c04b",
+      "label": "Prepare Human Review",
+      "state": "settled",
+      "countedDiskBytes": 0,
+      "countedMemoryBytes": 6096269312
+    },
+    {
+      "holderId": "48721a99-db80-48d6-8fe5-4eeb98a82e69",
+      "projectId": "b7919fdd-951c-4df2-8dbf-7909f7e74618",
+      "label": "Prepare Human Review",
+      "state": "settled",
+      "countedDiskBytes": 0,
+      "countedMemoryBytes": 6015344640
+    },
+    {
+      "holderId": "b1bafd0d-4899-47c3-a40e-c2d5d69c5e94",
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "label": "Draft Implementation",
+      "state": "ramping",
+      "countedDiskBytes": 0,
+      "countedMemoryBytes": 3221225472
+    }
+  ],
+  "countedTotals": {
+    "diskBytes": 0,
+    "memoryBytes": 15332839424
+  },
+  "admissibleHeadroom": {
+    "memoryBytesAfterCountedReservationsAndFloor": 2553257984,
+    "approxGiB": 2.38,
+    "requiredPerApplicationBytes": 6442450944,
+    "result": "insufficient; no application admission"
+  },
+  "waiters": [
+    {
+      "position": 1,
+      "projectId": "a1af409d-bbec-4e8f-a363-ee574970ef5f",
+      "requiredMemoryBytes": 6442450944,
+      "reason": "needs 6 GB memory (25 GB free, 14 GB reserved, 8 GB floor)"
+    },
+    {
+      "position": 2,
+      "projectId": "788d772d-1c78-4c30-9240-a7915ec2aa45",
+      "requiredMemoryBytes": 3221225472,
+      "reason": "needs 3 GB memory (25 GB free, 14 GB reserved, 8 GB floor)"
+    }
+  ],
+  "historicalDependencyEvidence": {
+    "awaitId": "0d6ddff7-0572-4259-b9a5-88499ab0c8a3",
+    "statusAtLastRecordedSnapshot": "pending",
+    "lastCheckAt": "2026-10-24T22:08:09.517Z",
+    "lastDetail": "check exit 1",
+    "ownerResponseId": "79c28b2e-e5dd-4985-8f9d-636d44655b80",
+    "ownerResponseAt": "2026-10-24T19:09:19.460Z",
+    "note": "Historical await/owner response; not represented as a fresh status check."
+  },
+  "correction": "The prior checkpoint claim that alga-dev lacked a ledger query was incorrect. workflow-resource-holds is the supported query. This live snapshot independently shows less than the required 6 GiB of admissible memory.",
+  "decision": "stop; no startup, builds, or unchanged validation attempted"
+}

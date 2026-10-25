@@ -1,0 +1,135 @@
+{
+  "recordedAt": "2026-10-25T01:07:45Z",
+  "evidenceType": "development-runtime product observations; not production acceptance",
+  "sourceRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "trackedWorktreeClean": true,
+  "devServer": {
+    "serviceSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:24",
+    "serviceStatus": "live",
+    "origin": "http://feature-co-managed-it.localhost:3374",
+    "command": "CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh dev-server --health http://127.0.0.1:3374/auth/msp/signin /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-dev-server.sh",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "process": {
+      "pid": 1130449,
+      "startedAt": "2026-10-25T00:56:05Z",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "node": "v22.18.0",
+      "entry": "server/dev-server.ts",
+      "mode": "development"
+    },
+    "provenance": {
+      "sourceRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+      "productionBuild": false,
+      "launcherSha256": "8b93a9b299c0daef9dd95d4fec77d45ed7d79a33b6dbd2f9e46d5bb4a83b90dd",
+      "entrySha256": "5154352d7a1dbadcef5c002b05eeb39d8ba75116c6e257886e84dffa4e5c3d3f"
+    },
+    "http": {
+      "signin": {
+        "status": 200
+      },
+      "health": {
+        "status": 200
+      }
+    }
+  },
+  "openReview": {
+    "result": "success",
+    "signedInAs": "qa@emeraldcity.oz",
+    "entryUrl": "http://feature-co-managed-it.localhost:3374/msp/tickets",
+    "sessionVerifiedBy": "workflow-open-review response and visible QT avatar"
+  },
+  "checks": [
+    {
+      "name": "Ordinary PSA account control",
+      "status": "pass-development",
+      "actor": "qa@emeraldcity.oz (MSP technician)",
+      "tenantId": "24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/account",
+      "expected": "Authorized MSP account page remains reachable and renders account and co-managed seat information.",
+      "actual": "Account Management loaded with Pro plan and Co-managed IT customer technician seats: 12 purchased, 12 allocated, 0 available.",
+      "evidence": "account-qa-development-loaded.png"
+    },
+    {
+      "name": "Native ticket screen control",
+      "status": "pass-development-read-only",
+      "actor": "qa@emeraldcity.oz (MSP technician)",
+      "tenantId": "24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets/e02a5394-193f-4c00-bb4b-cba239e8e4fa",
+      "resource": {
+        "kind": "native-ticket",
+        "ticketId": "e02a5394-193f-4c00-bb4b-cba239e8e4fa",
+        "ticketNumber": "TIC001019",
+        "title": "SMOKE-EMAIL-TICKET from e5052bbb-e102-41f2-82b9-fb9aa267bf0a"
+      },
+      "expected": "Native all-tickets detail remains usable with its existing comments, timeline, and time controls.",
+      "actual": "Native ticket list showed 14 records. Detail showed inbound-email origin, six timeline events including comments, and native time controls; no mutation was made.",
+      "evidence": "native-ticket-qa-development.png"
+    },
+    {
+      "name": "Customer Tickets shared queue and qualified detail",
+      "status": "partial-pass-development-read-only",
+      "actor": "qa@emeraldcity.oz (MSP technician)",
+      "tenantId": "24ac76c8-df59-4b10-8371-c56222904580",
+      "queueRoute": "/msp/tickets/customer",
+      "resource": {
+        "kind": "shared-ticket",
+        "mspTenantId": "24ac76c8-df59-4b10-8371-c56222904580",
+        "customerTenantId": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "ticketId": "cfff4242-7962-4100-a54c-687eaa540500",
+        "ticketNumber": "000002",
+        "title": "SMOKE callout count change 142333",
+        "customer": "White Rabbit IT",
+        "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e"
+      },
+      "detailRoute": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "expected": "Customer Tickets remains a separate qualified shared-data route; the MSP can see authorized shared-work details and existing audience/time attribution.",
+      "actual": "Queue showed one open White Rabbit IT ticket with MSP responsibility. Detail showed Shared IT teams and My organization only comments, 3 hours MSP effort and 0 customer hours. No assignment, comment, handoff, or time change was submitted. Cross-actor privacy and revocation were not tested.",
+      "evidence": [
+        "customer-ticket-queue-qa-development.png",
+        "shared-ticket-detail-qa-development.png"
+      ]
+    }
+  ],
+  "workers": {
+    "workflowWorker": {
+      "service": "workflow-worker:23",
+      "status": "live",
+      "pid": 1949120,
+      "startedAt": "2026-10-24T18:58:47Z",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "node --env-file=.env .",
+      "resolvedMain": "dist/services/workflow-worker/src/index.js",
+      "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
+      "entryMtime": "2026-10-13T20:52:12Z"
+    },
+    "temporalWorker": {
+      "service": "temporal-worker:25",
+      "status": "live",
+      "pid": 1949060,
+      "startedAt": "2026-10-24T18:58:47Z",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+      "entryMtime": "2026-10-13T20:51:22Z"
+    },
+    "limitation": "Both compiled entries are present and live, but their output mtimes predate this review session. Their full distribution source/build revisions are not established. No compiled-worker behavior is claimed or tested; rebuild remains deferred until admitted capacity permits it."
+  },
+  "notVerified": [
+    "Multipart server-action rejection and accepted-workspace/ordinary-PSA server-action controls",
+    "Co-managed customer denial of /msp/account and child routes; QA is an MSP actor and cannot establish the customer denial",
+    "Microsoft OIDC identity, directory, and replay/issuer/audience/expiry/nonce/PKCE cases",
+    "Customer provider and inbound-email journeys",
+    "Cross-actor audience separation, mutation/assignment, time entry, handoff, revocation, and task/project flows",
+    "Native attachment, project, workflow, and approval regressions beyond the read-only observations above",
+    "Production review-app acceptance and all 14 genuine guide recordings"
+  ],
+  "limitations": [
+    "All observations above are from the development server on the published source revision, not the production review-app.",
+    "The board denied review-app admission with 38 GiB free, 28 GiB reserved, and an 8 GiB floor; no production build/start was attempted.",
+    "The recording census remains unchanged and blocked; screenshots are evidence of these specific development observations, not guide recordings."
+  ],
+  "correction": {
+    "at": "2026-10-25T01:10:27.035827+00:00",
+    "reason": "Route parameters establish customer tenant and relationship identity; TZ=UTC ps confirms both worker children started at 2026-10-24T18:58:47Z. Board restartedAt is not a child start time."
+  }
+}

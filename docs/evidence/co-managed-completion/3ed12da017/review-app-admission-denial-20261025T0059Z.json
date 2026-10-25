@@ -1,0 +1,11 @@
+{
+  "recordedAt": "2026-10-25T00:59:10Z",
+  "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+  "service": "review-app",
+  "candidateHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "request": "alga-dev workflow-ensure-service --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a --name=review-app --cwd=/home/robert/alga-copies/feature-co-managed-it/server --readinessPort=23374 --readinessPath=/api/health --command='DEV_ALLOWED_ORIGINS=feature-co-managed-it.localhost,127.0.0.1,localhost PORT=23374 bash /home/robert/.alga-xo/scripts/review-app.sh'",
+  "boardDecision": "denied",
+  "boardResponse": "Error: starting review-app needs 6 GB memory on robert-Desktop-AMD-Ryzen-AI-Max-300-Series (38 GB free, 28 GB reserved, 8 GB floor); otherwise the kernel kills it (or a neighbour) mid-boot",
+  "buildOrStartLaunched": false,
+  "action": "No bypass or unrelated-service stop. Continue only with acceptance valid on the already-admitted dev app; production review-app and its acceptance evidence remain blocked until normal admission succeeds."
+}

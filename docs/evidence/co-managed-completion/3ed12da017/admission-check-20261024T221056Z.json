@@ -1,0 +1,286 @@
+{
+  "checkedAt": "2026-10-24T22:10:56.841155+00:00",
+  "publishedRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "remoteBranchRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "pullRequest": {
+    "number": 3363,
+    "head": "4305dac1a97f004e963c390e585fb1437f79e5f0"
+  },
+  "capacity": {
+    "ledger": {
+      "hosts": [
+        {
+          "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+          "measurement": {
+            "at": 1792879833704,
+            "source": "published",
+            "workspace": {
+              "path": "/home/robert/alga-copies",
+              "freeBytes": 83894272000,
+              "totalBytes": 322122547200
+            },
+            "memory": {
+              "freeBytes": 32952569856,
+              "totalBytes": 134306766848
+            }
+          },
+          "floors": {
+            "diskBytes": 10737418240,
+            "memoryBytes": 8589934592
+          },
+          "lastAdmitAt": "2026-10-24T22:10:38.436Z",
+          "reservations": [
+            {
+              "holderId": "e0e75eb3-69fb-4cec-bcfa-b46c00f06d69",
+              "kind": "run",
+              "projectId": "4756e613-0a79-4c76-9330-05c5d902c04b",
+              "label": "Prepare Human Review",
+              "title": "Invoice templates: per-line service periods and currency code (alga0002302 #5,#6)",
+              "diskBytes": 4294967296,
+              "memoryBytes": 6442450944,
+              "admittedAt": "2026-10-24T20:11:46.137Z",
+              "settlesAt": "2026-10-24T20:31:46.137Z",
+              "observedMemoryBytes": 346181632,
+              "live": true,
+              "counting": {
+                "diskBytes": 0,
+                "memoryBytes": 6096269312
+              },
+              "state": "settled"
+            },
+            {
+              "holderId": "48721a99-db80-48d6-8fe5-4eeb98a82e69",
+              "kind": "run",
+              "projectId": "b7919fdd-951c-4df2-8dbf-7909f7e74618",
+              "label": "Prepare Human Review",
+              "title": "alga0002096: Appliance has no warning or defined downgrade when its Pro subscription lapses",
+              "diskBytes": 4294967296,
+              "memoryBytes": 6442450944,
+              "admittedAt": "2026-10-24T21:39:36.858Z",
+              "settlesAt": "2026-10-24T21:59:36.858Z",
+              "observedMemoryBytes": 427106304,
+              "live": true,
+              "counting": {
+                "diskBytes": 0,
+                "memoryBytes": 6015344640
+              },
+              "state": "settled"
+            },
+            {
+              "holderId": "df8205a8-b199-4569-8604-403f3f3c5d42",
+              "kind": "run",
+              "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+              "label": "Draft Implementation",
+              "title": "Co-Managed IT",
+              "diskBytes": 0,
+              "memoryBytes": 3221225472,
+              "admittedAt": "2026-10-24T22:09:14.355Z",
+              "settlesAt": "2026-10-24T22:19:14.355Z",
+              "live": true,
+              "counting": {
+                "diskBytes": 0,
+                "memoryBytes": 3221225472
+              },
+              "state": "ramping"
+            },
+            {
+              "holderId": "493a631b-05ff-48b4-91b2-baec43274c0a",
+              "kind": "run",
+              "projectId": "c9e51a64-09e7-4a88-a66e-9b0774d8d8bf",
+              "label": "Draft Implementation",
+              "title": "Client picker perf E: contacts/billing/projects/assets/time use async picker",
+              "diskBytes": 0,
+              "memoryBytes": 3221225472,
+              "admittedAt": "2026-10-24T22:10:38.436Z",
+              "settlesAt": "2026-10-24T22:20:38.436Z",
+              "live": true,
+              "counting": {
+                "diskBytes": 0,
+                "memoryBytes": 3221225472
+              },
+              "state": "ramping"
+            }
+          ],
+          "waiters": [
+            {
+              "kind": "waiter",
+              "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+              "holderId": "d4ccefab-3277-4fd7-9540-e2e0a131ac77",
+              "projectId": "c87ae11f-b790-4ce7-8ae6-4228278326fd",
+              "label": "Prepare Human Review",
+              "title": "Client page: client-level software inventory view",
+              "diskBytes": 4294967296,
+              "memoryBytes": 6442450944,
+              "since": "2026-10-24T22:10:38.659Z",
+              "heartbeatAt": "2026-10-24T22:10:53.713Z",
+              "reason": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series admitted a run 15s ago; the next starts after 30s so a reading can catch up",
+              "position": 1
+            }
+          ]
+        }
+      ]
+    },
+    "awaits": {
+      "awaits": [
+        {
+          "id": "0d6ddff7-0572-4259-b9a5-88499ab0c8a3",
+          "status": "pending",
+          "title": "Co-Managed IT supported review-stack capacity (corrected check)",
+          "check": "python3 -c 'import pathlib; m=dict(line.split(\":\",1) for line in pathlib.Path(\"/proc/meminfo\").read_text().splitlines()); raise SystemExit(0 if int(m[\"MemAvailable\"].split()[0]) >= 44040192 else 1)'",
+          "then": "Retry canonical registered dev-server and production review-app startup through board admission, rebuild/start workers, verify deployed revisions and QA Open Review, then execute acceptance and all 14 recordings. Do not bypass admission.",
+          "intervalSeconds": 180,
+          "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+          "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "deadlineAt": "2026-10-25T05:02:27.873Z",
+          "createdAt": "2026-10-24T17:02:27.873Z",
+          "createdBy": "agent:DraftImplementationLead",
+          "checks": 96,
+          "lastCheckAt": "2026-10-24T22:08:09.517Z",
+          "lastDetail": "check exit 1"
+        }
+      ],
+      "prompt": {
+        "resolved": [],
+        "pending": [
+          "- awaitId=0d6ddff7-0572-4259-b9a5-88499ab0c8a3 project=964ce5e0-45a5-41b2-8e2c-73903742a85a checks=96 until=2026-10-25T05:02:27.873Z: Co-Managed IT supported review-stack capacity (corrected check)"
+        ]
+      }
+    },
+    "ownerResponse": {
+      "id": "79c28b2e-e5dd-4985-8f9d-636d44655b80",
+      "actor": "xo",
+      "text": "No window has opened yet, and I can give you the exact reason rather than a wait-and-see. The card's own run 0a19eb0b (Draft Implementation, live since 18:55) retried both boots at 18:52 and was refused: 39 GiB free, 26 GiB reserved, 8 GiB floor, 6 GiB required per app - so 5 GiB admissible against 6 needed. It is short by roughly 1 GiB, not by a mile. Await 0d6ddff7 is watching this card specifically (40 checks so far, running to 05:02Z) and the step's watch ticks re-attempt on cadence; both temporal-worker and workflow-worker are already up and HTTP-200, so only the two applications are missing. When admission clears I will run your sequence exactly: dev-server on :3374, confirm health, then production review-app on :23374, confirm health, then report the window and both URLs. I will not stop another card or touch its reservation - and I want to say plainly that your instruction matches the correction I posted at 18:45Z: my 18:28 sweep of 11 review-apps on gate cards was wrong and is being reversed, not repeated. If you would rather have the window now than wait for it, the only safe lever I can see is yours: approving a few of the 20 gate cards releases their apps' reservations. Nothing else on the host is reclaimable without touching work in progress.",
+      "replyToId": "bde9330c-a2ef-414a-af34-cc388be2943e",
+      "createdAt": "2026-10-24T19:09:19.460Z"
+    }
+  },
+  "serviceState": [
+    {
+      "name": "dev-server",
+      "port": 3374,
+      "liveRegistrations": [],
+      "http": {
+        "status": 0,
+        "error": "<urlopen error [Errno 111] Connection refused>"
+      }
+    },
+    {
+      "name": "review-app",
+      "port": 23374,
+      "liveRegistrations": [],
+      "http": {
+        "status": 0,
+        "error": "<urlopen error [Errno 111] Connection refused>"
+      }
+    },
+    {
+      "name": "review-guide",
+      "port": 8874,
+      "liveRegistrations": [
+        {
+          "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+          "name": "review-guide",
+          "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-guide:22",
+          "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "cwd": "/home/robert/card-reviews/co-managed-it-3363",
+          "command": "python3 -m http.server 8874 --bind 0.0.0.0",
+          "readiness": {
+            "port": 8874,
+            "path": "/"
+          },
+          "status": "live",
+          "createdAt": "2026-10-24T00:57:11.831Z",
+          "createdBy": "human",
+          "lastHealth": {
+            "status": "running",
+            "checkedAt": "2026-10-24T22:09:39.146Z"
+          }
+        }
+      ],
+      "http": {
+        "status": 200
+      }
+    },
+    {
+      "name": "workflow-worker",
+      "port": 4374,
+      "liveRegistrations": [
+        {
+          "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+          "name": "workflow-worker",
+          "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:workflow-worker:23",
+          "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+          "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh workflow-worker --health http://127.0.0.1:4374/health node --env-file=.env .",
+          "readiness": {
+            "port": 4374,
+            "path": "/health"
+          },
+          "status": "live",
+          "createdAt": "2026-10-24T17:08:17.619Z",
+          "createdBy": "agent:DraftImplementationLead",
+          "lastHealth": {
+            "status": "running",
+            "checkedAt": "2026-10-24T22:09:39.195Z"
+          },
+          "recovery": {
+            "autoHealAt": [
+              "2026-10-24T17:56:37.552Z"
+            ]
+          },
+          "restartedAt": "2026-10-24T18:58:48.156Z",
+          "restartedBy": "agent:Draft Implementation",
+          "facts": {
+            "algaUrl": "http://127.0.0.1:4374",
+            "updatedAt": "2026-10-24T17:56:38.091Z"
+          }
+        }
+      ],
+      "http": {
+        "status": 200
+      }
+    },
+    {
+      "name": "temporal-worker",
+      "port": 8375,
+      "liveRegistrations": [
+        {
+          "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+          "name": "temporal-worker",
+          "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:25",
+          "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+          "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+          "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh temporal-worker --health http://127.0.0.1:8375/health node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+          "readiness": {
+            "port": 8375,
+            "path": "/health"
+          },
+          "status": "live",
+          "createdAt": "2026-10-24T18:47:54.166Z",
+          "createdBy": "human",
+          "facts": {
+            "algaUrl": "http://127.0.0.1:8375",
+            "updatedAt": "2026-10-24T18:47:54.466Z"
+          },
+          "lastHealth": {
+            "status": "running",
+            "checkedAt": "2026-10-24T22:06:39.306Z"
+          },
+          "restartedAt": "2026-10-24T18:58:47.692Z",
+          "restartedBy": "agent:Draft Implementation"
+        }
+      ],
+      "http": {
+        "status": 200
+      }
+    }
+  ],
+  "workingTree": [
+    "?? docs/evidence/co-managed-completion/3ed12da017/",
+    "?? server/.next-review/"
+  ],
+  "decision": "blocked: no current 6 GiB application admission; no application launch attempted"
+}

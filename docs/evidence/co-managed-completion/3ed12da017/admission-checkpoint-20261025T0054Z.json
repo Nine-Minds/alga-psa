@@ -1,0 +1,104 @@
+{
+  "checkpointedAt": "2026-10-25T00:54:28Z",
+  "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+  "step": "Draft Implementation",
+  "checkoutHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "remoteFeatureHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "pr": 3363,
+  "prHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "admissionQuery": "alga-dev workflow-resource-holds",
+  "ledgerMeasurementAt": "2026-10-25T00:53:34.198Z",
+  "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+  "workspaceMemoryFreeBytes": 40421978112,
+  "hostFloorMemoryBytes": 8589934592,
+  "countedReservations": [
+    {
+      "holderId": "f43f212d-e595-45c5-b3e5-ace6579691e4",
+      "kind": "run",
+      "projectId": "e4b66d6a-6348-4715-b207-42a4b6bd16d2",
+      "countedMemoryBytes": 4007571456
+    },
+    {
+      "holderId": "885862e5-e8f5-4957-8fec-eb0d0c2eefc6",
+      "kind": "run",
+      "projectId": "266cc9e0-544f-4890-8953-092ff9317bbb",
+      "countedMemoryBytes": 3983687680
+    },
+    {
+      "holderId": "d5e9a8a6-74bc-485d-8ba6-7412cbfc211a",
+      "kind": "run",
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "countedMemoryBytes": 3221225472
+    },
+    {
+      "holderId": "service:266cc9e0-544f-4890-8953-092ff9317bbb:dev-server",
+      "kind": "service",
+      "projectId": "266cc9e0-544f-4890-8953-092ff9317bbb",
+      "countedMemoryBytes": 6442450944
+    },
+    {
+      "holderId": "service:7a9ead2e-49b3-4f04-a775-54ef7051a7a4:dev-server",
+      "kind": "service",
+      "projectId": "7a9ead2e-49b3-4f04-a775-54ef7051a7a4",
+      "countedMemoryBytes": 6442450944
+    }
+  ],
+  "countedReservationMemoryBytes": 24097386496,
+  "headroomAfterReservationsAndFloorBytes": 7734657024,
+  "headroomAfterReservationsAndFloorGiB": 7.203460693359375,
+  "requiredApplicationSlots": [
+    {
+      "service": "dev-server",
+      "memoryBytes": 6442450944,
+      "status": "concluded"
+    },
+    {
+      "service": "review-app",
+      "memoryBytes": 6442450944,
+      "status": "concluded"
+    }
+  ],
+  "cardServiceInventory": {
+    "dev-server": {
+      "status": "concluded",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "port": 3374,
+      "savedCommandContainsHistoricalHost": "--host 100.82.172.57"
+    },
+    "review-app": {
+      "status": "concluded",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "port": 23374
+    },
+    "workflow-worker": {
+      "status": "live",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "healthPort": 4374
+    },
+    "temporal-worker": {
+      "status": "live",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "healthPort": 8375
+    },
+    "review-guide": {
+      "status": "live",
+      "cwd": "/home/robert/card-reviews/co-managed-it-3363",
+      "port": 8874
+    },
+    "review-dependencies": {
+      "status": "concluded",
+      "port": 8876
+    },
+    "review-provider-simulator": {
+      "status": "concluded",
+      "port": 9177
+    },
+    "stripe-simulator": {
+      "status": "concluded",
+      "port": 9175
+    }
+  },
+  "admissionInterpretationCorrection": "Service admission is per service. The corrected arithmetic leaves enough estimated headroom to request one 6 GiB service slot; the board decision, not combined capacity inference, determines whether it is admitted.",
+  "blockingCondition": "At this ledger snapshot, estimated headroom supports requesting one 6 GiB service slot. The board later granted dev-server admission and directly verified QA Open Review. A subsequent review-app request was actually denied by the board; see admission-sequence-20261025T0058Z.json and review-app-admission-denial-20261025T0059Z.json.",
+  "result": "corrected per-service admission interpretation; later board decisions recorded separately"
+}

@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-10-25T00:58:13Z",
+  "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+  "candidateHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "devServer": {
+    "admission": "granted",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:24",
+    "url": "http://feature-co-managed-it.localhost:3374",
+    "commandlessEnsure": "succeeded",
+    "openReview": {"result":"succeeded","signedInAs":"qa@emeraldcity.oz","entryUrl":"http://feature-co-managed-it.localhost:3374/msp/tickets"}
+  },
+  "reviewApp": {
+    "admission": "denied by board pacing guard; no build/start was launched",
+    "request": "alga-dev workflow-ensure-service --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a --name=review-app --cwd=/home/robert/alga-copies/feature-co-managed-it/server --readinessPort=23374 --readinessPath=/api/health --command='DEV_ALLOWED_ORIGINS=feature-co-managed-it.localhost,127.0.0.1,localhost PORT=23374 bash /home/robert/.alga-xo/scripts/review-app.sh'",
+    "boardResponses": [
+      "Error: starting review-app robert-Desktop-AMD-Ryzen-AI-Max-300-Series admitted a run 28s ago; the next starts after 30s so a reading can catch up; otherwise the kernel kills it (or a neighbour) mid-boot",
+      "Error: starting review-app robert-Desktop-AMD-Ryzen-AI-Max-300-Series admitted a run 1s ago; the next starts after 30s so a reading can catch up; otherwise the kernel kills it (or a neighbour) mid-boot"
+    ]
+  },
+  "nextAction": "Continue QA acceptance on the admitted current-HEAD dev app where valid. Do not start review-app outside board admission."
+}

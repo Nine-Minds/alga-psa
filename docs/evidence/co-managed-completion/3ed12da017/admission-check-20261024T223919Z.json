@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-24T22:39:24.868550+00:00",
+  "localHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "originFeatureRef": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "pr3363Head": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "physicalMeasurement": {
+    "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+    "memAvailableBytes": 26436861952,
+    "memFreeBytes": 4907098112,
+    "workspaceFreeBytes": 82894958592,
+    "workspaceTotalBytes": 322122547200
+  },
+  "capacityDependency": {
+    "awaitId": "0d6ddff7-0572-4259-b9a5-88499ab0c8a3",
+    "latestAvailableLedgerSnapshotAt": "2026-10-24T22:11:33.704Z",
+    "snapshotAwaitStatus": "pending",
+    "lastCheckAt": "2026-10-24T22:08:09.517Z",
+    "lastCheckDetail": "check exit 1",
+    "ownerResponseId": "79c28b2e-e5dd-4985-8f9d-636d44655b80",
+    "requiredPerApplicationBytes": 6442450944,
+    "normalAdmission": "not confirmed; available alga-dev CLI has no ledger-query command"
+  },
+  "decision": "blocked: current physical measurement does not grant admission; no application launch attempted"
+}

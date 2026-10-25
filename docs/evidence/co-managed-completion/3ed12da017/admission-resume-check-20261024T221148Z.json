@@ -1,0 +1,608 @@
+{
+  "checkedAt": "2026-10-24T22:11:46.945619+00:00",
+  "head": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "remoteHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "prHead": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "capacityLedger": {
+    "hosts": [
+      {
+        "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+        "measurement": {
+          "at": 1792879893704,
+          "source": "published",
+          "workspace": {
+            "path": "/home/robert/alga-copies",
+            "freeBytes": 83964014592,
+            "totalBytes": 322122547200
+          },
+          "memory": {
+            "freeBytes": 32828096512,
+            "totalBytes": 134306766848
+          }
+        },
+        "floors": {
+          "diskBytes": 10737418240,
+          "memoryBytes": 8589934592
+        },
+        "lastAdmitAt": "2026-10-24T22:10:38.436Z",
+        "reservations": [
+          {
+            "holderId": "e0e75eb3-69fb-4cec-bcfa-b46c00f06d69",
+            "kind": "run",
+            "projectId": "4756e613-0a79-4c76-9330-05c5d902c04b",
+            "label": "Prepare Human Review",
+            "title": "Invoice templates: per-line service periods and currency code (alga0002302 #5,#6)",
+            "diskBytes": 4294967296,
+            "memoryBytes": 6442450944,
+            "admittedAt": "2026-10-24T20:11:46.137Z",
+            "settlesAt": "2026-10-24T20:31:46.137Z",
+            "observedMemoryBytes": 346181632,
+            "live": true,
+            "counting": {
+              "diskBytes": 0,
+              "memoryBytes": 6096269312
+            },
+            "state": "settled"
+          },
+          {
+            "holderId": "48721a99-db80-48d6-8fe5-4eeb98a82e69",
+            "kind": "run",
+            "projectId": "b7919fdd-951c-4df2-8dbf-7909f7e74618",
+            "label": "Prepare Human Review",
+            "title": "alga0002096: Appliance has no warning or defined downgrade when its Pro subscription lapses",
+            "diskBytes": 4294967296,
+            "memoryBytes": 6442450944,
+            "admittedAt": "2026-10-24T21:39:36.858Z",
+            "settlesAt": "2026-10-24T21:59:36.858Z",
+            "observedMemoryBytes": 427106304,
+            "live": true,
+            "counting": {
+              "diskBytes": 0,
+              "memoryBytes": 6015344640
+            },
+            "state": "settled"
+          },
+          {
+            "holderId": "df8205a8-b199-4569-8604-403f3f3c5d42",
+            "kind": "run",
+            "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+            "label": "Draft Implementation",
+            "title": "Co-Managed IT",
+            "diskBytes": 0,
+            "memoryBytes": 3221225472,
+            "admittedAt": "2026-10-24T22:09:14.355Z",
+            "settlesAt": "2026-10-24T22:19:14.355Z",
+            "live": true,
+            "counting": {
+              "diskBytes": 0,
+              "memoryBytes": 3221225472
+            },
+            "state": "ramping"
+          },
+          {
+            "holderId": "493a631b-05ff-48b4-91b2-baec43274c0a",
+            "kind": "run",
+            "projectId": "c9e51a64-09e7-4a88-a66e-9b0774d8d8bf",
+            "label": "Draft Implementation",
+            "title": "Client picker perf E: contacts/billing/projects/assets/time use async picker",
+            "diskBytes": 0,
+            "memoryBytes": 3221225472,
+            "admittedAt": "2026-10-24T22:10:38.436Z",
+            "settlesAt": "2026-10-24T22:20:38.436Z",
+            "live": true,
+            "counting": {
+              "diskBytes": 0,
+              "memoryBytes": 3221225472
+            },
+            "state": "ramping"
+          }
+        ],
+        "waiters": [
+          {
+            "kind": "waiter",
+            "host": "robert-desktop-amd-ryzen-ai-max-300-series",
+            "holderId": "d4ccefab-3277-4fd7-9540-e2e0a131ac77",
+            "projectId": "c87ae11f-b790-4ce7-8ae6-4228278326fd",
+            "label": "Prepare Human Review",
+            "title": "Client page: client-level software inventory view",
+            "diskBytes": 4294967296,
+            "memoryBytes": 6442450944,
+            "since": "2026-10-24T22:10:38.659Z",
+            "heartbeatAt": "2026-10-24T22:11:42.003Z",
+            "reason": "needs 6 GB memory on robert-Desktop-AMD-Ryzen-AI-Max-300-Series (31 GB free, 17 GB reserved, 8 GB floor)",
+            "position": 1
+          }
+        ]
+      }
+    ]
+  },
+  "awaits": {
+    "awaits": [
+      {
+        "id": "0d6ddff7-0572-4259-b9a5-88499ab0c8a3",
+        "status": "pending",
+        "title": "Co-Managed IT supported review-stack capacity (corrected check)",
+        "check": "python3 -c 'import pathlib; m=dict(line.split(\":\",1) for line in pathlib.Path(\"/proc/meminfo\").read_text().splitlines()); raise SystemExit(0 if int(m[\"MemAvailable\"].split()[0]) >= 44040192 else 1)'",
+        "then": "Retry canonical registered dev-server and production review-app startup through board admission, rebuild/start workers, verify deployed revisions and QA Open Review, then execute acceptance and all 14 recordings. Do not bypass admission.",
+        "intervalSeconds": 180,
+        "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+        "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+        "deadlineAt": "2026-10-25T05:02:27.873Z",
+        "createdAt": "2026-10-24T17:02:27.873Z",
+        "createdBy": "agent:DraftImplementationLead",
+        "checks": 97,
+        "lastCheckAt": "2026-10-24T22:11:24.653Z",
+        "lastDetail": "check exit 1"
+      }
+    ],
+    "prompt": {
+      "resolved": [],
+      "pending": [
+        "- awaitId=0d6ddff7-0572-4259-b9a5-88499ab0c8a3 project=964ce5e0-45a5-41b2-8e2c-73903742a85a checks=97 until=2026-10-25T05:02:27.873Z: Co-Managed IT supported review-stack capacity (corrected check)"
+      ]
+    }
+  },
+  "capacityOwnerResponse": {
+    "id": "79c28b2e-e5dd-4985-8f9d-636d44655b80",
+    "actor": "xo",
+    "text": "No window has opened yet, and I can give you the exact reason rather than a wait-and-see. The card's own run 0a19eb0b (Draft Implementation, live since 18:55) retried both boots at 18:52 and was refused: 39 GiB free, 26 GiB reserved, 8 GiB floor, 6 GiB required per app - so 5 GiB admissible against 6 needed. It is short by roughly 1 GiB, not by a mile. Await 0d6ddff7 is watching this card specifically (40 checks so far, running to 05:02Z) and the step's watch ticks re-attempt on cadence; both temporal-worker and workflow-worker are already up and HTTP-200, so only the two applications are missing. When admission clears I will run your sequence exactly: dev-server on :3374, confirm health, then production review-app on :23374, confirm health, then report the window and both URLs. I will not stop another card or touch its reservation - and I want to say plainly that your instruction matches the correction I posted at 18:45Z: my 18:28 sweep of 11 review-apps on gate cards was wrong and is being reversed, not repeated. If you would rather have the window now than wait for it, the only safe lever I can see is yours: approving a few of the 20 gate cards releases their apps' reservations. Nothing else on the host is reclaimable without touching work in progress.",
+    "replyToId": "bde9330c-a2ef-414a-af34-cc388be2943e",
+    "createdAt": "2026-10-24T19:09:19.460Z"
+  },
+  "cardServices": [
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "dev-server",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh dev-server --health http://127.0.0.1:3374/auth/msp/signin /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374",
+      "status": "concluded",
+      "createdAt": "2026-09-20T01:37:03.718Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-09-20T01:37:11.304Z"
+      },
+      "concludedAt": "2026-09-20T01:37:15.519Z",
+      "concludedBy": "human",
+      "concludedReason": "re-ensure with explicit readiness port/path"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "dev-server",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:29",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh dev-server --health http://127.0.0.1:3374/auth/msp/signin /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374",
+      "readiness": {
+        "port": 3374,
+        "path": "/auth/msp/signin"
+      },
+      "status": "concluded",
+      "createdAt": "2026-09-20T01:37:16.136Z",
+      "createdBy": "human",
+      "restartedAt": "2026-10-13T10:35:36.627Z",
+      "restartedBy": "system",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-14T00:40:28.653Z"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-13T20:15:24.151Z",
+          "2026-10-13T21:00:20.187Z"
+        ],
+        "lastError": "Local host does not use a remote connection"
+      },
+      "concludedAt": "2026-10-14T00:40:38.468Z",
+      "concludedBy": "human",
+      "concludedReason": "Human review uses the production review-app on :23374; dev server stopped to free memory for the review build."
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "PORT=23374 bash /home/robert/.alga-xo/scripts/review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-14T00:40:22.729Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "failed",
+        "checkedAt": "2026-10-15T05:53:43.874Z",
+        "reason": "Process is no longer running"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-14T00:50:57.914Z"
+        ]
+      },
+      "restartedAt": "2026-10-15T05:53:27.983Z",
+      "restartedBy": "human",
+      "wantedUntil": "2026-10-15T02:36:39.952Z",
+      "concludedAt": "2026-10-15T05:54:32.017Z",
+      "concludedBy": "human",
+      "concludedReason": "re-register: nx build-deps trips branch next.config DEV_ALLOWED_ORIGINS guard on the card hostname; add hostname to DEV_ALLOWED_ORIGINS"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "dev-server",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "../scripts/dev/run-co-managed-dev-server.sh",
+      "readiness": {
+        "port": 3374,
+        "path": "/auth/msp/signin"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-14T14:53:28.380Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-14T19:36:34.650Z"
+      },
+      "restartedAt": "2026-10-14T18:21:04.733Z",
+      "restartedBy": "system",
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-14T18:21:04.709Z"
+        ]
+      },
+      "concludedAt": "2026-10-14T19:37:47.021Z",
+      "concludedBy": "human",
+      "concludedReason": "Human review uses the production review-app build; free memory for the 6029f17dc9 build"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "DEV_ALLOWED_ORIGINS=feature-co-managed-it.localhost,127.0.0.1,localhost PORT=23374 bash $HOME/.alga-xo/scripts/review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-15T05:54:32.062Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-17T04:36:40.214Z"
+      },
+      "wantedUntil": "2026-10-16T04:09:50.765Z",
+      "restartedAt": "2026-10-17T04:36:38.976Z",
+      "restartedBy": "human",
+      "concludedAt": "2026-10-17T04:37:05.414Z",
+      "concludedBy": "human",
+      "concludedReason": "Replace orphaned e59c11e198 production process with current 80d653b28a review build"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "dev-server",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh dev-server --health http://127.0.0.1:3374/auth/msp/signin /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374",
+      "readiness": {
+        "port": 3374,
+        "path": "/auth/msp/signin"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-16T06:13:09.222Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-17T04:35:40.163Z"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-17T01:33:10.454Z"
+        ],
+        "lastError": "Local host does not use a remote connection"
+      },
+      "concludedAt": "2026-10-17T04:40:15.703Z",
+      "concludedBy": "human",
+      "concludedReason": "Review uses the production build on 23374"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-app",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "command": "DEV_ALLOWED_ORIGINS=feature-co-managed-it.localhost,127.0.0.1,localhost PORT=23374 bash $HOME/.alga-xo/scripts/review-app.sh",
+      "readiness": {
+        "port": 23374,
+        "path": "/api/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-17T04:37:05.471Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-21T10:57:59.152Z"
+      },
+      "wantedUntil": "2026-10-20T19:35:23.730Z",
+      "restartedAt": "2026-10-18T20:11:00.689Z",
+      "restartedBy": "human",
+      "concludedAt": "2026-10-21T11:01:19.436Z",
+      "concludedBy": "xo",
+      "concludedReason": "housekeeping: live service on a final_done card was holding host memory (43 orphaned next-server processes, 7GB free vs the 8GB review boot floor); concluded to free the review-build slot"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "node --env-file=.env .",
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-17T04:40:16.631Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "failed",
+        "checkedAt": "2026-10-17T04:40:40.176Z",
+        "reason": "Process is no longer running"
+      },
+      "concludedAt": "2026-10-17T04:41:07.631Z",
+      "concludedBy": "human",
+      "concludedReason": "Worker direct-execution guard requires explicit built entry path; node dot exits without starting"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-guide",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-guide:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/card-reviews/co-managed-it-3363",
+      "command": "python3 -m http.server 8874 --bind 0.0.0.0",
+      "readiness": {
+        "port": 8874,
+        "path": "/"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-17T04:40:41.324Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-21T10:57:59.158Z"
+      },
+      "concludedAt": "2026-10-21T11:01:19.527Z",
+      "concludedBy": "xo",
+      "concludedReason": "housekeeping: live service on a final_done card was holding host memory (43 orphaned next-server processes, 7GB free vs the 8GB review boot floor); concluded to free the review-build slot"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-17T04:41:07.672Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-21T10:57:59.158Z"
+      },
+      "restartedAt": "2026-10-18T16:24:29.548Z",
+      "restartedBy": "human",
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-19T00:29:35.107Z"
+        ],
+        "lastError": "Local host does not use a remote connection"
+      },
+      "concludedAt": "2026-10-21T11:01:19.621Z",
+      "concludedBy": "xo",
+      "concludedReason": "housekeeping: live service on a final_done card was holding host memory (43 orphaned next-server processes, 7GB free vs the 8GB review boot floor); concluded to free the review-build slot"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "workflow-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:workflow-worker:21",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "node --env-file=.env .",
+      "readiness": {
+        "port": 4374,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-17T04:41:08.456Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-21T10:57:59.158Z"
+      },
+      "restartedAt": "2026-10-18T16:24:29.884Z",
+      "restartedBy": "human",
+      "concludedAt": "2026-10-21T11:01:19.714Z",
+      "concludedBy": "xo",
+      "concludedReason": "housekeeping: live service on a final_done card was holding host memory (43 orphaned next-server processes, 7GB free vs the 8GB review boot floor); concluded to free the review-build slot"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "review-guide",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-guide:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/card-reviews/co-managed-it-3363",
+      "command": "python3 -m http.server 8874 --bind 0.0.0.0",
+      "readiness": {
+        "port": 8874,
+        "path": "/"
+      },
+      "status": "live",
+      "createdAt": "2026-10-24T00:57:11.831Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T22:09:39.146Z"
+      }
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh temporal-worker --health http://127.0.0.1:8375/health node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-24T17:04:58.715Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T17:05:36.466Z"
+      },
+      "concludedAt": "2026-10-24T17:08:26.011Z",
+      "concludedBy": "agent:DraftImplementationLead",
+      "concludedReason": "Rebuild this card compiled Temporal worker for takeover provenance, then restart through board registration."
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "workflow-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:workflow-worker:22",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh workflow-worker --health http://127.0.0.1:4374/health node --env-file=.env .",
+      "readiness": {
+        "port": 4374,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-24T17:05:02.478Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T17:05:06.471Z"
+      },
+      "concludedAt": "2026-10-24T17:07:46.445Z",
+      "concludedBy": "agent:DraftImplementationLead",
+      "concludedReason": "Rebuild compiled worker to establish provenance after prior saved hash failed comparison; only this card worker is stopped."
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "workflow-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:workflow-worker:23",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh workflow-worker --health http://127.0.0.1:4374/health node --env-file=.env .",
+      "readiness": {
+        "port": 4374,
+        "path": "/health"
+      },
+      "status": "live",
+      "createdAt": "2026-10-24T17:08:17.619Z",
+      "createdBy": "agent:DraftImplementationLead",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T22:09:39.195Z"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-24T17:56:37.552Z"
+        ]
+      },
+      "restartedAt": "2026-10-24T18:58:48.156Z",
+      "restartedBy": "agent:Draft Implementation"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:24",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh temporal-worker --health http://127.0.0.1:8375/health node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "status": "concluded",
+      "createdAt": "2026-10-24T17:09:09.157Z",
+      "createdBy": "agent:DraftImplementationLead",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T18:47:38.021Z"
+      },
+      "recovery": {
+        "autoHealAt": [
+          "2026-10-24T17:56:38.140Z"
+        ]
+      },
+      "restartedAt": "2026-10-24T18:42:27.891Z",
+      "restartedBy": "human",
+      "concludedAt": "2026-10-24T18:47:51.350Z",
+      "concludedBy": "human",
+      "concludedReason": "Replace the child process after verifying the previous board restart adopted the existing PID"
+    },
+    {
+      "projectId": "964ce5e0-45a5-41b2-8e2c-73903742a85a",
+      "name": "temporal-worker",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:25",
+      "hostId": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "hostname": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "/home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-card-service.sh temporal-worker --health http://127.0.0.1:8375/health node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "readiness": {
+        "port": 8375,
+        "path": "/health"
+      },
+      "status": "live",
+      "createdAt": "2026-10-24T18:47:54.166Z",
+      "createdBy": "human",
+      "lastHealth": {
+        "status": "running",
+        "checkedAt": "2026-10-24T22:11:39.214Z"
+      },
+      "restartedAt": "2026-10-24T18:58:47.692Z",
+      "restartedBy": "agent:Draft Implementation"
+    }
+  ],
+  "http": {
+    "3374": 0,
+    "23374": 0,
+    "8874": 200,
+    "4374": 200,
+    "8375": 200
+  },
+  "workingTree": [
+    "?? docs/evidence/co-managed-completion/3ed12da017/",
+    "?? server/.next-review/"
+  ],
+  "decision": "still blocked: no normal 6 GiB application admission; no service/build/validation activity"
+}
