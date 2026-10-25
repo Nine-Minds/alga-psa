@@ -785,6 +785,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         bootstrap?.layoutPreference?.timelineOrder ?? 'asc',
     );
     const [isAllFieldsDrawerOpen, setIsAllFieldsDrawerOpen] = useState(false);
+    // Set once the user picks a layout on this screen. The stored preference only
+    // seeds the initial layout: a load that resolves after an explicit choice must
+    // not switch layouts, which would unmount an open composer and its draft.
+    const layoutChosenRef = useRef(false);
 
     useEffect(() => {
         if (bootstrapSkips.current.layout) {
@@ -799,7 +803,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     console.warn('Unable to load ticket layout preference:', getErrorMessage(prefs));
                     return;
                 }
-                setLayoutMode(prefs.layout);
+                if (!layoutChosenRef.current) {
+                    setLayoutMode(prefs.layout);
+                }
                 setTimelinePrefOrder(prefs.timelineOrder);
             })
             .catch(() => undefined);
@@ -809,6 +815,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, []);
 
     const handleLayoutModeChange = useCallback((next: TicketDetailLayout) => {
+        layoutChosenRef.current = true;
         setLayoutMode(next);
         void setTicketLayoutPreference({ layout: next })
             .then((result) => {
