@@ -445,7 +445,9 @@
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
     "timeEntry": "Tidpost",
-    "contractLabel": "Avtal: {{contract}}"
+    "contractLabel": "Avtal: {{contract}}",
+    "hoursLeftValue": "{{hours}} h kvar · {{value}}",
+    "validFrom": "Giltig från {{date}}"
   },
   "bucketUsage": {
     "contractLine": "Avtalsrad med timpott",

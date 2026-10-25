@@ -310,7 +310,9 @@
       "hourlyRate": "Rate / hr",
       "expirationDate": "Expires",
       "neverExpires": "Never",
-      "adhocBlock": "Ad-hoc"
+      "adhocBlock": "Ad-hoc",
+      "remainingValue": "Remaining value",
+      "validFrom": "Valid from"
     },
     "statusValues": {
       "active": "Active",

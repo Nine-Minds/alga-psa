@@ -310,7 +310,9 @@
       "hourlyRate": "Tariff / tim",
       "expirationDate": "Går ut",
       "neverExpires": "Aldrig",
-      "adhocBlock": "Enstaka"
+      "adhocBlock": "Enstaka",
+      "remainingValue": "Återstående värde",
+      "validFrom": "Giltig från"
     },
     "statusValues": {
       "active": "Aktivt",

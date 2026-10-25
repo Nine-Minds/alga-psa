@@ -445,7 +445,9 @@
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
     "timeEntry": "Zeiteintrag",
-    "contractLabel": "Vertrag: {{contract}}"
+    "contractLabel": "Vertrag: {{contract}}",
+    "hoursLeftValue": "{{hours}} Std. übrig · {{value}}",
+    "validFrom": "Gültig ab {{date}}"
   },
   "bucketUsage": {
     "contractLine": "Vertragslinie für Stundenkontingent",

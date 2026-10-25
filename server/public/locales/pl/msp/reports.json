@@ -310,7 +310,9 @@
       "hourlyRate": "Stawka / h",
       "expirationDate": "Wygasa",
       "neverExpires": "Nigdy",
-      "adhocBlock": "Doraźny"
+      "adhocBlock": "Doraźny",
+      "remainingValue": "Pozostała wartość",
+      "validFrom": "Obowiązuje od"
     },
     "statusValues": {
       "active": "Aktywny",

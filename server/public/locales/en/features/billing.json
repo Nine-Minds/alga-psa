@@ -445,7 +445,9 @@
     "expires": "Expires {{date}}",
     "recentBurn": "Recent usage",
     "timeEntry": "Time entry",
-    "contractLabel": "Contract: {{contract}}"
+    "contractLabel": "Contract: {{contract}}",
+    "hoursLeftValue": "{{hours}}h left · {{value}}",
+    "validFrom": "Valid from {{date}}"
   },
   "bucketUsage": {
     "contractLine": "Bucket Contract Line",

@@ -445,7 +445,9 @@
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
     "timeEntry": "Entrada de tiempo",
-    "contractLabel": "Contrato: {{contract}}"
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido desde {{date}}"
   },
   "bucketUsage": {
     "contractLine": "Línea de contrato de bolsa de horas",

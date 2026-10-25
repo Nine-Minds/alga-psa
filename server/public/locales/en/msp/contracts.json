@@ -2015,7 +2015,9 @@
       "blockSummary": "{{hours}} hours for {{price}}",
       "expiresAfter_one": "expires after {{count}} month",
       "expiresAfter_other": "expires after {{count}} months",
-      "neverExpires": "never expires"
+      "neverExpires": "never expires",
+      "cadenceSummary": "{{hours}} h every billing period for {{price}}",
+      "overageRate": "overage {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2317,7 +2319,8 @@
       "period": "Period: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} hours for {{price}} (in the client's currency)"
+      "blockSummaryNeutral": "{{hours}} hours for {{price}} (in the client's currency)",
+      "cadenceSummaryNeutral": "{{hours}} h every billing period for {{price}} (in the client's currency)"
     }
   },
   "templatePreview": {
@@ -2781,7 +2784,7 @@
     "done": "Done"
   },
   "sellHourBlockNote": {
-    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to this contract."
+    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to the contract and issue it every billing period."
   },
   "review": {
     "saveTemplateRates": "Save these {{currency}} rates to the template",
@@ -2963,7 +2966,16 @@
       "tier": "Follow-on invoice",
       "tierDraft": "Create a draft for review",
       "tierAutoIssue": "Finalize and send automatically",
-      "blockPriceNeutral": "Block price (in the client's currency)"
+      "blockPriceNeutral": "Block price (in the client's currency)",
+      "ratePerHour": "Works out to {{rate}} per hour of the block.",
+      "issueMode": "Issue blocks",
+      "issueModeCadence": "Every billing period",
+      "issueModeConsumption": "When the current block runs out or expires",
+      "rolloverPeriods": "Unused hours",
+      "rolloverNone": "Expire at the end of the period",
+      "cadenceNote": "Billed in advance each period. Hours over the block bill at the line's hourly rate on the next invoice.",
+      "rolloverCarry_one": "Carry over {{count}} period",
+      "rolloverCarry_other": "Carry over {{count}} periods"
     },
     "status": {
       "pending": "Pending",

@@ -445,7 +445,9 @@
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
     "timeEntry": "Tijdsvermelding",
-    "contractLabel": "Contract: {{contract}}"
+    "contractLabel": "Contract: {{contract}}",
+    "hoursLeftValue": "{{hours}} u over · {{value}}",
+    "validFrom": "Geldig vanaf {{date}}"
   },
   "bucketUsage": {
     "contractLine": "Contractregel voor urenbundel",

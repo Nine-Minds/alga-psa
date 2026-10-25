@@ -310,7 +310,9 @@
       "hourlyRate": "Tariffa / ora",
       "expirationDate": "Scade",
       "neverExpires": "Mai",
-      "adhocBlock": "Ad hoc"
+      "adhocBlock": "Ad hoc",
+      "remainingValue": "Valore residuo",
+      "validFrom": "Valido dal"
     },
     "statusValues": {
       "active": "Attivo",
