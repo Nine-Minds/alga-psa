@@ -1,3 +1,4 @@
+import { isLicensedUserType } from '@alga-psa/types';
 import type { IDisplayTag, ITagDisplayRule, TagDisplayAudience, TagDisplayEntityType } from '@alga-psa/types';
 
 /** Entity types a display rule can be written for. */
@@ -15,7 +16,7 @@ export const isTagDisplayAudience = (value: unknown): value is TagDisplayAudienc
  * shown.
  */
 export function displayAudienceForUser(user: { user_type?: string | null } | null | undefined): TagDisplayAudience {
-  return user?.user_type === 'internal' ? 'internal' : 'client';
+  return isLicensedUserType(user?.user_type) ? 'internal' : 'client';
 }
 
 /**
