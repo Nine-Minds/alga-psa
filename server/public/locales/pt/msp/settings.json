@@ -3703,10 +3703,10 @@
       "remove": "Remover",
       "reasons": {
         "no_two_factor": "A autenticação de dois fatores foi redefinida ou está em falta.",
-        "inactive": "O utilizador está desativado.",
-        "not_admin": "O utilizador já não é administrador.",
-        "not_internal": "O utilizador não é um utilizador interno.",
-        "not_found": "O utilizador já não existe."
+        "inactive": "O usuário está desativado.",
+        "not_admin": "O usuário não é mais administrador.",
+        "not_internal": "O usuário não é um usuário interno.",
+        "not_found": "O usuário não existe mais."
       }
     },
     "guard": {
