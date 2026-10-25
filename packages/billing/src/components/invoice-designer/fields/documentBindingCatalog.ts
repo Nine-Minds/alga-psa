@@ -19,6 +19,10 @@ import {
   LABEL_TEMPLATE_VALUE_BINDINGS,
   buildLabelTemplateBindings,
 } from '../../../lib/label-template-ast/bindings';
+import {
+  STAGING_MANIFEST_VALUE_BINDINGS,
+  buildStagingManifestTemplateBindings,
+} from '../../../lib/staging-manifest-template-ast/bindings';
 import type { DesignerDocumentKind } from '../utils/documentKind';
 import {
   getTemplateFieldDefinition,
@@ -57,6 +61,7 @@ const ROOT_METADATA: Record<string, { label: string; description: string }> = {
   customer: { label: 'Customer', description: 'Customer fields' },
   tenant: { label: 'Tenant', description: 'Tenant fields' },
   item: { label: 'Line Item', description: 'Line item fields for repeating/table contexts' },
+  manifest: { label: 'Packing Manifest', description: 'Staging box, project and client fields' },
 };
 
 // The issuer party is `tenantClient` on the invoice and sales-order models and `tenant` on the
@@ -128,6 +133,14 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
   ],
   // Labels render one record; there are no repeating item rows.
   'work-tag': [],
+  'staging-manifest': [
+    { name: 'description', valueType: 'string', description: 'Product name, client asset name, or client item description.' },
+    { name: 'sku', valueType: 'string', description: 'Product SKU, or the client asset tag.' },
+    { name: 'quantity', valueType: 'number', description: 'Quantity in this box.' },
+    { name: 'serial', valueType: 'string', description: 'Serial number (full for MSP stock units, a suffix for client assets).' },
+    { name: 'owner', valueType: 'string', description: 'Who owns the item: MSP or client.' },
+    { name: 'taskName', valueType: 'string', description: 'The project task the item is staged for.' },
+  ],
 };
 
 const resolveValueType = (renderPath: string): DocumentBindingField['valueType'] =>
@@ -172,6 +185,9 @@ const buildDocumentBindingFields = (documentKind: DesignerDocumentKind): Documen
   }
   if (documentKind === 'work-tag') {
     return buildCatalogFields(LABEL_TEMPLATE_VALUE_BINDINGS, { scalarRoot: 'label' });
+  }
+  if (documentKind === 'staging-manifest') {
+    return buildCatalogFields(STAGING_MANIFEST_VALUE_BINDINGS, { scalarRoot: 'manifest' });
   }
   return [
     ...buildCatalogFields(buildInvoiceTemplateBindings().values ?? {}, {
@@ -291,6 +307,7 @@ export const resolveDocumentCanonicalBindings = (
   if (documentKind === 'quote') return buildQuoteTemplateBindings();
   if (documentKind === 'sales-order') return buildSalesOrderTemplateBindings();
   if (documentKind === 'work-tag') return buildLabelTemplateBindings();
+  if (documentKind === 'staging-manifest') return buildStagingManifestTemplateBindings();
   return buildInvoiceTemplateBindings();
 };
 
@@ -310,7 +327,7 @@ export const resolveDocumentLogoRenderPath = (documentKind: DesignerDocumentKind
 
 /** Every document kind's logo path, for recognising a logo binding in imported layouts. */
 export const isDocumentLogoRenderPath = (path: string): boolean =>
-  (['invoice', 'quote', 'sales-order', 'work-tag'] as const).some(
+  (['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest'] as const).some(
     (documentKind) => resolveDocumentLogoRenderPath(documentKind) === path.trim()
   );
 
@@ -366,7 +383,7 @@ export const buildDocumentExpressionPathOptions = (params: {
     contextRoots: buildDocumentExpressionContextRoots(params.documentKind),
   });
 
-const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order', 'work-tag'];
+const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest'];
 
 /**
  * Every render path a binding key could mean, across document types. The editor canvas resolves a

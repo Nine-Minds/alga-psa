@@ -249,7 +249,9 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // the PDF render and the read-only lookups the print dialog needs.
     pathname === '/api/labels/pdf' ||
     pathname === '/api/labels/templates' ||
-    pathname === '/api/labels/linked-assets';
+    pathname === '/api/labels/linked-assets' ||
+    // Session-authenticated staging box manifest (C6): project read + record-level check in-handler.
+    /^\/api\/projects\/staging\/containers\/[^/]+\/manifest$/.test(pathname);
 }
 
 export function hasContradictoryPortalIdentity(user: {

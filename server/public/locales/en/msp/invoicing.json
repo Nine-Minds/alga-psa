@@ -2534,7 +2534,8 @@
       "salesOrder": "Sales Order",
       "packingSlip": "Packing Slip",
       "pickList": "Pick List",
-      "workTag": "Work Tag / Label"
+      "workTag": "Work Tag / Label",
+      "stagingManifest": "Packing Manifest"
     }
   },
   "errors": {

@@ -26,7 +26,7 @@ const SERVICE_USER = '33333333-3333-4333-8333-333333333333';
 
 function fakeTable(name: string, tenant: string) {
   let filter: Record<string, any> = {};
-  const inFilters: Array<[string, unknown[]]> = [];
+  const inFilters: Array<[string, any[]]> = [];
   const rows = () =>
     (state.tables[name] ?? []).filter(
       (row) =>
@@ -39,13 +39,13 @@ function fakeTable(name: string, tenant: string) {
       filter = { ...filter, ...f };
       return api;
     },
-    whereIn(column: string, values: unknown[]) {
+    whereIn(column: string, values: any[]) {
       inFilters.push([column, values]);
       return api;
     },
+    first: async () => rows()[0],
     select: async (...columns: string[]) =>
       rows().map((row) => Object.fromEntries(columns.map((column) => [column, row[column]]))),
-    first: async () => rows()[0],
     pluck: async (column: string) => rows().map((row) => row[column]),
     update: async (data: any) => {
       state.updates.push({ table: name, data });
@@ -272,22 +272,42 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.entryId).toBe(ENTRY_ID);
     });
 
-    it('rejects adding a non-interactive assignee and leaves the assignees untouched', async () => {
-      // The caller may assign the service user, so only the human-work guard can refuse it.
-      state.userLevels.set(SERVICE_USER, 'edit');
+    // The caller holds edit on these users' calendars, so the assignment right is not what blocks.
+    const grantAssign = (...userIds: string[]) => userIds.forEach((userId) => state.userLevels.set(userId, 'edit'));
+
+    it('replaces assignees when every added assignee is an active internal user', async () => {
+      grantAssign(OTHER_USER);
+      await makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER, OTHER_USER] } as any, context);
+
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER, OTHER_USER]);
+      const event = state.published.find((e) => e.eventType === 'SCHEDULE_ENTRY_UPDATED');
+      expect(event!.payload.changes.after.assignedUserIds).toEqual([USER, OTHER_USER]);
+    });
+
+    it('rejects adding a service user as assignee and leaves the existing assignees in place', async () => {
+      grantAssign(SERVICE_USER);
       await expect(
         makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER, SERVICE_USER] } as any, context),
-      ).rejects.toMatchObject({ name: 'HumanWorkAssigneeInvalidError', userIds: [SERVICE_USER] });
+      ).rejects.toMatchObject({ name: 'HumanWorkAssigneeInvalidError' });
+
       expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER]);
       expect(state.published).toHaveLength(0);
     });
 
-    it('keeps a legacy non-interactive assignee while adding a valid one (only added ids are checked)', async () => {
-      state.userLevels.set(OTHER_USER, 'edit');
+    it('keeps a legacy non-human assignee without blocking the edit (only added ids are validated)', async () => {
+      grantAssign(OTHER_USER);
       state.tables.schedule_entries[0].calendar_id = CAL_EDIT;
-      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: SERVICE_USER }];
-      await makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [SERVICE_USER, OTHER_USER] } as any, context);
-      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([SERVICE_USER, OTHER_USER]);
+      state.tables.schedule_entry_assignees = [
+        { tenant: TENANT, entry_id: ENTRY_ID, user_id: USER },
+        { tenant: TENANT, entry_id: ENTRY_ID, user_id: SERVICE_USER },
+      ];
+      await makeService().updateScheduleEntry(
+        ENTRY_ID,
+        { assigned_user_ids: [USER, SERVICE_USER, OTHER_USER] } as any,
+        context,
+      );
+
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER, SERVICE_USER, OTHER_USER]);
     });
 
     it('carries the existing assignees into the event when assigned_user_ids is not supplied', async () => {

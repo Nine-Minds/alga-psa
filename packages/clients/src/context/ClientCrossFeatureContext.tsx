@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ClientSoftwareSummaryParams, ClientSoftwareSummaryResponse } from '@alga-psa/types';
 
 export interface QuickAddTicketRenderProps {
   id?: string;
@@ -143,6 +144,12 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /**
+   * Optional: client-level software inventory (aggregate across the client's assets).
+   * Owned by the assets package, which the clients package must not depend on.
+   * Absent in AlgaDesk, where the Software surface is not offered.
+   */
+  getClientSoftwareSummary?: (params: ClientSoftwareSummaryParams) => Promise<ClientSoftwareSummaryResponse | ActionMessageError | ActionPermissionError>;
   /** Optional: prepaid hour blocks on the client billing tab (billing owns the component; clients must not import it directly). */
   renderHourBlocksSection?: (props: HourBlocksSectionRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */

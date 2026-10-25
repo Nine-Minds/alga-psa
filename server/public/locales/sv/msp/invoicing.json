@@ -2534,7 +2534,8 @@
       "salesOrder": "Försäljningsorder",
       "packingSlip": "Följesedel",
       "pickList": "Plocklista",
-      "workTag": "Arbetsetikett / Etikett"
+      "workTag": "Arbetsetikett / Etikett",
+      "stagingManifest": "Packlista"
     }
   },
   "errors": {

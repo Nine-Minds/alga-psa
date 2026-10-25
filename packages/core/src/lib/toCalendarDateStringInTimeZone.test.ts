@@ -11,11 +11,9 @@ import { toCalendarDateStringInTimeZone } from './dateTimeUtils';
 // test pins the process TZ to a zone that disagrees with the asserted target
 // zone and asserts the exact same result — proving host-TZ independence.
 
-// The expected offsets are the zones' late-August 2026 offsets (DST in effect
-// where applicable), matching every fixture date in this file. Probe at that
-// fixed instant rather than wall-clock "now", which would flip the expected
-// offset whenever CI runs outside daylight-saving time.
-// LEVERAGE: pattern tz-offset-guard — assertTz/assertWorkerTz is copy-pasted across six hour-block/date test files; belongs in a shared test helper.
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
 const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
 function assertTz(zone: string, expectedOffsetMinutes: number) {

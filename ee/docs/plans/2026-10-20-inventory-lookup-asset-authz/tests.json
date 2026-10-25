@@ -1,0 +1,10 @@
+[
+  {"id":"T001","description":"Integration (a): inventory:read without asset:read scanning an asset serial, then tag, gets none with no asset in the payload.","implemented":true,"featureIds":["F002","F003","F004"]},
+  {"id":"T002","description":"Integration (b): code matching a product and an unreadable asset returns a plain product result, not multi.","implemented":true,"featureIds":["F002"]},
+  {"id":"T003","description":"Integration (c): asset:read plus a bundle narrowing to one client drops the other client's asset, keeps readable assets (enterprise kernel).","implemented":true,"featureIds":["F003"]},
+  {"id":"T004","description":"Integration (d): asset:read with record access keeps today's asset and multi results.","implemented":true,"featureIds":["F003"]},
+  {"id":"T005","description":"Unit: omitting the visibility argument returns no assets.","implemented":true,"featureIds":["F001"]},
+  {"id":"T006","description":"Unit: multi collapses to product/unit, and asset to none, when assets are removed; partial removal keeps readable assets.","implemented":true,"featureIds":["F002"]},
+  {"id":"T007","description":"Mobile: ScanResultCard renders multi without assets and none without candidates.","implemented":true,"featureIds":["F006"]},
+  {"id":"T008","description":"Contract tests for assetActions updated for the moved helper.","implemented":true,"featureIds":["F005"]}
+]

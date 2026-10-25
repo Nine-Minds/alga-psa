@@ -37,8 +37,15 @@ const DEFAULT_LAYOUT: LabelBatchLayout = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface PrintLabelsRequest {
-  labelClass: unknown;
-  ids: unknown;
+  /** Single-class request: one label class for every id. */
+  labelClass?: unknown;
+  ids?: unknown;
+  /**
+   * Mixed request (C6 bulk print): labels of several classes in ONE PDF, in this order. Each class prints
+   * with its tenant default (or standard) template; templateId, overrides and linkedAssetId are not
+   * accepted with `items`. The cap, ordering and skip/404 rules are the same as a single-class request.
+   */
+  items?: unknown;
   /** A tenant custom `work-tag` template id, or a standard code. Supersedes `templateCode`. */
   templateId?: unknown;
   /** Alias of `templateId` for standard codes (C1 request shape). */
@@ -88,17 +95,57 @@ export interface PrintLabelsDeps {
     context: LabelRequestContext,
     ticketIds: readonly string[],
     chosen: Record<string, string>
-  ) => Promise<Record<string, { assetId: string; assetTag: string | null; serialSuffix: string | null } | null>>;
+  ) => Promise<
+    Record<
+      string,
+      {
+        assetId: string;
+        assetTag: string | null;
+        serialSuffix: string | null;
+        custodyLocation?: string | null;
+        nextAction?: string | null;
+      } | null
+    >
+  >;
   describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
 }
 
 const NOT_FOUND: PrintLabelsResult = { ok: false, status: 404, message: 'Not found.' };
 
-export async function printLabels(
-  deps: PrintLabelsDeps,
-  caller: { user: IUserWithRoles; tenant: string; baseUrl: string },
-  request: PrintLabelsRequest
-): Promise<PrintLabelsResult> {
+interface NormalizedEntry {
+  labelClass: LabelClass;
+  id: string;
+}
+
+function normalizeEntries(request: PrintLabelsRequest): { entries: NormalizedEntry[]; mixed: boolean } | PrintLabelsResult {
+  if (request.items !== undefined) {
+    if (request.labelClass !== undefined || request.ids !== undefined) {
+      return { ok: false, status: 400, message: 'Send either labelClass and ids, or items, not both.' };
+    }
+    const items = request.items;
+    if (!Array.isArray(items) || items.length === 0 || items.length > MAX_LABELS_PER_REQUEST) {
+      return { ok: false, status: 400, message: `items must be 1 to ${MAX_LABELS_PER_REQUEST} labels.` };
+    }
+    const entries: NormalizedEntry[] = [];
+    for (const item of items) {
+      const raw = item as { labelClass?: unknown; id?: unknown } | null;
+      if (!raw || typeof raw !== 'object' || !isLabelClass(raw.labelClass) || typeof raw.id !== 'string' || !UUID.test(raw.id)) {
+        return {
+          ok: false,
+          status: 400,
+          message: `Each item must be { labelClass: ${LABEL_CLASSES.join(' | ')}, id: record id }.`,
+        };
+      }
+      entries.push({ labelClass: raw.labelClass, id: raw.id });
+    }
+    for (const name of ['templateId', 'templateCode', 'overrides', 'linkedAssetId'] as const) {
+      if (request[name] !== undefined && request[name] !== null) {
+        return { ok: false, status: 400, message: `${name} is not accepted with items.` };
+      }
+    }
+    return { entries, mixed: true };
+  }
+
   if (!isLabelClass(request.labelClass)) {
     return { ok: false, status: 400, message: `labelClass must be one of: ${LABEL_CLASSES.join(', ')}.` };
   }
@@ -112,15 +159,32 @@ export async function printLabels(
   ) {
     return { ok: false, status: 400, message: `ids must be 1 to ${MAX_LABELS_PER_REQUEST} record ids.` };
   }
+  return { entries: ids.map((id) => ({ labelClass, id })), mixed: false };
+}
+
+export async function printLabels(
+  deps: PrintLabelsDeps,
+  caller: { user: IUserWithRoles; tenant: string; baseUrl: string },
+  request: PrintLabelsRequest
+): Promise<PrintLabelsResult> {
+  const normalized = normalizeEntries(request);
+  if ('ok' in normalized) return normalized;
+  const { entries, mixed } = normalized;
+  const classes = [...new Set(entries.map((e) => e.labelClass))];
+  // Single-class request: the class and ids every existing check below is phrased in.
+  const labelClass = classes[0];
+  const ids = entries.map((e) => e.id);
+
   for (const [name, value] of [['templateId', request.templateId], ['templateCode', request.templateCode]] as const) {
     if (value !== undefined && typeof value !== 'string') {
       return { ok: false, status: 400, message: `${name} must be a string.` };
     }
   }
-  const requestedTemplate =
-    (typeof request.templateId === 'string' && request.templateId) ||
-    (typeof request.templateCode === 'string' && request.templateCode) ||
-    null;
+  const requestedTemplate = mixed
+    ? null
+    : (typeof request.templateId === 'string' && request.templateId) ||
+      (typeof request.templateCode === 'string' && request.templateCode) ||
+      null;
 
   // Overrides edit one ticket's own tag: single ticket only, plain text, bounded.
   let overrides: { title?: string | null; detail?: string | null } | null = null;
@@ -144,7 +208,7 @@ export async function printLabels(
   // Absent unless it is a well-formed id on a single-ticket print. Whether it is linked to the ticket and
   // readable is decided in the assets package; a bad value is ignored silently, never an error.
   const linkedAssetId =
-    labelClass === 'ticket-work-tag' && ids.length === 1 && typeof request.linkedAssetId === 'string' && UUID.test(request.linkedAssetId)
+    !mixed && labelClass === 'ticket-work-tag' && ids.length === 1 && typeof request.linkedAssetId === 'string' && UUID.test(request.linkedAssetId)
       ? request.linkedAssetId
       : null;
 
@@ -153,37 +217,66 @@ export async function printLabels(
     return NOT_FOUND;
   }
 
-  const provider = deps.providers[labelClass];
-  if (!provider || provider.entityType !== LABEL_CLASS_ENTITY_TYPE[labelClass]) {
-    // Not provided yet (stubbed / deferred): never reached with real data.
-    return { ok: false, status: 422, message: `Labels of class "${labelClass}" are not available yet.` };
+  const providers = new Map<LabelClass, LabelViewModelProvider>();
+  for (const cls of classes) {
+    const provider = deps.providers[cls];
+    if (!provider || provider.entityType !== LABEL_CLASS_ENTITY_TYPE[cls]) {
+      // Not provided yet (stubbed / deferred): never reached with real data.
+      return { ok: false, status: 422, message: `Labels of class "${cls}" are not available yet.` };
+    }
+    providers.set(cls, provider);
   }
 
   // A template of another label class (or an unknown one) is the caller's mistake: 400. It names no record.
-  const template = await deps.resolveTemplate(caller.tenant, labelClass, requestedTemplate);
-  if (!template.ok) {
-    return { ok: false, status: 400, message: template.message };
+  const templates = new Map<LabelClass, Extract<ResolvedLabelTemplate, { ok: true }>>();
+  for (const cls of classes) {
+    const template = await deps.resolveTemplate(caller.tenant, cls, requestedTemplate);
+    if (!template.ok) {
+      return { ok: false, status: 400, message: template.message };
+    }
+    templates.set(cls, template);
   }
 
   const context: LabelRequestContext = { tenant: caller.tenant, user: caller.user, baseUrl: caller.baseUrl };
-  const providerResults = await provider.getLabelViewModels(context, ids);
-  const readable = providerResults.filter((vm): vm is LabelViewModel => vm !== null);
+  // One provider call per class, then the results are put back in request order.
+  const results: Array<LabelViewModel | null> = new Array(entries.length).fill(null);
+  for (const cls of classes) {
+    const positions = entries.flatMap((e, index) => (e.labelClass === cls ? [index] : []));
+    const providerResults = await providers.get(cls)!.getLabelViewModels(context, positions.map((i) => entries[i].id));
+    if (providerResults.length !== positions.length) {
+      return NOT_FOUND;
+    }
+    positions.forEach((position, k) => {
+      results[position] = providerResults[k];
+    });
+  }
+  const readable = results.filter((vm): vm is LabelViewModel => vm !== null);
   // Skip unreadable records and count them; if nothing is readable the answer is the uniform 404.
-  if (readable.length === 0 || providerResults.length !== ids.length) {
+  if (readable.length === 0) {
     return NOT_FOUND;
   }
-  const skipped = ids.length - readable.length;
+  const skipped = entries.length - readable.length;
 
   let viewModels = readable;
-  if (labelClass === 'ticket-work-tag') {
+  const ticketIds = readable.filter((vm) => vm.labelClass === 'ticket-work-tag').map((vm) => vm.recordId);
+  if (ticketIds.length > 0) {
     const parts = await deps.getLinkedAssetParts(
       context,
-      readable.map((vm) => vm.recordId),
+      ticketIds,
       linkedAssetId ? { [readable[0].recordId]: linkedAssetId } : {}
     );
-    viewModels = readable.map((vm) => {
+    viewModels = viewModels.map((vm) => {
+      if (vm.labelClass !== 'ticket-work-tag') return vm;
       const linked = parts[vm.recordId];
-      return linked ? { ...vm, secondaryIdentifier: linked.assetTag, serialSuffix: linked.serialSuffix } : vm;
+      return linked
+        ? {
+            ...vm,
+            secondaryIdentifier: linked.assetTag,
+            serialSuffix: linked.serialSuffix,
+            custodyLocation: linked.custodyLocation ?? null,
+            nextAction: linked.nextAction ?? null,
+          }
+        : vm;
     });
   }
   if (overrides) {
@@ -195,11 +288,14 @@ export async function printLabels(
     }));
   }
 
-  const items: LabelPrintItem[] = viewModels.map((viewModel) => ({
-    viewModel,
-    templateCode: template.templateCode,
-    ...(template.templateAst ? { templateAst: template.templateAst } : {}),
-  }));
+  const items: LabelPrintItem[] = viewModels.map((viewModel) => {
+    const template = templates.get(viewModel.labelClass)!;
+    return {
+      viewModel,
+      templateCode: template.templateCode,
+      ...(template.templateAst ? { templateAst: template.templateAst } : {}),
+    };
+  });
 
   try {
     const { pdf, labels, sheets } = await deps.renderPdf(

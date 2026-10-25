@@ -121,6 +121,8 @@ interface BentoHeroProps {
   taskActions?: React.ReactNode;
   /** Rendered quick-invoice action (injected node). */
   quickInvoiceActions?: React.ReactNode;
+  /** Composition-supplied "Receive equipment" action (assets live outside this package). */
+  receiveEquipmentActions?: React.ReactNode;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -199,6 +201,7 @@ export function BentoHero({
   onTagsChange,
   taskActions,
   quickInvoiceActions,
+  receiveEquipmentActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -977,6 +980,7 @@ export function BentoHero({
             ) : null}
             {taskActions}
             {quickInvoiceActions}
+            {receiveEquipmentActions}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}

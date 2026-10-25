@@ -984,7 +984,8 @@
         "description": "Opis",
         "items": "Elementy",
         "status": "Status",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "scope": "Dostępne dla"
       },
       "statusLabels": {
         "active": "Aktywny",
@@ -1002,7 +1003,9 @@
         "down": "W dół",
         "remove": "Usuń",
         "addItem": "Dodaj element",
-        "addRule": "Dodaj regułę"
+        "addRule": "Dodaj regułę",
+        "duplicateToClient": "Duplikuj dla klienta…",
+        "duplicate": "Duplikuj"
       },
       "fields": {
         "name": {
@@ -1032,8 +1035,10 @@
           "priority": "Priorytet",
           "any": "Dowolny",
           "appliesToAll": "Dotyczy wszystkich zgłoszeń",
+          "appliesToAllClientTickets": "Dotyczy wszystkich zgłoszeń klienta {{client}}",
           "clients": "Klienci",
           "clientsAny": "Dowolny klient",
+          "clientsFixedByTemplate": "Tylko {{client}} (ustalone przez klienta szablonu)",
           "clientsAddAnother": "Dodaj kolejnego klienta",
           "removeClient": "Usuń {{name}}",
           "origins": "Źródło zgłoszenia",
@@ -1057,7 +1062,13 @@
             "inbound_email": "Przychodząca wiadomość e-mail",
             "api": "API",
             "recurring": "Harmonogram cykliczny"
-          }
+          },
+          "clientScopedWarning": "Ten szablon jest ograniczony do klienta {{client}}: te reguły dotyczą tylko zgłoszeń klienta {{client}}."
+        },
+        "availableTo": {
+          "label": "Dostępne dla",
+          "clear": "Wszyscy klienci",
+          "help": "Pozostaw „Wszyscy klienci”, aby oferować szablon w każdym zgłoszeniu, lub wybierz klienta, aby ograniczyć go do jego zgłoszeń."
         }
       },
       "dialog": {
@@ -1065,13 +1076,17 @@
         "editTemplate": "Edytuj szablon listy kontrolnej",
         "createFirstHelp": "Najpierw utwórz szablon, a następnie dodaj elementy listy kontrolnej i reguły automatycznego stosowania.",
         "deleteTitle": "Usuń szablon listy kontrolnej",
-        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione."
+        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione.",
+        "duplicateTitle": "Duplikuj dla klienta",
+        "duplicateHelp": "Skopiuj „{{name}}” wraz z pozycjami do nowego szablonu ograniczonego do jednego klienta. Kopia jest niezależna: późniejsze zmiany jednego szablonu nie wpływają na drugi.",
+        "duplicateClientPlaceholder": "Wybierz klienta"
       },
       "messages": {
         "success": {
           "created": "Szablon listy kontrolnej został utworzony pomyślnie",
           "updated": "Szablon listy kontrolnej został zaktualizowany pomyślnie",
-          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie"
+          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie",
+          "duplicated": "Szablon listy kontrolnej zduplikowany dla klienta"
         },
         "error": {
           "fetchFailed": "Nie udało się pobrać szablonów list kontrolnych",
@@ -1081,8 +1096,18 @@
           "deleteFailed": "Nie udało się usunąć szablonu listy kontrolnej",
           "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
           "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
-          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania",
+          "duplicateFailed": "Nie udało się zduplikować szablonu listy kontrolnej"
         }
+      },
+      "scope": {
+        "allClients": "Wszyscy klienci",
+        "unknownClient": "Nieznany klient"
+      },
+      "filter": {
+        "client": "Klient",
+        "allClients": "Wszyscy klienci",
+        "clear": "Wyczyść filtr"
       }
     },
     "externalSystems": {
@@ -2405,7 +2430,23 @@
         "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
         "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
         "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
-        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji",
+        "matchedBySku": "Dopasowano do istniejącego produktu według SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkty (katalog / cennik)",
+          "vendorProducts": "Cennik dostawców (koszty dystrybutora)"
+        },
+        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkty",
+          "serviceType": "Typ usługi dla nowych produktów",
+          "serviceTypePlaceholder": "Wybierz typ usługi",
+          "serviceTypeHelp": "Produkty, których SKU już istnieje, są dopasowywane i pozostają bez zmian; tylko nowe produkty są przypisywane do tego typu usługi."
+        }
       }
     },
     "jobDetails": {

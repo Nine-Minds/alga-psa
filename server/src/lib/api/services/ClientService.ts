@@ -3,6 +3,7 @@
  * Business logic for client-related operations
  */
 
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
@@ -523,6 +524,7 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });

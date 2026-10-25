@@ -2,6 +2,7 @@
  * @alga-psa/inventory — core library (engine).
  */
 export * from './levels';
+export * from './allocation';
 export * from './movements';
 export * from './reconcile';
 export * from './consume';
@@ -13,11 +14,15 @@ export * from './ghostUsageTypes';
 export * from './ghostUsage';
 export * from './integrationTypes';
 export * from './materials';
+export * from './staging';
+export * from './stagingContainers';
 export * from './availability';
 export * from './inventoryEvents';
 export * from './stockLowSignal';
 export * from './dashboardQueries';
 export * from './tenantCurrency';
+export * from './vendors';
+export * from './vendorProducts';
 export * from './receive';
 export * from './adjust';
 export * from './counts';

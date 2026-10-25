@@ -3,6 +3,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { LabelRequestContext } from '@alga-psa/types';
 
 import { createAssetReadContext, isAssetReadAllowed } from './assetReadAuthorization';
+import { getOpenCustodyForAssets } from './custody/queries';
+import { formatCustodyForLabel, formatCustodyForLabelMulti } from './custody/labelFormat';
 
 /**
  * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
@@ -16,6 +18,10 @@ export interface TicketLinkedAssetLabelParts {
   assetId: string;
   assetTag: string | null;
   serialSuffix: string | null;
+  /** Held-equipment line ("Main Office / Shelf B3", "With vendor", "2 items held"), or null. Never the note. */
+  custodyLocation: string | null;
+  /** "Waiting on vendor, Oct 29" etc., or null. Derived from party + follow-up date only. */
+  nextAction: string | null;
 }
 
 /** Serials shorter than this produce no suffix, so the suffix can never be the whole serial. */
@@ -82,6 +88,14 @@ export async function getTicketLinkedAssetLabelParts(
     return allowed;
   };
 
+  // Custody is shown for every READABLE linked asset (not only the one picked for the asset line): the tag
+  // answers "where is the equipment for this ticket". Unreadable assets contribute nothing.
+  const readableIds: string[] = [];
+  for (const assetId of assetIds) {
+    if (await canRead(assetId)) readableIds.push(assetId);
+  }
+  const custodyByAsset = await getOpenCustodyForAssets(knex, context.tenant, readableIds);
+
   for (const ticketId of ticketIds) {
     const linked = Array.from(new Set(links.filter((l) => l.entity_id === ticketId).map((l) => l.asset_id)));
     const readableLinked: string[] = [];
@@ -90,12 +104,21 @@ export async function getTicketLinkedAssetLabelParts(
     }
     const pick = chosen[ticketId];
     const assetId = pick && readableLinked.includes(pick) ? pick : readableLinked.length === 1 ? readableLinked[0] : null;
-    if (!assetId) continue;
-    const asset = byId.get(assetId)!;
+    const held = readableLinked.flatMap((id) => {
+      const facts = formatCustodyForLabel(custodyByAsset.get(id));
+      return facts ? [facts] : [];
+    });
+    const custody = formatCustodyForLabelMulti(held);
+    if (!assetId && !custody) continue;
+    // LEVERAGE: friction label-seam-asset-or-custody — the seam was shaped around one linked asset; custody facts
+    // are per ticket (all held items), so a null-asset result still carries them (assetId '' = none picked).
+    const asset = assetId ? byId.get(assetId)! : null;
     result[ticketId] = {
-      assetId,
-      assetTag: asset.asset_tag ?? null,
-      serialSuffix: serialSuffixOf(asset.serial_number),
+      assetId: assetId ?? '',
+      assetTag: asset?.asset_tag ?? null,
+      serialSuffix: asset ? serialSuffixOf(asset.serial_number) : null,
+      custodyLocation: custody?.custodyLocation ?? null,
+      nextAction: custody?.nextAction ?? null,
     };
   }
   return result;

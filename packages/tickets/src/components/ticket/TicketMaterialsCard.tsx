@@ -294,7 +294,7 @@ export default function TicketMaterialsCard({
         } else if (conflict.reason === 'held') {
           setAddError(t(
             'materials.stockHeld',
-            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can\'t be used here.',
+            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can\'t be used here.',
             { free: Math.max(0, conflict.free), held: conflict.held },
           ));
         } else {
@@ -676,10 +676,10 @@ export default function TicketMaterialsCard({
         id={`${id}-reserved-stock-confirm`}
         isOpen={reservedConflict !== null}
         onClose={() => setReservedConflict(null)}
-        title={t('materials.reservedStockTitle', 'Stock is reserved for a sales order')}
+        title={t('materials.reservedStockTitle', 'Stock is reserved for a sales order or project')}
         message={reservedConflict ? t(
           'materials.reservedStockMessage',
-          'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.',
+          'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.',
           { free: Math.max(0, reservedConflict.free), reserved: reservedConflict.reserved, requested: reservedConflict.requested },
         ) : ''}
         confirmLabel={t('materials.reservedStockConfirm', 'Add anyway')}

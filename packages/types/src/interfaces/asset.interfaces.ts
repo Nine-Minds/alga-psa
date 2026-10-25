@@ -61,6 +61,8 @@ export interface Asset {
   serial_number?: string;
   name: string;
   status: string;
+  /** Who owns the device: the client (default) or the MSP. Custody intake only ever handles client-owned devices. */
+  ownership?: 'client' | 'msp';
   location_id?: string | null;
   /** The one contact this asset is assigned to (portal asset scope). */
   contact_name_id?: string | null;
@@ -499,6 +501,8 @@ export interface CreateAssetRequest {
   asset_tag: string;
   name: string;
   status: string;
+  /** Who owns the device. Defaults to 'client' server-side. */
+  ownership?: 'client' | 'msp';
   location_id?: string | null;
   contact_name_id?: string | null;
   location?: string;
@@ -573,6 +577,10 @@ export interface AssetQueryParams {
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
   status?: string;
+  /** Filter by who owns the device. */
+  ownership?: 'client' | 'msp';
+  /** true: only assets with an open custody episode. false: only assets without one. */
+  in_custody?: boolean;
   vendor_id?: string;
   group_id?: string;
   /** Only assets that are not in any group. */

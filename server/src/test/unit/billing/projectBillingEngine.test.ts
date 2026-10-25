@@ -3,6 +3,7 @@ import { resolveInvoiceCurrency } from '@alga-psa/billing/lib/billing/compute/pr
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
+import { DatabaseChargeSource } from "@alga-psa/billing/lib/billing/chargeResolution";
 import { TaxService } from "@alga-psa/billing/services/taxService";
 import {
   computeTimeBasedCharges,
@@ -1140,6 +1141,21 @@ describe("project billing engine orchestration", () => {
       subtotal: expected.totalAmount,
       total: expected.totalAmount,
     }));
+
+    // Pool lookups moved from the (stubbed) bucket loader into the shared
+    // resolver's database source; this suite has no database, so the line has
+    // no pools.
+    vi.spyOn(DatabaseChargeSource.prototype, "pools").mockResolvedValue([]);
+    // The stubbed calculate* adapters are no longer on the main loop's path
+    // either; the loaders it now reaches through the source emit nothing.
+    for (const loader of [
+      "loadFixedPriceObligation",
+      "loadTimeBasedObligation",
+      "loadUsageBasedObligation",
+      "loadRecurringQuantityObligation",
+    ]) {
+      vi.spyOn(engine as any, loader).mockResolvedValue(undefined);
+    }
 
     const actual = await (engine as any).calculateBillingForPreparedPeriod(
       "client-1",

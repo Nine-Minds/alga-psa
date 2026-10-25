@@ -59,6 +59,32 @@ describe('DefaultPaymentTermsSettings', () => {
     expect((screen.getByTestId('default-payment-terms-select') as HTMLSelectElement).value).toBe('net_30');
   });
 
+  it('ignores a load that resolves after unmount', async () => {
+    let resolveLoad!: (value: unknown) => void;
+    getDefaultBillingSettings.mockReturnValue(new Promise((resolve) => { resolveLoad = resolve; }));
+    const { unmount } = render(<DefaultPaymentTermsSettings />);
+    await waitFor(() => expect(getDefaultBillingSettings).toHaveBeenCalled());
+    unmount();
+
+    resolveLoad({ permissionError: 'denied' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleError).not.toHaveBeenCalled();
+  });
+
+  it('ignores a load that rejects after unmount', async () => {
+    let rejectLoad!: (reason: unknown) => void;
+    getDefaultBillingSettings.mockReturnValue(new Promise((_, reject) => { rejectLoad = reject; }));
+    const { unmount } = render(<DefaultPaymentTermsSettings />);
+    await waitFor(() => expect(getDefaultBillingSettings).toHaveBeenCalled());
+    unmount();
+
+    rejectLoad(new Error('late failure'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleError).not.toHaveBeenCalled();
+  });
+
   it('saves only defaultPaymentTerms', async () => {
     getDefaultBillingSettings.mockResolvedValue({ defaultPaymentTerms: 'net_7', defaultCurrencyCode: 'USD' });
     updateDefaultBillingSettings.mockResolvedValue({ success: true });

@@ -359,9 +359,15 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // members and people, which are keyed by group). This is also why a merge is
   // exempt from FR-E5's "a client change removes the asset from its group".
   { table: 'asset_groups', label: 'asset group' },
+  // Equipment custody records the owning client of the held asset. The asset
+  // moves, so its custody (open or closed) follows; one open record per asset,
+  // not per client, so a move cannot collide.
+  { table: 'asset_custody', label: 'equipment custody record' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
+  // Client-scoped checklist templates keep applying to the surviving client's tickets.
+  { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_materials', label: 'ticket material' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },

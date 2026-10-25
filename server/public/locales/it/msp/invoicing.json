@@ -2534,7 +2534,8 @@
       "salesOrder": "Ordine di vendita",
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo",
-      "workTag": "Etichetta di lavoro / Etichetta"
+      "workTag": "Etichetta di lavoro / Etichetta",
+      "stagingManifest": "Distinta di imballaggio"
     }
   },
   "errors": {

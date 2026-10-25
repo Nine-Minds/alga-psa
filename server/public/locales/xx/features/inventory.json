@@ -1713,7 +1713,11 @@
       "submit": "⟦Řḗşŧȯƈķ⟧"
     },
     "printLabel": "⟦Ƥřīƞŧ ŀȧƀḗŀ⟧",
-    "printWithTemplate": "⟦Ƥřīƞŧ ẇīŧħ {{code}}⟧"
+    "printWithTemplate": "⟦Ƥřīƞŧ ẇīŧħ {{code}}⟧",
+    "claimant": {
+      "project": "⟦Ƥřȯĵḗƈŧ {{number}}⟧",
+      "salesOrder": "⟦Şȧŀḗş ȯřḓḗř {{number}}⟧"
+    }
   },
   "transfers": {
     "addLine": "⟦Ȧḓḓ Ŀīƞḗ⟧",

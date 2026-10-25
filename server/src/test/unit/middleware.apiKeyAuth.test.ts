@@ -27,6 +27,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/labels/other')).toBe(false);
   });
 
+  it('lets the session-authenticated staging box manifest through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/manifest')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/x/manifest/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/123')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
