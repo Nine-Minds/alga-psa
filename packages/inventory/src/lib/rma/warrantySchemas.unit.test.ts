@@ -37,8 +37,8 @@ describe('warranty schemas', () => {
     expect(receiveVendorReplacementSchema.safeParse({}).success).toBe(false);
     expect(receiveVendorReplacementSchema.parse({ replacement_serial_number: 'NEW1', inbound_carrier: ' ' })).toMatchObject({ inbound_carrier: null, warranty_end_date: null });
   });
-  it('close defaults to resolved and refuses warranty_denied', () => {
-    expect(closeWarrantyRmaSchema.parse({}).reason).toBe('resolved');
+  it('close leaves the reason to the status default and refuses warranty_denied', () => {
+    expect(closeWarrantyRmaSchema.parse({}).reason).toBeUndefined();
     expect(closeWarrantyRmaSchema.safeParse({ reason: 'warranty_denied' }).success).toBe(false);
   });
 });

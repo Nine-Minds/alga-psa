@@ -53,6 +53,25 @@ export const inventoryRmaCreatedEventPayloadSchema = z.object({
 
 export type InventoryRmaCreatedEventPayload = z.infer<typeof inventoryRmaCreatedEventPayloadSchema>;
 
+/** A warranty/RMA case changed (C5). Published after commit for client-asset warranty claims. */
+export const inventoryRmaUpdatedEventPayloadSchema = z.object({
+  tenant: tenantSchema,
+  rma_id: uuidSchema('RMA ID'),
+  rma_number: z.string().min(1),
+  status: z.string().min(1),
+  previous_status: z.string().nullable(),
+  rma_type: z.enum(['standard', 'advance_replacement']),
+  asset_id: optionalUuidSchema('Asset ID'),
+  ticket_id: optionalUuidSchema('Ticket ID'),
+  client_id: optionalUuidSchema('Client ID'),
+  warranty_outcome: z.enum(['covered', 'not_covered', 'unknown']).nullable(),
+  changed_fields: changedFieldsSchema,
+  user_id: z.string().uuid().optional(),
+  timestamp: z.string().min(1),
+}).describe('Payload for INVENTORY_RMA_UPDATED');
+
+export type InventoryRmaUpdatedEventPayload = z.infer<typeof inventoryRmaUpdatedEventPayloadSchema>;
+
 export const inventorySalesOrderSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   so_id: uuidSchema('Sales order ID'),

@@ -118,7 +118,8 @@ export const returnDeviceToClientSchema = z.object({
 export type ReturnDeviceToClientInput = z.infer<typeof returnDeviceToClientSchema>;
 
 export const closeWarrantyRmaSchema = z.object({
-  reason: z.enum(CALLER_CLOSE_REASONS).default('resolved'),
+  /** Defaults to `vendor_credited` for a credited case, otherwise `resolved`. */
+  reason: z.enum(CALLER_CLOSE_REASONS).optional(),
   ...common,
 });
 export type CloseWarrantyRmaInput = z.infer<typeof closeWarrantyRmaSchema>;
