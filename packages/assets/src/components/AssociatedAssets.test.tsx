@@ -15,6 +15,7 @@ vi.mock('./custody/CustodyBadge', () => ({
   useCustodyBadges: () => badges.map,
   CustodyBadge: ({ id }: any) => <span id={id}>In office</span>,
 }));
+vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
 vi.mock('../actions/remoteAccessLinkActions', () => ({ hasRemoteAccessLinks: vi.fn(async () => false) }));
 vi.mock('../actions/assetDrawerActions', () => ({ loadAssetDetailDrawerData: vi.fn() }));
 vi.mock('../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value: any) => value }));
