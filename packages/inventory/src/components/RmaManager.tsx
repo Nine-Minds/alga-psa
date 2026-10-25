@@ -37,11 +37,13 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'info' | 'warning' | 'success
   closed: 'success',
   replaced: 'success',
   credited: 'success',
-  dead_unit_returned: 'success',
+  repaired: 'success',
+  warranty_review: 'warning',
   charged: 'error',
 };
 
 const RMA_STATUS_FILTERS = new Set([
+  'warranty_review',
   'open',
   'awaiting_return',
   'returned',
@@ -49,8 +51,8 @@ const RMA_STATUS_FILTERS = new Set([
   'replacement_received',
   'replacement_deployed',
   'dead_unit_owed',
-  'dead_unit_returned',
   'replaced',
+  'repaired',
   'credited',
   'charged',
   'closed',
@@ -118,6 +120,7 @@ export function RmaManager({
   // status/type checks); only the badge/column text is translated. Unknown values fall
   // back to humanize() so behavior never regresses.
   const RMA_STATUS_LABELS: Record<string, string> = {
+    warranty_review: t('rma.status.warrantyReview', 'Warranty review'),
     open: t('rma.status.open', 'Open'),
     awaiting_return: t('rma.status.awaitingReturn', 'Awaiting return'),
     returned: t('rma.status.returned', 'Returned'),
@@ -125,8 +128,8 @@ export function RmaManager({
     replacement_received: t('rma.status.replacementReceived', 'Replacement received'),
     replacement_deployed: t('rma.status.replacementDeployed', 'Replacement deployed'),
     dead_unit_owed: t('rma.status.deadUnitOwed', 'Dead unit owed'),
-    dead_unit_returned: t('rma.status.deadUnitReturned', 'Dead unit returned'),
     replaced: t('rma.status.replaced', 'Replaced'),
+    repaired: t('rma.status.repaired', 'Repaired'),
     credited: t('rma.status.credited', 'Credited'),
     charged: t('rma.status.charged', 'Charged'),
     closed: t('rma.status.closed', 'Closed'),
