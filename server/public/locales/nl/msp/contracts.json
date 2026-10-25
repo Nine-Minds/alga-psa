@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Geschat maandtotaal",
-      "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
+      "description": "Producten en vaste kosten zijn in dit totaal opgenomen. Uur- en verbruiksservices worden op basis van werkelijk gebruik gefactureerd.",
       "perMonth": "per maand",
       "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
     },
@@ -2427,6 +2427,22 @@
       "description": "Dit contract heeft geen contractregels. Voeg eerst contractregels toe en kom dan terug om te simuleren.",
       "title": "Nog niets te simuleren"
     },
+    "errors": {
+      "title": "De simulatie kan niet worden uitgevoerd",
+      "baselineTitle": "Het huidige contract kan niet worden gesimuleerd, dus er is niets om mee te vergelijken",
+      "unsupportedLineType": "Contractregel \"{{lineName}}\" heeft het regeltype \"{{lineType}}\", dat de simulator niet kan berekenen. Wijzig de regel naar Vast, Per uur of Gebruik en simuleer opnieuw.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" op contractregel \"{{lineName}}\" heeft het configuratietype \"{{configurationType}}\", dat de simulator niet kan berekenen. Stel de dienst in op Vast, Per uur, Gebruik of Bundel en simuleer opnieuw.",
+      "serviceNotInCatalog": "Contractregel \"{{lineName}}\" gebruikt een dienst die niet meer in de dienstencatalogus staat ({{serviceId}}). Verwijder de dienst van de regel of herstel de dienst en simuleer opnieuw.",
+      "poolMissing": "\"{{serviceName}}\" op contractregel \"{{lineName}}\" is ingesteld als bundel, maar heeft geen pool met inbegrepen uren. Voeg de inbegrepen uren van de pool toe aan de contractregel en simuleer opnieuw.",
+      "contractNotFound": "Dit contract is niet beschikbaar. Het is mogelijk verwijderd; laad de pagina opnieuw.",
+      "clientNotAvailable": "De klant voor deze simulatie is niet beschikbaar. Deze is mogelijk verwijderd; kies een andere klant.",
+      "clientRequired": "Selecteer een klant voordat u simuleert.",
+      "historyRequiresClient": "Historische aannames vereisen een scenario dat aan een echte klant is gekoppeld. Kies een klant voor deze simulatie en probeer het opnieuw.",
+      "invalidReplayRange": "Het afspeelbereik is ongeldig. Kies een bereik dat eindigt na het begin en niet meer dan 120 factureringsperiodes beslaat.",
+      "scenarioInvalid": "Dit scenario kan niet worden gesimuleerd omdat de opzet onvolledig is. Laad de pagina opnieuw en probeer het opnieuw.",
+      "scenarioReferenceInvalid": "Dit scenario verwijst naar iets dat niet meer beschikbaar is, zoals een contractregel, dienst, belastingtarief of klantlocatie. Laad de pagina opnieuw om met het huidige contract te beginnen.",
+      "unexpected": "De simulator kon niet worden uitgevoerd vanwege een onverwachte fout. Probeer het opnieuw; neem contact op met support als het blijft gebeuren."
+    },
     "explanation": {
       "amount": "Bedrag",
       "close": "Sluiten",
@@ -2473,6 +2489,7 @@
       "simulatedDelta": "gesimuleerd verschil"
     },
     "runBar": {
+      "blocked": "Simulatie niet mogelijk",
       "compareToggle": "Wijzigingen ten opzichte van het huidige contract tonen",
       "horizonOption": "{{count}} factureringsperioden van de klant",
       "lastRun": "Simulatie actueel · {{count}} factureringsperioden van de klant",
@@ -2481,6 +2498,7 @@
       "simulating": "Simuleren…",
       "stale": "Wijzigingen niet gesimuleerd",
       "staleBanner": "Deze bedragen komen uit de vorige simulatie. Werk de simulatie bij om uw laatste wijzigingen mee te nemen.",
+      "staleBlockedBanner": "Deze melding komt uit de vorige simulatie. Werk de simulatie bij om uw laatste wijzigingen mee te nemen.",
       "updateSimulation": "Simulatie bijwerken"
     },
     "scenario": {

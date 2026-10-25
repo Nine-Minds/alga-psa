@@ -88,6 +88,10 @@ import {
 } from './billingEventSchemas';
 import {
   clientArchivedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
@@ -325,6 +329,10 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ClientOwnerAssigned.v1': clientOwnerAssignedEventPayloadSchema,
   'payload.ClientMerged.v1': clientMergedEventPayloadSchema,
   'payload.ClientArchived.v1': clientArchivedEventPayloadSchema,
+  'payload.ClientLocationCreated.v1': clientLocationCreatedEventPayloadSchema,
+  'payload.ClientLocationUpdated.v1': clientLocationUpdatedEventPayloadSchema,
+  'payload.ClientLocationDeactivated.v1': clientLocationDeactivatedEventPayloadSchema,
+  'payload.ClientLocationDeleted.v1': clientLocationDeletedEventPayloadSchema,
   'payload.ContactCreated.v1': contactCreatedEventPayloadSchema,
   'payload.ContactUpdated.v1': contactUpdatedEventPayloadSchema,
   'payload.ContactPrimarySet.v1': contactPrimarySetEventPayloadSchema,

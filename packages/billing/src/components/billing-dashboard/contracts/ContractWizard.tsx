@@ -209,6 +209,10 @@ export interface ContractWizardData {
     quantity: number;
     /** Optional per-unit override in cents (contract currency). */
     custom_rate?: number;
+    /** Catalog price in the contract currency (cents); null when the catalog has none. Display-only, never persisted. */
+    currency_rate?: number | null;
+    /** Legacy currency-untagged catalog default rate (cents). Display-only, never persisted. */
+    default_rate?: number | null;
   }>;
   enable_proration: boolean;
   hourly_services: Array<{
@@ -566,12 +570,13 @@ export function ContractWizard({
         ...wizardData,
         fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
         discounts: wizardData.discounts ?? [],
+        bucket_pools: wizardData.bucket_pools ?? [],
         // Complete prepaid block lines only; incomplete drafts are not simulated (as on submit).
         prepaid_block_lines: (() => {
           const parsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
           return "lines" in parsed ? parsed.lines : [];
         })(),
-      }) as ContractDraftSimulationInput,
+      }) satisfies ContractDraftSimulationInput,
     [wizardData],
   );
 

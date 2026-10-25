@@ -1503,6 +1503,8 @@
       "installDate": "Installationsdatum"
     },
     "empty": "Ingen programvara matchar din sökning.",
+    "noInventory": "Ingen programvaruinventering har samlats in för den här enheten ännu.",
+    "loadError": "Det gick inte att läsa in programvaruinventeringen.",
     "totalItems": "Totalt antal poster: {{count}}",
     "values": {
       "unknown": "Okänd"

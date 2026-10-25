@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
     "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
     "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden.",
-    "recurringTickets": "Wiederkehrende Tickets"
+    "recurringTickets": "Wiederkehrende Tickets",
+    "software": "Software"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Personen",
       "record": "Kundendatensatz",
       "service": "Dienst",
-      "timeline": "Alles der Reihe nach"
+      "timeline": "Alles der Reihe nach",
+      "software": "Software"
     },
     "csatEmpty": "Noch keine Umfrageantworten.",
     "discardCancel": "Weiter bearbeiten",
@@ -406,6 +408,12 @@
       "primary": "Primär"
     },
     "pulseError": "Die Kundenübersicht konnte nicht geladen werden.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Kontakte",
+      "label": "Schnellzugriff",
+      "software": "Software"
+    },
     "rail": {
       "close": "Schließen",
       "installBase": "Installationsbasis",
@@ -440,6 +448,13 @@
       "onTrack": "SLA im Plan",
       "onTrackLeft": "SLA {{left}} übrig",
       "paused": "SLA pausiert"
+    },
+    "software": {
+      "assetsMeta_one": "1 Gerät",
+      "assetsMeta_other": "{{count}} Geräte",
+      "loadError": "Software-Inventar konnte nicht geladen werden.",
+      "titles": "Titel",
+      "viewAll": "Gesamte Software"
     },
     "timeline": {
       "daysAgo": "vor {{count}} T",
@@ -572,13 +587,6 @@
     "invoiceDeliveryMethod": "Rechnungszustellungsmethode",
     "invoiceTemplate": "Rechnungsvorlage",
     "invoiceTemplateHelp": "Wählen Sie eine Vorlage aus oder verwenden Sie die Standardvorlage",
-    "paymentTerms": {
-      "dueOnReceipt": "Fällig bei Erhalt",
-      "net14": "Netto 14",
-      "net15": "Netto 15",
-      "net30": "Netto 30",
-      "net7": "Netto 7"
-    },
     "preferredPaymentMethod": "Bevorzugte Zahlungsmethode",
     "defaultCurrency": "Standardwährung",
     "selectTaxRegion": "Steuerregion auswählen (optional)",
@@ -590,11 +598,6 @@
       "both": "Beide",
       "email": "E-Mail",
       "mail": "Post"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Banküberweisung",
-      "check": "Scheck",
-      "creditCard": "Kreditkarte"
     },
     "paymentTermsLabel": "Zahlungsbedingungen",
     "standardTemplateLabel": "(Standard)",
@@ -1766,7 +1769,8 @@
     },
     "cardExpiry": ", gültig bis {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}“ ist keine anerkannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie gelöscht.",
-    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Mandantenstandard: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",
@@ -2033,5 +2037,21 @@
     "manager": "Leitung",
     "seesTickets": "Sieht Profil-Tickets",
     "editHint": "Diese Angaben werden am Abrechnungsprofil in den Abrechnungseinstellungen des Kunden bearbeitet."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Zuletzt gesehen",
+      "title": "Titel",
+      "versions": "Versionen"
+    },
+    "empty": "Noch kein Software-Inventar — das Inventar wird pro Gerät erfasst",
+    "emptyAssetsLink": "Assets anzeigen",
+    "exportCsv": "CSV exportieren",
+    "exportError": "Software-Inventar konnte nicht exportiert werden.",
+    "installedOn": "Installiert auf",
+    "loadError": "Software-Inventar konnte nicht geladen werden.",
+    "moreAssets": "und {{count}} weitere (die ersten {{limit}} nach Name)",
+    "searchPlaceholder": "Software suchen..."
   }
 }

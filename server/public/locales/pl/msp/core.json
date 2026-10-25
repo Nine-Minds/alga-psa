@@ -106,7 +106,8 @@
     "ticketsAll": "Wszystkie zgłoszenia",
     "ticketsRecurring": "Zgłoszenia cykliczne",
     "ticketsTemplates": "Szablony zgłoszeń",
-    "assetsCustody": "Sprzęt w przechowaniu"
+    "assetsCustody": "Sprzęt w przechowaniu",
+    "ticketsCannedResponses": "Gotowe odpowiedzi"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

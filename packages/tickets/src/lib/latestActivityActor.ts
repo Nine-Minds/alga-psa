@@ -2,6 +2,7 @@ import type {
   ITicketLatestActivityActor,
   TicketLatestActivityActorKind,
 } from '@alga-psa/types';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 
 /** The ticket-row fields the actor resolution needs. */
 export interface LatestActivityTicketRow {
@@ -72,7 +73,12 @@ function userActor(
   const known = names.users[userId];
   const name = known?.name?.trim() || fallbackName?.trim() || null;
   if (!name) return null;
-  const kind: TicketLatestActivityActorKind = known?.userType === 'client' ? 'client_user' : 'user';
+  // 'service' (non-interactive) is a named non-human actor; never client_user or a plain user.
+  const kind: TicketLatestActivityActorKind = isClientUserType(known?.userType)
+    ? 'client_user'
+    : known?.userType && !isInteractiveUserType(known.userType)
+      ? 'service'
+      : 'user';
   return { kind, name };
 }
 

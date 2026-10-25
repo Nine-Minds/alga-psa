@@ -291,6 +291,9 @@
       },
       "templates": {
         "title": "Plantillas de tickets"
+      },
+      "cannedResponses": {
+        "title": "Respuestas predefinidas"
       }
     },
     "workflowEditor": {

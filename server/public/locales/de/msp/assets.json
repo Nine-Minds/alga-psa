@@ -1503,6 +1503,8 @@
       "installDate": "Installationsdatum"
     },
     "empty": "Es wurde keine Software gefunden, die Ihrer Suche entspricht.",
+    "noInventory": "Für dieses Gerät wurde noch kein Softwareinventar erfasst.",
+    "loadError": "Das Softwareinventar konnte nicht geladen werden.",
     "totalItems": "Gesamtzahl der Artikel: {{count}}",
     "values": {
       "unknown": "Unbekannt"

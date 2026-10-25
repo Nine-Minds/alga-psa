@@ -1416,7 +1416,15 @@
     "selectUnit": "Select a unit to deliver...",
     "onHandByLocation": "On hand by location",
     "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "costNotConfigured": "Not configured",
+    "availableBadge": "Available: {{available}}",
+    "availableByLocation": "Free stock by location",
+    "freeOfOnHand": "{{free}} free of {{onHand}}",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can't be used here.",
+    "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
+    "reservedStockTitle": "Stock is reserved for a sales order",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.",
+    "reservedStockConfirm": "Add anyway"
   },
   "watchList": {
     "title": "Watch List",
@@ -2640,6 +2648,116 @@
       "hours": "{{hours}}h",
       "daysHours": "{{days}}d {{hours}}h",
       "days": "{{days}}d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Canned responses",
+      "buttonTooltip": "Insert a canned response (Ctrl/Cmd+J, or type /)",
+      "title": "Insert a canned response",
+      "searchPlaceholder": "Search canned responses…",
+      "searchLabel": "Search canned responses",
+      "loading": "Loading canned responses…",
+      "empty": "No canned responses are available yet.",
+      "noResults": "No canned responses match your search.",
+      "loadFailed": "Canned responses could not be loaded.",
+      "insertFailed": "The canned response could not be inserted.",
+      "favorites": "Favorites",
+      "recent": "Recently used",
+      "uncategorized": "Uncategorized",
+      "slashGroup": "Canned responses",
+      "slashBrowse": "Canned responses…",
+      "slashBrowseHint": "Browse and insert a saved reply"
+    },
+    "scope": {
+      "personal": "Personal",
+      "team": "Team",
+      "board": "Board",
+      "clientPortal": "Client portal",
+      "personalHelp": "Only you can use this response.",
+      "teamHelp": "Members of the chosen team can use this response.",
+      "boardHelp": "Anyone replying to tickets on the chosen board can use this response.",
+      "clientPortalHelp": "Reserved for client portal replies. It is not offered when replying from the MSP portal."
+    },
+    "list": {
+      "title": "Canned responses",
+      "new": "New canned response",
+      "showInactive": "Show inactive",
+      "searchPlaceholder": "Search name, category or text…",
+      "searchLabel": "Search canned responses",
+      "allCategories": "All categories",
+      "noResults": "No canned responses match your filters.",
+      "empty": "No canned responses yet. Create one to reuse it in ticket replies.",
+      "deleteTitle": "Delete canned response",
+      "deleteMessage": "Delete \"{{name}}\"? Replies that already used it are not changed.",
+      "deleted": "Canned response deleted",
+      "favorite": "Favorite",
+      "columns": {
+        "name": "Name",
+        "category": "Category",
+        "scope": "Available to",
+        "preview": "Preview",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "favorite": "Add to favorites",
+      "unfavorite": "Remove from favorites",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "loading": "Loading…",
+    "editor": {
+      "back": "Canned responses",
+      "newTitle": "New canned response",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Canned response saved",
+      "created": "Canned response created",
+      "viewOnly": "You can view this canned response but not change it."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Response"
+    },
+    "fields": {
+      "name": "Name",
+      "category": "Category",
+      "categoryHelp": "Groups responses in the picker. Optional.",
+      "scope": "Available to",
+      "team": "Team",
+      "teamPlaceholder": "Select a team",
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "body": "Response text",
+      "bodyPlaceholder": "Write the reply…"
+    },
+    "mergeFields": {
+      "title": "Merge fields",
+      "help": "Filled in when the response is inserted into a reply. A field with no value becomes empty; an unrecognized field is left as written.",
+      "descriptions": {
+        "contact_first_name": "The contact's first name",
+        "contact_last_name": "The contact's last name",
+        "contact_name": "The contact's full name",
+        "ticket_number": "The ticket number",
+        "ticket_title": "The ticket title",
+        "agent_name": "Your name (the agent replying)",
+        "client_name": "The client's name"
+      }
+    },
+    "errors": {
+      "notFound": "Canned response not found.",
+      "duplicateName": "A canned response named \"{{name}}\" already exists here.",
+      "invalidReferences": "The selected team or board no longer exists.",
+      "notAvailable": "This canned response is not available for this ticket.",
+      "notATeamMember": "You can only manage team responses for teams you belong to."
     }
   }
 }

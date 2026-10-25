@@ -106,7 +106,8 @@
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
     "ticketsTemplates": "Modelli di ticket",
-    "assetsCustody": "Apparecchiature in custodia"
+    "assetsCustody": "Apparecchiature in custodia",
+    "ticketsCannedResponses": "Risposte predefinite"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

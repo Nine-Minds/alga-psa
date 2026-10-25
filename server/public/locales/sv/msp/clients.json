@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
     "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
-    "recurringTickets": "Återkommande ärenden"
+    "recurringTickets": "Återkommande ärenden",
+    "software": "Programvara"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Personer",
       "record": "Kundpost",
       "service": "Support",
-      "timeline": "Allt i tidsordning"
+      "timeline": "Allt i tidsordning",
+      "software": "Programvara"
     },
     "csatEmpty": "Inga enkätsvar ännu.",
     "discardCancel": "Fortsätt redigera",
@@ -406,6 +408,12 @@
       "primary": "Primär"
     },
     "pulseError": "Det gick inte att läsa in kundöversikten.",
+    "quickLinks": {
+      "assets": "Tillgångar",
+      "contacts": "Kontakter",
+      "label": "Snabblänkar",
+      "software": "Programvara"
+    },
     "rail": {
       "close": "Stäng",
       "installBase": "Installerad utrustning",
@@ -440,6 +448,13 @@
       "onTrack": "SLA följs",
       "onTrackLeft": "SLA: {{left}} kvar",
       "paused": "SLA pausat"
+    },
+    "software": {
+      "assetsMeta_one": "1 tillgång",
+      "assetsMeta_other": "{{count}} tillgångar",
+      "loadError": "Det gick inte att läsa in programvaruinventeringen.",
+      "titles": "titlar",
+      "viewAll": "All programvara"
     },
     "timeline": {
       "daysAgo": "för {{count}} d sedan",
@@ -572,13 +587,6 @@
     "invoiceDeliveryMethod": "Leveranssätt för fakturor",
     "invoiceTemplate": "Fakturamall",
     "invoiceTemplateHelp": "Välj en mall eller använd standardmallen",
-    "paymentTerms": {
-      "dueOnReceipt": "Betalas vid mottagande",
-      "net14": "14 dagar netto",
-      "net15": "15 dagar netto",
-      "net30": "30 dagar netto",
-      "net7": "7 dagar netto"
-    },
     "preferredPaymentMethod": "Önskad betalningsmetod",
     "defaultCurrency": "Standardvaluta",
     "selectTaxRegion": "Välj skatteregion (valfritt)",
@@ -590,11 +598,6 @@
       "both": "Båda",
       "email": "E-post",
       "mail": "Post"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Banköverföring",
-      "check": "Check",
-      "creditCard": "Kreditkort"
     },
     "paymentTermsLabel": "Betalningsvillkor",
     "standardTemplateLabel": "(standard)",
@@ -1784,7 +1787,8 @@
     },
     "cardExpiry": ", giltigt t.o.m. {{month}}/{{year}}",
     "legacyPaymentTerms": "”{{value}}” är inte ett känt betalningsvillkor och har aldrig tillämpats. Det rensas när du sparar.",
-    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Hyresgästens standard: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Aviseringar om förbetalt saldo",
@@ -2033,5 +2037,21 @@
     "manager": "Ansvarig",
     "seesTickets": "Ser profilens ärenden",
     "editHint": "Ändra detta på faktureringsprofilen, under kundens faktureringsinställningar."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Tillgångar",
+      "lastSeen": "Senast sedd",
+      "title": "Titel",
+      "versions": "Versioner"
+    },
+    "empty": "Ingen programvaruinventering ännu — inventeringen samlas in per enhet",
+    "emptyAssetsLink": "Visa tillgångar",
+    "exportCsv": "Exportera CSV",
+    "exportError": "Det gick inte att exportera programvaruinventeringen.",
+    "installedOn": "Installerad på",
+    "loadError": "Det gick inte att läsa in programvaruinventeringen.",
+    "moreAssets": "och {{count}} till (de första {{limit}} efter namn)",
+    "searchPlaceholder": "Sök programvara..."
   }
 }

@@ -72,7 +72,7 @@ export function calculateContractBucketPeriodState(
   return computeBucketPeriodState(inputs);
 }
 
-function lineFacts(
+export function lineFacts(
   line: FixedChargeComputeInputs["clientContractLine"],
   tenantId: string,
 ): ResolvedContractLineFacts {

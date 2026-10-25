@@ -18,6 +18,7 @@ import {
 // Bucket usage MUST go through the shared canonical service. See the note in
 // actions/timeEntryCrudActions.ts history: a local fork once queried the dropped
 // `client_contract_lines` table and caused a prod outage on time-entry save.
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 // Hour-block burn MUST go through the shared canonical service too.
@@ -256,6 +257,16 @@ export async function persistTimeEntry(
   }
 
   await assertCanActOnBehalf(actor, tenant, timeEntryUserId, trx);
+
+  // Human-work guard (new entries only; an existing entry's owner never changes here).
+  // An explicit owner must be a licensed user; a defaulted owner (the actor) must be one too.
+  if (!validatedTimeEntry.entry_id) {
+    if (validatedTimeEntry.user_id) {
+      await assertHumanWorkAssignee(trx, tenant, [validatedTimeEntry.user_id]);
+    } else {
+      await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
+    }
+  }
 
   // Extract only the fields that exist in the database schema
   const {

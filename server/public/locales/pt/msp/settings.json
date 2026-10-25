@@ -2379,7 +2379,23 @@
         "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
         "claimedBySamePackage": "Já migrado por este pacote",
         "claimedByOtherPackage": "Já migrado por {{file}}",
-        "claimedByExistingEntity": "Corresponde a uma entidade existente"
+        "claimedByExistingEntity": "Corresponde a uma entidade existente",
+        "matchedBySku": "Associado a um produto existente por SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produtos (catálogo / lista de preços)",
+          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)"
+        },
+        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome."
+      },
+      "configure": {
+        "products": {
+          "title": "Produtos",
+          "serviceType": "Tipo de serviço para novos produtos",
+          "serviceTypePlaceholder": "Selecione um tipo de serviço",
+          "serviceTypeHelp": "Produtos cujo SKU já existe são associados e mantidos sem alterações; apenas produtos novos são arquivados neste tipo de serviço."
+        }
       }
     },
     "jobDetails": {
@@ -2938,7 +2954,8 @@
     "emptyState": "Nenhum usuário disponível.",
     "roles": {
       "client": "Usuário cliente",
-      "internal": "Usuário Interno"
+      "internal": "Usuário Interno",
+      "service": "Conta de serviço"
     },
     "badge": {
       "inactive": "Inativo"

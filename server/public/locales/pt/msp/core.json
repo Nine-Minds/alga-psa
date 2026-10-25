@@ -106,7 +106,8 @@
     "ticketsAll": "Todos os tickets",
     "ticketsRecurring": "Tickets recorrentes",
     "ticketsTemplates": "Modelos de tickets",
-    "assetsCustody": "Equipamento sob custódia"
+    "assetsCustody": "Equipamento sob custódia",
+    "ticketsCannedResponses": "Respostas prontas"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",

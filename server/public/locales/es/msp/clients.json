@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
     "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
     "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos.",
-    "recurringTickets": "Tickets recurrentes"
+    "recurringTickets": "Tickets recurrentes",
+    "software": "Software"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Personas",
       "record": "Ficha del cliente",
       "service": "Servicio",
-      "timeline": "Todo, en orden"
+      "timeline": "Todo, en orden",
+      "software": "Software"
     },
     "csatEmpty": "Aún no hay respuestas de encuestas.",
     "discardCancel": "Seguir editando",
@@ -406,6 +408,12 @@
       "primary": "Principal"
     },
     "pulseError": "No se pudo cargar el resumen del cliente.",
+    "quickLinks": {
+      "assets": "Activos",
+      "contacts": "Contactos",
+      "label": "Accesos rápidos",
+      "software": "Software"
+    },
     "rail": {
       "close": "Cerrar",
       "installBase": "Base instalada",
@@ -440,6 +448,13 @@
       "onTrack": "SLA en plazo",
       "onTrackLeft": "SLA: quedan {{left}}",
       "paused": "SLA en pausa"
+    },
+    "software": {
+      "assetsMeta_one": "1 activo",
+      "assetsMeta_other": "{{count}} activos",
+      "loadError": "No se pudo cargar el inventario de software.",
+      "titles": "títulos",
+      "viewAll": "Todo el software"
     },
     "timeline": {
       "daysAgo": "hace {{count}} d",
@@ -572,13 +587,6 @@
     "invoiceDeliveryMethod": "Método de entrega de facturas",
     "invoiceTemplate": "Plantilla de factura",
     "invoiceTemplateHelp": "Seleccione una plantilla o use la predeterminada",
-    "paymentTerms": {
-      "dueOnReceipt": "Vencimiento al recibir",
-      "net14": "neto 14",
-      "net15": "neto 15",
-      "net30": "neto 30",
-      "net7": "neto 7"
-    },
     "preferredPaymentMethod": "Método de pago preferido",
     "defaultCurrency": "Moneda predeterminada",
     "selectTaxRegion": "Seleccionar región fiscal (opcional)",
@@ -590,11 +598,6 @@
       "both": "Ambos",
       "email": "Correo electrónico",
       "mail": "Correo"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Transferencia bancaria",
-      "check": "Cheque",
-      "creditCard": "Tarjeta de crédito"
     },
     "paymentTermsLabel": "Condiciones de pago",
     "standardTemplateLabel": "(Estándar)",
@@ -1766,7 +1769,8 @@
     },
     "cardExpiry": ", caduca {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» no es una condición de pago reconocida y nunca se ha aplicado. Se elimina al guardar.",
-    "cardOnFile": "{{type}} terminada en {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} terminada en {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Predeterminado del inquilino: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo prepagado",
@@ -2033,5 +2037,21 @@
     "manager": "Responsable",
     "seesTickets": "Ve los tickets del perfil",
     "editHint": "Esto se edita en el perfil de facturación, dentro de los ajustes de facturación del cliente."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Activos",
+      "lastSeen": "Visto por última vez",
+      "title": "Título",
+      "versions": "Versiones"
+    },
+    "empty": "Aún no hay inventario de software — el inventario se recopila por dispositivo",
+    "emptyAssetsLink": "Ver activos",
+    "exportCsv": "Exportar CSV",
+    "exportError": "No se pudo exportar el inventario de software.",
+    "installedOn": "Instalado en",
+    "loadError": "No se pudo cargar el inventario de software.",
+    "moreAssets": "y {{count}} más (se muestran los primeros {{limit}} por nombre)",
+    "searchPlaceholder": "Buscar software..."
   }
 }

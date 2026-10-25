@@ -1503,6 +1503,8 @@
       "installDate": "Install Date"
     },
     "empty": "No software found matching your search.",
+    "noInventory": "No software inventory has been collected for this device yet.",
+    "loadError": "Could not load software inventory.",
     "totalItems": "Total Items: {{count}}",
     "values": {
       "unknown": "Unknown"

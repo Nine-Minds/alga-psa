@@ -288,6 +288,9 @@
       },
       "templates": {
         "title": "Ticket-Vorlagen"
+      },
+      "cannedResponses": {
+        "title": "Textbausteine"
       }
     },
     "userActivities": {

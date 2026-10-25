@@ -12,7 +12,7 @@ describe('project authorization kernel contracts', () => {
   const commentActionsSource = readSource('../lib/taskComments/taskCommentService.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
-    expect(commentActionsSource).toContain('if (user.user_type === \'internal\') {');
+    expect(commentActionsSource).toContain('if (isMspPrincipalUserType(user.user_type)) {');
     expect(commentActionsSource).toContain('relationshipRules: [{ template: \'own\' }],');
     expect(commentActionsSource).toContain("type: 'project_task_comment'");
 

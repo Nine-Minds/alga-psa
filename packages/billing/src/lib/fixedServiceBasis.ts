@@ -1,5 +1,6 @@
 import type { FixedPricingBasis } from '@alga-psa/types';
 import { isUnitPricedFixedConfig } from './usageSemantics';
+import { normalizeToMonthlyCents } from '@alga-psa/shared/billingClients/recurringMemberRate';
 
 // Client-safe re-export, as resolveFixedLineRate is re-exported for billing.
 export * from '@alga-psa/shared/billingClients/fixedMemberRate';
@@ -62,25 +63,6 @@ export function fixedServicesRecurringTotalCents(
     return sum + unitFixedServiceAmountCents(quantity, rate);
   }, 0);
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
-}
-
-// LEVERAGE: pattern monthly-cadence-normalization — twin of shared/billingClients/contractMonthlyValue.normalizeToMonthlyCents;
-// that module imports the server DB layer, so client-side wizard code cannot import it. The pure cadence math
-// belongs in a client-safe layer both import.
-function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      return Math.round(amountCents);
-  }
 }
 
 /**

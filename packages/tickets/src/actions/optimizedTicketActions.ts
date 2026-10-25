@@ -1,7 +1,10 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -248,7 +251,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -1618,7 +1621,7 @@ function applyTicketListIndexedSearchFilter(
   const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
   const includeBundledChildren = validatedFilters.bundleView === 'bundled';
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId
@@ -2933,6 +2936,11 @@ export async function updateTicketInTransaction(
       }
     }
 
+    // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    if (isChangingAssignment && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+    }
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -3464,7 +3472,7 @@ export async function addTicketCommentInTransaction(
 ): Promise<IComment> {
   const {
     ticketId,
-    content,
+    content: rawContent,
     isInternal,
     isResolution,
     closesTicket = false,
@@ -3479,8 +3487,11 @@ export async function addTicketCommentInTransaction(
     throw new Error('suppressInternalNotifications requires suppressContactNotifications');
   }
 
+  // comments.author_type is internal|client|unknown: a service user is MSP-side so it is stored
+  // as 'internal' (kind is recovered from users.user_type); Comment.insert enforces the
+  // internal-only visibility rule for non-interactive authors.
   const authorType: 'internal' | 'client' | 'unknown' =
-    user.user_type === 'client' ? 'client' : 'internal';
+    isClientUserType(user.user_type) ? 'client' : 'internal';
 
   if (isInternal && authorType !== 'internal') {
     throw new Error('Only MSP users can create internal comments');
@@ -3521,6 +3532,10 @@ export async function addTicketCommentInTransaction(
   if (!ticket) {
     throw new Error('Ticket not found');
   }
+
+  // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
+  // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.
+  const content = await resolveCommentMergeTokens(trx, tenant, ticketId, user.user_id, authorType, rawContent);
 
   // Use the centralized utility to convert BlockNote JSON to markdown
   let markdownContent = "";

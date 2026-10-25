@@ -460,6 +460,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtro ticket",
         "ticketFilterPlaceholder": "Un UUID ticket per riga. Lasciare vuoto per ricevere tutti gli eventi ticket corrispondenti.",
+        "legacyEventsHelp": "Questi tipi di evento non sono più supportati. Restano associati a questo webhook ma non vengono mai recapitati. Deseleziona un tipo per rimuoverlo.",
+        "legacyEventLabel": "non supportato",
         "retryConfig": "Configurazione tentativi (JSON)",
         "verifySsl": "Verifica certificati SSL",
         "webhookActive": "Il webhook è attivo",
@@ -801,6 +803,7 @@
       "deliveryNotFound": "Consegna non trovata.",
       "testNotRetryable": "Le consegne di prova non possono essere ritentate.",
       "payloadInvalid": "Questa consegna non può essere ritentata perché il payload memorizzato non è valido.",
+      "unsupportedEventType": "Tipo di evento non supportato: {{eventTypes}}",
       "validation": { "unknownEntity": "Entità webhook sconosciuta «{{entity}}».", "unknownField": "Campo sconosciuto «{{field}}» per l’entità webhook «{{entity}}»." }
     },
     "inboundWebhooks": {

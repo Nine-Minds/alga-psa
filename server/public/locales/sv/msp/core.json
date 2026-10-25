@@ -106,7 +106,8 @@
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
     "ticketsTemplates": "Ärendemallar",
-    "assetsCustody": "Utrustning i förvar"
+    "assetsCustody": "Utrustning i förvar",
+    "ticketsCannedResponses": "Färdiga svar"
   },
   "marketing": {
     "dialogs": {

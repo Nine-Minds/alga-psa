@@ -1416,7 +1416,15 @@
     "selectUnit": "Välj en enhet att leverera…",
     "onHandByLocation": "Lagerbestånd per plats",
     "catalogUnitCost": "Enhetskostnad i katalogen",
-    "costNotConfigured": "Inte konfigurerad"
+    "costNotConfigured": "Inte konfigurerad",
+    "availableBadge": "Tillgängligt: {{available}}",
+    "availableByLocation": "Fritt lager per plats",
+    "freeOfOnHand": "{{free}} lediga av {{onHand}}",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder och kan inte användas här.",
+    "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder räknar med, och ordern kan bli underfylld.",
+    "reservedStockConfirm": "Lägg till ändå"
   },
   "watchList": {
     "title": "Bevakningslista",
@@ -2640,6 +2648,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Färdiga svar",
+      "buttonTooltip": "Infoga ett färdigt svar (Ctrl/Cmd+J, eller skriv /)",
+      "title": "Infoga ett färdigt svar",
+      "searchPlaceholder": "Sök färdiga svar…",
+      "searchLabel": "Sök färdiga svar",
+      "loading": "Läser in färdiga svar…",
+      "empty": "Det finns inga färdiga svar ännu.",
+      "noResults": "Inga färdiga svar matchar din sökning.",
+      "loadFailed": "Det gick inte att läsa in de färdiga svaren.",
+      "insertFailed": "Det gick inte att infoga det färdiga svaret.",
+      "favorites": "Favoriter",
+      "recent": "Nyligen använda",
+      "uncategorized": "Utan kategori",
+      "slashGroup": "Färdiga svar",
+      "slashBrowse": "Färdiga svar…",
+      "slashBrowseHint": "Bläddra bland och infoga ett sparat svar"
+    },
+    "scope": {
+      "personal": "Personligt",
+      "team": "Team",
+      "board": "Tavla",
+      "clientPortal": "Kundportal",
+      "personalHelp": "Bara du kan använda det här svaret.",
+      "teamHelp": "Medlemmar i det valda teamet kan använda det här svaret.",
+      "boardHelp": "Alla som svarar på ärenden på den valda tavlan kan använda det här svaret.",
+      "clientPortalHelp": "Reserverat för svar i kundportalen. Erbjuds inte när du svarar från MSP-portalen."
+    },
+    "list": {
+      "title": "Färdiga svar",
+      "new": "Nytt färdigt svar",
+      "showInactive": "Visa inaktiva",
+      "searchPlaceholder": "Sök på namn, kategori eller text…",
+      "searchLabel": "Sök färdiga svar",
+      "allCategories": "Alla kategorier",
+      "noResults": "Inga färdiga svar matchar dina filter.",
+      "empty": "Inga färdiga svar ännu. Skapa ett för att återanvända det i ärendesvar.",
+      "deleteTitle": "Ta bort färdigt svar",
+      "deleteMessage": "Ta bort ”{{name}}”? Svar som redan har använt det ändras inte.",
+      "deleted": "Färdigt svar borttaget",
+      "favorite": "Favorit",
+      "columns": {
+        "name": "Namn",
+        "category": "Kategori",
+        "scope": "Tillgängligt för",
+        "preview": "Förhandsvisning",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktivt",
+      "inactive": "Inaktivt"
+    },
+    "actions": {
+      "favorite": "Lägg till i favoriter",
+      "unfavorite": "Ta bort från favoriter",
+      "edit": "Redigera",
+      "activate": "Aktivera",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "cancel": "Avbryt"
+    },
+    "loading": "Läser in…",
+    "editor": {
+      "back": "Färdiga svar",
+      "newTitle": "Nytt färdigt svar",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "saved": "Färdigt svar sparat",
+      "created": "Färdigt svar skapat",
+      "viewOnly": "Du kan visa det här färdiga svaret men inte ändra det."
+    },
+    "sections": {
+      "details": "Detaljer",
+      "body": "Svar"
+    },
+    "fields": {
+      "name": "Namn",
+      "category": "Kategori",
+      "categoryHelp": "Grupperar svar i väljaren. Valfritt.",
+      "scope": "Tillgängligt för",
+      "team": "Team",
+      "teamPlaceholder": "Välj ett team",
+      "board": "Tavla",
+      "boardPlaceholder": "Välj en tavla",
+      "body": "Svarstext",
+      "bodyPlaceholder": "Skriv svaret…"
+    },
+    "mergeFields": {
+      "title": "Sammanfogningsfält",
+      "help": "Fylls i när svaret infogas i ett svar. Ett fält utan värde blir tomt; ett okänt fält lämnas som det är.",
+      "descriptions": {
+        "contact_first_name": "Kontaktens förnamn",
+        "contact_last_name": "Kontaktens efternamn",
+        "contact_name": "Kontaktens fullständiga namn",
+        "ticket_number": "Ärendenumret",
+        "ticket_title": "Ärendets titel",
+        "agent_name": "Ditt namn (agenten som svarar)",
+        "client_name": "Kundens namn"
+      }
+    },
+    "errors": {
+      "notFound": "Det färdiga svaret hittades inte.",
+      "duplicateName": "Ett färdigt svar med namnet ”{{name}}” finns redan här.",
+      "invalidReferences": "Det valda teamet eller tavlan finns inte längre.",
+      "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
+      "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
   }
 }

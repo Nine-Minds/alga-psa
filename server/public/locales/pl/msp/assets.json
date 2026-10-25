@@ -1503,6 +1503,8 @@
       "installDate": "Data instalacji"
     },
     "empty": "Nie znaleziono oprogramowania odpowiadającego Twojemu wyszukiwaniu.",
+    "noInventory": "Dla tego urządzenia nie zebrano jeszcze inwentarza oprogramowania.",
+    "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
     "totalItems": "Łączna liczba elementów: {{count}}",
     "values": {
       "unknown": "Nieznany"

@@ -288,6 +288,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
 
+  // Canned ticket responses. Favorites FK to responses (ON DELETE CASCADE), so favorites go first.
+  'canned_response_favorites', 'canned_responses',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',

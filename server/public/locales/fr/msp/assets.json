@@ -1503,6 +1503,8 @@
       "installDate": "Date d'installation"
     },
     "empty": "Aucun logiciel trouvé correspondant à votre recherche.",
+    "noInventory": "Aucun inventaire logiciel n'a encore été collecté pour cet appareil.",
+    "loadError": "Impossible de charger l'inventaire logiciel.",
     "totalItems": "Total des articles : {{count}}",
     "values": {
       "unknown": "Inconnu"
