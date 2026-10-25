@@ -1,328 +1,273 @@
-# Service requests: restrict forms to specific clients and client-user groups
+# Service requests: restrict forms to specific clients and client users
 
-Card `1c48ad98-7a36-49bd-b871-37f466cb9740` (PBNJ Consulting, 2026-10-22).
+Card `1c48ad98-7a36-49bd-b871-37f466cb9740` (PBNJ Consulting feedback). PSA ticket `alga-2026-0002816`.
 Worktree: `~/alga-copies/feature-service-requests-restrict-forms-to-specific-clie`.
 
-**Revision 2 (2026-10-25).** The first design — two audience link tables
-(`service_request_audience_clients`, `service_request_audience_client_groups`)
-plus `audience_mode` — is superseded. The audience is now **one stored
-predicate** on `@alga-psa/predicates` (shipped by card `9798abc3`, PR #3858),
-which lets a form target clients, client tags, client-user groups, contacts and
-contact tags without a table per audience kind. The link tables and their
-migration are withdrawn before ever reaching main; the migration file is
-rewritten in place, not layered over.
+Revision 2 (2026-10-25). Revision 1 stored the audience in two link tables (`service_request_audience_clients`,
+`service_request_audience_client_groups`) and shipped as draft PR #3854. That design is replaced: the audience is
+a predicate on the shared model from `@alga-psa/predicates` (card `9798abc3`, PR #3858). This card is stacked on
+`9798abc3` and starts implementation from `main` after #3858 merges. Decisions D1–D9 were approved by the captain
+on 2026-10-25.
 
-## 1. What changes
+## 1. Outcome
 
-Today the only built-in visibility provider has no config and always returns
-`true`
-(`server/src/lib/service-requests/providers/builtins/allAuthenticatedClientUsersVisibilityProvider.ts:3-10`).
-The only real filter is EE `advanced-visibility`
-(`ee/server/src/lib/service-requests/providers.ts:412-512`, registered `:599`),
-configured by hand-written `allowedClientIds` / `allowedRequesterUserIds` JSON in
-the editor textarea (`ServiceRequestDefinitionEditorPage.tsx:1843-1878`). CE
-ignores that config.
+An admin can make a service-request form visible to everyone, or to any combination of:
 
-New:
-- `server/src/lib/service-requests/definitionAudience.ts` — the audience
-  vocabulary, validation, the portal **subject** loader and the single decision
-  function (§3).
-- `server/src/components/settings/service-requests/ServiceRequestAudienceEditor.tsx`
-  (§4).
-- `server/migrations/20261022090000_add_service_request_audience_scoping.cjs`
-  (rewritten, §2).
+- specific clients (all their portal users),
+- specific clients, limited to some of their client portal visibility groups,
+- specific contacts,
+- contacts with a given tag,
+- clients with a given tag,
 
-Modify: `portalCatalog.ts:101-132` and `portalDetail.ts:91-118` (shared
-decision); `definitionEditor.ts:78-79,182-183` (expose `execution.audience`);
-`actions.ts:488-505` (`updateServiceRequestAudienceAction`; keep the
-visibility-config action for EE); `definitionManagement.ts:324-366` (copy the
-audience on duplicate); `definitionValidation.ts:94-102` (reject an invalid or
-empty audience at publish); `ServiceRequestDefinitionEditorPage.tsx:689-692,1144-1154,1843-1880`.
+each optionally narrowed to "only contacts tagged …". The admin picks entities with pickers, never types ids, and
+sees how many contacts the audience currently reaches. The client portal catalog, the form detail page and
+submission all respect it. It works the same in CE and EE.
 
-Reuse, do not invent:
-- `packages/predicates` (`evaluatePredicate`, `predicateGroupSchema`,
-  `PREDICATE_OPERATORS`, `SET_OPERATORS`) — the same condition model the ticket
-  list and workflow conditions already use. One semantics contract
-  (`packages/predicates/spec/SEMANTICS.md`), one conformance suite.
-- `packages/ui/src/components/ClientPicker.tsx:34-67` (async `searchClients`,
-  backed by `searchClientsForPicker`, `clientPickerActions.ts:47`) and
-  `MultiContactPicker.tsx:14-71` for the search-plus-chips pattern.
-- The entity-tag picker and tag chip components from `packages/tags` (card
-  `9798abc3`) for client-tag and contact-tag selection.
-- `visibilityGroupActions.ts:268` (`getClientPortalVisibilityGroups`) to list a
-  client's groups.
+## 2. The audience is a predicate over the requester
 
-## 2. Data model
+### 2.1 Requester record and paths
 
-One column, no link tables:
+A requester is described by one record. These paths are the audience vocabulary. They are persisted inside stored
+audiences from the first save, so they are contracts: a rename needs a migration that rewrites stored audiences,
+and a path is never reused with a different meaning.
 
-```sql
-ALTER TABLE service_request_definitions
-  ADD COLUMN audience_filter jsonb NULL;
+| Path | Kind | Source |
+| --- | --- | --- |
+| `client.id` | scalar uuid | `clients.client_id` of the requester's client |
+| `client.tags` | set of tag definition ids | `tag_mappings` with `tagged_type = 'client'` |
+| `contact.id` | scalar uuid | `contacts.contact_name_id` |
+| `contact.tags` | set of tag definition ids | `tag_mappings` with `tagged_type = 'contact'` |
+| `contact.group.id` | scalar uuid | `contacts.portal_visibility_group_id` |
+| `user.id` | scalar uuid | the client-portal user (`users.user_id`) |
+
+Tag values are tag definition ids (`tag_mappings.tag_id`), the same identity #3858 uses for ticket filters.
+
+### 2.2 Storage
+
+`service_request_definitions.audience jsonb NOT NULL DEFAULT '{"join":"and","clauses":[]}'`.
+
+- The value is a `PredicateGroup`, validated with `predicateGroupSchema` from `@alga-psa/predicates` plus the
+  audience query schema (§2.4), so unknown paths and operators are rejected on write.
+- **Everyone** is the empty `and` group, which the predicate semantics define as true. It is the default and the
+  value every existing definition gets.
+- **Selected** is an `or` group of entries. An empty `or` group is false, so a scoped form with no entries is
+  visible to nobody (fails closed) without a separate mode column.
+- Revision 1's migration `server/migrations/20261022090000_add_service_request_audience_scoping.cjs` never
+  shipped. Replace it in place with a migration that adds `audience`. Dev databases that ran revision 1 must
+  drop `service_request_audience_clients`, `service_request_audience_client_groups` and
+  `service_request_definitions.audience_mode` by hand (record this as a card fact). Remove the revision 1 entries
+  from `packages/db/src/lib/tenantTableMetadata.ts`, `server/migrations/utils/tenantDb.cjs` and
+  `ee/temporal-workflows/src/activities/tenant-deletion-activities.ts`.
+
+The audience is a live access policy on the definition. It is not copied into
+`service_request_definition_versions` by `definitionPublishing.ts`; tightening it takes effect immediately.
+
+### 2.3 Shape the editor writes
+
+The model allows arbitrary nesting. The editor writes exactly one shape, and the save action rejects anything
+else with a clear error:
+
+```
+Everyone:  { join: 'and', clauses: [] }
+Selected:  { join: 'or', clauses: [ <entry>, ... ] }
+<entry>:   <base clause>
+         | { join: 'and', clauses: [ <base clause>, { path: 'contact.tags', operator: 'in', value: [<tag ids>] } ] }
+<base clause>:
+           { path: 'client.id',        operator: 'in', value: [<client id>] }
+         | { path: 'contact.group.id', operator: 'in', value: [<group ids of one client>] }
+         | { path: 'contact.id',       operator: 'in', value: [<contact ids>] }
+         | { path: 'contact.tags',     operator: 'in', value: [<tag ids>] }
+         | { path: 'client.tags',      operator: 'in', value: [<tag ids>] }
+         | { path: 'user.id',          operator: 'in', value: [<user ids>] }   (written only by the §5 migration)
 ```
 
-- `NULL` = **everyone** (today's behaviour; the default, so no definition
-  changes on deploy).
-- A `PredicateGroup` (JSON) = the audience, evaluated against the portal
-  viewer (§3). It is `{"join":"or","clauses":[…]}` so each clause is one
-  audience *source*; an empty `or` group matches nobody and is rejected at save
-  (§4) rather than stored.
-- No `audience_mode` column: `NULL` already encodes "everyone", and a stored
-  group encodes intent. "Empty rows = everyone" — the failure mode the old
-  `audience_mode` column existed to prevent — cannot happen, because the
-  audience is a value, not a row set.
-- CHECK `audience_filter IS NULL OR jsonb_typeof(audience_filter) = 'object'`;
-  shape is enforced in application code by `predicateGroupSchema`.
-- No backfill, and no change to `service_request_definition_versions`: audience
-  is an access policy, not form content (§3, "Must not change").
+`client.id` entries hold one client each, so the editor can render one row per client. A client limited to groups
+is stored as a `contact.group.id` entry only, with no `client.id` entry (groups are owned by exactly one client,
+so this cannot admit another client's users). The editor rebuilds the per-client row from the groups' owning
+client. The save action rejects a client selected together with one of its own groups ("choose either all users
+or specific groups"). A client plus another client's group is allowed.
 
-The withdrawn tables (`service_request_audience_clients`,
-`service_request_audience_client_groups`), their FKs and indices disappear from
-the migration. The migration never ran on any shared DB (see the card's
-`smokeReport`: `20261022090000` had never been applied and had to be applied by
-hand for the smoke), so no down-migration is needed.
+### 2.4 Audience query schema
 
-Tenancy follows the definition row: the audience filter carries no ids of its
-own except the tag/client/group/contact ids inside clauses, all of which are
-resolved against the viewer's tenant-scoped subject. A foreign-tenant id in a
-clause can only match a foreign-tenant subject, which cannot occur (§3
-`loadAudienceSubject` is always `tenantDb`-scoped and reads the current
-contact). Save-time validation rejects ids that do not exist in the tenant.
+`server/src/lib/service-requests/audienceSchema.ts` declares one `QuerySchema` for the paths in §2.1. It is used
+for validation (`validatePredicate`) and for the reach count (§4.3). Root table `contacts`:
 
-## 3. Where the restriction is enforced
+- relation `contact` (one, `contacts`, `contact_name_id` → `contact_name_id`): attributes `id`
+  (column `contact_name_id`, uuid, operators `in`/`not_in`), `tags` (`tagSet({ taggedType: 'contact', local:
+  'contact_name_id' })`); relation `group` (one, `client_portal_visibility_groups`, `portal_visibility_group_id`
+  → `group_id`) with attribute `id`.
+- relation `client` (one, `clients`, `client_id` → `client_id`): attributes `id`, `tags`
+  (`tagSet({ taggedType: 'client', local: 'client_id' })`).
+- relation `user` (many, `users`, `contact_name_id` → `contact_id`, where `user_type = 'client'`): attribute `id`.
 
-Single authority, `server/src/lib/service-requests/definitionAudience.ts`.
+The compiler correlates every hop on `tenant`. No computed attributes; this schema has no raw SQL.
 
-### 3.1 The audience vocabulary
+## 3. Enforcement
 
-An audience is a predicate over the **viewer**, not over a table, so it gets its
-own path vocabulary (not the ticket query schema). Paths, with the operators the
-editor may emit:
+Single authority in `server/src/lib/service-requests/definitionAudience.ts`:
 
-| Path | Kind | Meaning | Editor operator |
-| --- | --- | --- | --- |
-| `client.id` | scalar uuid | the viewer's client | `in` |
-| `client.tags` | set of tag ids | tags on that client | `in` (any of) |
-| `contact.id` | scalar uuid | the viewer's contact | `in` |
-| `contact.tags` | set of tag ids | tags on that contact | `in` (any of) |
-| `contact.groups` | set of visibility-group ids | the contact's portal visibility group(s) | `in` (any of) |
-
-`contact.groups` is a set even though `contacts.portal_visibility_group_id` is a
-single column today: the set form gives "member of any of these groups" for
-free and stays correct if a contact ever belongs to more than one group.
-
-`AUDIENCE_PATHS` is the allow-list. `validateAudienceFilter(filter)` walks the
-group, rejects an unknown path, rejects an operator not permitted for the path
-kind (`SET_OPERATORS` for set paths; `in`/`not_in`/`equals`/`not_equals`/
-`is_empty`/`is_not_empty` for scalar paths), and rejects an empty group at the
-root. `predicateGroupSchema` is applied first, so a malformed node never reaches
-the vocabulary check. This is what makes a stored filter safe to evaluate: the
-evaluator is total, but the vocabulary is what stops a caller inventing
-`contact.password` and reading it.
-
-### 3.2 The subject
-
-```ts
-loadAudienceSubject(db, context): Promise<AudienceSubject>
-// { client: { id, tags: string[] }, contact: { id, tags: string[], groups: string[] } }
+```
+loadRequesterRecord(db, tenant, { requesterUserId, clientId, contactId })  // once per request
+isAudienceSatisfied(audience: PredicateGroup, requester: RequesterRecord): boolean  // evaluatePredicate
 ```
 
-- One query for the contact row (`tenantDb`, by `contact_id` from the session),
-  one batched tag read over `tag_mappings` for `(tagged_type, tagged_id)` in
-  `('client', clientId)` / `('contact', contactId)`.
-- A missing contact (`null`) yields `contact: { id: null, tags: [], groups: [] }`,
-  so contact-scoped clauses simply do not match — the same "missing never
-  satisfies a comparison" rule the semantics contract already fixes.
-- Loaded once per request and passed to the catalog loop; `portalDetail` loads
-  it for the single definition.
+- `loadRequesterRecord` returns `{ client: { id, tags }, contact: { id, tags, group: { id } }, user: { id } }`.
+  Tags are read straight from `tag_mappings` with `tenantDb`. They are **all** of the entity's tags, not the
+  display-rule-filtered set: display rules decide what a badge shows, never who can see a form. Do not call
+  `findTagsByEntityIds` (it requires `tag:read`, which client users do not hold). A requester with no contact gets
+  `contact: null`, so contact paths are missing and never match.
+- `isAudienceSatisfied` calls `evaluatePredicate` from `@alga-psa/predicates`. A stored value that fails
+  `predicateGroupSchema` is treated as false (fail closed) and logged.
+- `portalCatalog.ts`: select `audience` with the definition rows, load the requester record once before the loop,
+  and keep a definition only if the visibility provider allows it **and** the audience is satisfied.
+- `portalDetail.ts`: same check for one definition; `null` stays the "not visible" result.
+- `submissionService.ts` does not change. It already goes through
+  `getVisiblePublishedServiceRequestDefinitionDetail` and throws `Service request is not visible or not
+  published`; a second check would duplicate the authority.
+- The client-portal actions already pass `clientId` and `contact_id`; only tests prove propagation.
 
-### 3.3 The decision
+## 4. Editor
 
-```ts
-isDefinitionVisibleToRequester({ audienceFilter, subject, providerAllowed }): boolean
-// providerAllowed && (audienceFilter === null || evaluatePredicate(audienceFilter, subject))
-```
+### 4.1 Audience editor
 
-- `evaluatePredicate` from the package root: deterministic, Node-free, already
-  conformance-tested for every operator, missing-value rule and set semantics.
-  No new SQL compiler surface and no second semantics.
-- A stored filter that fails `validateAudienceFilter` (only possible if a row was
-  written by something other than this action) **fails closed**: return `false`
-  and log once, scoped. Never throw into the portal request path.
+`server/src/app/msp/service-requests/ServiceRequestAudienceEditor.tsx` (rework of revision 1), rendered in the
+execution card of `ServiceRequestDefinitionEditorPage.tsx` for every definition:
 
-### 3.4 Enforcement points
+- **Everyone** (default) or **Selected clients and client users**.
+- Selected: a list of entries, each added with the matching picker:
+  - client: `ClientPicker` with `searchClientsForPicker`; each client row offers "All users of {client}" or
+    "Only members of selected groups" (groups from `getClientPortalVisibilityGroups`, shown with the client name);
+  - contact: `ContactPicker`;
+  - contact tag / client tag: the existing tag selector (`TagFilter` from `@alga-psa/ui/components/tags`, the one
+    #3858's `WhereTagFilter` uses) over contact-type / client-type tag definitions.
+- Any entry can add "only contacts tagged …" (the `and` form in §2.3).
+- Clients and contacts render with `EntityChip` (#3858), including their displayed tags. Tags render with their
+  tag colors. No raw ids anywhere.
+- Saving with Selected and no entries is allowed but shows a warning that nobody will see the form.
+- Strings under `editor.execution.visibility.audience.*` in every locale file
+  (`server/public/locales/{en,de,es,fr,it,nl,pl,pt,sv,xx,yy}/msp/service-requests.json`).
 
-Must change:
-- `portalCatalog.ts:101-132` — load the subject once, pass the existing provider
-  result through the decision. A restricted form disappears from the list.
-- `portalDetail.ts:91-118` — same decision; `null` remains "not visible".
+### 4.2 Save
 
-Must **not** change:
-- `submissionService.ts:261-278` — it already calls
-  `getVisiblePublishedServiceRequestDefinitionDetail` and throws
-  `Service request is not visible or not published`. That is the submit gate; a
-  second check would duplicate the authority and drift.
-- `server/src/app/client-portal/request-services/actions.ts` and
-  `[definitionId]/actions.ts` — already pass `clientId` and
-  `currentUser.contact_id`; tests only prove propagation.
-- `definitionPublishing.ts:113-114` — audience is an access policy on the
-  definition, not form content. Publishing must not freeze or resurrect an old
-  audience: tightening access takes effect immediately. EE
-  `advanced-visibility` stays version-snapshotted and is ANDed with it.
+`updateServiceRequestAudienceAction(definitionId, audience)` in `server/src/app/msp/service-requests/actions.ts`,
+backed by `saveServiceRequestDefinitionAudience` in `definitionManagement.ts`:
 
-### 3.5 CE vs EE
+- requires `service-request:update`;
+- validates the group with `predicateGroupSchema`, `validatePredicate(audienceSchema, …)` and the §2.3 shape;
+- checks every referenced client, contact, group, tag definition (of the right `tagged_type`) and user exists in
+  the tenant; foreign-tenant or missing ids are rejected;
+- rejects a client selected together with one of its own groups;
+- writes `audience` and calls `revalidatePath('/client-portal/request-services')`.
 
-Enforcement is core (`server/src/lib/service-requests/…`), so client, group,
-contact and tag scoping works in CE with **no** license gate. EE
-`advanced-visibility` remains what it is — user-id allow-lists and its own
-provider config — and the effective answer is
-`providerAllowed AND audienceAllowed`, i.e. the intersection. The audience editor
-is shown for every provider, because audience is orthogonal to provider choice.
-The raw JSON textarea survives only for `advanced-visibility`, under a labelled
-advanced section.
+"Save all" on the editor page includes the audience. `definitionManagement.ts` copies `audience` when a definition
+is duplicated.
 
-## 4. Audience editor
+### 4.3 Reach count
 
-`ServiceRequestAudienceEditor.tsx`, rendered where the visibility JSON block is
-today (`ServiceRequestDefinitionEditorPage.tsx:1843-1880`), replacing it for the
-built-in provider:
+The editor shows "Visible to N contacts at M clients" for the current (unsaved) audience, refreshed on change.
+`getServiceRequestAudienceReachAction(audience)` compiles the audience with `compilePredicate(knex,
+audienceSchema, audience, { rootAlias: 'c' })` over `contacts c` in the tenant, restricted to contacts that have
+an active client-portal user, and returns `count(*)` and `count(distinct client_id)`. Everyone shows "All client
+portal users". Requires `service-request:read`. The count reflects the current data; it is not a guarantee about
+contacts added later.
 
-- Segmented **Everyone** (default; stores `null`) / **Selected audience**
-  (stores a group).
-- "Selected audience" is a list of **sources**, each a row with a picker and a
-  removable chip set, all ORed:
-  - *Clients* — `ClientPicker` (`searchClients={searchClientsForPicker}`), each
-    pick a `ClientAvatar` + name chip → `{path:'client.id', operator:'in', value:[…ids]}`.
-  - *Client tags* — tag picker scoped to entity type `client` →
-    `{path:'client.tags', operator:'in', value:[…tagIds]}`.
-  - *Client-user groups* — pick a client, then its groups from
-    `getClientPortalVisibilityGroups`, shown with the owning client's name (a
-    group belongs to exactly one client) →
-    `{path:'contact.groups', operator:'in', value:[…groupIds]}`.
-  - *Contacts* — `MultiContactPicker` →
-    `{path:'contact.id', operator:'in', value:[…contactIds]}`.
-  - *Contact tags* — tag picker scoped to `contact` →
-    `{path:'contact.tags', operator:'in', value:[…tagIds]}`.
-- Row group `join: 'or'`. Inside one row, multiple selections are one `in`
-  clause (any of). The semantics read exactly like the intent: "visible to
-  Client X **or** clients tagged VIP **or** members of group G **or** contact C".
-- Editor data is the parsed filter plus picker display data, so the saved filter
-  is the single source of truth. Parsing is total: a clause the editor cannot
-  represent (hand-written JSON, a future path) is shown in a read-only JSON
-  fallback with a warning; saving that definition keeps the filter unchanged
-  unless the admin edits a row, so nothing is silently dropped.
-- Save calls `updateServiceRequestAudienceAction(definitionId, filter)`, which:
-  requires `service-request:update`; runs `validateAudienceFilter`; verifies
-  every id inside clauses exists in the tenant (clients, groups, contacts, tags,
-  each with its tenant key); rejects an empty group with "add at least one
-  audience"; rejects a scalar path given a list; writes the column in one
-  statement and revalidates `/client-portal/request-services`.
-- "Save all" (`:1144-1154`) includes the audience state alongside execution
-  content; the definition editor's `execution.audience` read
-  (`definitionEditor.ts:78-79`) supplies it.
-- Duplicate copies `audience_filter` verbatim (`definitionManagement.ts:324-366`).
-- Publish (`definitionValidation.ts:94-102`) refuses an invalid or empty
-  audience; a valid non-empty audience is required to be non-empty by
-  construction.
-- Locale keys under `editor.execution.visibility.audience.*` in
-  `server/public/locales/*/msp/service-requests.json` (all existing locales;
-  `npm run validate-translations` is part of the gate).
+### 4.4 Deleted references
 
-## 5. Dependency: the predicates package must exist
+An id that no longer exists matches nobody, so a stale audience fails closed. Publish validation
+(`definitionValidation.ts`) rejects an audience that references missing clients, contacts, groups, tags or users.
+When the editor loads an audience with missing references it drops them from the working copy and lists what it
+dropped; saving persists the cleaned audience.
 
-`@alga-psa/predicates` reaches `main` with card `9798abc3` (PR #3858), which is
-not merged yet. This card therefore **stacks on `9798abc3`** (`stackMode=after`),
-and its implementation steps stay held until that parent merges and the branch
-is carried onto main. The design is written against the package's v1 API
-(`types.ts`, `schema.ts`, `evaluate.ts`) and needs no change when it lands; if the
-API shifts in review, the adapter in §3.3 is the only place to touch.
+### 4.5 Tags referenced by audiences must not be cleaned up
 
-## 6. Order of work
+#3858's orphan cleanup (`TagDefinition.deleteOrphaned` in `packages/tags/src/models/tagDefinition.ts`,
+`packages/tags/src/lib/tagCleanup.ts`, `server/src/lib/utils/tagCleanup.ts`, the `deleteTag` orphan branch) deletes
+tag definitions with no mappings, sparing only those a display rule references. A tag used by an audience but not
+yet applied to anyone would be deleted, silently emptying that entry.
 
-1. Migration (rewritten) + generated types; run `serviceRequestDomainTables`.
-2. `definitionAudience.ts`: vocabulary, `validateAudienceFilter`,
-   `loadAudienceSubject`, `isDefinitionVisibleToRequester` + unit tests.
-3. Wire catalog (one subject per request) and detail; integration tests for
-   list/detail/submit across every audience kind.
-4. Editor data, save action, publish validation, duplicate-copy.
-5. `ServiceRequestAudienceEditor` + page wiring + "Save all"; locale keys.
-6. Typecheck, service-request suites, i18n validation, browser pass.
+The fix is a general tag-reference mechanism in `packages/tags`: a registry of referrers, each declaring how to
+find the tag ids it references (display rules declare `tag_display_rules.tag_id`; service-request audiences
+declare the tag ids inside `service_request_definitions.audience`). Orphan cleanup and the option loaders consult
+the registry instead of special-casing display rules. If #3858 lands this mechanism, this card registers the
+audience referrer. If it does not, this card builds it, moves display rules onto it, and registers the audience
+referrer. Either way, an integration test proves an audience-only tag survives cleanup.
 
-## 7. Explicit non-goals
+Deleting a tag explicitly is still allowed. The audience entry then holds a missing id, handled by §4.4.
 
-- No link tables, no `audience_mode`, no per-audience-kind schema.
-- No exclusions in v1 (`not_in` rows): audience is a union of admits. The
-  vocabulary permits `not_in`, but the editor will not emit it until someone
-  asks for "everyone except".
-- No new general predicate builder UI. The editor is a fixed, labelled list of
-  audience sources; admins do not author arbitrary expressions.
-- No change to `client_portal_visibility_groups` or `visibilityGroupActions`.
-- No MSP-side restriction; staff still see and manage every form.
-- No new EE license gate; scoping is core.
-- No audience snapshots in `service_request_definition_versions`.
+## 5. Retire the EE `advanced-visibility` provider
 
-## 8. Risks
+Captain decision (D6): one visibility authority.
 
-- **Tag ids are tenant-scoped.** A tag deleted while in an audience leaves a
-  clause that matches nobody for that source; the form stays visible to the
-  other sources. UI warns when a referenced tag no longer exists.
-- **Groups are client-owned.** A group from client A only ever admits client A's
-  members, so it cannot grant a client B user; show the owning client next to
-  every group. Deleting the group leaves a clause matching nobody.
-- **Contacts without a group** match client, client-tag and contact scopes only.
-  Reassigning a contact changes access immediately (intended).
-- **Two models.** EE `advanced-visibility` remains; effective access is the
-  intersection. On-behalf creation does not exist today; any future path must
-  pass the target contact's subject or fail closed.
-- **Draft vs published:** a draft scoped form stays invisible, and publishing
-  must not copy the audience into versions.
-- **Predicate drift:** the vocabulary allow-list, not the evaluator, is the
-  security boundary. A path added to `AUDIENCE_PATHS` must come with a subject
-  field and a test.
+- A migration converts every definition whose `visibility_provider = 'advanced-visibility'`. It reads the config
+  the portal enforces today, from the latest **published** version (the draft's config if nothing is published),
+  and ANDs it into the definition's `audience`:
+  - `allowAll: false` → `{ join: 'or', clauses: [] }` (nobody);
+  - `allowedClientIds` (non-empty) → `{ path: 'client.id', operator: 'in', value: [...] }`;
+  - `allowedRequesterUserIds` (non-empty) → `{ path: 'user.id', operator: 'in', value: [...] }`;
+  - both lists → `{ join: 'and', clauses: [<client clause>, <user clause>] }` (the provider required both).
+  Then it sets `visibility_provider = 'all-authenticated-client-users'` and `visibility_config = {}` on the
+  definition and every version.
+- If the converted audience is not in the §2.3 shape the editor writes, the editor shows it read-only with a
+  "Replace with a new audience" action rather than mis-rendering it. The save action accepts the converted shape
+  on unchanged round-trip.
+- Remove `advancedVisibilityProvider` from `ee/server/src/lib/service-requests/providers.ts` (`:412-480`, and its
+  registration at `:599`), the JSON textarea and its "Save all" parse in `ServiceRequestDefinitionEditorPage.tsx`
+  (`:1170`, `:1881`), and the provider option from the selector. The visibility provider registry stays; it now
+  has the built-in provider only.
+- Behavior change for release notes: the provider's config was copied into each published version; the audience
+  is live. A draft whose advanced-visibility config differed from its published version follows the published
+  config after migration.
 
-## 9. Test plan
+## 6. CE and EE
 
-Unit (`definitionAudience.unit.test.ts`): `validateAudienceFilter` accepts every
-editor-emitted clause and rejects unknown paths, list-on-scalar, single-on-set,
-empty root group; the decision returns true for `null`, false for an empty
-subject with a client clause, true for a tag match on client and contact, true
-for a group match, false for a missing contact, false (fail closed) for an
-unparseable filter.
+Audience scoping is core in CE and EE. No license gate.
 
-Integration (`serviceRequestAudienceScoping.integration.test.ts`, replacing the
-withdrawn table-based file): everyone (regression); client audience
-visible/detail/submit for A and invisible for B (no submission row for B);
-client-tag audience admits a tagged client's contact and not another;
-contact audience admits exactly that contact; contact-tag audience; group-only
-audience admits a contact whose `portal_visibility_group_id` matches while a
-contact with no group or a different group is refused; union of sources admits
-both populations; foreign-tenant client/group/contact/tag ids rejected on save;
-`advanced-visibility` + audience = AND; duplicate copies the filter; tenant
-isolation. Extend `serviceRequestPortalCatalog.integration.test.ts:234`,
-`serviceRequestPortalDetail.integration.test.ts:86,171`,
-`serviceRequestDefinitionEditor.integration.test.ts`,
-`serviceRequestAdvancedVisibility.integration.test.ts`.
+## 7. Visibility groups
 
-Browser: as an MSP admin, build an audience from a client picker, from a client
-tag, and from a group; then as a client user in and out of the audience confirm
-catalog, detail and submit.
+Groups are a requester attribute (`contact.group.id`), not a list of forms on the group. Adding service-request
+definitions to what a group scopes would put form access in two places that can disagree. No change to
+`client_portal_visibility_groups` or `visibilityGroupActions`.
 
-Verify with `npx tsc --noEmit` in `server`, the integration files above against
-the test DB, `editor.i18n.test.tsx` / `npm run validate-translations`, then the
-browser pass.
+## 8. Order of work
 
-## 10. Corrections to the card
+1. Start from `main` after #3858 merges. Keep revision 1's editor, call sites and tests as the starting point.
+2. Migration (§2.2), `audienceSchema.ts`, revision 1 metadata cleanup.
+3. `definitionAudience.ts` (§3) with unit tests; wire catalog and detail.
+4. Save action, validation, duplicate copy, reach count action (§4.2–4.4).
+5. Tag-reference mechanism or audience referrer registration (§4.5).
+6. Advanced-visibility migration and removal (§5).
+7. Audience editor and page wiring; locale keys.
+8. Typecheck, service-request suites, predicates suites, i18n validation, browser pass.
 
-1. CE does not "ignore config"; `all-authenticated-client-users` accepts any
-   config and returns `true`.
-2. `client_portal_visibility_groups` are per-client groups of contacts, not
-   tenant-wide client-user groups; a group belongs to exactly one client, but
-   selecting a group does not select its client.
-3. "Add service-request definitions to what visibility groups can scope" is the
-   reverse relation and would change the group tables. The form referencing
-   groups (now as a `contact.groups` clause) is smaller and correct.
-4. Submit does not enforce visibility itself: `submissionService.ts:261` calls
-   the detail function. Only catalog and detail need wiring.
-5. `allowedRequesterUserIds` is a per-user id allow-list, not group membership;
-   it stays with the EE provider.
-6. No on-behalf MSP submission path exists today, so that risk is future-only.
+## 9. Tests
+
+- **Conformance.** Requester paths add no new path kind (scalar uuid, set of uuids, relation hop). If anything
+  needs a kind the table lacks, add rows to `packages/predicates/spec/conformance.json` first.
+- **Unit** (`definitionAudience.unit.test.ts`): every §2.3 entry kind, the `and` narrowing, empty `and` = everyone,
+  empty `or` = nobody, missing contact, invalid stored value fails closed.
+- **Integration** (`serviceRequestAudienceScoping.integration.test.ts`, rewritten): for each entry kind, the admitted
+  requester sees the form in the catalog, opens detail and submits; a non-admitted requester gets none of the
+  three and no submission row. Also: group-only entry with no client entry; client plus another client's group;
+  client with its own group rejected; foreign-tenant ids rejected for every kind; missing references rejected at
+  publish; display rules do not affect access (tag with no display rule still admits); audience not snapshotted
+  by publish; duplicate copies the audience; reach count matches the admitted set.
+- **Tag references:** an audience-only tag survives every cleanup path; explicit delete still works and leaves the
+  form failing closed.
+- **Advanced-visibility migration:** each config shape converts to the specified audience and the same requesters
+  see the form before and after; published-vs-draft divergence follows published.
+- **Existing suites:** `serviceRequestPortalCatalog`, `serviceRequestPortalDetail`, `serviceRequestDefinitionEditor`
+  integration tests; `ServiceRequestAudienceEditor.test.tsx` rewritten for the new editor; `editor.i18n.test.tsx`
+  and `npm run validate-translations`. `serviceRequestAdvancedVisibility.integration.test.ts` becomes the
+  migration test.
+
+## 10. Risks
+
+- **Persisted vocabulary.** The §2.1 paths and the §2.3 shape outlive this code. Changes go through a migration.
+- **Tenant leakage.** Every loader uses `tenantDb`; the compiler correlates every hop on `tenant`; the save
+  action rejects foreign-tenant ids. Cross-tenant tests are required for every entry kind.
+- **Tag cleanup** (§4.5) is the one way an audience can change without an admin editing it; the reference
+  mechanism and its test close it.
+- **Group or client deletion** leaves a missing id, so the form fails closed rather than opening up. The editor
+  warns on load.
+- **On-behalf creation.** No MSP path creates a request for a client today. Any future one must build the target
+  requester's record or fail closed.
