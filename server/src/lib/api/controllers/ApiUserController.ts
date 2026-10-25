@@ -30,7 +30,7 @@ import {
 } from '../../auth/rbac';
 import { createSystemContext, tenantDb } from '@alga-psa/db';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -129,7 +129,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -191,7 +191,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -290,7 +290,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -374,7 +374,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -459,7 +459,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
