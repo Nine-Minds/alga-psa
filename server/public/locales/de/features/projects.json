@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "Sie haben keine Berechtigung, Projekte anzuzeigen.",
         "update": "Sie haben keine Berechtigung, Projekte zu ändern.",
-        "inventory": "Sie benötigen Inventarzugriff, um Lagereinheiten auszuwählen."
+        "inventory": "Sie benötigen Inventarzugriff, um Lagereinheiten auszuwählen.",
+        "billing": "Sie benötigen Abrechnungszugriff, um Artikel in ein Projekt einzubauen.",
+        "asset": "Sie benötigen Asset-Zugriff, um Kunden-Assets zu verknüpfen.",
+        "inventoryStock": "Sie benötigen Inventarzugriff, um Lagerbestände einzusehen."
       }
     }
   }

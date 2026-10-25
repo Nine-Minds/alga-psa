@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "You do not have permission to view projects.",
         "update": "You do not have permission to change projects.",
-        "inventory": "You need inventory access to choose stock units."
+        "inventory": "You need inventory access to choose stock units.",
+        "billing": "You need billing access to install items into a project.",
+        "asset": "You need asset access to link client assets.",
+        "inventoryStock": "You need inventory access to see stock levels."
       }
     }
   }

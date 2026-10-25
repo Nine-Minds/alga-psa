@@ -65,3 +65,18 @@ Where the build differs from the design text, and why:
 - No separate billing-run preview test: T007 proves reserve, stage and pack write no `project_materials` row, and billing reads only that table.
 
 Not verified in this run: the mobile workspace's recordLinks parity test could not start locally (Expo deps not installed in this worktree); byte identity was checked with `cmp`. No signed-in browser smoke test: the shared dev stack's login password was not available; the page and manifest routes were checked unauthenticated (redirect to sign-in, 401, 404).
+
+## Repair round (2026-10-25, PR #3892 review)
+
+**Task / phase / project delete policy.** Deleting a task must never leave phantom claims or fail on a raw FK error.
+- `releaseStagingForTasks` / `releaseStagingForTask` / `releaseStagingForProject` (inventory `staging.ts`) run inside the delete transaction. Live lines (`reserved`/`staged` stock, `received`/`staged` client) are released through the same `releaseLineInTransaction` that `releaseLines` uses: counters return via `releaseCounter`, serial units return to `in_stock` with `allocated_staging_line_id` cleared, and the lines leave their boxes (a sealed box holding such a line is reopened first, as in "release all").
+- **Installed lines** own a `project_materials` row and are never cascaded away or refused: they are detached (`task_id = NULL`) and stay on the project as history. Released lines are detached the same way.
+- **Boxes** on the task are detached (`task_id = NULL`) and stay on the project.
+- Migration `20261025080000_staging_task_fks_no_cascade.cjs` changes `project_staging_lines_task_fk` from CASCADE to NO ACTION (SET NULL cannot be used: the composite key includes the NOT NULL `tenant`). `staging_containers_task_fk` was already NO ACTION. A delete path that skips the helper now fails loudly instead of orphaning claims. The original migration is untouched.
+- Paths covered: `deleteTask` action, `ProjectModel.deletePhase` (and the `deletePhase` action through it), `ProjectModel.delete` (and `deleteProject` through it; project delete releases every live claim and removes the project's boxes, members and lines before its tasks go), and the REST `ProjectService.deleteTask` / `deletePhase` (now transactional and routed through the helper). No known gap.
+
+**Permission gates.** `installProjectStagingLines` needs `project:update` + record-level read + `billing:create` (same gate as the billing material wrapper, since install creates a billable material); denial consumes nothing. `getProjectStagingAvailability` needs `inventory:read` as well as the project gate. `addProjectClientItems` needs `asset:read` when any item carries an `asset_id`; the refusal is permission-level and reveals nothing about the asset.
+
+**Low-stock signal.** A staging install evaluates the low-stock signal at the line's claim location (`collectStockLowSignalAfterConsume`); ordinary materials keep the default-location behaviour. Serialized units never signal.
+
+**Shared helper hardening.** `releaseClaimedUnits` selects the units `FOR UPDATE`.

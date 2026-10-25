@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "U heeft geen toestemming om projecten te bekijken.",
         "update": "U heeft geen toestemming om projecten te wijzigen.",
-        "inventory": "U heeft toegang tot de voorraad nodig om voorraadeenheden te kiezen."
+        "inventory": "U heeft toegang tot de voorraad nodig om voorraadeenheden te kiezen.",
+        "billing": "U heeft toegang tot facturatie nodig om items in een project te installeren.",
+        "asset": "U heeft toegang tot assets nodig om klantassets te koppelen.",
+        "inventoryStock": "U heeft toegang tot de voorraad nodig om voorraadniveaus te zien."
       }
     }
   }

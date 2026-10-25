@@ -8,7 +8,7 @@ import {
 } from '@alga-psa/types';
 import { recordStockConsumption, reverseStockConsumption, type ConsumeClaimant } from './consume';
 import { publishInventoryEvent } from './inventoryEvents';
-import { collectDefaultLocationStockLowSignalAfterConsume } from './stockLowSignal';
+import { collectDefaultLocationStockLowSignalAfterConsume, collectStockLowSignalAfterConsume } from './stockLowSignal';
 import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
@@ -357,8 +357,12 @@ export async function addMaterial(
         });
     }
 
+    // A staging install consumed at the line's claim location, so the low-stock signal is evaluated there
+    // (serialized units have no claim location and never signal). Ordinary materials use the default location.
     const pendingStockLow = consumption.consumed
-      ? await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity)
+      ? (claimLocationId
+        ? await collectStockLowSignalAfterConsume(trx, tenant, row.service_id, claimLocationId, row.quantity)
+        : await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity))
       : null;
 
     return { row, pendingAsset: consumption.pending_asset_link ?? null, pendingStockLow };

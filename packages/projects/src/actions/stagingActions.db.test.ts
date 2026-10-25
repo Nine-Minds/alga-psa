@@ -37,7 +37,9 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publis
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   createProjectStagingBox,
+  addProjectClientItems,
   getProjectStaging,
+  getProjectStagingAvailability,
   installProjectStagingLines,
   listProjectStagingUnits,
   packProjectStagingBox,
@@ -61,7 +63,7 @@ let CLIENT_A: string;
 let CLIENT_B: string;
 let TYPE_ID: string;
 
-const ALL = ['project:read', 'project:update', 'inventory:read'];
+const ALL = ['project:read', 'project:update', 'inventory:read', 'billing:create', 'asset:read'];
 
 beforeAll(async () => {
   knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 4 } });
@@ -201,5 +203,52 @@ describe('staging actions: RBAC and record-level authorization', () => {
     expect(await listProjectStagingUnits(projectId, svc)).toEqual([]);
     const pick = await reserveProjectStaging({ project_id: projectId, service_id: svc, quantity: 1, unit_ids: [randomUUID()], currency_code: 'USD' });
     expect(isActionPermissionError(pick)).toBe(true);
+  });
+});
+
+describe('staging actions: install, availability and client-item gates (repair round)', () => {
+  it('install needs billing:create; a denied install consumes nothing and creates no material', async () => {
+    const projectId = await makeProject(CLIENT_A);
+    const svc = await makeProduct(5);
+    const [line]: any = await reserveProjectStaging({ project_id: projectId, service_id: svc, quantity: 2, currency_code: 'USD' });
+    testState.permissions = new Set(['project:read', 'project:update', 'inventory:read']);
+
+    const denied = await installProjectStagingLines(projectId, [line.staging_line_id]);
+    expect(isActionPermissionError(denied)).toBe(true);
+
+    const after = await trx()('project_staging_lines').where({ tenant: TENANT, staging_line_id: line.staging_line_id }).first();
+    expect(after.status).toBe('reserved');
+    const level = await trx()('stock_levels').where({ tenant: TENANT, service_id: svc, location_id: LOCATION }).first();
+    expect([Number(level.quantity_on_hand), Number(level.reserved_quantity)]).toEqual([5, 2]);
+    expect(await count('project_materials', { project_id: projectId })).toBe(0);
+    expect(await count('stock_movements', { service_id: svc })).toBe(0);
+
+    // With billing:create the same call installs.
+    testState.permissions = new Set(ALL);
+    const ok: any = await installProjectStagingLines(projectId, [line.staging_line_id]);
+    expect(ok[0]).toMatchObject({ ok: true });
+  });
+
+  it('availability needs inventory:read', async () => {
+    const projectId = await makeProject(CLIENT_A);
+    const svc = await makeProduct(5);
+    testState.permissions = new Set(['project:read', 'project:update']);
+    expect(isActionPermissionError(await getProjectStagingAvailability(projectId, svc))).toBe(true);
+    testState.permissions = new Set(ALL);
+    const ok: any = await getProjectStagingAvailability(projectId, svc);
+    expect(ok.locations[0]).toMatchObject({ on_hand: 5, free: 5 });
+  });
+
+  it('client items that link an asset need asset:read; the refusal names no asset and writes nothing', async () => {
+    const projectId = await makeProject(CLIENT_A);
+    const assetId = randomUUID();
+    testState.permissions = new Set(['project:read', 'project:update']);
+    const denied: any = await addProjectClientItems(projectId, { items: [{ kind: 'client_asset', asset_id: assetId }] });
+    expect(isActionPermissionError(denied)).toBe(true);
+    expect(JSON.stringify(denied)).not.toContain(assetId);
+    expect(await count('project_staging_lines', { project_id: projectId })).toBe(0);
+    // Free-text items do not need asset:read.
+    const ok: any = await addProjectClientItems(projectId, { items: [{ kind: 'client_item', description: 'Rack rails' }] });
+    expect(Array.isArray(ok)).toBe(true);
   });
 });

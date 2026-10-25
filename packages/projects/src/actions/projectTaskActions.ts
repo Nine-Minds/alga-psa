@@ -2,6 +2,7 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
+import { releaseStagingForTask } from '@alga-psa/inventory/lib';
 import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
 import TaskTypeModel from '../models/taskType';
@@ -1086,6 +1087,9 @@ export const deleteTask = withAuth(async (
             }
 
             await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
+
+            // C6: return staging claims on the task (and detach installed lines / boxes) so nothing is left phantom-claimed.
+            await releaseStagingForTask(trx, tenant, taskId, user.user_id);
 
             await ProjectTaskModel.deleteTask(trx, tenant, taskId);
 

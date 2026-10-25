@@ -15,6 +15,7 @@ const testState = vi.hoisted(() => ({
   user: { user_id: 'staging-test-user' },
   permissions: new Set<string>(),
   assetLinks: [] as unknown[],
+  inventoryEvents: [] as Array<{ name: string; payload: unknown }>,
 }));
 
 vi.mock('@alga-psa/db', async () => ({
@@ -38,6 +39,13 @@ vi.mock('./assetLink', async () => ({
   createAndLinkDeliveredAsset: vi.fn(async (_db: unknown, _tenant: string, link: unknown) => {
     testState.assetLinks.push(link);
     return null;
+  }),
+}));
+
+vi.mock('./inventoryEvents', async () => ({
+  ...(await vi.importActual<typeof import('./inventoryEvents')>('./inventoryEvents')),
+  publishInventoryEvent: vi.fn(async (name: string, payload: unknown) => {
+    testState.inventoryEvents.push({ name, payload });
   }),
 }));
 
@@ -99,6 +107,7 @@ beforeEach(async () => {
   testState.trx = await knex.transaction();
   testState.permissions = new Set(['sales_order:read', 'sales_order:create', 'sales_order:update']);
   testState.assetLinks = [];
+  testState.inventoryEvents = [];
 });
 
 afterEach(async () => {
@@ -449,6 +458,23 @@ describe('T004 SO fulfillment never poaches a project claim', () => {
 });
 
 describe('T005 install, undo and delete', () => {
+  it('low-stock signal after install names the claimed-from location, not the product default', async () => {
+    const other = await makeLocation('Reserve warehouse');
+    const svc = await makeProduct({ onHand: 1 });
+    await trx()('product_inventory_settings').where({ tenant: TENANT, service_id: svc }).update({ reorder_point: 5 });
+    await recordStockMovement(trx(), TENANT, { movement_type: 'receipt', service_id: svc, quantity: 6, to_location_id: other, unit_cost: 500 });
+    const { projectId } = await makeProject();
+    const [line] = await reserve(projectId, svc, 4, { location_id: other });
+    await stageLines(db(), TENANT, [line.staging_line_id], USER);
+
+    const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
+    expect(result.ok).toBe(true);
+    const low = testState.inventoryEvents.filter((e) => e.name === 'INVENTORY_STOCK_LOW');
+    expect(low).toHaveLength(1);
+    expect(JSON.stringify(low[0].payload)).toContain(other);
+    expect(JSON.stringify(low[0].payload)).not.toContain(LOCATION);
+  });
+
   it('non-serialized: consumes once at the claim location, releases the claim, one material with the planned billing fields', async () => {
     const other = await makeLocation();
     const svc = await makeProduct({ onHand: 1 });

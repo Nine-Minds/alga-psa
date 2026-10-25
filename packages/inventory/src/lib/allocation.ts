@@ -270,7 +270,8 @@ export async function releaseClaimedUnits(
   const column = UNIT_CLAIM_COLUMN[kind];
   const units = (await trx('stock_units')
     .where({ tenant, status: 'allocated' })
-    .whereIn(column, claimantIds as string[])) as any[];
+    .whereIn(column, claimantIds as string[])
+    .forUpdate()) as any[];
   for (const u of units) {
     await trx('stock_units')
       .where({ tenant, unit_id: u.unit_id })

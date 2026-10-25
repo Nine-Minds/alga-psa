@@ -128,5 +128,55 @@
     ],
     "implemented": true,
     "evidence": "packages/inventory/src/lib/staging.db.test.ts (T013)"
+  },
+  {
+    "id": "T014",
+    "name": "T-task-delete-release (DB)",
+    "description": "deleteTask with reserved + staged non-serialized lines and a staged serial unit returns counters/unit, empties boxes, cache agrees with computeAllocationsFromTruth; sealed-box line released; DB refuses a task delete that skips the helper",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T015",
+    "name": "T-task-delete-detach (DB)",
+    "description": "Boxes are detached and installed lines stay as history (task_id null, material kept, stock stays consumed); no FK error",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T016",
+    "name": "T-phase-project-delete (DB)",
+    "description": "ProjectModel.deletePhase and ProjectModel.delete return every staging claim and remove project staging rows",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T017",
+    "name": "T-gates-repair (DB)",
+    "description": "install needs billing:create (denied consumes nothing); availability needs inventory:read; client items with asset_id need asset:read without revealing the asset",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingActions.db.test.ts"
+  },
+  {
+    "id": "T018",
+    "name": "T-low-stock-claim-location (DB)",
+    "description": "Low-stock signal after a staging install names the claimed-from (non-default) location",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T005 describe)"
   }
 ]

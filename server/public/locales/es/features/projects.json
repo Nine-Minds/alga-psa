@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "No tiene permiso para ver proyectos.",
         "update": "No tiene permiso para modificar proyectos.",
-        "inventory": "Necesita acceso al inventario para elegir unidades de stock."
+        "inventory": "Necesita acceso al inventario para elegir unidades de stock.",
+        "billing": "Necesita acceso a facturación para instalar artículos en un proyecto.",
+        "asset": "Necesita acceso a activos para vincular activos del cliente.",
+        "inventoryStock": "Necesita acceso al inventario para ver los niveles de stock."
       }
     }
   }

@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "Nie masz uprawnień do wyświetlania projektów.",
         "update": "Nie masz uprawnień do zmiany projektów.",
-        "inventory": "Potrzebujesz dostępu do magazynu, aby wybierać jednostki zapasu."
+        "inventory": "Potrzebujesz dostępu do magazynu, aby wybierać jednostki zapasu.",
+        "billing": "Potrzebujesz dostępu do rozliczeń, aby zainstalować pozycje w projekcie.",
+        "asset": "Potrzebujesz dostępu do zasobów, aby powiązać zasoby klienta.",
+        "inventoryStock": "Potrzebujesz dostępu do magazynu, aby zobaczyć stany zapasów."
       }
     }
   }

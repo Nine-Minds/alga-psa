@@ -571,6 +571,95 @@ export async function releaseLines(
   });
 }
 
+/** Live (still claiming or held) lines among `lineRows`; installed / released lines are history. */
+function isLiveLine(line: Pick<IProjectStagingLine, 'kind' | 'status'>): boolean {
+  return (line.kind === 'stock' ? ACTIVE_STOCK_STATUSES : ACTIVE_CLIENT_STATUSES).includes(line.status);
+}
+
+async function releaseLiveLinesWhere(
+  trx: Knex.Transaction,
+  tenant: string,
+  scope: (query: Knex.QueryBuilder) => Knex.QueryBuilder,
+  performedBy: string | null,
+): Promise<number> {
+  const rows = await scope(trx('project_staging_lines').where({ tenant }))
+    .orderBy('staging_line_id', 'asc')
+    .select('staging_line_id', 'kind', 'status');
+  const live = rows.filter((r: IProjectStagingLine) => isLiveLine(r));
+  if (live.length === 0) return 0;
+  // A released line must leave its box, and a sealed box cannot lose members: reopen those boxes first
+  // (same rule as releaseAllProjectClaims - the work they were packed for is going away).
+  const sealedBoxIds = await trx('staging_container_members as m')
+    .join('staging_containers as c', function () {
+      this.on('c.container_id', '=', 'm.container_id').andOn('c.tenant', '=', 'm.tenant');
+    })
+    .where({ 'm.tenant': tenant, 'c.status': 'sealed' })
+    .whereIn('m.staging_line_id', live.map((l: { staging_line_id: string }) => l.staging_line_id))
+    .pluck('c.container_id');
+  if (sealedBoxIds.length > 0) {
+    await trx('staging_containers')
+      .where({ tenant })
+      .whereIn('container_id', sealedBoxIds)
+      .update({ status: 'open', sealed_at: null, sealed_by: null, updated_at: trx.fn.now() });
+  }
+  for (const { staging_line_id } of live) {
+    const line = await lockLine(trx, tenant, staging_line_id);
+    if (isLiveLine(line)) await releaseLineInTransaction(trx, tenant, line, performedBy);
+  }
+  return live.length;
+}
+
+/**
+ * Task delete policy (C6 repair): before tasks are deleted, release every live staging line on them
+ * (reserved / staged stock, received / staged client lines) through the same code `releaseLines` uses,
+ * so counters and serial units go back to free and the lines leave their boxes. Installed and released
+ * lines own history (a project_materials row) and are NOT cascaded away: they are detached
+ * (task_id = NULL) and stay on the project. Boxes on the tasks are detached too and stay on the project.
+ * project_staging_lines_task_fk and staging_containers_task_fk are NO ACTION, so skipping this helper
+ * fails loudly instead of leaving phantom claims. Runs inside the caller's transaction.
+ */
+export async function releaseStagingForTasks(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskIds: readonly string[],
+  performedBy: string | null,
+): Promise<{ released: number }> {
+  if (taskIds.length === 0) return { released: 0 };
+  const ids = [...taskIds];
+  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.whereIn('task_id', ids), performedBy);
+  await trx('project_staging_lines').where({ tenant }).whereIn('task_id', ids).update({ task_id: null, updated_at: trx.fn.now() });
+  await trx('staging_containers').where({ tenant }).whereIn('task_id', ids).update({ task_id: null, updated_at: trx.fn.now() });
+  return { released };
+}
+
+export async function releaseStagingForTask(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string,
+  performedBy: string | null,
+): Promise<{ released: number }> {
+  return releaseStagingForTasks(trx, tenant, [taskId], performedBy);
+}
+
+/**
+ * Project delete: release every live claim (including client lines), then remove the project's boxes,
+ * members and lines explicitly - the same rows the project FK cascade would remove, but only after the
+ * claims are returned, and before the project's tasks are deleted (the task FK is NO ACTION).
+ */
+export async function releaseStagingForProject(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  performedBy: string | null,
+): Promise<{ released: number }> {
+  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.where({ project_id: projectId }), performedBy);
+  const containerIds = trx('staging_containers').where({ tenant, project_id: projectId }).select('container_id');
+  await trx('staging_container_members').where({ tenant }).whereIn('container_id', containerIds).delete();
+  await trx('staging_containers').where({ tenant, project_id: projectId }).delete();
+  await trx('project_staging_lines').where({ tenant, project_id: projectId }).delete();
+  return { released };
+}
+
 /** Active stock claims on a project (reserved or staged stock lines). */
 export async function countActiveStockClaims(db: Knex | Knex.Transaction, tenant: string, projectId: string): Promise<number> {
   const row = await db('project_staging_lines')

@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "Du har inte behörighet att visa projekt.",
         "update": "Du har inte behörighet att ändra projekt.",
-        "inventory": "Du behöver lagertillgång för att välja lagerenheter."
+        "inventory": "Du behöver lagertillgång för att välja lagerenheter.",
+        "billing": "Du behöver faktureringsåtkomst för att installera artiklar i ett projekt.",
+        "asset": "Du behöver tillgångsåtkomst för att länka kundens tillgångar.",
+        "inventoryStock": "Du behöver lagertillgång för att se lagernivåer."
       }
     }
   }

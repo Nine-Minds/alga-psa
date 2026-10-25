@@ -247,6 +247,10 @@ export const installProjectStagingLines = withAuth(async (
 ): Promise<InstallLineResult[] | StagingActionError | StockConflictResult> => run(async () => {
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
+  // Install creates a billable project_materials row: same gate as the billing material wrapper (addMaterial).
+  if (!(await hasPermission(user, 'billing', 'create'))) {
+    return permissionError('Permission denied: billing create required', 'projects:staging.errors.permission.billing');
+  }
   await assertLinesInProject(g.db, tenant, projectId, lineIds);
   return installLines(g.db, tenant, lineIds, userId(user), { projectId, allowReservedOverride: options.allowReservedOverride === true });
 }));
@@ -271,6 +275,11 @@ export const addProjectClientItems = withAuth(async (
 ): Promise<IProjectStagingLine[] | StagingActionError | StockConflictResult> => run(async () => {
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
+  // Linking an asset needs asset:read; the refusal is permission-level and says nothing about the asset.
+  if ((input.items ?? []).some((item) => Boolean((item as { asset_id?: string | null }).asset_id))
+    && !(await hasPermission(user, 'asset', 'read'))) {
+    return permissionError('Permission denied: asset read required', 'projects:staging.errors.permission.asset');
+  }
   return addClientLines(g.db, tenant, { project_id: projectId, task_id: input.task_id ?? null, items: input.items }, userId(user));
 }));
 
@@ -283,6 +292,9 @@ export const getProjectStagingAvailability = withAuth(async (
 ): Promise<{ track_stock: boolean; is_serialized: boolean; default_location_id: string | null; locations: Array<{ location_id: string; name: string; on_hand: number; reserved: number; held: number; free: number }> } | StagingActionError | StockConflictResult> => run(async () => {
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
+  if (!(await hasPermission(user, 'inventory', 'read'))) {
+    return permissionError('Permission denied: inventory read required', 'projects:staging.errors.permission.inventoryStock');
+  }
   const settings = await g.db('product_inventory_settings').where({ tenant, service_id: serviceId }).first('track_stock', 'is_serialized', 'default_location_id');
   const rows = await g.db('stock_levels as sl')
     .join('stock_locations as loc', function () {

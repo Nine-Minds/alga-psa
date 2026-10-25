@@ -2266,7 +2266,10 @@
       "permission": {
         "read": "Você não tem permissão para visualizar projetos.",
         "update": "Você não tem permissão para alterar projetos.",
-        "inventory": "Você precisa de acesso ao estoque para escolher unidades de estoque."
+        "inventory": "Você precisa de acesso ao estoque para escolher unidades de estoque.",
+        "billing": "Você precisa de acesso ao faturamento para instalar itens em um projeto.",
+        "asset": "Você precisa de acesso a ativos para vincular ativos do cliente.",
+        "inventoryStock": "Você precisa de acesso ao estoque para ver os níveis de estoque."
       }
     }
   }
