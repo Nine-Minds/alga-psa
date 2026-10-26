@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -227,18 +228,13 @@ export default function QuickInvoiceTicketDialog({
 
   return (
     <>
-      <Button
+      <ActionTrigger
         id={`${id}-quick-invoice-button`}
-        type="button"
-        variant="soft"
-        size="sm"
-        className="flex items-center gap-1.5"
         onClick={() => setIsOpen(true)}
         disabled={disabled || !ticketId}
-      >
-        <Receipt className="h-3.5 w-3.5" />
-        {t('quickInvoice.action', { defaultValue: 'Quick invoice' })}
-      </Button>
+        icon={<Receipt />}
+        label={t('quickInvoice.action', { defaultValue: 'Quick invoice' })}
+      />
 
       <Dialog
         isOpen={isOpen}

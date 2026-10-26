@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { PackageOpen } from 'lucide-react';
@@ -167,17 +168,12 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   const id = `receive-equipment-${ticketId}`;
   return (
     <>
-      <Button
+      <ActionTrigger
         id={`${id}-button`}
-        type="button"
-        variant="soft"
-        size="sm"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5"
-      >
-        <PackageOpen className="h-3.5 w-3.5" />
-        {t('custody.receiveEquipment.button', { defaultValue: 'Receive equipment' })}
-      </Button>
+        icon={<PackageOpen />}
+        label={t('custody.receiveEquipment.button', { defaultValue: 'Receive equipment' })}
+      />
 
       <DialogShell
         id={id}

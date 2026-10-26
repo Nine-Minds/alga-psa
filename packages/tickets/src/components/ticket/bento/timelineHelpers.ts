@@ -15,6 +15,18 @@ export interface TimelineNodeLike {
   sortId: string;
 }
 
+/** Activity events whose whole content is "a reply was posted" — the reply itself says so. */
+const REPLY_ECHO_EVENTS = new Set([
+  'TICKET_COMMENT_ADDED',
+  'TICKET_MESSAGE_ADDED',
+  'TICKET_CUSTOMER_REPLIED',
+  'TICKET_INTERNAL_NOTE_ADDED',
+]);
+
+export function isReplyEchoEvent(eventType: string | null | undefined): boolean {
+  return Boolean(eventType && REPLY_ECHO_EVENTS.has(eventType.toUpperCase()));
+}
+
 /** Map a raw unified-timeline entry type onto a display lane. */
 export function laneForEntryType(type: TicketTimelineEntryType): Lane {
   switch (type) {

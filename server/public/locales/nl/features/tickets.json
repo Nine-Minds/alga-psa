@@ -1819,7 +1819,8 @@
     "remoteFieldUpdated": "{{name}} heeft {{field}} bijgewerkt",
     "connection": {
       "reconnecting": "Live-updates offline - opnieuw verbinden...",
-      "unavailable": "Live-updates niet beschikbaar"
+      "unavailable": "Live-updates niet beschikbaar",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -2001,7 +2002,10 @@
       "openScheduleEntry": "Agenda-item openen",
       "acrossEntries_few": "over {{count}} registraties",
       "acrossEntries_many": "over {{count}} registraties",
-      "changeLocation": "Locatie wijzigen"
+      "changeLocation": "Locatie wijzigen",
+      "addDescriptionPrompt": "Voeg een beschrijving toe — wat is het probleem en wat heeft de klant nodig?",
+      "projectTasks": "Projecttaken",
+      "timeAndBilling": "Tijd en facturatie"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -2097,6 +2101,17 @@
       "collapseActivity": "Oudere activiteit inklappen",
       "replyingToComment": "Reageren op {{name}}",
       "createdFromTemplate": "{{actor}} heeft dit ticket gemaakt uit sjabloon \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Gesprek",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Klant",
+      "work": "Werk",
+      "who": "Personen",
+      "linked": "Gekoppelde items",
+      "empty": "Nog niets hier"
     }
   },
   "notifications": {
@@ -2528,7 +2543,9 @@
     "discard": "Stopwatch verwijderen",
     "pausedHint": "Gepauzeerd. Hervat om door te gaan, of stop om de tijd te registreren.",
     "workDescription": "Werkbeschrijving",
-    "whatAreYouWorkingOn": "Waar werkt u aan?"
+    "whatAreYouWorkingOn": "Waar werkt u aan?",
+    "chipElsewhere": "Stopwatch op {{label}}",
+    "title": "Stopwatch"
   },
   "templates": {
     "loading": "Laden…",

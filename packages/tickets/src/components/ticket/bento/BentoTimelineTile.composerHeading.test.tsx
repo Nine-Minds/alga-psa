@@ -102,7 +102,8 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
   BentoTileEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -121,7 +122,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
   usePageCreateShortcut: () => undefined,
 }));
 
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/ui-reflection/withDataAutomationId')>()),
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
   // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
   withUIReflectionId: (Component: unknown) => Component,
@@ -171,6 +173,8 @@ vi.mock('../useTicketRichTextUploadSession', () => ({
 
 const defaultProps: BentoTimelineTileProps = {
   id: 'ticket-timeline',
+  // Newest-first: the composer entry sits above the history (see composer placement).
+  initialOrder: 'desc',
   ticketId: 'ticket-1',
   conversations: [],
   userMap: {},
@@ -194,6 +198,26 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
   fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
   return result;
 }
+
+describe('BentoTimelineTile composer placement and lane chips', () => {
+  it('puts the reply entry above the history for newest-first', () => {
+    render(<BentoTimelineTile {...defaultProps} initialOrder="desc" />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).not.toBeNull();
+  });
+
+  it('docks the reply entry at the bottom (the newest end) for oldest-first, with no top entry', () => {
+    render(<BentoTimelineTile {...defaultProps} initialOrder="asc" />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-dock-trigger')).not.toBeNull();
+  });
+
+  it('hides filter chips for lanes with nothing in them', () => {
+    render(<BentoTimelineTile {...defaultProps} />);
+    expect(document.getElementById('ticket-timeline-filter-everything')).not.toBeNull();
+    expect(document.getElementById('ticket-timeline-filter-system')).toBeNull();
+    expect(document.getElementById('ticket-timeline-filter-alert')).toBeNull();
+  });
+});
 
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
@@ -343,7 +367,7 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
     expect(screen.getByLabelText('Publish at (America/New_York)')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reply to Andrew' }));
 
     expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
     expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();

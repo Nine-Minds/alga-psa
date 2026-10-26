@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -154,16 +155,12 @@ export default function LinkTicketToTaskDialog({
 
   return (
     <>
-      <Button
+      <ActionTrigger
         id="link-ticket-to-task-button"
-        type="button"
-        variant="soft"
         onClick={() => setOpen(true)}
-        className="flex items-center"
-      >
-        <Link className="h-4 w-4 mr-1" />
-        {t('dialogs.linkTicketToTask.button', 'Link to Task')}
-      </Button>
+        icon={<Link />}
+        label={t('dialogs.linkTicketToTask.button', 'Link to Task')}
+      />
 
       <Dialog
         isOpen={open}

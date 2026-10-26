@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, Plus, Tag } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -12,14 +12,13 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import UserAndTeamPicker, { type GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
 import type { GetUserAvatarUrlsBatch } from '@alga-psa/ui/components/UserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket, ITeam, ITicketResource, IUser, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
+import { hasDescriptionContent } from './descriptionContent';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -93,8 +92,6 @@ interface BentoHeroProps {
   /** Batch avatar loaders threaded to the assignee picker. */
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
   getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
-  /** Opens the agent schedule drawer when an additional agent is clicked. */
-  onAgentClick?: (userId: string) => void;
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /**
    * Coalesced multi-field save. Hero edits are buffered as a pending diff and
@@ -123,6 +120,14 @@ interface BentoHeroProps {
   quickInvoiceActions?: React.ReactNode;
   /** Composition-supplied "Receive equipment" action (assets live outside this package). */
   receiveEquipmentActions?: React.ReactNode;
+  /** Created/Updated stamps shown on the metadata line under the title. */
+  heroMeta?: React.ReactNode;
+  /** Secondary ticket actions (overflow menu), rendered last in the action cluster. */
+  moreActions?: React.ReactNode;
+  /** Compact stopwatch chip, first in the action cluster. */
+  timerControl?: React.ReactNode;
+  /** "Contact · Client", shown in the meta line when the hero is narrow (the Contact tile is far below). */
+  customerLabel?: string | null;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -158,9 +163,9 @@ interface BentoHeroProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
 }
 
-function HeroField({ label, children }: { label: string; children: React.ReactNode }) {
+function HeroField({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${className ?? ''}`}>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-0.5">
         {label}
       </div>
@@ -189,7 +194,6 @@ export function BentoHero({
   onAssignTeam,
   getUserAvatarUrlsBatch,
   getTeamAvatarUrlsBatch,
-  onAgentClick,
   onSelectChange,
   onBatchSelectChange,
   onUpdateDescription,
@@ -199,9 +203,10 @@ export function BentoHero({
   onOpenAllFields,
   tags,
   onTagsChange,
-  taskActions,
-  quickInvoiceActions,
-  receiveEquipmentActions,
+  heroMeta,
+  moreActions,
+  timerControl,
+  customerLabel,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -220,7 +225,6 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
-  const [additionalAgentsOpen, setAdditionalAgentsOpen] = useState(false);
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -363,15 +367,7 @@ export function BentoHero({
     setHasDescriptionContentChanged(false);
   }, [ticket.attributes?.description, isEditingDescription]);
 
-  const hasDescription = useMemo(
-    () =>
-      descriptionContent.some((block) =>
-        Array.isArray((block as { content?: unknown }).content)
-          ? ((block as { content: unknown[] }).content.length > 0)
-          : Boolean((block as { content?: unknown }).content),
-      ),
-    [descriptionContent],
-  );
+  const hasDescription = useMemo(() => hasDescriptionContent(descriptionContent), [descriptionContent]);
 
   // The switcher rides the heading row, so the clamped box below measures only
   // the body; the editor owns the stored text, so no original is offered there.
@@ -591,22 +587,6 @@ export function BentoHero({
     [teams, ticket.assigned_team_id],
   );
   const assignedTeamAvatarUrl = useTeamAvatarUrl(assignedTeam?.team_id, assignedTeam?.tenant, getTeamAvatarUrlsBatch);
-
-  // Extra assigned agents are surfaced as a "+N" indicator; resolve each name
-  // from the full agent pool (the resource rows only carry the user id).
-  const additionalAgentEntries = useMemo(
-    () =>
-      (additionalAgents ?? [])
-        .filter((agent) => agent.additional_user_id)
-        .map((agent) => {
-          const user = availableAgents.find((candidate) => candidate.user_id === agent.additional_user_id);
-          const name = user
-            ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || t('bento.hero.unknownAgent', 'Unknown agent')
-            : t('bento.hero.unknownAgent', 'Unknown agent');
-          return { userId: agent.additional_user_id as string, name };
-        }),
-    [additionalAgents, availableAgents, t],
-  );
 
   const dueRaw = displayValue('due_date');
   const dueDate = dueRaw ? new Date(dueRaw as unknown as string) : undefined;
@@ -899,9 +879,12 @@ export function BentoHero({
 
   return (
     <BentoTile id={id}>
-      <div>
-        <div className="flex items-start gap-3 flex-wrap">
-          <div className="min-w-0 flex-1" {...editHandlers('title')}>
+      <div className="@container/hero">
+        {/* The title keeps a readable width: when title + actions don't fit on
+            one line, the actions wrap to their own row instead of squeezing the
+            title into a narrow column. */}
+        <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+          <div className="min-w-0 flex-[1_1_28rem]" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
               {isEditingTitle ? (
                 <Input
@@ -922,7 +905,12 @@ export function BentoHero({
                 />
               ) : (
                 <h2 ref={titleRef} className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
-                  <span className="truncate">{displayedTitle}</span>
+                  <span className="break-words">
+                    {ticket.ticket_number ? (
+                      <span className="mr-2 font-semibold text-[rgb(var(--color-text-400))]">#{ticket.ticket_number}</span>
+                    ) : null}
+                    {displayedTitle}
+                  </span>
                   <button
                     id={`${id}-title-edit`}
                     type="button"
@@ -949,7 +937,7 @@ export function BentoHero({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {ticket.escalated ? (
               <span
                 id={`${id}-escalated-chip`}
@@ -978,14 +966,12 @@ export function BentoHero({
                 </span>
               </span>
             ) : null}
-            {taskActions}
-            {quickInvoiceActions}
-            {receiveEquipmentActions}
+            {timerControl}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}
                 type="button"
-                variant="soft"
+                variant="default"
                 size="sm"
                 onClick={onResolveAndClose}
                 disabled={workflowLocked || isFrozen('status_id') || resolveAndCloseDisabled}
@@ -1005,23 +991,55 @@ export function BentoHero({
               <SlidersHorizontal className="h-3.5 w-3.5" />
               {t('bento.hero.allFields', 'All fields')}
             </Button>
+            {moreActions}
           </div>
         </div>
 
-        {/* Personal "My group" control: under the title row, outside the shared field tiles.
-            Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
-        {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl ? (
-          <div className="mt-2">
-            {activityCrossFeature.renderActivityGroupControl({
-              id: `${id}-activity-group`,
-              activityType: 'ticket',
-              activityId: ticket.ticket_id,
-              // Built from SAVED state (props), not unsaved hero edits. Same id resolution as
-              // TicketDetails' additionalAgentsForInfo, so the key matches TicketInfo's.
-              assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.additional_user_id || a.assigned_to)),
-            })}
+        {/* Metadata and the personal "My group" control span the full hero
+            width under the title row. */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <div id={`${id}-meta-line`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[rgb(var(--color-text-500))]">
+            <p>
+              {createdByUser
+                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
+                : t('bento.tiles.opened', 'Opened')}
+              {ticket.source ? ` ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
+            </p>
+            {customerLabel ? (
+              <span id={`${id}-customer-chip`} className="font-medium text-[rgb(var(--color-text-700))]">
+                {customerLabel}
+              </span>
+            ) : null}
+            {heroMeta}
+            {ticket.ticket_id && onTagsChange ? (
+              <div id={`${id}-tags-row`} className="flex items-center gap-1 flex-wrap">
+                <Tag className="h-3 w-3" aria-hidden="true" />
+                <TagManager
+                  entityId={ticket.ticket_id}
+                  entityType="ticket"
+                  initialTags={tags ?? []}
+                  onTagsChange={onTagsChange}
+                  useInlineInput
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
+          {/* Personal "My group" control: under the title row, outside the shared field tiles.
+              Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
+          {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl ? (
+            <div>
+              {activityCrossFeature.renderActivityGroupControl({
+                id: `${id}-activity-group`,
+                activityType: 'ticket',
+                activityId: ticket.ticket_id,
+                // Built from SAVED state (props), not unsaved hero edits. Same id resolution as
+                // TicketDetails' additionalAgentsForInfo, so the key matches TicketInfo's.
+                assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.additional_user_id || a.assigned_to)),
+              })}
+            </div>
+          ) : null}
+
+        </div>
 
         {hasUnsavedChanges ? (
           <Alert id={`${id}-unsaved-changes-banner`} variant="warning" className="mt-3">
@@ -1039,7 +1057,10 @@ export function BentoHero({
           </Alert>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        {/* Two balanced rows at hero width: triage state (status, owner,
+            priority, reply) first, then routing (due, board, category). */}
+        <div className="@container mt-4">
+        <div className="grid grid-cols-2 @[720px]:grid-cols-4 gap-x-3 gap-y-3">
           <HeroField label={t('bento.hero.status', 'Status')}>
             {renderLiveField('status_id', '', (
               <CustomSelect
@@ -1051,6 +1072,43 @@ export function BentoHero({
                 disabled={workflowLocked || isFrozen('status_id') || isLoadingStatusOptions}
                 className="!w-full"
               />
+            ))}
+          </HeroField>
+          <HeroField label={t('bento.hero.assignedTo', 'Assigned to')}>
+            {renderLiveField('assigned_to', 'flex items-center gap-1.5', (
+              <>
+              <UserAndTeamPicker
+                id={`${id}-assignee-picker`}
+                value={displayValue('assigned_to') ?? ''}
+                onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                onTeamSelect={async (teamId) => {
+                  await onAssignTeam?.(teamId);
+                }}
+                users={availableAgents}
+                teams={teams ?? []}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
+                labelStyle="none"
+                buttonWidth="full"
+                className="min-w-0 flex-1"
+                size="sm"
+                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                disabled={workflowLocked || isFrozen('assigned_to')}
+              />
+              {assignedTeam ? (
+                <Tooltip content={assignedTeam.team_name}>
+                  <Badge variant="info" size="sm" className="gap-1 cursor-help">
+                    <TeamAvatar
+                      teamId={assignedTeam.team_id}
+                      teamName={assignedTeam.team_name}
+                      avatarUrl={assignedTeamAvatarUrl}
+                      size="xs"
+                    />
+                  </Badge>
+                </Tooltip>
+              ) : null}
+              {/* Additional agents live in the Team tile; not repeated here. */}
+              </>
             ))}
           </HeroField>
           <HeroField label={t('bento.hero.priority', 'Priority')}>
@@ -1066,7 +1124,37 @@ export function BentoHero({
               />
             ))}
           </HeroField>
-          <HeroField label={t('bento.hero.board', 'Board')}>
+          {responseStateTrackingEnabled ? (
+            <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>
+              {renderLiveField('response_state', '', (
+                <CustomSelect
+                id={`${id}-response-state-select`}
+                placeholder={t('bento.hero.replyStatus', 'Reply status')}
+                value={displayValue('response_state') ?? 'none'}
+                options={responseStateOptions}
+                onValueChange={(value: string) =>
+                    handlePendingChange('response_state', value === 'none' ? null : value)
+                  }
+                  disabled={isFrozen('response_state')}
+                  className="!w-full"
+                />
+              ))}
+            </HeroField>
+          ) : null}
+          {/* Narrow hero: routing fields stay one click away in All fields. */}
+          <HeroField label={t('bento.hero.due', 'Due')} className="hidden @[720px]:block">
+            {renderLiveField('due_date', '', (
+              <DatePicker
+                id={`${id}-due-date-picker`}
+                value={dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined}
+                onChange={handleDueDateChange}
+                placeholder={t('bento.hero.noDueDate', 'No due date')}
+                disabled={isFrozen('due_date')}
+                collapsible
+              />
+            ))}
+          </HeroField>
+          <HeroField label={t('bento.hero.board', 'Board')} className="hidden @[720px]:block">
             {renderLiveField('board_id', '', (
               <CustomSelect
                 id={`${id}-board-select`}
@@ -1079,7 +1167,7 @@ export function BentoHero({
               />
             ))}
           </HeroField>
-          <HeroField label={t('bento.hero.category', 'Category')}>
+          <HeroField label={t('bento.hero.category', 'Category')} className="hidden @[720px]:block col-span-2">
             {renderLiveField('category_id', '', (
               <CategoryPicker
                 id={`${id}-category-select`}
@@ -1110,136 +1198,13 @@ export function BentoHero({
               />
             ))}
           </HeroField>
-          <HeroField label={t('bento.hero.assignedTo', 'Assigned to')}>
-            {renderLiveField('assigned_to', 'flex items-center gap-1.5 flex-wrap', (
-              <>
-              <UserAndTeamPicker
-                id={`${id}-assignee-picker`}
-                value={displayValue('assigned_to') ?? ''}
-                onValueChange={(value) => handlePendingChange('assigned_to', value)}
-                onTeamSelect={async (teamId) => {
-                  await onAssignTeam?.(teamId);
-                }}
-                users={availableAgents}
-                teams={teams ?? []}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
-                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
-                labelStyle="none"
-                buttonWidth="fit"
-                size="sm"
-                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
-                disabled={workflowLocked || isFrozen('assigned_to')}
-              />
-              {onAgentClick && ticket.assigned_to ? (
-                <Tooltip content={t('bento.hero.viewSchedule', 'View schedule')}>
-                  <button
-                    id={`${id}-assignee-schedule`}
-                    type="button"
-                    aria-label={t('bento.hero.viewSchedule', 'View schedule')}
-                    className="inline-flex items-center justify-center h-6 w-6 rounded text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
-                    onClick={() => onAgentClick(ticket.assigned_to!)}
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              ) : null}
-              {assignedTeam ? (
-                <Tooltip content={assignedTeam.team_name}>
-                  <Badge variant="info" size="sm" className="gap-1 cursor-help">
-                    <TeamAvatar
-                      teamId={assignedTeam.team_id}
-                      teamName={assignedTeam.team_name}
-                      avatarUrl={assignedTeamAvatarUrl}
-                      size="xs"
-                    />
-                  </Badge>
-                </Tooltip>
-              ) : null}
-              {additionalAgentEntries.length > 0 && (
-                <Popover open={additionalAgentsOpen} onOpenChange={setAdditionalAgentsOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      id={`${id}-additional-agents`}
-                      type="button"
-                      aria-label={t('bento.hero.additionalAgentsTooltip')}
-                      className="rounded-full px-2 py-1 text-xs font-medium bg-[rgb(var(--color-border-100))] hover:bg-[rgb(var(--color-border-200))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
-                    >
-                      +{additionalAgentEntries.length}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 p-2">
-                    <p className="px-2 py-1 text-xs text-[rgb(var(--color-text-500))]">
-                      {t('bento.hero.additionalAgentsTooltip')}
-                    </p>
-                    {additionalAgentEntries.map((agent, index) => (
-                      <button
-                        key={agent.userId}
-                        id={`${id}-additional-agent-${index}`}
-                        type="button"
-                        disabled={!onAgentClick}
-                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-[rgb(var(--color-border-100))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
-                        onClick={() => {
-                          setAdditionalAgentsOpen(false);
-                          onAgentClick?.(agent.userId);
-                        }}
-                      >
-                        <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
-                        <span className="truncate">{agent.name}</span>
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              )}
-              </>
-            ))}
-          </HeroField>
-          <HeroField label={t('bento.hero.due', 'Due')}>
-            {renderLiveField('due_date', '', (
-              <DatePicker
-                id={`${id}-due-date-picker`}
-                value={dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined}
-                onChange={handleDueDateChange}
-                placeholder={t('bento.hero.noDueDate', 'No due date')}
-                disabled={isFrozen('due_date')}
-                collapsible
-              />
-            ))}
-          </HeroField>
-          {responseStateTrackingEnabled ? (
-            <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>
-              {renderLiveField('response_state', '', (
-                <CustomSelect
-                id={`${id}-response-state-select`}
-                placeholder={t('bento.hero.replyStatus', 'Reply status')}
-                value={displayValue('response_state') ?? 'none'}
-                options={responseStateOptions}
-                onValueChange={(value: string) =>
-                    handlePendingChange('response_state', value === 'none' ? null : value)
-                  }
-                  disabled={isFrozen('response_state')}
-                  className="!w-full"
-                />
-              ))}
-            </HeroField>
-          ) : null}
         </div>
 
-        {ticket.ticket_id && onTagsChange ? (
-          <div id={`${id}-tags-row`} className="mt-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-              {t('bento.hero.tags', 'Tags')}
-            </span>
-            <TagManager
-              entityId={ticket.ticket_id}
-              entityType="ticket"
-              initialTags={tags ?? []}
-              onTagsChange={onTagsChange}
-              useInlineInput
-            />
-          </div>
-        ) : null}
+        </div>
+        {/* With no description yet, tags and the description prompt share one row. */}
 
-        <div id={`${id}-description-section`} className="mt-4">
+        <div id={`${id}-description-section`} className="mt-3">
+          {hasDescription || isEditingDescription ? (
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('fields.description', 'Description')}
@@ -1261,6 +1226,7 @@ export function BentoHero({
             ) : null}
             {emailView.switcher}
           </div>
+          ) : null}
 
           {isEditingDescription ? (
             <div className="min-w-0 w-full">
@@ -1301,17 +1267,21 @@ export function BentoHero({
               ) : null}
             </>
           ) : (
-            <BentoTileEmpty id={`${id}-description-empty`}>
-              {t('bento.tiles.noDescriptionYet', 'No description yet')}
-            </BentoTileEmpty>
+            <button
+              id={`${id}-description-empty`}
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md border border-dashed border-[rgb(var(--color-border-300))] px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-500))] hover:border-[rgb(var(--color-primary-400))] hover:text-[rgb(var(--color-text-700))]"
+              onClick={() => {
+                originalDescriptionRef.current = descriptionContent;
+                setHasDescriptionContentChanged(false);
+                setIsEditingDescription(true);
+              }}
+            >
+              <Plus className="h-4 w-4 flex-shrink-0" />
+              {t('bento.tiles.addDescriptionPrompt', 'Add a description — what is the problem, and what does the customer need?')}
+            </button>
           )}
 
-          <p className="text-xs text-[rgb(var(--color-text-400))] mt-2">
-            {createdByUser
-              ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
-              : t('bento.tiles.opened', 'Opened')}
-            {ticket.source ? ` · ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
-          </p>
         </div>
 
         {/* The bar is also the only exit from an open description editor, so it

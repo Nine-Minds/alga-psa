@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   StopwatchContextProvider,
   type StopwatchContextValue,
@@ -166,6 +166,53 @@ describe('TicketStopwatchControls', () => {
       expect.objectContaining({ workItemType: 'ticket', workItemId: 'ticket-1' }),
       expect.any(Function),
     );
+  });
+
+  describe('chip variant (Grid hero)', () => {
+    it('shows the clock with Start when idle', () => {
+      const value = makeValue(null);
+      renderControls(value, { variant: 'chip' });
+
+      expect(document.getElementById('t-stopwatch-clock')).toHaveTextContent('00:00:00');
+      fireEvent.click(screen.getByTestId('t-stopwatch-start'));
+      expect(value.start).toHaveBeenCalledWith(
+        expect.objectContaining({ workItemType: 'ticket', workItemId: 'ticket-1' }),
+        expect.any(Function),
+      );
+    });
+
+    // Regression guard: the hero chip is the only stopwatch control on the Grid
+    // screen, so it must keep "Switch here" when the session runs elsewhere.
+    it('names the other ticket and keeps Switch here when the session runs elsewhere', () => {
+      const other = makeSession({ work_item_id: 'ticket-2', ticket_number: '200', work_item_title: 'VPN' });
+      const value = makeValue(other);
+      renderControls(value, { variant: 'chip' });
+
+      const chip = document.getElementById('t-stopwatch-elsewhere')!;
+      expect(chip).toHaveTextContent('Timer on #200');
+      expect(chip).toHaveAttribute('title', 'Running on another ticket: #200 VPN');
+      fireEvent.click(screen.getByTestId('t-stopwatch-switch'));
+      expect(value.start).toHaveBeenCalledWith(
+        expect.objectContaining({ workItemType: 'ticket', workItemId: 'ticket-1' }),
+        expect.any(Function),
+      );
+    });
+
+    it('renders nothing when the board has the stopwatch off', () => {
+      const { container } = renderControls(makeValue(null), { variant: 'chip', enabled: false });
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  it('notes variant drops the clock but still offers the switch when running elsewhere', () => {
+    renderControls(makeValue(null), { variant: 'notes' });
+    expect(document.getElementById('t-stopwatch-clock')).toBeNull();
+    expect(screen.getByLabelText('Work description')).toBeInTheDocument();
+    cleanup();
+
+    const other = makeSession({ work_item_id: 'ticket-2', ticket_number: '200', work_item_title: 'VPN' });
+    renderControls(makeValue(other), { variant: 'notes' });
+    expect(screen.getByTestId('t-stopwatch-switch')).toBeInTheDocument();
   });
 
   it('persists the description on blur only for this ticket session', () => {

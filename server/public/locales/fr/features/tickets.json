@@ -1819,7 +1819,8 @@
     "remoteFieldUpdated": "{{name}} a mis à jour {{field}}",
     "connection": {
       "reconnecting": "Mises à jour en direct hors ligne - reconnexion...",
-      "unavailable": "Mises à jour en direct indisponibles"
+      "unavailable": "Mises à jour en direct indisponibles",
+      "offlineShort": "Hors ligne"
     }
   },
   "delete": {
@@ -2001,7 +2002,10 @@
       "openScheduleEntry": "Ouvrir l’entrée de planning",
       "acrossEntries_few": "sur {{count}} entrées",
       "acrossEntries_many": "sur {{count}} entrées",
-      "changeLocation": "Changer d'emplacement"
+      "changeLocation": "Changer d'emplacement",
+      "addDescriptionPrompt": "Ajoutez une description — quel est le problème et de quoi le client a-t-il besoin ?",
+      "projectTasks": "Tâches de projet",
+      "timeAndBilling": "Temps et facturation"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",
@@ -2097,6 +2101,17 @@
       "collapseActivity": "Réduire l'activité plus ancienne",
       "replyingToComment": "Réponse à {{name}}",
       "createdFromTemplate": "{{actor}} a créé ce ticket à partir du modèle « {{name}} »"
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Détails"
+    },
+    "groups": {
+      "customer": "Client",
+      "work": "Travail",
+      "who": "Personnes",
+      "linked": "Éléments liés",
+      "empty": "Rien ici pour l'instant"
     }
   },
   "notifications": {
@@ -2528,7 +2543,9 @@
     "discard": "Supprimer le chronomètre",
     "pausedHint": "En pause. Reprenez pour continuer le suivi, ou arrêtez pour enregistrer le temps.",
     "workDescription": "Description du travail",
-    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?"
+    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?",
+    "chipElsewhere": "Chronomètre sur {{label}}",
+    "title": "Chronomètre"
   },
   "templates": {
     "loading": "Chargement…",
