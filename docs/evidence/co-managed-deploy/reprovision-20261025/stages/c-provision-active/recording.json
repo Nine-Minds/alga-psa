@@ -1,0 +1,71 @@
+{
+  "scenario": "c-provision-active",
+  "recordedAt": "2026-10-26T00:08:44.738Z",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "build": null,
+  "assertions": [
+    {
+      "id": "customer-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T00:09:08.913Z",
+      "data": {
+        "ticket": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+        "title": "White Rabbit printer queue stalled"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T00:08:47.793Z",
+      "seconds": 3.055,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T00:08:50.514Z",
+      "seconds": 5.776,
+      "actor": "active-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T00:08:53.085Z",
+      "seconds": 8.347,
+      "actor": "active-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T00:09:08.913Z",
+      "seconds": 24.175,
+      "actor": "active-admin",
+      "title": "customer-native-ticket",
+      "data": {
+        "ticket": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+        "title": "White Rabbit printer queue stalled"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 25.08,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "active-admin",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

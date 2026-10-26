@@ -1,0 +1,102 @@
+{
+  "scenario": "c-provision-departing",
+  "recordedAt": "2026-10-26T00:11:38.842Z",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "build": null,
+  "assertions": [
+    {
+      "id": "customer-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T00:11:56.319Z",
+      "data": {
+        "ticket": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "title": "Kansas Farms barn Wi-Fi drops"
+      }
+    },
+    {
+      "id": "existing-tag-added-while-active",
+      "passed": true,
+      "at": "2026-10-26T00:12:06.013Z",
+      "data": {
+        "tag": "Barn network"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T00:11:41.965Z",
+      "seconds": 3.123,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T00:11:44.172Z",
+      "seconds": 5.33,
+      "actor": "departing-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T00:11:46.801Z",
+      "seconds": 7.959,
+      "actor": "departing-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T00:11:51.881Z",
+      "seconds": 13.039,
+      "actor": "departing-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T00:11:56.319Z",
+      "seconds": 17.477,
+      "actor": "departing-admin",
+      "title": "customer-native-ticket",
+      "data": {
+        "ticket": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "title": "Kansas Farms barn Wi-Fi drops"
+      }
+    },
+    {
+      "at": "2026-10-26T00:11:59.822Z",
+      "seconds": 20.98,
+      "actor": "departing-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T00:12:06.013Z",
+      "seconds": 27.171,
+      "actor": "departing-admin",
+      "title": "existing-tag-added-while-active",
+      "data": {
+        "tag": "Barn network"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 28.04,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "departing-admin",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

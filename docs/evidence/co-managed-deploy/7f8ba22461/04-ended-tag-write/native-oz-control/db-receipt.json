@@ -1,0 +1,29 @@
+{
+  "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+  "ticket": "14619f1e-dd21-4f7e-902f-32fb983766df",
+  "tag": "SMOKE ended-tag control 1792974966694",
+  "build": {
+    "dist": ".next-review-final-7f8ba224",
+    "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+    "buildId": "build-1792973888001"
+  },
+  "added": [
+    {
+      "mapping_id": "6e1d7ddd-51a7-4aad-8b83-0cf90f865225",
+      "tag_id": "c7b5db6f-1d5d-4cde-a3c3-dcb80dcf89d4",
+      "tag_text": "SMOKE ended-tag control 1792974966694",
+      "tagged_id": "14619f1e-dd21-4f7e-902f-32fb983766df",
+      "tagged_type": "ticket",
+      "created_by": "86952555-610c-4737-be41-a9236cfa9cdb"
+    }
+  ],
+  "countsBefore": {
+    "tag_definitions": 2,
+    "tag_mappings": 2
+  },
+  "countsAfter": {
+    "tag_definitions": 2,
+    "tag_mappings": 2
+  },
+  "noLeftovers": true
+}

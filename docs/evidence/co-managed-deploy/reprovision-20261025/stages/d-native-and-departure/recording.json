@@ -1,0 +1,92 @@
+{
+  "scenario": "d-native-and-departure",
+  "recordedAt": "2026-10-26T00:12:21.912Z",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "build": null,
+  "assertions": [
+    {
+      "id": "native-oz-ticket",
+      "passed": true,
+      "at": "2026-10-26T00:12:31.975Z",
+      "data": {
+        "ticket": "14619f1e-dd21-4f7e-902f-32fb983766df"
+      }
+    },
+    {
+      "id": "departing-relationship-terminated",
+      "passed": true,
+      "at": "2026-10-26T00:13:32.380Z",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T00:12:24.117Z",
+      "seconds": 2.205,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T00:12:27.208Z",
+      "seconds": 5.296,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T00:12:31.974Z",
+      "seconds": 10.062,
+      "actor": "qa",
+      "title": "native-ticket-created",
+      "data": {
+        "client": "EC\nEmerald City\ncompany",
+        "board": "Urgent Matters"
+      }
+    },
+    {
+      "at": "2026-10-26T00:12:31.975Z",
+      "seconds": 10.063,
+      "actor": "qa",
+      "title": "native-oz-ticket",
+      "data": {
+        "ticket": "14619f1e-dd21-4f7e-902f-32fb983766df"
+      }
+    },
+    {
+      "at": "2026-10-26T00:13:24.648Z",
+      "seconds": 62.736,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/departure?operationId=9dbcbdff-3ef3-4b5b-b834-15afccae841c"
+    },
+    {
+      "at": "2026-10-26T00:13:32.380Z",
+      "seconds": 70.468,
+      "actor": "qa",
+      "title": "departing-relationship-terminated",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 70.52,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

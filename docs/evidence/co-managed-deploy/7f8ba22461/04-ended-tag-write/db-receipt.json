@@ -1,0 +1,64 @@
+{
+  "build": {
+    "dist": ".next-review-final-7f8ba224",
+    "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+    "buildId": "build-1792973888001"
+  },
+  "terminated": {
+    "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+    "relationship": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+    "ticket": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+    "existingTag": "Barn network",
+    "relationshipBefore": {
+      "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+      "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "state": "terminated",
+      "ended_at": "2026-10-26T00:13:30.705+00:00",
+      "updated_at": "2026-10-26T00:13:30.705+00:00"
+    },
+    "relationshipAfter": {
+      "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+      "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "state": "terminated",
+      "ended_at": "2026-10-26T00:13:30.705+00:00",
+      "updated_at": "2026-10-26T00:13:30.705+00:00"
+    },
+    "countsBefore": {
+      "tag_definitions": 1,
+      "tag_mappings": 1
+    },
+    "countsAfter": {
+      "tag_definitions": 1,
+      "tag_mappings": 1
+    },
+    "tablesUnchanged": true
+  },
+  "activeControl": {
+    "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+    "ticket": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+    "tag": "SMOKE ended-tag control 1792974956059",
+    "countsBefore": {
+      "tag_definitions": 0,
+      "tag_mappings": 0
+    },
+    "countsAfter": {
+      "tag_definitions": 0,
+      "tag_mappings": 0
+    },
+    "noLeftovers": true
+  },
+  "nativeControl": {
+    "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+    "ticket": "14619f1e-dd21-4f7e-902f-32fb983766df",
+    "tag": "SMOKE ended-tag control 1792974966694",
+    "countsBefore": {
+      "tag_definitions": 2,
+      "tag_mappings": 2
+    },
+    "countsAfter": {
+      "tag_definitions": 2,
+      "tag_mappings": 2
+    },
+    "noLeftovers": true
+  }
+}

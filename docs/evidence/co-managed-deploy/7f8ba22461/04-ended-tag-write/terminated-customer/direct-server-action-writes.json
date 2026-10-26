@@ -1,0 +1,83 @@
+[
+  {
+    "action": "createTag",
+    "actionId": "7f2e4a09503bc1a63f841267b4cc1ee29015a0cf81",
+    "args": [
+      {
+        "tag_text": "Direct write after departure",
+        "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "tagged_type": "ticket"
+      }
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "createTag",
+    "actionId": "7f2e4a09503bc1a63f841267b4cc1ee29015a0cf81",
+    "args": [
+      {
+        "tag_text": "Barn network",
+        "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "tagged_type": "ticket"
+      }
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "updateTagColor",
+    "actionId": "7ffb6e3ecd48f174c7d33ce88dd1e19e2864358c17",
+    "args": [
+      "89821814-ea4d-4568-a152-ccccf909dbe4",
+      "#FF0000",
+      "#FFFFFF"
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "updateTagText",
+    "actionId": "7f09563e9b7a22bbd9705106bc3cc5116ba4a9cd2f",
+    "args": [
+      "89821814-ea4d-4568-a152-ccccf909dbe4",
+      "Renamed after departure"
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "deleteTag",
+    "actionId": "7f2fb6cf471d78f48039b11035d2cb4bf570bdc857",
+    "args": [
+      "89821814-ea4d-4568-a152-ccccf909dbe4"
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "deleteAllTagsByText",
+    "actionId": "7f551a9c1ce58008cbd5c783f7ec4e3de76400015a",
+    "args": [
+      "Barn network",
+      "ticket"
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+  },
+  {
+    "action": "createTagsForEntity",
+    "actionId": "7076d1d6e9a20b1f680bfe0b7e19dfb517ca8878a2",
+    "args": [
+      "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+      "ticket",
+      [
+        {
+          "tag_text": "Bulk after departure"
+        }
+      ]
+    ],
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:[]\n"
+  }
+]

@@ -1,0 +1,424 @@
+{
+  "scenario": "terminated-customer",
+  "recordedAt": "2026-10-26T00:35:39.498Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-7f8ba224",
+    "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+    "buildId": "build-1792973888001"
+  },
+  "assertions": [
+    {
+      "id": "relationship-terminated-before",
+      "passed": true,
+      "at": "2026-10-26T00:35:40.616Z",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "id": "ticket-has-existing-tag",
+      "passed": true,
+      "at": "2026-10-26T00:35:40.938Z",
+      "data": {
+        "existing": [
+          {
+            "mapping_id": "04f57bd8-f312-4d7d-a4cc-8673ecd6a775",
+            "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+            "tag_text": "Barn network",
+            "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+            "tagged_type": "ticket",
+            "created_by": "6d4bb919-9ac4-470a-8928-314043d1a613"
+          }
+        ]
+      }
+    },
+    {
+      "id": "entry-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-26T00:35:47.100Z",
+      "data": {
+        "tag": "Barn network"
+      }
+    },
+    {
+      "id": "entry-no-tag-add-or-remove-control",
+      "passed": true,
+      "at": "2026-10-26T00:35:47.100Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "grid-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-26T00:35:48.759Z",
+      "data": {
+        "tag": "Barn network"
+      }
+    },
+    {
+      "id": "grid-no-tag-add-or-remove-control",
+      "passed": true,
+      "at": "2026-10-26T00:35:48.760Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "ticket-list-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-26T00:35:52.317Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "direct-createTag-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.755Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-createTag-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.755Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-updateTagColor-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.755Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-updateTagText-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.756Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-deleteTag-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.756Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-deleteAllTagsByText-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.756Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "id": "direct-createTagsForEntity-refused",
+      "passed": true,
+      "at": "2026-10-26T00:35:54.756Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:[]\n"
+      }
+    },
+    {
+      "id": "tag-tables-unchanged",
+      "passed": true,
+      "at": "2026-10-26T00:35:55.561Z",
+      "data": {
+        "before": {
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        },
+        "after": {
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        }
+      }
+    },
+    {
+      "id": "relationship-still-terminated",
+      "passed": true,
+      "at": "2026-10-26T00:35:55.561Z",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T00:35:39.547Z",
+      "seconds": 0.049,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-7f8ba224",
+        "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+        "buildId": "build-1792973888001",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:40.616Z",
+      "seconds": 1.118,
+      "title": "relationship-terminated-before",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:40.938Z",
+      "seconds": 1.44,
+      "title": "ticket-has-existing-tag",
+      "data": {
+        "existing": [
+          {
+            "mapping_id": "04f57bd8-f312-4d7d-a4cc-8673ecd6a775",
+            "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+            "tag_text": "Barn network",
+            "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+            "tagged_type": "ticket",
+            "created_by": "6d4bb919-9ac4-470a-8928-314043d1a613"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:43.114Z",
+      "seconds": 3.616,
+      "actor": "terminated-customer-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:45.484Z",
+      "seconds": 5.986,
+      "actor": "terminated-customer-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T00:35:47.100Z",
+      "seconds": 7.602,
+      "actor": "terminated-customer-admin",
+      "title": "entry-existing-tag-displayed",
+      "data": {
+        "tag": "Barn network"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:47.100Z",
+      "seconds": 7.602,
+      "actor": "terminated-customer-admin",
+      "title": "entry-no-tag-add-or-remove-control",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:48.759Z",
+      "seconds": 9.261,
+      "actor": "terminated-customer-admin",
+      "title": "grid-existing-tag-displayed",
+      "data": {
+        "tag": "Barn network"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:48.760Z",
+      "seconds": 9.262,
+      "actor": "terminated-customer-admin",
+      "title": "grid-no-tag-add-or-remove-control",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:50.764Z",
+      "seconds": 11.266,
+      "actor": "terminated-customer-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T00:35:52.318Z",
+      "seconds": 12.82,
+      "actor": "terminated-customer-admin",
+      "title": "ticket-list-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.393Z",
+      "seconds": 14.895,
+      "actor": "terminated-customer-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T00:35:54.612Z",
+      "seconds": 15.114,
+      "actor": "terminated-customer-admin",
+      "title": "server-action-ids",
+      "data": {
+        "createTagsForEntity": "7076d1d6e9a20b1f680bfe0b7e19dfb517ca8878a2",
+        "updateTagText": "7f09563e9b7a22bbd9705106bc3cc5116ba4a9cd2f",
+        "createTag": "7f2e4a09503bc1a63f841267b4cc1ee29015a0cf81",
+        "deleteTag": "7f2fb6cf471d78f48039b11035d2cb4bf570bdc857",
+        "deleteAllTagsByText": "7f551a9c1ce58008cbd5c783f7ec4e3de76400015a",
+        "updateTagColor": "7ffb6e3ecd48f174c7d33ce88dd1e19e2864358c17"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.755Z",
+      "seconds": 15.257,
+      "actor": "terminated-customer-admin",
+      "title": "direct-createTag-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.755Z",
+      "seconds": 15.257,
+      "actor": "terminated-customer-admin",
+      "title": "direct-createTag-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.755Z",
+      "seconds": 15.257,
+      "actor": "terminated-customer-admin",
+      "title": "direct-updateTagColor-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.756Z",
+      "seconds": 15.258,
+      "actor": "terminated-customer-admin",
+      "title": "direct-updateTagText-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.756Z",
+      "seconds": 15.258,
+      "actor": "terminated-customer-admin",
+      "title": "direct-deleteTag-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.756Z",
+      "seconds": 15.258,
+      "actor": "terminated-customer-admin",
+      "title": "direct-deleteAllTagsByText-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:54.756Z",
+      "seconds": 15.258,
+      "actor": "terminated-customer-admin",
+      "title": "direct-createTagsForEntity-refused",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792973888001\"}\n1:[]\n"
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:55.561Z",
+      "seconds": 16.063,
+      "actor": "terminated-customer-admin",
+      "title": "tag-tables-unchanged",
+      "data": {
+        "before": {
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        },
+        "after": {
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T00:35:55.561Z",
+      "seconds": 16.063,
+      "actor": "terminated-customer-admin",
+      "title": "relationship-still-terminated",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 16.64,
+  "actors": [
+    {
+      "name": "terminated-customer-admin",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

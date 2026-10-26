@@ -1,0 +1,6 @@
+=== 2026-10-26T00:14:28Z run-card-service.sh starting review-build-prep-7f8ba224: bash /tmp/alga-smoke-evidence/co-managed-it-reprovision-20261025/prepare-7f8ba224.sh
+[alga-card-service] phase=building
+Typechecking review candidate 7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b
+Typecheck passed for 7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b
+Building 7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b into .next-review-final-7f8ba224 (2026-10-26T00:17:56Z)
+Review build 7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b prepared in .next-review-final-7f8ba224; application startup skipped.

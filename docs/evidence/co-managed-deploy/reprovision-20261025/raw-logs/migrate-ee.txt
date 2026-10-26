@@ -1,0 +1,27 @@
+
+> server@1.6.12 migrate:ee
+> node scripts/run-ee-migrations.js
+Data migration completed successfully
+CitusDB migration completed - RLS removed, tenant isolation now handled at shard level
+Tag normalization migration completed successfully
+✅ Inbound ticket defaults refactoring completed
+Permission updates completed
+✓ Cleanup migration completed successfully
+✓ Company to client migration completed successfully
+✓ Company to client cleanup migration completed successfully
+✓ Combined rename migration completed successfully
+✓ Combined cleanup migration completed
+✓ Migration completed successfully
+✓ Migration completed successfully
+✓ Appointment request email templates migration completed successfully
+Migration completed successfully
+Migration completed successfully!
+Migration completed successfully!
+[sync_standard_template_sources] Migration completed successfully.
+✓ Migration completed successfully
+✓ Migration completed successfully
+Migration completed successfully
+Migration completed successfully
+Notification priority migration completed.
+Batch 1 run: 1240 migrations
+Migration latest completed successfully.

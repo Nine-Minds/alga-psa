@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-26T00:35:39.148671+00:00",
+  "pid": 3390697,
+  "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+  "nextDistDir": ".next-review-final-7f8ba224",
+  "revisionStamp": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+  "buildId": "build-1792973888001",
+  "embeddedBuildObserved": true,
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "mode": "production",
+  "healthStatus": 200,
+  "boardService": "review-app:22 (workflow-ensure-service, normal admission, readiness 23374/api/health)",
+  "preparedBy": "review-build-prep-7f8ba224:21 (CO_MANAGED_REVIEW_PREPARE_ONLY=1, result 0, concluded after build)",
+  "replaced": {
+    "pid": 2835854,
+    "nextDistDir": ".next-review-final-ccb29f50",
+    "buildId": "build-1792967039963",
+    "stoppedBy": "workflow-conclude-service review-app (:21), run-card-service.sh review-app --stop, then SIGTERM to the orphaned card-owned next-server"
+  },
+  "database": {
+    "name": "server_co_managed",
+    "host": "127.0.0.1:5376",
+    "reprovisioned": "2026-10-25T23:50Z"
+  }
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "scenario": "terminated-customer",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-7f8ba224",
+      "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+      "buildId": "build-1792973888001"
+    },
+    "assertions": [
+      "relationship-terminated-before",
+      "ticket-has-existing-tag",
+      "entry-existing-tag-displayed",
+      "entry-no-tag-add-or-remove-control",
+      "grid-existing-tag-displayed",
+      "grid-no-tag-add-or-remove-control",
+      "ticket-list-no-tag-mutation-controls",
+      "direct-createTag-refused",
+      "direct-createTag-refused",
+      "direct-updateTagColor-refused",
+      "direct-updateTagText-refused",
+      "direct-deleteTag-refused",
+      "direct-deleteAllTagsByText-refused",
+      "direct-createTagsForEntity-refused",
+      "tag-tables-unchanged",
+      "relationship-still-terminated"
+    ]
+  },
+  {
+    "scenario": "active-customer-control",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-7f8ba224",
+      "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+      "buildId": "build-1792973888001"
+    },
+    "assertions": [
+      "tag-persisted",
+      "tag-removed-and-no-leftovers"
+    ]
+  },
+  {
+    "scenario": "native-oz-control",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-7f8ba224",
+      "revision": "7f8ba224614469791df901bd7bd37b0eba3649da+da39a3ee5e6b",
+      "buildId": "build-1792973888001"
+    },
+    "assertions": [
+      "tag-persisted",
+      "tag-removed-and-no-leftovers"
+    ]
+  }
+]

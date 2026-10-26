@@ -1,0 +1,82 @@
+{
+  "scenario": "b-seat-pool",
+  "recordedAt": "2026-10-26T00:03:05.639Z",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "build": null,
+  "assertions": [
+    {
+      "id": "seat-pool-purchased",
+      "passed": true,
+      "at": "2026-10-26T00:03:24.970Z",
+      "data": {
+        "capacity": 3
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T00:03:08.053Z",
+      "seconds": 2.414,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T00:03:10.644Z",
+      "seconds": 5.005,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T00:03:12.276Z",
+      "seconds": 6.637,
+      "actor": "qa",
+      "title": "checkout-session-created",
+      "data": {
+        "sessionId": "cs_5315c42a5",
+        "quantity": 3
+      }
+    },
+    {
+      "at": "2026-10-26T00:03:16.853Z",
+      "seconds": 11.214,
+      "actor": "qa",
+      "title": "simulator-complete-session",
+      "data": {
+        "eventId": "evt_a3d44f2db",
+        "eventType": "checkout.session.completed",
+        "sessionId": "cs_5315c42a5"
+      }
+    },
+    {
+      "at": "2026-10-26T00:03:24.368Z",
+      "seconds": 18.729,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T00:03:24.970Z",
+      "seconds": 19.331,
+      "actor": "qa",
+      "title": "seat-pool-purchased",
+      "data": {
+        "capacity": 3
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 19.72,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

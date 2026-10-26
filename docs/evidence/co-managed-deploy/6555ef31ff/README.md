@@ -2,13 +2,15 @@
 
 This round follows [tagfix-ccb29f50](../tagfix-ccb29f50/README.md). That round closed the tag server actions, both ticket-screen layouts, the ticket list and the REST `TagService`/`ClientService`. It listed three writer families as unguarded: `createTicketWithSideEffects` tag writes, management-tenant `TagModel` uses, and workflow contact/client tag writes. This round audits each one from the code. The reachable ones are closed in `6555ef31ff`.
 
-## Live check: not run
+## Live check: run later in 7f8ba22461
 
-**The live denial and positive controls were not re-run, and there is no `04-ended-tag-write/` receipt.** During this round the review database was lost. Restoring it needs a human.
+> **Update.** The database was re-provisioned and the review scenario rebuilt through the product. The live denial and positive controls then passed on `7f8ba22461` / `build-1792973888001`; see [7f8ba22461](../7f8ba22461/README.md) and its [04-ended-tag-write](../7f8ba22461/04-ended-tag-write/db-receipt.json) receipt. The record below describes the state when this packet was written.
+
+**The live denial and positive controls were not re-run in this round, and this packet has no `04-ended-tag-write/` receipt.** During this round the review database was lost.
 
 - **What happened.** At 23:28Z the database `server_co_managed` was dropped and recreated empty. It lives in `co-managed-it-postgres` on 127.0.0.1:5376, and the review-app on :23374 reads it. The cause was the DB-backed workflow-action suites (`shared/workflow/runtime/actions/__tests__/*.db.test.ts`). I ran them with `DB_NAME_SERVER=server_co_managed` in the environment. `scripts/dev/load-env-local.sh server/.env.local` sets that value too. Their harness runs `recreateDatabase(process.env.DB_NAME_SERVER || 'test_database')`.
 - **State now.** The new database has 0 tenant rows. The terminated customer `d46de2e8`, Alice and QA in Oz are gone ([receipt](raw-logs/review-db-loss-receipt.json)).
-- **No recovery path from here.** `archive_mode` is off, no dump exists, and the volume sits under snap Docker, which needs root.
+- **No restore.** `archive_mode` is off, no dump exists, and the volume sits under snap Docker, which needs root. The database was later re-provisioned from migrations and seeds instead.
 - **Serving.** The review-app still serves `ccb29f50` / `build-1792967039963` from `server/.next-review-final-ccb29f50`, and `/api/health` returns 200. With no tenants, nobody can sign in.
 - **No rebuild.** There is no data to verify a new build against, so this round did not rebuild.
 - **To finish.** Restore or re-provision the review data. Then rebuild through `run-co-managed-review-app.sh` at this head, and run the step-2 scenario into `04-ended-tag-write/`.
