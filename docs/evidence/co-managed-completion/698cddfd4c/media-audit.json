@@ -1,0 +1,74 @@
+[
+  {
+    "evidence": "rt-billing-late-time",
+    "webm": "../../co-managed-deploy/8093816c90/01-billing-late-time/walkthrough.webm",
+    "sha256": "e8a27c3c0a857372d9eec2b7beae83687d4c83123c643dcbf37c4d8eadcd04c5",
+    "durationSeconds": 109,
+    "vtt": "../../co-managed-deploy/8093816c90/01-billing-late-time/chapters.vtt",
+    "vttSha256": "f405469b3fa06b4040f080a8bc77bafd800dce88aa4dc041303ac909b597142d",
+    "chapters": 7
+  },
+  {
+    "evidence": "rt-billing-cleanup",
+    "webm": "../../co-managed-deploy/8093816c90/02-billing-late-time-cleanup/walkthrough.webm",
+    "sha256": "648a794a87945f99c5cc692b04746daa3303af5e7c17515988dc8549174df4df",
+    "durationSeconds": 37.84,
+    "vtt": "../../co-managed-deploy/8093816c90/02-billing-late-time-cleanup/chapters.vtt",
+    "vttSha256": "8f171d2867f57e43f894143d5beed692f0ee85e781867767c2a6f7531492e82f",
+    "chapters": 5
+  },
+  {
+    "evidence": "rt-t13-msp-edit",
+    "webm": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/walkthrough.webm",
+    "sha256": "32b7f70c8014b160bb333cb9b7a8a28f1a69f019a5d7aaf962ac16c78748fc1c",
+    "durationSeconds": 25.08,
+    "vtt": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/chapters.vtt",
+    "vttSha256": "f0b024a32aa1ff4c18a7b0696bb05bf098eb145af15d57158657b4e1b0810ad9",
+    "chapters": 3
+  },
+  {
+    "evidence": "rt-t09-privacy",
+    "webm": "../../co-managed-deploy/8093816c90/04-t09-privacy/walkthrough.webm",
+    "sha256": "f80c977eaf8abc966079899cf07425714873b54069264320222b559ba7291a66",
+    "durationSeconds": 146.96,
+    "vtt": "../../co-managed-deploy/8093816c90/04-t09-privacy/chapters.vtt",
+    "vttSha256": "b3a8fceb068c051df3f630aa9e65f0df123857c83d9750bc9e44722d06bb1322",
+    "chapters": 5
+  },
+  {
+    "evidence": "rt-t09-export",
+    "webm": "../../co-managed-deploy/8093816c90/05-t09-export/walkthrough.webm",
+    "sha256": "852000c832f8f8aaf488fdca31a470c925e7a58d9ec950d300a6feea101c7959",
+    "durationSeconds": 6.12,
+    "vtt": "../../co-managed-deploy/8093816c90/05-t09-export/chapters.vtt",
+    "vttSha256": "4acbb40b3036aa570b71af6e37bcddcde07df5b9e224a4d7bc360563eec98054",
+    "chapters": 2
+  },
+  {
+    "evidence": "rt-f003-states",
+    "webm": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/walkthrough.webm",
+    "sha256": "9d90fc027b1d707579c90e704f1fe2b6573d4050f4b64e436a9a27164ae9f30f",
+    "durationSeconds": 117.32,
+    "vtt": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/chapters.vtt",
+    "vttSha256": "f331caf534a68b7a5a31ad15b4580a6fa78e43ff0097ae722c1e9fa098c6c468",
+    "chapters": 7
+  },
+  {
+    "evidence": "rt-t009-onboarding",
+    "webm": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/walkthrough.webm",
+    "sha256": "e0ca8034157c2469bb62f2ad2e402def8e74e0a6afd72646db1b1a34e61384eb",
+    "durationSeconds": 42.32,
+    "vtt": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/chapters.vtt",
+    "vttSha256": "2774613d4b29972400a91c8a07bfdaefe9255d83e81e889edf3fb5ba1a160272",
+    "chapters": 5
+  },
+  {
+    "evidence": "rt-closure-archive",
+    "webm": "../../co-managed-deploy/8093816c90/08-closure-archive-dedup/walkthrough.webm",
+    "sha256": "829a4017d260cc92981adb3247d852f1615839b870a30f20d84e8af7a8640257",
+    "durationSeconds": 94.2,
+    "vtt": "../../co-managed-deploy/8093816c90/08-closure-archive-dedup/chapters.vtt",
+    "vttSha256": "3d6530093b9e70b99be4229c7e865298f27aa89ea6814c9af72c3212f2c5b364",
+    "chapters": 6
+  }
+]

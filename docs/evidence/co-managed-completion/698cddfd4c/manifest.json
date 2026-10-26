@@ -1,0 +1,3463 @@
+{
+  "schemaVersion": 1,
+  "candidate": "698cddfd4c5cbd48594082ad153d5f412448d4c8",
+  "base": "7e8d87a9482528142004dfbb6fd5b29c58150e59",
+  "collectedAt": "2026-10-26T14:05:24.039Z",
+  "pr": {
+    "number": 3363,
+    "head": null
+  },
+  "provenance": {
+    "app": {
+      "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "buildId": "build-1793021045283",
+      "stamp": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+      "dist": "server/.next-review-final-8093816c",
+      "servedAt": ":23374 (board review-app)",
+      "boardAdmission": {
+        "ensure": "alga-dev workflow-ensure-service --name=review-app --readinessPort=23374 --readinessPath=/api/health",
+        "result": "created:true, status live",
+        "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+        "createdAt": "2026-10-26T13:23:34.079Z",
+        "laterBoardStatus": "suspended",
+        "suspendedAt": "2026-10-26T13:23:37.550Z",
+        "suspendedReason": "\"Draft Implementation\" does not use it",
+        "note": "The board marked the PTY suspended 3.5 s after admission because the current step does not list review-app; the detached card-service supervisor it launched kept serving this build for the whole run."
+      },
+      "dependencyAnalysis": "source-delta.json"
+    },
+    "worker": {
+      "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "temporal-worker": {
+        "rebuiltWith": "~/.alga-dev/releases/202610232337-g5429853d2c/scripts/build-service.sh <worktree> ee/temporal-workflows",
+        "reason": "8093816c90 changed packages/co-managed/src/managementPolicy.ts, which the temporal worker compiles",
+        "coldRestart": "run-card-service.sh temporal-worker --stop, then alga-dev workflow-restart-service",
+        "childPid": 3848394,
+        "childStarted": "Mon Oct 26 09:24:56 2026",
+        "boardSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:27",
+        "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+        "managementPolicyJsSha256": "ca67fedf23e53ba7eea04ef2e7397913799bfc776477f4d9c19f599e56bf5032"
+      },
+      "workflow-worker": {
+        "rebuilt": false,
+        "reason": "Neither 5a822cb47e nor 8093816c90 changes code it compiles (no packages/co-managed or billing engine in its dist; the billing interface type change emits no JS).",
+        "childPid": 3111766,
+        "childStarted": "Mon Oct 26 06:35:18 2026"
+      }
+    },
+    "migrations": null,
+    "config": null,
+    "simulator": null
+  },
+  "worktreeClean": false,
+  "mergeability": {
+    "mergeable": null,
+    "mergeStateStatus": null,
+    "checkedAtSha": null
+  },
+  "ci": {
+    "runId": null,
+    "checks": []
+  },
+  "reviewEnvironment": {
+    "stable": false,
+    "observedMinutes": 0,
+    "healingEvents": null
+  },
+  "openDefects": [],
+  "productionPrerequisites": [
+    {
+      "id": "stripe-recurring-1149",
+      "owner": "release-operator",
+      "acceptedByReleaseOwner": false,
+      "summary": "Real recurring USD 11.49 (1149 cents) monthly licensed price and a provider test-mode checkout/webhook/invoice."
+    },
+    {
+      "id": "external-license-issuance",
+      "owner": "release-operator",
+      "acceptedByReleaseOwner": false,
+      "summary": "External sponsor-bound and independent-customer license issuance and renewal."
+    },
+    {
+      "id": "microsoft-real-application",
+      "owner": "release-operator",
+      "acceptedByReleaseOwner": false,
+      "summary": "Real Microsoft application, callback, permissions and directory/inbound acceptance."
+    },
+    {
+      "id": "deployed-storage-and-migrations",
+      "owner": "release-operator",
+      "acceptedByReleaseOwner": false,
+      "summary": "Deployed storage and candidate migrations including distributed invariants."
+    }
+  ],
+  "evidence": {
+    "current-source-census": {
+      "type": "analysis",
+      "sha": "698cddfd4c5cbd48594082ad153d5f412448d4c8",
+      "command": "node scripts/build-co-managed-inventory.mjs --current-source-census",
+      "result": "260 requirement rows mapped to current source and regression paths; no acceptance statuses promoted to verified.",
+      "artifact": "source-census.json",
+      "artifactAvailable": true
+    },
+    "rt-billing-late-time": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI as QA: restore the White Rabbit hourly contract, log Oct-18 MSP time on shared ticket 000016 and native time on a new native ticket, approve the sheet, generate the November-service period from Automatic Invoices, open the draft, retry; DB checks",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"setup-inv3-is-the-425-reference-draft\", \"setup-october-period-closed-by-inv3\", \"contract-active\", \"shared-entry-is-msp-commercial-time-on-the-contract-line-in-october\", \"native-ticket-is-for-white-rabbit\", \"native-entry-on-the-same-contract-line-in-october\", \"team-led-by-qa\", \"both-entries-approved-uninvoiced\", \"preview-labels-both-entries-as-late-october-time-at-the-contract-rate\", \"db-disposable-draft-bills-exactly-the-two-late-entries-at-100-per-hour\", \"db-lines-name-and-carry-the-october-service-period\", \"db-shared-line-keeps-qualified-co-managed-provenance\", \"db-periods-october-stays-on-inv3-november-claimed-by-the-new-draft\", \"db-inv3-unchanged\", \"db-entries-invoiced-once\", \"ui-draft-shows-late-lines-and-100\", \"no-ready-november-row-after-generation\", \"db-still-one-new-draft-and-inv3-unchanged\"], \"limitations\": [\"cleanup not yet run\"]}",
+      "artifact": "../../co-managed-deploy/8093816c90/01-billing-late-time/recording.json",
+      "artifactSha256": "bb9e4e2433f99ce1405dc392a0e5f6e8a64da1081bdf7758477f936380141601",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/01-billing-late-time/walkthrough.webm",
+        "sha256": "e8a27c3c0a857372d9eec2b7beae83687d4c83123c643dcbf37c4d8eadcd04c5",
+        "durationSeconds": 109,
+        "vtt": "../../co-managed-deploy/8093816c90/01-billing-late-time/chapters.vtt",
+        "vttSha256": "f405469b3fa06b4040f080a8bc77bafd800dce88aa4dc041303ac909b597142d",
+        "chapters": 7
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-billing-cleanup": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI as QA: reverse disposable draft, reverse approval, delete entries/ticket/team, terminate contract, clear billing email; INV-000003 checked",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"draft-reversed-entries-and-november-period-released\", \"entries-deleted\", \"inv3-unchanged-425-17-sources\"], \"limitations\": []}",
+      "artifact": "../../co-managed-deploy/8093816c90/02-billing-late-time-cleanup/recording.json",
+      "artifactSha256": "9028330a0aaa2b0a5ed5a8b6452f637d7d1131c44fbb8dbe9ae65e20cc161491",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/02-billing-late-time-cleanup/walkthrough.webm",
+        "sha256": "648a794a87945f99c5cc692b04746daa3303af5e7c17515988dc8549174df4df",
+        "durationSeconds": 37.84,
+        "vtt": "../../co-managed-deploy/8093816c90/02-billing-late-time-cleanup/chapters.vtt",
+        "vttSha256": "8f171d2867f57e43f894143d5beed692f0ee85e781867767c2a6f7531492e82f",
+        "chapters": 5
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-t13-msp-edit": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI: QA edits shared ticket priority; customer audit row and Alice history read; priority restored",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"customer-audit-row-carries-qualified-msp-actor\", \"alice-history-names-the-qualified-msp-actor-for-the-change\", \"priority-restored\"], \"limitations\": []}",
+      "artifact": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/recording.json",
+      "artifactSha256": "0d098650cf2cffe3628f73cb2a6cf8c1c310d6d2dc671da838cdafb60ee187c9",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/walkthrough.webm",
+        "sha256": "32b7f70c8014b160bb333cb9b7a8a28f1a69f019a5d7aaf962ac16c78748fc1c",
+        "durationSeconds": 25.08,
+        "vtt": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/chapters.vtt",
+        "vttSha256": "f0b024a32aa1ff4c18a7b0696bb05bf098eb145af15d57158657b4e1b0810ad9",
+        "chapters": 3
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-t09-privacy": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI: Alice and QA post four-audience markers; QA/Alice full search and palette typeahead; requester 07 client portal ticket, counts and search; DB audience storage",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"storage-audiences\", \"qa-search-positive-control-finds-native-oz-ticket\", \"qa-typeahead-and-full-search-hide-customer-private\", \"alice-search-surface-is-live\", \"alice-typeahead-hides-msp-private-and-full-search-is-outside-the-product\", \"portal-ticket-shows-requester-reply-only\", \"portal-counts-never-reveal-hidden-comments\", \"portal-search-never-matches-hidden-markers\"], \"limitations\": [\"Requester portal search filters ticket fields; a hidden marker would only leak if it matched, which it did not.\"]}",
+      "artifact": "../../co-managed-deploy/8093816c90/04-t09-privacy/recording.json",
+      "artifactSha256": "aac01796f0a570f008ab1ee89f3f7c46242729a45d25a7664300c3759361a75f",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/04-t09-privacy/walkthrough.webm",
+        "sha256": "f80c977eaf8abc966079899cf07425714873b54069264320222b559ba7291a66",
+        "durationSeconds": 146.96,
+        "vtt": "../../co-managed-deploy/8093816c90/04-t09-privacy/chapters.vtt",
+        "vttSha256": "b3a8fceb068c051df3f630aa9e65f0df123857c83d9750bc9e44722d06bb1322",
+        "chapters": 5
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-t09-export": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI: Alice downloads the encrypted portable backup; archive decrypted with packages/co-managed openPortableArchive and scanned for markers",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"archive-is-white-rabbit\", \"archive-contains-customer-owned-markers\", \"archive-excludes-msp-private-notes\"], \"limitations\": [\"Archive and passphrase are retained only in the private card directory; evidence keeps the hash and the marker-level scan.\"]}",
+      "artifact": "../../co-managed-deploy/8093816c90/05-t09-export/recording.json",
+      "artifactSha256": "088bc3888a4a322ba32cf8e17444f9c5d0ddf983c8a3db4bacbe5aa0272f5aa3",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/05-t09-export/walkthrough.webm",
+        "sha256": "852000c832f8f8aaf488fdca31a470c925e7a58d9ec950d300a6feea101c7959",
+        "durationSeconds": 6.12,
+        "vtt": "../../co-managed-deploy/8093816c90/05-t09-export/chapters.vtt",
+        "vttSha256": "4acbb40b3036aa570b71af6e37bcddcde07df5b9e224a4d7bc360563eec98054",
+        "chapters": 2
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-f003-states": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI: Technician viewer forbidden probes; tampered relationship URL; single/ended/absent client tabs; seat 1->2->1 summary refresh; multiple and inconsistent states via reversible SQL fixtures; stale two-tab staff-access save",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"f010-non-manager-is-never-offered-enable\", \"viewer-co-management-fails-closed\", \"viewer-co-management-message-names-the-permission-not-a-reload\", \"viewer-client-tab-offers-no-management-writes\", \"viewer-shared-ticket-fails-closed-without-content\", \"mismatched-relationship-fails-closed\", \"matching-relationship-control-opens\", \"single-shows-active-and-manage\", \"f010-summary-refreshes-after-allocation-without-reload\", \"ended-shows-history-no-setup\", \"absent-offers-setup-to-the-manager\", \"multiple-requires-explicit-selection-listing-both\", \"explicit-selection-resolves-the-exact-relationship\", \"inconsistent-relationship-is-not-adopted-by-the-other-client\", \"inconsistent-client-is-named-and-offers-neither-setup-nor-management\", \"stale-save-refused-and-db-unchanged\", \"access-restored\"], \"limitations\": [\"multiple and inconsistent states were produced with reversible SQL fixtures on disposable workspaces: the product deliberately offers no path that creates them\"]}",
+      "artifact": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/recording.json",
+      "artifactSha256": "f32e7a84783c744200aa97ae40bf154766bce8e3f895a396276dbd24404e83de",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/walkthrough.webm",
+        "sha256": "9d90fc027b1d707579c90e704f1fe2b6573d4050f4b64e436a9a27164ae9f30f",
+        "durationSeconds": 117.32,
+        "vtt": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/chapters.vtt",
+        "vttSha256": "f331caf534a68b7a5a31ad15b4580a6fa78e43ff0097ae722c1e9fa098c6c468",
+        "chapters": 7
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-t009-onboarding": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI as QA: fixed-client setup with SMTP sink reject-mail armed, reload, sink recovery, expiry via expires_at time fixture, cancel",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"setup-shows-progress-with-a-reserved-seat\", \"reload-reopens-the-same-setup-showing-delivery-failure-not-expiry\", \"recovery-refreshes-the-view-in-the-same-document\", \"retry-recovers-one-operation-and-one-delivery\", \"expiry-is-named-and-offers-resend\"], \"limitations\": [\"Invitation expiry was produced by moving expires_at into the past (recorded SQL time fixture); delivery failure used the local SMTP sink reject-mail fault.\"]}",
+      "artifact": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/recording.json",
+      "artifactSha256": "eac9465e9af4255ceaf989ec08e88b6c5159165e8a8757208251d66d263efdd9",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/walkthrough.webm",
+        "sha256": "e0ca8034157c2469bb62f2ad2e402def8e74e0a6afd72646db1b1a34e61384eb",
+        "durationSeconds": 42.32,
+        "vtt": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/chapters.vtt",
+        "vttSha256": "2774613d4b29972400a91c8a07bfdaefe9255d83e81e889edf3fb5ba1a160272",
+        "chapters": 5
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-closure-archive": {
+      "type": "browser",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "Real production UI: QA SLA mapping and staff assignment on Accept-3; customer admin ticket; QA Shared IT comment with file and MSP-private note; customer ends the relationship in two tabs; DB closures/manifests/files; MSP archive page",
+      "result": "{\"status\": \"passed\", \"assertions\": [\"exactly-one-closure-and-one-sealed-manifest\", \"no-duplicated-archive-files\", \"seat-released-on-closure\", \"retry-tab-changes-nothing\", \"msp-archive-lists-the-ticket-once\"], \"limitations\": []}",
+      "artifact": "../../co-managed-deploy/8093816c90/08-closure-archive-dedup/recording.json",
+      "artifactSha256": "6254b48abe4be0fc6ff24f20d388ed8fcfa2b15f6ae5bfef7e49c79dfa5c78aa",
+      "media": {
+        "webm": "../../co-managed-deploy/8093816c90/08-closure-archive-dedup/walkthrough.webm",
+        "sha256": "829a4017d260cc92981adb3247d852f1615839b870a30f20d84e8af7a8640257",
+        "durationSeconds": 94.2,
+        "vtt": "../../co-managed-deploy/8093816c90/08-closure-archive-dedup/chapters.vtt",
+        "vttSha256": "3d6530093b9e70b99be4229c7e865298f27aa89ea6814c9af72c3212f2c5b364",
+        "chapters": 6
+      },
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    },
+    "rt-regression-tests": {
+      "type": "automated",
+      "sha": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+      "command": "server tsc --noEmit (12 GiB); packages/billing vitest (1950); coManagedBootstrap.integration.test.ts seed 20260610 on server_co_managed; server lateApprovedHourlyTime.integration; server unit coManaged client/policy suites; mutation controls",
+      "result": "{\"serverTypecheck\": \"exit 0 at 5a822cb47e and 8093816c90\", \"billingPackage\": \"1950/1950\", \"coManagedBootstrap\": \"1492/1492 at 5a822cb47e, 1493/1493 at 8093816c90\", \"mutations\": \"late-time loader neutralised -> native and co-managed cases red; inconsistent classification removed -> bootstrap case red\"}",
+      "artifact": "../../co-managed-deploy/8093816c90/README.md",
+      "dependencyAnalysis": "Ran on build-1793021045283 served on :23374 from server/.next-review-final-8093816c (stamp 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b). The candidate 698cddfd4c differs from that source only under docs/evidence (187 files), so the runtime behaviour is the candidate's."
+    }
+  },
+  "requirements": [
+    {
+      "key": "T01",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete product/role/entry-point acceptance; source and unit coverage do not establish every operational UI/API journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T02",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T03",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise normal signed-license import/refresh and independent upgrade controls; raw entitlement fixtures alone do not satisfy the signed-license journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "tenant-bound signed self-host test licence on an isolated self-hosted installation with a lapse/renewal fixture (guide 02 missingResources)"
+    },
+    {
+      "key": "T04",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach candidate-specific capacity/race results to this requirement and complete its required hosted/self-host controls.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T05",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete fresh-client invitation/setup/acceptance through the application and actual delivery/worker composition; database fixtures cover only part of the journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T06",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the full two-session API/search/download/realtime/queued-delivery matrix; a ticket collision regression covers only part of it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T07",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-approved delegation and revoked-scope application journeys; source presence cannot accept these scenarios.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T08",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the normal application handoff/retry/close/reopen journey with canonical ownership and qualified mapping evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T09",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: This build: requester portal shows only requester-audience comments with matching counts; portal search, MSP full search and palette typeahead never surface hidden markers (positive controls live); customer portable export contains customer markers and no MSP-private notes. Remaining: Task conversation audiences: requester task access, task disclosure, task notifications/email on this build.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-t09-privacy"
+        },
+        {
+          "id": "rt-t09-export"
+        }
+      ]
+    },
+    {
+      "key": "T10",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the normal application handoff/retry/close/reopen journey with canonical ownership and qualified mapping evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T11",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T12",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual shared-task picker, collaboration and revocation journeys; retain unshared-project denial.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T13",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: This build: MSP commercial time on a shared ticket and native ticket time bill together through native Automatic Invoices at the contract rate; approved time dated in an already-invoiced period bills once on the next invoice with its service period named, INV-000003 untouched, no double billing on retry; a qualified MSP ticket edit is attributed 'QA Tester (Oz)' in the customer audit and history. Remaining: MSP edit of a time entry itself; catalog-priced time with a real catalog price; customer operational time on this build.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-billing-late-time"
+        },
+        {
+          "id": "rt-billing-cleanup"
+        },
+        {
+          "id": "rt-t13-msp-edit"
+        }
+      ]
+    },
+    {
+      "key": "T14",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete native grid/detail/export/approval/invoice application journeys and confirm totals/privacy; service tests do not establish screen usability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T15",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise escalation/reply/handback/close/reopen with both running SLA backends and duplicate consumer delivery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T16",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the full two-session API/search/download/realtime/queued-delivery matrix; a ticket collision regression covers only part of it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T17",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: Not exercised at runtime this round. Remaining: Lifecycle grace expiring mid-operation (defer and roll back) needs runtime clock control; covered only by coManagedBootstrap PostgreSQL cases.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T18",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: Closure with participation and a retried closure produced exactly one closure, one sealed manifest, one archive file with no duplicates; MSP archive lists the ticket once; portable export excludes MSP-private notes. Remaining: Restore of the portable export needs an isolated destination installation (external).",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-closure-archive"
+        },
+        {
+          "id": "rt-t09-export"
+        }
+      ],
+      "externalPrerequisite": "isolated destination installation (database-owner operator and file storage) for --restore (guide 11 missingResources)"
+    },
+    {
+      "key": "T19",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete hosted/signed-license independent upgrade through normal controls and exactly-once release/activation recovery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer's own paid/test AlgaPSA subscription or tenant-bound licence plus a separate disposable live relationship (guide 11 missingResources)"
+    },
+    {
+      "key": "T20",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise actual customer deletion and retained MSP invoice/archive access; PostgreSQL/Citus runtime invariants need their own acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T21",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete real flag-off/direct-route/portal and backend-authority matrix; ordinary PSA/AlgaDesk fallback must remain usable.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "T22",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete real flag-off/direct-route/portal and backend-authority matrix; ordinary PSA/AlgaDesk fallback must remain usable.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F003",
+      "status": "verified",
+      "justification": "Every clause exercised on build-1793021045283: absent: pass: a never-set-up client (Emerald City) offers setup to the manager; single: pass: White Rabbit Active, seats, Manage access; multiple: pass: two live relationships on one client (SQL fixture) show 'Multiple co-managed relationships'; no management controls until an explicit choice; choosing resolves the exact relationship; ended: pass: Kansas Farms 'Relationship ended' with history and no setup; inconsistent: pass after 8093816c90: a setup whose relationship names another client (SQL fixture) reads 'Co-managed record needs attention' with neither setup nor management, and is not adopted by the other client; forbidden: pass after 8093816c90: an Oz Technician sees the permission message on /msp/co-management, no client-tab writes, and the shared ticket fails closed; exact expected relationship identity for writes: pass: a stale second-tab staff-access save is refused with the revision unchanged; a URL carrying another relationship id fails closed. Multiple and inconsistent states require reversible SQL fixtures because the product offers no path that creates them; disclosed in the scenario limitations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-f003-states"
+        },
+        {
+          "id": "rt-regression-tests"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F010",
+      "status": "verified",
+      "justification": "Every clause exercised on build-1793021045283: absent offers Enable to an authorized manager only: pass: manager sees setup on an absent client; the Technician viewer is never offered Enable (no summary rendered); active shows seat usage and Manage: pass; ended shows end date and View history: pass (Kansas Farms); shared refresh between summary and client view: pass: seats 1 -> 2 -> 1 updated the summary in the same document (performance.timeOrigin unchanged)",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-f003-states"
+        },
+        {
+          "id": "rt-regression-tests"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F015",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: Progress, delivery failure, durable automatic redelivery, expired invitation with Resend, and cancellation releasing the seat on this build. Remaining: worker failure and acknowledged cleanup.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-t009-onboarding"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F018",
+      "status": "implemented-unverified",
+      "justification": "Progress on build-1793021045283: Departure from the customer side and archive navigation on this build; ended client view without live usage. Remaining: sponsor-side End co-management from the client tab was not re-run on this build.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-closure-archive"
+        },
+        {
+          "id": "rt-f003-states"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F027",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F028",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F029",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F030",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F031",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete real flag-off/direct-route/portal and backend-authority matrix; ordinary PSA/AlgaDesk fallback must remain usable.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F032",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:F033",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T009",
+      "status": "verified",
+      "justification": "Every clause exercised on build-1793021045283: reserved progress then pending acceptance: pass: reserved seat and progress, then awaiting acceptance; reopens the original operation after failure/reload: pass: after reload the same operation shows delivery failure with Retry; distinguishes invitation expiry from delivery failure: pass: 'Invitation delivery failed; retry to send it.' vs 'Invitation expired' + 'Resend administrator invitation' (expiry via recorded time fixture); refreshes summary/usage after allocation or recovery: pass: recovery cleared the failure in the same document; allocation refresh in 06; active settings use embeddable sections: pass: White Rabbit tab embeds staff access, SLA link, capacity (06); ended state uses retained history: pass: Kansas Farms (06). Invitation expiry was produced by moving expires_at into the past; delivery failure used the local SMTP sink reject-mail fault. A reviewer may hold this row on the time fixture.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        },
+        {
+          "id": "rt-t009-onboarding"
+        },
+        {
+          "id": "rt-f003-states"
+        },
+        {
+          "id": "rt-regression-tests"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T018",
+      "status": "blocked-external",
+      "justification": "Blocked on an external resource: real Stripe test account, price and checkout, and release-owner receipts. Not faked.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": false,
+      "externalOwner": "release-operator",
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "real Stripe test account, price and checkout, and release-owner receipts"
+    },
+    {
+      "key": "clientIntegration:T019",
+      "status": "blocked-external",
+      "justification": "Blocked on an external resource: signed tenant-bound self-host licence and an isolated self-host installation. Not faked.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": false,
+      "externalOwner": "release-operator",
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "signed tenant-bound self-host licence and an isolated self-host installation"
+    },
+    {
+      "key": "clientIntegration:T020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete client page/drawer/legacy/role/draft application acceptance; component/service proofs do not establish all browser states.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "clientIntegration:T021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F018",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "operator-prepared restricted shared-field policy (guide 03 missingResources; the product has no UI to create one)"
+    },
+    {
+      "key": "ticketList:F020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F027",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F028",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F029",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F030",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F031",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F032",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F033",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F034",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F035",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F036",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F037",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F038",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F039",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F040",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F041",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F042",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F043",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F044",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F045",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F046",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F047",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F048",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:F049",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "operator-prepared restricted shared-field policy (guide 03 missingResources; the product has no UI to create one)"
+    },
+    {
+      "key": "ticketList:T005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T018",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "ticketList:T026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Gate behavior is tested; actual-candidate acceptance cannot pass until every required evidence obligation is met. Do not relax the gate or convert a source census into acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-owned provider setup/save/reload/OAuth and directory vendor-event flow through normal controls and real consumers.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer directory provisioning entry (SCIM / enabled Entra Direct app) for the workspace (guide 12 missingResources)"
+    },
+    {
+      "key": "CF006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-owned provider setup/save/reload/OAuth and directory vendor-event flow through normal controls and real consumers.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "approved Microsoft Entra app registration with a publicly reachable redirect URI (guide 12 missingResources)"
+    },
+    {
+      "key": "CF007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the Alga customer tenant-resolution/account-linking journey on the deployed runtime as well as signed Entra discovery/JWKS/PKCE and Auth.js protocol/session checks; protocol tests alone do not establish it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "approved Microsoft Entra app registration with a publicly reachable redirect URI (guide 12 missingResources)"
+    },
+    {
+      "key": "CF008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "inbound mailbox binding (Microsoft/Gmail/IMAP) usable by the reply ingestion worker (guide 12 missingResources)"
+    },
+    {
+      "key": "CF009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-owned provider setup/save/reload/OAuth and directory vendor-event flow through normal controls and real consumers.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer directory provisioning entry (SCIM / enabled Entra Direct app) for the workspace (guide 12 missingResources)"
+    },
+    {
+      "key": "CF010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete fresh-client invitation/setup/acceptance through the application and actual delivery/worker composition; database fixtures cover only part of the journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Demonstrate the real hydrated team/person picker with pointer and keyboard; action/SQL assignment is not that proof.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete native grid/detail/export/approval/invoice application journeys and confirm totals/privacy; service tests do not establish screen usability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF018",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete native grid/detail/export/approval/invoice application journeys and confirm totals/privacy; service tests do not establish screen usability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the full two-session API/search/download/realtime/queued-delivery matrix; a ticket collision regression covers only part of it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete original-deadline lapse and once-only renewal through both deployed worker compositions.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise escalation/reply/handback/close/reopen with both running SLA backends and duplicate consumer delivery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer's own paid/test AlgaPSA subscription or tenant-bound licence plus a separate disposable live relationship (guide 11 missingResources)"
+    },
+    {
+      "key": "CF023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise normal signed-license import/refresh and independent upgrade controls; raw entitlement fixtures alone do not satisfy the signed-license journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "tenant-bound signed self-host test licence on an isolated self-hosted installation with a lapse/renewal fixture (guide 02 missingResources)"
+    },
+    {
+      "key": "CF024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete source-unavailable export/restore through native screens; compare permitted records/files/credentials and prove tamper/interruption recovery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "isolated destination installation (database-owner operator and file storage) for --restore (guide 11 missingResources)"
+    },
+    {
+      "key": "CF025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise actual customer deletion and retained MSP invoice/archive access; PostgreSQL/Citus runtime invariants need their own acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Execute fresh/populated-upgrade/rollback and distributed Citus mutation invariants; a PostgreSQL schema clone is not a Citus installation or upgrade.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "a PostgreSQL/Citus installation for fresh-install, populated-upgrade and rollback runs (no Citus cluster in the review stack)"
+    },
+    {
+      "key": "CF027",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires current app/worker build provenance, authenticated walkthrough and 30 minutes without healing; unit/service tests do not establish runtime stability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF028",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires fixture reset/apply/reapply and current application/DB evidence. Disposable test fixtures are not the review-stack reset/stability proof.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF029",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires affected local typechecks/regressions, CE/EE builds and exact-candidate CI/mergeability acceptance; local test counts do not establish CI success.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "exact-candidate CI on a mergeable PR (PR #3363 is CONFLICTING; manifest.ci.checks is empty)"
+    },
+    {
+      "key": "CF030",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Gate behavior is tested; actual-candidate acceptance cannot pass until every required evidence obligation is met. Do not relax the gate or convert a source census into acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF031",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires final PR/guide/recording/runtime/CI packet reconciliation and the actual-candidate verifier verdict before human-review readiness.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CF032",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires final PR/guide/recording/runtime/CI packet reconciliation and the actual-candidate verifier verdict before human-review readiness.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "externalOwner": "release-operator",
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Gate behavior is tested; actual-candidate acceptance cannot pass until every required evidence obligation is met. Do not relax the gate or convert a source census into acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "exact-candidate CI on a mergeable PR (PR #3363 is CONFLICTING; manifest.ci.checks is empty)"
+    },
+    {
+      "key": "CT003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Focused PostgreSQL lifecycle cases exist. Original-order CI and running-worker deferred-source replay are distinct remaining acceptance obligations.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "exact-candidate CI on a mergeable PR (PR #3363 is CONFLICTING; manifest.ci.checks is empty)"
+    },
+    {
+      "key": "CT006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-owned provider setup/save/reload/OAuth and directory vendor-event flow through normal controls and real consumers.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer directory provisioning entry (SCIM / enabled Entra Direct app) for the workspace (guide 12 missingResources)"
+    },
+    {
+      "key": "CT007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete fresh-client invitation/setup/acceptance through the application and actual delivery/worker composition; database fixtures cover only part of the journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the Alga customer tenant-resolution/account-linking journey on the deployed runtime as well as signed Entra discovery/JWKS/PKCE and Auth.js protocol/session checks; protocol tests alone do not establish it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "approved Microsoft Entra app registration with a publicly reachable redirect URI (guide 12 missingResources)"
+    },
+    {
+      "key": "CT009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete customer-owned provider setup/save/reload/OAuth and directory vendor-event flow through normal controls and real consumers.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "inbound mailbox binding (Microsoft/Gmail/IMAP) usable by the reply ingestion worker (guide 12 missingResources); customer directory provisioning entry (SCIM / enabled Entra Direct app) for the workspace (guide 12 missingResources)"
+    },
+    {
+      "key": "CT010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete actual list/count/export and navigation acceptance using duplicate qualified identities and current grants.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete translated light/dark/narrow/keyboard/focus browser acceptance and retain the required revision-specific evidence.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete native grid/detail/export/approval/invoice application journeys and confirm totals/privacy; service tests do not establish screen usability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete the full two-session API/search/download/realtime/queued-delivery matrix; a ticket collision regression covers only part of it.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete original-deadline lapse and once-only renewal through both deployed worker compositions.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "tenant-bound signed self-host test licence on an isolated self-hosted installation with a lapse/renewal fixture (guide 02 missingResources)"
+    },
+    {
+      "key": "CT017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise escalation/reply/handback/close/reopen with both running SLA backends and duplicate consumer delivery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT018",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Run the required application/provider purchase and reconciliation journey; real Stripe price/payment acceptance needs release-owner credentials.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer's own paid/test AlgaPSA subscription or tenant-bound licence plus a separate disposable live relationship (guide 11 missingResources)"
+    },
+    {
+      "key": "CT019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise normal signed-license import/refresh and independent upgrade controls; raw entitlement fixtures alone do not satisfy the signed-license journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "tenant-bound signed self-host test licence on an isolated self-hosted installation with a lapse/renewal fixture (guide 02 missingResources)"
+    },
+    {
+      "key": "CT020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Complete source-unavailable export/restore through native screens; compare permitted records/files/credentials and prove tamper/interruption recovery.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "isolated destination installation (database-owner operator and file storage) for --restore (guide 11 missingResources)"
+    },
+    {
+      "key": "CT021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Exercise actual customer deletion and retained MSP invoice/archive access; PostgreSQL/Citus runtime invariants need their own acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "customer's own paid/test AlgaPSA subscription or tenant-bound licence plus a separate disposable live relationship (guide 11 missingResources)"
+    },
+    {
+      "key": "CT022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Execute fresh/populated-upgrade/rollback and distributed Citus mutation invariants; a PostgreSQL schema clone is not a Citus installation or upgrade.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "a PostgreSQL/Citus installation for fresh-install, populated-upgrade and rollback runs (no Citus cluster in the review stack)"
+    },
+    {
+      "key": "CT023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires current app/worker build provenance, authenticated walkthrough and 30 minutes without healing; unit/service tests do not establish runtime stability.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires fixture reset/apply/reapply and current application/DB evidence. Disposable test fixtures are not the review-stack reset/stability proof.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "CT025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires affected local typechecks/regressions, CE/EE builds and exact-candidate CI/mergeability acceptance; local test counts do not establish CI success.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "exact-candidate CI on a mergeable PR (PR #3363 is CONFLICTING; manifest.ci.checks is empty)"
+    },
+    {
+      "key": "CT026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Gate behavior is tested; actual-candidate acceptance cannot pass until every required evidence obligation is met. Do not relax the gate or convert a source census into acceptance.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "operator-prepared restricted shared-field policy (guide 03 missingResources; the product has no UI to create one)"
+    },
+    {
+      "key": "nativeTicketScreen:F014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "operator-prepared restricted shared-field policy (guide 03 missingResources; the product has no UI to create one)"
+    },
+    {
+      "key": "nativeTicketScreen:F015",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F016",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F017",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F018",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F019",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F020",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F021",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F022",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F023",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F024",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F025",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F026",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F027",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F028",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F029",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F030",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F031",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F032",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F033",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F034",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F035",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F036",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:F037",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T001",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T002",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T003",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T004",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ],
+      "externalPrerequisite": "operator-prepared restricted shared-field policy (guide 03 missingResources; the product has no UI to create one)"
+    },
+    {
+      "key": "nativeTicketScreen:T005",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T006",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T007",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T008",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T009",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T010",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T011",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T012",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T013",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    },
+    {
+      "key": "nativeTicketScreen:T014",
+      "status": "implemented-unverified",
+      "justification": "Current source and regression locations exist; this is not full behavioral acceptance. Requires current Entry/Grid application walkthrough and recorded evidence; source and component tests do not establish the browser journey.",
+      "ownerRole": "implementing-ood",
+      "requiredInCard": true,
+      "evidence": [
+        {
+          "id": "current-source-census"
+        }
+      ]
+    }
+  ],
+  "runtimeEvidence": {
+    "attribution": "../../co-managed-deploy/8093816c90/requirement-attribution.json",
+    "mediaAudit": "media-audit.json",
+    "sourceRevision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+    "buildId": "build-1793021045283",
+    "supersededAttempts": "../../co-managed-deploy/8093816c90/attempts"
+  }
+}
