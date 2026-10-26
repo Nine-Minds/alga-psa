@@ -1597,6 +1597,9 @@
       "ticket-category": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di categoria."
       },
+      "ticket-category-any": {
+        "board_id": "Choose a fixed Board first to load category options."
+      },
       "ticket-status": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di stato.",
         "ticket_id": "Scegli prima un ticket fisso per caricare le opzioni di stato."

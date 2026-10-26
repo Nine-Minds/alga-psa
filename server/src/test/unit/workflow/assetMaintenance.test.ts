@@ -25,6 +25,8 @@ const ids = {
   priority: '99999999-9999-4999-8999-999999999999',
   ticket: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   category: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  subcategory: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1',
+  orphanSubcategory: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2',
   otherBoard: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   otherBoardCategory: 'eeeeeeee-dddd-4ddd-8ddd-dddddddddddd',
 };
@@ -165,6 +167,8 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
       priorities: scoped([{ priority_id: ids.priority, item_type: 'ticket' }]),
       categories: scoped([
         { category_id: ids.category, category_name: 'Maintenance', board_id: ids.board, parent_category: null },
+        { category_id: ids.subcategory, category_name: 'Filter change', board_id: ids.board, parent_category: ids.category },
+        { category_id: ids.orphanSubcategory, category_name: 'Orphan', board_id: ids.board, parent_category: 'ffffffff-bbbb-4bbb-8bbb-bbbbbbbbbbbb' },
         { category_id: ids.otherBoardCategory, category_name: 'Other board', board_id: ids.otherBoard, parent_category: null },
       ]),
       tickets: [], asset_associations: [], user_roles: [], team_members: [],
@@ -247,9 +251,17 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     }));
   });
 
+  it('stores a subcategory pick as parent category plus subcategory, like the ticket UI', async () => {
+    await execute('create_maintenance_ticket', { ...ticketInput, category_id: ids.subcategory });
+    expect(createTicketWithSideEffects).toHaveBeenCalledWith(expect.anything(), state.tenant, expect.objectContaining({
+      ticket: expect.objectContaining({ category_id: ids.category, subcategory_id: ids.subcategory }),
+    }));
+  });
+
   it.each([
     ['unknown category', 'ffffffff-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
     ['category on another board', ids.otherBoardCategory],
+    ['subcategory whose parent is missing', ids.orphanSubcategory],
   ])('rejects ticket creation with an %s', async (_label, categoryId) => {
     await expect(execute('create_maintenance_ticket', { ...ticketInput, category_id: categoryId })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
     expect(createTicketWithSideEffects).not.toHaveBeenCalled();

@@ -170,8 +170,8 @@ export function registerAssetMaintenanceActions(): void {
       priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
       category_id: withWorkflowPicker(
         uuidSchema.optional(),
-        'Optional ticket category id (must belong to the selected board)',
-        'ticket-category',
+        'Optional ticket category or subcategory id (like the ticket UI category dropdown; must belong to the selected board)',
+        'ticket-category-any',
         ['board_id']
       ),
     }),
@@ -208,11 +208,26 @@ export function registerAssetMaintenanceActions(): void {
       if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'status_id must be an open ticket status on the selected board' });
       const priority = await db.table('priorities').where({ priority_id: input.priority_id, item_type: 'ticket' }).first();
       if (!priority) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid ticket priority_id' });
+      // One field takes either a primary category or one of its subcategories, like the ticket UI
+      // dropdown. A subcategory stores as category_id = its parent + subcategory_id = itself.
+      let categoryId: string | undefined;
+      let subcategoryId: string | undefined;
       if (input.category_id) {
-        const category = await db.table('categories').where({ category_id: input.category_id }).first<{ board_id: string | null }>();
+        const category = await db.table('categories').where({ category_id: input.category_id })
+          .first<{ board_id: string | null; parent_category: string | null }>();
         // Board-less categories are tenant-global; otherwise the category must live on the selected board.
         if (!category || (category.board_id && category.board_id !== input.board_id)) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id must exist and belong to the selected board' });
+        }
+        if (category.parent_category) {
+          const parent = await db.table('categories').where({ category_id: category.parent_category }).first();
+          if (!parent) {
+            throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id subcategory has no parent category' });
+          }
+          categoryId = category.parent_category;
+          subcategoryId = category.category_id;
+        } else {
+          categoryId = category.category_id;
         }
       }
       const ticket = await createTicketWithSideEffects(tx.trx, tx.tenantId, {
@@ -220,7 +235,7 @@ export function registerAssetMaintenanceActions(): void {
         ticket: {
           title: input.title ?? schedule.schedule_name, description: input.description,
           client_id: asset.client_id, board_id: input.board_id, status_id: input.status_id,
-          priority_id: input.priority_id, category_id: input.category_id, source: 'workflow',
+          priority_id: input.priority_id, category_id: categoryId, subcategory_id: subcategoryId, source: 'workflow',
         },
         assetIds: [occurrence.asset_id],
         notificationSuppression: { suppressContactNotifications: true, suppressInternalNotifications: false },

@@ -130,6 +130,7 @@ export const WORKFLOW_PICKER_KIND_HINTS = {
   role: 'Search roles',
   ticket: 'Search tickets',
   'ticket-category': 'Search categories',
+  'ticket-category-any': 'Search categories',
   'ticket-priority': 'Search priorities',
   'ticket-status': 'Search statuses',
   'ticket-subcategory': 'Search subcategories',

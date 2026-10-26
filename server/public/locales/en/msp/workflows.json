@@ -1475,6 +1475,9 @@
       "ticket-category": {
         "board_id": "Choose a fixed Board first to load category options."
       },
+      "ticket-category-any": {
+        "board_id": "Choose a fixed Board first to load category options."
+      },
       "ticket-status": {
         "board_id": "Choose a fixed Board first to load status options.",
         "ticket_id": "Choose a fixed Ticket first to load status options."
