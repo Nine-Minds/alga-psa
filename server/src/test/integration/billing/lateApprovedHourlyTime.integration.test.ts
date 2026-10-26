@@ -456,20 +456,52 @@ describe('late approved hourly time in an already-invoiced service period', () =
     expect(row).toMatchObject({ invoiced: false, approval_status: 'APPROVED' });
   }, HOOK_TIMEOUT);
 
-  it('a cancelled invoice does not close its window: time there is not carried forward as late time', async () => {
+  it('a voided invoice keeps its window closed: regeneration is refused, so late time carries forward and is named', async () => {
+    const { finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
+    const { voidInvoice } = await import('@alga-psa/billing/actions/voidInvoiceActions');
     const fixture = await seedHourlyClient();
     await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 60);
-    const january = await generateInvoice(fixture.cycleIds.january);
+    const january = await generateInvoice(fixture.cycleIds.january) as any;
+    expect((await finalizeInvoice(january.invoice_id) as any)?.actionError ?? null).toBeNull();
+    const voided = await voidInvoice(january.invoice_id, 'late-time regression: void then check');
+    expect(voided).toMatchObject({ success: true });
+    expect((await tenantTable(db, tenantId, 'invoices').where({ invoice_id: january.invoice_id }).first() as any).status).toBe('cancelled');
     const dated = await logApprovedHours(fixture, '2024-12-23T10:00:00Z', 60);
-    await tenantTable(db, tenantId, 'invoices').where({ invoice_id: (january as any).invoice_id }).update({ status: 'cancelled' });
 
+    // The product will not regenerate the voided window ...
+    // (pre-existing behaviour: the refusal surfaces as the period-claim guard's error)
+    const again = await generateInvoice(fixture.cycleIds.january).catch((error: Error) => error) as any;
+    expect(again?.invoice_id ?? null).toBeNull();
+    expect(String(again?.message ?? again?.actionError ?? '')).toMatch(/already claimed|already exists/i);
+    // ... so the late entry is named with the voided invoice and carries forward once.
+    const notices = await late(fixture.clientId);
+    expect(notices).toEqual([expect.objectContaining({ entryId: dated.entry_id, disposition: 'next_invoice', closedByInvoiceStatus: 'cancelled' })]);
+    const february = await generateInvoice(fixture.cycleIds.february) as any;
+    const links = await tenantTable(db, tenantId, 'invoice_time_entries').where({ invoice_id: february.invoice_id }).select('entry_id');
+    expect(links.map((l: any) => l.entry_id)).toContain(dated.entry_id);
     expect(await late(fixture.clientId)).toEqual([]);
-    const february = await generateInvoice(fixture.cycleIds.february);
-    const links = (february as any)?.invoice_id
-      ? await tenantTable(db, tenantId, 'invoice_time_entries').where({ invoice_id: (february as any).invoice_id }).select('entry_id')
-      : [];
-    expect(links.map((l: any) => l.entry_id)).not.toContain(dated.entry_id);
-    expect((await tenantTable(db, tenantId, 'time_entries').where({ entry_id: dated.entry_id }).first() as any).invoiced).toBe(false);
+  }, HOOK_TIMEOUT);
+
+  it('a reversed draft releases its window: late time rejoins the regenerated window and is not carried as late time', async () => {
+    const { hardDeleteInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
+    const fixture = await seedHourlyClient();
+    const onTime = await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 60);
+    const january = await generateInvoice(fixture.cycleIds.january) as any;
+    const dated = await logApprovedHours(fixture, '2024-12-23T10:00:00Z', 60);
+    expect((await late(fixture.clientId)).map((n) => n.entryId)).toEqual([dated.entry_id]);
+    expect((await hardDeleteInvoice(january.invoice_id) as any)?.actionError ?? null).toBeNull();
+    // Negative control: once the draft is reversed nothing is late any more.
+    expect(await late(fixture.clientId)).toEqual([]);
+    const regenerated = await generateInvoice(fixture.cycleIds.january) as any;
+    expect(regenerated?.invoice_id).toBeDefined();
+    const rows = await tenantTable(db, tenantId, 'invoice_time_entries as ite')
+      .join('invoice_charges as ic', function () { this.on('ic.item_id', '=', 'ite.item_id').andOn('ic.tenant', '=', 'ite.tenant'); })
+      .where('ite.invoice_id', regenerated.invoice_id).select('ite.entry_id', 'ic.description');
+    expect(rows.map((r: any) => r.entry_id).sort()).toEqual([onTime.entry_id, dated.entry_id].sort());
+    expect(rows.every((r: any) => !String(r.description).includes('late time'))).toBe(true);
+    const february = await generateInvoice(fixture.cycleIds.february) as any;
+    const febLinks = february?.invoice_id ? await tenantTable(db, tenantId, 'invoice_time_entries').where({ invoice_id: february.invoice_id }).select('entry_id') : [];
+    expect(febLinks.map((l: any) => l.entry_id)).not.toContain(dated.entry_id);
   }, HOOK_TIMEOUT);
 });
 

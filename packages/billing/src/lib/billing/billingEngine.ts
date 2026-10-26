@@ -5478,8 +5478,8 @@ export class BillingEngine {
 
   /**
    * Service windows of one contract line that an invoice has already closed
-   * (see lateHourlyTime.ts for what closes a window: any non-cancelled invoice,
-   * drafts included) and that begin before `before`, clipped to it so they never
+   * (see lateHourlyTime.ts for what closes a window: any invoice claiming it,
+   * drafts and voided invoices included) and that begin before `before`, clipped to it so they never
    * overlap the current window. Materialized lines read their claimed recurring
    * service periods; a line with no materialized periods falls back to the
    * client's invoiced billing cycles, resolved through the same timing rules

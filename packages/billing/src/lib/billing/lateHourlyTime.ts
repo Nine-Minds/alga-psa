@@ -9,12 +9,15 @@ import { joinTimeEntryBillingWorkContext } from './timeEntryWorkContext';
  * Late approved hourly time: approved, uninvoiced time dated inside a service
  * window an earlier invoice already closed.
  *
- * A window is closed exactly when the duplicate-window guard refuses to
- * regenerate it — it is claimed by an invoice that is not cancelled. A draft
- * closes its window: the product cannot regenerate a draft in place (only a
- * destructive reverse-then-generate), and existing drafts must keep their
- * contents, so late time in a draft's window carries forward like any other.
- * A cancelled invoice reopens its window, so time there bills with the window.
+ * A window is closed exactly when the product will not generate it again: an
+ * invoice claims it. That includes drafts — the product cannot regenerate a
+ * draft in place (same-window generation is refused; only a destructive
+ * reverse-then-generate), and existing drafts must keep their contents — and
+ * voided (cancelled) invoices: a void keeps the recurring period's claim and the
+ * cycle guard still counts the invoice, so regenerating that window is refused.
+ * Treating a voided window as open would strand its late time with nothing to
+ * bill it. A reversed draft is deleted and releases its claim, so its window
+ * reopens and late time there bills with the regenerated window.
  *
  * The billing engine carries late time onto the line's next invoice; this
  * module is also what tells the operator, so nothing is omitted silently —
@@ -46,7 +49,7 @@ export function closedWindow(start: ISO8601String, endExclusive: ISO8601String, 
   };
 }
 
-/** Closed windows of materialized lines (recurring service periods claimed by a non-cancelled invoice), keyed by line. */
+/** Closed windows of materialized lines (recurring service periods claimed by an invoice, voided included), keyed by line. */
 export async function loadMaterializedClosedWindows(knex: Knex, tenant: string, lineIds: string[]) {
   const db = tenantDb(knex, tenant);
   const materialized = new Set<string>();
@@ -59,7 +62,6 @@ export async function loadMaterializedClosedWindows(knex: Knex, tenant: string, 
   db.tenantJoin(query, 'invoices as i', 'i.invoice_id', 'rsp.invoice_id');
   const rows = await query.whereIn('rsp.obligation_id', lineIds)
     .whereNotIn('rsp.lifecycle_state', ['superseded', 'archived'])
-    .whereNot('i.status', 'cancelled')
     .select('rsp.obligation_id', 'rsp.record_id', 'rsp.service_period_start', 'rsp.service_period_end',
       'rsp.activity_window_start', 'rsp.activity_window_end', 'i.invoice_id', 'i.invoice_number', 'i.status');
   for (const row of rows) {
@@ -70,12 +72,12 @@ export async function loadMaterializedClosedWindows(knex: Knex, tenant: string, 
   return { materialized, windows };
 }
 
-/** Invoiced (not cancelled) billing cycles of a client, for lines with no materialized periods. */
+/** Invoiced billing cycles of a client (any status: the cycle guard refuses to regenerate them), for lines with no materialized periods. */
 export async function loadInvoicedClientCycles(knex: Knex, tenant: string, clientId: string) {
   const db = tenantDb(knex, tenant);
   const query = db.table('client_billing_cycles as cbc');
   db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
-  return query.where('cbc.client_id', clientId).whereNot('i.status', 'cancelled')
+  return query.where('cbc.client_id', clientId)
     .whereNotNull('cbc.period_start_date').whereNotNull('cbc.period_end_date')
     .select('cbc.billing_cycle_id', 'cbc.billing_cycle', 'cbc.period_start_date', 'cbc.period_end_date', 'i.invoice_id', 'i.invoice_number', 'i.status');
 }
