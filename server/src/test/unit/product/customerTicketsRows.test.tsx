@@ -123,8 +123,12 @@ describe('F015 / T009 — shared rows keep their qualified identity', () => {
     mount();
     const a = await screen.findByRole('link', { name: 'T-1 · Printer A' });
     const b = await screen.findByRole('link', { name: 'T-1 · Printer B' });
-    expect(a.getAttribute('href')).toBe('/msp/co-management/tickets/a/rel-a/same-id');
-    expect(b.getAttribute('href')).toBe('/msp/co-management/tickets/b/rel-b/same-id');
+    // Each link names its own customer workspace and relationship, and carries the list it was opened from
+    // (a46feefa6f) so the shared ticket can return to the same qualified view.
+    const href = (link: HTMLElement) => new URL(link.getAttribute('href')!, 'https://alga.invalid');
+    expect(href(a).pathname).toBe('/msp/co-management/tickets/a/rel-a/same-id');
+    expect(href(b).pathname).toBe('/msp/co-management/tickets/b/rel-b/same-id');
+    for (const link of [a, b]) expect(href(link).searchParams.get('returnTo')).toBe('/msp/tickets/customer?queueView=working&workspace=all');
   });
 
   it('selects one of two same-id rows without selecting the other', async () => {
