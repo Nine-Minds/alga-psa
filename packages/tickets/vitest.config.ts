@@ -1,6 +1,20 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { readFileSync } from 'fs';
+
+/** Exact-match source aliases for every subpath a workspace package exports, read from its own `exports` map
+ * (each entry's `types` is its source file). Tests then resolve a subpath exactly as the package publishes it,
+ * instead of through a guessed directory pattern that silently misses entries living elsewhere. */
+function exportedSourceAliases(packageName: string, packageDir: string) {
+  const manifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8')) as { exports?: Record<string, { types?: string }> };
+  return Object.entries(manifest.exports ?? {})
+    .filter(([subpath, entry]) => subpath !== '.' && typeof entry?.types === 'string' && entry.types.startsWith('./src/'))
+    .map(([subpath, entry]) => ({
+      find: new RegExp(`^${`${packageName}${subpath.slice(1)}`.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`),
+      replacement: path.resolve(packageDir, entry.types!),
+    }));
+}
 
 export default defineConfig({
   plugins: [
@@ -57,7 +71,9 @@ export default defineConfig({
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
-      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
+      // LEVERAGE: pattern vitest-workspace-src-aliases — the published subpaths come from core's exports map
+      // (config/deletion lives outside src/lib); the patterns below only cover unexported test-time paths.
+      ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
       { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/context/$1') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../auth/src/index.ts') },
