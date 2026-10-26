@@ -692,6 +692,7 @@
         "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
       },
       "unknownOutcome": "Non è stato possibile confermare il salvataggio del messaggio. Riprova per verificare la stessa richiesta.",
+      "audienceUnresolved": "La visibilità di questo commento è ancora in caricamento. Controlla il pubblico e invia di nuovo.",
       "files": {
         "choose": "Allega file",
         "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",

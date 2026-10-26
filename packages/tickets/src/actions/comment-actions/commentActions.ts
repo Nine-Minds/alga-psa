@@ -174,11 +174,13 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
 export const createComment = withAuth(async (
   user,
   { tenant },
-  comment: Omit<IComment, 'tenant'>,
+  input: Omit<IComment, 'tenant'> & { audienceId?: string },
   emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<string | TicketActionError> => {
   try {
     if (!await hasPermission(user, 'ticket', 'update')) throw new Error('Permission denied: Cannot add comment');
+    // The chosen audience is a write option, never a comment column.
+    const { audienceId: nativeAudience, ...comment } = input;
     comment.user_id = user.user_id;
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -279,7 +281,7 @@ export const createComment = withAuth(async (
         };
       }
 
-      const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
+      const commentId = await Comment.insert(trx, commentTenant!, commentToInsert, undefined, nativeAudience ?? null);
       const assertScheduleCurrent = comment.publish_state === 'scheduled'
         ? await admitScheduledCommentCommand(trx, commentTenant!, user, { commentId, ticketId: comment.ticket_id!, operation: 'create' })
         : async () => {};

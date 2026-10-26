@@ -28,6 +28,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTicketDataSource } from '../TicketDataSourceContext';
+import { resolveComposerAudience } from '../../../lib/ticketDataSource';
 import type { IAggregatedReaction, IComment } from '@alga-psa/types';
 import CommentItem from '../CommentItem';
 import { DEFAULT_BLOCK } from '../TicketConversation';
@@ -471,8 +472,12 @@ export function BentoTimelineTile({
   // Visibility and resolution are independent, same as the legacy composer: an
   // internal note can also be the resolution.
   const [composerVisibilityState, setComposerVisibility] = useState<'client' | 'internal'>('client');
-  const [audienceId, setAudienceId] = useState<string | undefined>(audiences?.defaultId);
-  const selectedAudience = audiences?.options.find((option) => option.id === audienceId);
+  // Only an explicit pick is state; the shown and submitted audience is derived on
+  // every render because the options load after the composer may already be open.
+  const [audienceId, setAudienceId] = useState<string | undefined>(undefined);
+  const selectedAudience = audiences ? resolveComposerAudience(audiences, audienceId) : undefined;
+  // Fail closed: an audience-aware composer with no resolvable audience cannot submit.
+  const audienceUnresolved = Boolean(audiences) && !selectedAudience;
   // With audiences the audience control replaces the Client/Internal lanes; the
   // selected option's `internal` flag drives the legacy visibility value.
   const composerVisibility: 'client' | 'internal' = audiences
@@ -775,7 +780,7 @@ export function BentoTimelineTile({
       isResolution && resolutionCloseStatusId !== NO_STATUS_CHANGE
         ? resolutionCloseStatusId
         : null;
-    if (composeUploadSession.isUploading) return;
+    if (composeUploadSession.isUploading || audienceUnresolved) return;
     const success = await onAddNewComment(
       composerVisibility === 'internal',
       isResolution,
@@ -789,10 +794,10 @@ export function BentoTimelineTile({
       // Never sent with an internal note, even though the draft is kept.
       allowEmailRecipients && composerVisibility !== 'internal' ? emailRecipients.payload : undefined,
       // Audience-aware sources only: native calls keep their exact argument list.
-      ...(audiences ? ([audienceId] as [string | undefined]) : ([] as [])),
+      ...(audiences ? ([selectedAudience?.id] as [string | undefined]) : ([] as [])),
     );
     if (success) {
-      setAudienceId(audiences?.defaultId);
+      setAudienceId(undefined);
       emailRecipients.reset();
       setHasDraft(false);
       setComposeHasContent(false);
@@ -805,7 +810,7 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients, audiences, audienceId]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients, audiences, selectedAudience, audienceUnresolved]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {
@@ -952,7 +957,7 @@ export function BentoTimelineTile({
                 { value: 'internal', label: t('bento.timeline.modeInternal', 'Internal') },
               ]
           ).map((option) => {
-            const isSelected = audiences ? audienceId === option.value : composerVisibility === option.value;
+            const isSelected = audiences ? selectedAudience?.id === option.value : composerVisibility === option.value;
             return (
             <button
               key={option.value}
@@ -1000,6 +1005,7 @@ export function BentoTimelineTile({
           disabled={
             isSubmitting
             || composeUploadSession.isUploading
+            || audienceUnresolved
             || !hasDraft
             || !scheduleIsValid
             || (allowEmailRecipients && composerVisibility !== 'internal' && emailRecipients.hasErrors)

@@ -692,6 +692,7 @@
         "organization_private": "Visível somente para o pessoal autorizado da sua organização."
       },
       "unknownOutcome": "Não foi possível confirmar se a mensagem foi salva. Tente novamente para verificar a mesma solicitação.",
+      "audienceUnresolved": "Ainda estamos carregando quem pode ver este comentário. Verifique o público e envie novamente.",
       "files": {
         "choose": "Anexar arquivos",
         "help": "Até {{count}} arquivos de {{size}} MiB cada. Os arquivos são compartilhados com os destinatários desta mensagem.",

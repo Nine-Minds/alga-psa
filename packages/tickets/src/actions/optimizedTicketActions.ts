@@ -3,6 +3,7 @@
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 
 import { retainNativeConversationEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
@@ -3489,6 +3490,8 @@ export interface AddTicketCommentInput {
   >;
   schedule?: ScheduledCommentPublication | null;
   emailRecipients?: CommentEmailRecipientsInput | null;
+  /** The audience the author chose; required for a requester-visible staff comment in a co-managed workspace. */
+  audience?: string | null;
 }
 
 /**
@@ -3512,6 +3515,7 @@ export async function addTicketCommentInTransaction(
     notificationSuppression,
     schedule,
     emailRecipients,
+    audience,
   } = input;
 
   const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
@@ -3596,6 +3600,8 @@ export async function addTicketCommentInTransaction(
     isInternal: effectiveIsInternal,
   });
 
+  // Fails closed before anything is written: see nativeThreadAudience.
+  const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal: effectiveIsInternal, authorType, audience });
   await tenantDb(trx, tenant).table('comment_threads').insert({
     tenant,
     thread_id: threadId,
@@ -3603,6 +3609,7 @@ export async function addTicketCommentInTransaction(
     project_task_id: null,
     root_comment_id: newCommentId,
     is_internal: effectiveIsInternal,
+    ...threadAudience,
     reply_count: 0,
     last_activity_at: nowIso,
     created_at: nowIso,
@@ -3852,6 +3859,7 @@ export const addTicketCommentWithCache = withAuth(async (
   >,
   schedule?: ScheduledCommentPublication | null,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  writeOptions?: { audienceId?: string } | null,
 ): Promise<IComment | TicketActionError> => {
   // The catch sits outside the transaction on purpose: an expected error must
   // roll back anything already written instead of committing a half-written comment.
@@ -3872,6 +3880,7 @@ export const addTicketCommentWithCache = withAuth(async (
         notificationSuppression,
         schedule,
         emailRecipients,
+        audience: writeOptions?.audienceId ?? null,
       });
     });
   } catch (error) {
@@ -3901,6 +3910,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
   >,
   schedule?: ScheduledCommentPublication | null,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  writeOptions?: { audienceId?: string } | null,
 ): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(
     ticketId,
@@ -3911,6 +3921,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     notificationSuppression,
     schedule,
     emailRecipients,
+    writeOptions,
   );
 }
 

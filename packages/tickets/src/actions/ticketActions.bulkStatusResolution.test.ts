@@ -200,6 +200,8 @@ describe('ticketActions bulk status resolution comment', () => {
           ticketId,
           content: PARAGRAPH('Replaced the failed switch.'),
           isInternal: true,
+          // The dialog's Internal switch names the audience explicitly (co-managed fail-closed rule).
+          audience: 'organization_private',
           isResolution: true,
           closesTicket: true,
           notificationSuppression: { suppressContactNotifications: true, suppressInternalNotifications: true },
@@ -234,6 +236,7 @@ describe('ticketActions bulk status resolution comment', () => {
         ticketId: 'ticket-1',
         content: PARAGRAPH('Cleared the queue.'),
         isInternal: false,
+        audience: 'requester',
         isResolution: true,
         closesTicket: true,
         notificationSuppression: { suppressContactNotifications: undefined, suppressInternalNotifications: undefined },

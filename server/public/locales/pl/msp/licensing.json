@@ -699,6 +699,7 @@
         "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
       },
       "unknownOutcome": "Nie udało się potwierdzić zapisania wiadomości. Ponów próbę, aby sprawdzić to samo żądanie.",
+      "audienceUnresolved": "Trwa wczytywanie informacji, kto może zobaczyć ten komentarz. Sprawdź odbiorców i wyślij ponownie.",
       "files": {
         "choose": "Dołącz pliki",
         "help": "Maksymalnie {{count}} plików, każdy do {{size}} MiB. Pliki są udostępniane odbiorcom tej wiadomości.",

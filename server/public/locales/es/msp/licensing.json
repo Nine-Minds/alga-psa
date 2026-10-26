@@ -692,6 +692,7 @@
         "organization_private": "Visible solo para el personal autorizado de su organización."
       },
       "unknownOutcome": "No pudimos confirmar si se guardó el mensaje. Reintenta para comprobar la misma solicitud.",
+      "audienceUnresolved": "Todavía se está cargando quién puede ver este comentario. Revise la audiencia y vuelva a enviarlo.",
       "files": {
         "choose": "Adjuntar archivos",
         "help": "Hasta {{count}} archivos de {{size}} MiB cada uno. Los archivos se comparten con los destinatarios de este mensaje.",

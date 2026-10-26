@@ -687,6 +687,7 @@
         "organization_private": "Visible only to authorized staff in your organization."
       },
       "unknownOutcome": "We could not confirm whether the message was saved. Retry to check the same request.",
+      "audienceUnresolved": "Who can see this comment is still loading. Check the audience and send again.",
       "files": {
         "choose": "Attach files",
         "help": "Up to {{count}} files, {{size}} MiB each. Files are shared with this message’s audience.",

@@ -215,15 +215,16 @@ export function createSharedTicketDataSource(resource: CoManagedSharedResource, 
     }
   };
 
-  const audienceFor = (explicit: string | undefined, isInternal: boolean): CommentAudience => {
+  /** Fail closed: only the audience the composer showed is written; a missing one is never inferred from `is_internal`. */
+  const audienceFor = (explicit: string | undefined): CommentAudience => {
     if (explicit && (ALL_AUDIENCES as string[]).includes(explicit)) return explicit as CommentAudience;
-    return isInternal ? 'shared_it' : 'requester';
+    throw new Error(t('coManaged.conversation.audienceUnresolved'));
   };
 
-  const addComment = async (_ticketId: string, content: string, isInternal: boolean, _isResolution?: boolean, _closes?: boolean, _suppression?: unknown,
+  const addComment = async (_ticketId: string, content: string, _isInternal: boolean, _isResolution?: boolean, _closes?: boolean, _suppression?: unknown,
     _schedule?: unknown, _recipients?: unknown, writeOptions?: { audienceId?: string }) => {
     try {
-      const id = await writeComment({ content, audience: audienceFor(writeOptions?.audienceId, isInternal) });
+      const id = await writeComment({ content, audience: audienceFor(writeOptions?.audienceId) });
       return mapped().find(comment => comment.comment_id === id) ?? actionError(message('unknownOutcome'));
     } catch (error) {
       return actionError(error instanceof Error ? error.message : message('unknownOutcome'));
@@ -232,7 +233,7 @@ export function createSharedTicketDataSource(resource: CoManagedSharedResource, 
 
   const createComment = async (comment: IComment & { audienceId?: string }) => {
     try {
-      return await writeComment({ content: comment.note ?? '', audience: audienceFor(comment.audienceId, Boolean(comment.is_internal)),
+      return await writeComment({ content: comment.note ?? '', audience: audienceFor(comment.audienceId),
         parentCommentId: comment.parent_comment_id ?? undefined });
     } catch (error) {
       return actionError(error instanceof Error ? error.message : message('unknownOutcome'));

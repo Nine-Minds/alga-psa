@@ -31,6 +31,20 @@ type KnownComment = { audience: CommentAudience; storeTenant: string; threadId: 
 /** Commentary on `{ actionError }`: the same shape native comment actions return, so the screen's existing error handling shows it. */
 const actionError = (message: string) => ({ actionError: message });
 
+type NativeComments = TicketDataSource['comments'];
+/**
+ * Native comment writes on a co_managed workspace's ticket. The server refuses a requester-visible staff
+ * comment that does not name its audience, so these name the one the native composer showed: its Internal
+ * switch is the user's explicit choice between requester-visible and private to this organization.
+ */
+const nativeAudienceComments = (native: NativeComments): Pick<NativeComments, 'addTicketCommentWithCacheForCurrentUser' | 'createComment'> => ({
+  addTicketCommentWithCacheForCurrentUser: (ticketIdArg, content, isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients) =>
+    native.addTicketCommentWithCacheForCurrentUser(ticketIdArg, content, isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients,
+      { audienceId: isInternal ? 'organization_private' : 'requester' }),
+  createComment: (comment, emailRecipients) => native.createComment(comment.parent_comment_id ? comment
+    : { ...comment, audienceId: comment.is_internal ? 'organization_private' : 'requester' }, emailRecipients),
+});
+
 /**
  * Customer-side (local) co-managed ticket: the NATIVE ticket screen with the
  * Internal toggle replaced by the co-managed audience control, audience-aware
@@ -130,10 +144,21 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, readO
     // Native until the co-managed screen has loaded; a ticket that is not co-managed stays native.
     // A co_managed tenant never has native time-entry authority, so that panel is never offered,
     // and the workspace lifecycle decides whether the screen can write at all.
-    if (!enabled || !screenState || screenState === 'failed') {
+    if (!enabled || screenState === 'failed') {
       return composeTicketDataSource(nativeTicketDataSource, {
         capabilities: { ...NATIVE_TICKET_CAPABILITIES, timeEntry: false },
         ...(readOnly ? { screen: { readOnly: true } } : {}),
+        comments: nativeAudienceComments(nativeTicketDataSource.comments),
+      });
+    }
+    if (!screenState) {
+      // Still learning whether this ticket is shared: its audiences are unresolved, so a write
+      // fails closed rather than guessing. The composer offers the audience control once loaded.
+      const unresolved = async () => actionError(tRef.current('coManaged.conversation.audienceUnresolved')) as never;
+      return composeTicketDataSource(nativeTicketDataSource, {
+        capabilities: { ...NATIVE_TICKET_CAPABILITIES, timeEntry: false },
+        ...(readOnly ? { screen: { readOnly: true } } : {}),
+        comments: { addTicketCommentWithCacheForCurrentUser: unresolved, createComment: unresolved },
       });
     }
     const customerName = screenState.customerName;
@@ -164,15 +189,17 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, readO
       }),
     };
 
-    const addComment: TicketDataSource['comments']['addTicketCommentWithCacheForCurrentUser'] = async (ticketIdArg, content, isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients, writeOptions) => {
+    const addComment: TicketDataSource['comments']['addTicketCommentWithCacheForCurrentUser'] = async (ticketIdArg, content, _isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients, writeOptions) => {
       const audience = writeOptions?.audienceId as CommentAudience | undefined;
+      // Fail closed: a co-managed comment is written only to the audience the composer showed, never a default.
+      if (!audience || !allowed.includes(audience)) return actionError(tRef.current('coManaged.conversation.audienceUnresolved')) as never;
       // Scheduling, resolution and per-recipient email are native-only features of a requester-visible comment.
-      if (staging.getSnapshot().length && (!audience || schedule || isResolution || emailRecipients)) {
+      if (staging.getSnapshot().length && (schedule || isResolution || emailRecipients)) {
         return actionError(tRef.current('coManaged.editor.errors.invalid')) as never;
       }
-      if (!audience || (audience === 'requester' && (schedule || isResolution || emailRecipients))) {
+      if (audience === 'requester' && (schedule || isResolution || emailRecipients)) {
         return nativeTicketDataSource.comments.addTicketCommentWithCacheForCurrentUser(
-          ticketIdArg, content, audience ? false : isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients);
+          ticketIdArg, content, false, isResolution, closesTicket, suppression, schedule, emailRecipients, { audienceId: 'requester' });
       }
       try {
         const commentId = await writeComment({ content, audience });
@@ -184,7 +211,8 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, readO
     };
     const createComment: TicketDataSource['comments']['createComment'] = async (comment, emailRecipients) => {
       const audience = (comment as { audienceId?: string }).audienceId as CommentAudience | undefined;
-      if (!audience) return nativeTicketDataSource.comments.createComment(comment, emailRecipients);
+      // A reply names its parent's audience; without one the write fails closed (the server re-checks the thread).
+      if (!audience || !ALL_AUDIENCES.includes(audience)) return actionError(tRef.current('coManaged.conversation.audienceUnresolved')) as never;
       try {
         return await writeComment({ content: comment.note ?? '', audience, parentCommentId: comment.parent_comment_id ?? undefined });
       } catch (error) {

@@ -1438,7 +1438,8 @@
       "agentAlreadyAssigned": "Este usuario ya está asignado como agente adicional.",
       "teamNotFound": "Equipo no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "teamLeadNotFound": "El equipo seleccionado no tiene responsable. Elija otro equipo o asigne un responsable primero.",
-      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo."
+      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "audienceRequired": "Elija quién puede ver este comentario antes de publicarlo."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "El ticket {{tickets}} ya es un ticket principal de agrupación y no puede añadirse como ticket secundario. Deshaga la agrupación primero o utilícelo como principal.",

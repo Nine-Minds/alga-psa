@@ -5450,6 +5450,33 @@ it('retains legacy private notes and requires a disclosure command to change co-
   expect(await customer.table('comment_threads').where('thread_id', thread.thread_id).first()).toMatchObject({ reply_count: 0 });
 }));
 
+// P0 privacy (guide 12): a requester-visible staff comment in a co-managed workspace must name its audience;
+// a missing audience fails closed on the server instead of defaulting to requester-visible.
+it('refuses a native requester-visible comment without a named audience and persists a named one', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal }) => {
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
+  const { nativeThreadAudience } = await import('../../../../../shared/lib/commentAudience');
+  const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Meant for shared IT', is_internal: false };
+  const before = await customer.table('comment_threads').count('* as count').first();
+  await expect(Comment.insert(db, resource.tenant, input)).rejects.toMatchObject({ code: 'CO_MANAGED_AUDIENCE_REQUIRED' });
+  await expect(Comment.insert(db, resource.tenant, input, undefined, 'shared_it')).rejects.toMatchObject({ name: 'CommentAudienceError' });
+  await expect(Comment.insert(db, resource.tenant, input, undefined, 'organization_private')).rejects.toMatchObject({ name: 'CommentAudienceError' });
+  expect(await customer.table('comment_threads').count('* as count').first()).toEqual(before);
+  // The native comment action (addTicketCommentInTransaction) runs the same guard before it writes a thread.
+  await expect(db.transaction(trx => nativeThreadAudience(trx, resource.tenant, { isInternal: false, authorType: 'internal' }))).rejects.toMatchObject({ code: 'CO_MANAGED_AUDIENCE_REQUIRED' });
+  expect(await db.transaction(trx => nativeThreadAudience(trx, resource.tenant, { isInternal: false, authorType: 'client' }))).toEqual({});
+  const requesterId = await Comment.insert(db, resource.tenant, { ...input, note: 'Requester reply' }, undefined, 'requester');
+  const privateId = await Comment.insert(db, resource.tenant, { ...input, note: 'Private note', is_internal: true });
+  const audienceOf = async (id: string) => (await customer.table('comment_threads').where('root_comment_id', id).first()).collaboration_audience;
+  expect(await audienceOf(requesterId)).toBe('requester');
+  // An internal note without an audience stays organization-private (never widened).
+  expect(await audienceOf(privateId)).toBeNull();
+  // Outside a co-managed workspace the native path keeps its legacy unlabelled shape.
+  const independent = await db('tenants').whereNot('product_code', 'co_managed').orWhereNull('product_code').first('tenant');
+  expect(await db.transaction(trx => nativeThreadAudience(trx, independent.tenant, { isInternal: false, authorType: 'internal', audience: 'requester' }))).toEqual({});
+  expect(await db.transaction(trx => nativeThreadAudience(trx, independent.tenant, { isInternal: false, authorType: 'internal' }))).toEqual({});
+  for (const id of [requesterId, privateId]) await Comment.delete(db, resource.tenant, id);
+}));
+
 it('makes native comment model writes atomic and denies them after the co-managed grace period', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal, principal }) => {
   const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
   const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Original', is_internal: true };

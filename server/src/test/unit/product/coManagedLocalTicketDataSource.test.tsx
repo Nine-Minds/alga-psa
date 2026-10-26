@@ -159,3 +159,60 @@ it('is read-only when the workspace lifecycle cannot write, whether or not the c
   await waitFor(() => expect(source.slots.timeSummary).toBeTypeOf('function'));
   expect(source.screen?.readOnly).toBeFalsy();
 });
+
+// P0 privacy regression (guide 12, comment aa0fa6f0): a co-managed write without a resolved audience
+// was saved through the native action as requester-visible and emailed to the requester.
+it('fails closed when a co-managed comment arrives without an audience: nothing is written natively or shared', async () => {
+  mount();
+  await waitFor(() => expect(source.conversation.audiences).toBeDefined());
+  let top: any; let reply: any;
+  await act(async () => { top = await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, false, false, false, undefined, undefined, undefined); });
+  await act(async () => { reply = await source.comments.createComment({ ticket_id: 'ticket-a', note: richText, is_internal: false, parent_comment_id: 'comment-0' }); });
+  expect(top).toEqual({ actionError: 'coManaged.conversation.audienceUnresolved' });
+  expect(reply).toEqual({ actionError: 'coManaged.conversation.audienceUnresolved' });
+  expect(mocks.nativeAdd).not.toHaveBeenCalled();
+  expect(mocks.nativeCreate).not.toHaveBeenCalled();
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+
+it('persists the shared IT audience through the co-managed command when the default is submitted', async () => {
+  mount();
+  await waitFor(() => expect(source.conversation.audiences).toBeDefined());
+  await act(async () => { await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, true, false, false, undefined, undefined, undefined, { audienceId: source.conversation.audiences.defaultId }); });
+  expect(mocks.create.mock.calls[0][1]).toMatchObject({ audience: 'shared_it' });
+  expect(mocks.nativeAdd).not.toHaveBeenCalled();
+});
+
+it('refuses writes while the ticket is still loading, before its audiences are known', async () => {
+  let resolveScreen: (value: unknown) => void = () => {};
+  mocks.screen.mockReturnValue(new Promise(resolve => { resolveScreen = resolve; }));
+  mount();
+  await act(async () => {});
+  let result: any;
+  await act(async () => { result = await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, false, false, false, undefined, undefined, undefined); });
+  expect(result).toEqual({ actionError: 'coManaged.conversation.audienceUnresolved' });
+  expect(mocks.nativeAdd).not.toHaveBeenCalled();
+  await act(async () => { resolveScreen({ summary: { resource }, customerName: 'Customer A' }); });
+  await waitFor(() => expect(source.conversation.audiences).toBeDefined());
+});
+
+it('names the audience the native composer showed when the co-managed screen is unavailable', async () => {
+  mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null });
+  mount();
+  await act(async () => {});
+  await act(async () => { await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, false, false, false, undefined, undefined, undefined); });
+  await act(async () => { await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, true, false, false, undefined, undefined, undefined); });
+  expect(mocks.nativeAdd.mock.calls[0][8]).toEqual({ audienceId: 'requester' });
+  expect(mocks.nativeAdd.mock.calls[1][8]).toEqual({ audienceId: 'organization_private' });
+});
+
+it('sends a scheduled requester reply through the native action with its audience named', async () => {
+  mount();
+  await waitFor(() => expect(source.conversation.audiences).toBeDefined());
+  const schedule = { publishAt: '2099-01-01T00:00:00.000Z', timeZone: 'UTC' };
+  await act(async () => { await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', richText, false, false, false, undefined, schedule, undefined, { audienceId: 'requester' }); });
+  expect(mocks.nativeAdd).toHaveBeenCalledTimes(1);
+  expect(mocks.nativeAdd.mock.calls[0][2]).toBe(false);
+  expect(mocks.nativeAdd.mock.calls[0][8]).toEqual({ audienceId: 'requester' });
+  expect(mocks.create).not.toHaveBeenCalled();
+});

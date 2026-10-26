@@ -1576,7 +1576,8 @@
       "agentAlreadyAssigned": "Ten użytkownik jest już przypisany jako dodatkowy agent.",
       "teamNotFound": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "teamLeadNotFound": "Wybrany zespół nie ma lidera. Wybierz inny zespół lub najpierw wyznacz lidera.",
-      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "audienceRequired": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Zgłoszenie {{tickets}} jest już zgłoszeniem nadrzędnym pakietu i nie może zostać dodane jako zgłoszenie podrzędne. Najpierw rozwiąż pakiet albo użyj go jako zgłoszenia nadrzędnego.",

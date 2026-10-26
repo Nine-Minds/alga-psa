@@ -1438,7 +1438,8 @@
       "agentAlreadyAssigned": "Dieser Benutzer ist bereits als zusätzlicher Bearbeiter zugewiesen.",
       "teamNotFound": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "teamLeadNotFound": "Das ausgewählte Team hat keine Teamleitung. Wählen Sie ein anderes Team oder legen Sie zuerst eine Teamleitung fest.",
-      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "audienceRequired": "Wählen Sie vor dem Posten aus, wer diesen Kommentar sehen kann."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} ist bereits ein Bündel-Haupt-Ticket und kann nicht als untergeordnetes Ticket hinzugefügt werden. Lösen Sie das Bündel zuerst auf oder verwenden Sie es als Haupt-Ticket.",

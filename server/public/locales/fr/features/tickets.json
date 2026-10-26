@@ -1438,7 +1438,8 @@
       "agentAlreadyAssigned": "Cet utilisateur est déjà affecté comme intervenant supplémentaire.",
       "teamNotFound": "Équipe introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
       "teamLeadNotFound": "L’équipe sélectionnée n’a pas de responsable. Choisissez une autre équipe ou désignez d’abord un responsable.",
-      "commentNotFound": "Commentaire introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer."
+      "commentNotFound": "Commentaire introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "audienceRequired": "Choisissez qui peut voir ce commentaire avant de le publier."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Le ticket {{tickets}} est déjà un ticket principal de regroupement et ne peut pas être ajouté comme ticket enfant. Dissociez-le d’abord ou utilisez-le comme ticket principal.",

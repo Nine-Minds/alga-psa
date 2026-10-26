@@ -49,6 +49,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useTicketDataSource } from './TicketDataSourceContext';
+import { resolveComposerAudience } from '../../lib/ticketDataSource';
 import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
@@ -209,8 +210,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [internalToggleState, setInternalToggleState] = useState(false);
-  const [audienceId, setAudienceId] = useState<string | undefined>(audiences?.defaultId);
-  const selectedAudience = audiences?.options.find((option) => option.id === audienceId);
+  // Only an explicit pick is state; the shown and submitted audience is derived on
+  // every render because the options load after the composer may already be open.
+  const [audienceId, setAudienceId] = useState<string | undefined>(undefined);
+  const selectedAudience = audiences ? resolveComposerAudience(audiences, audienceId) : undefined;
+  // Fail closed: an audience-aware composer with no resolvable audience cannot submit.
+  const audienceUnresolved = Boolean(audiences) && !selectedAudience;
   // With audiences the composer's audience control replaces the Internal
   // toggle; the selected option's `internal` flag drives the legacy boolean.
   const isInternalToggle = audiences ? Boolean(selectedAudience?.internal) : internalToggleState;
@@ -351,6 +356,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
   const handleSubmitComment = async () => {
     if (composeUploadSession.isUploading || isSubmittingFromParent || submitInFlightRef.current) return;
+    if (!hideInternalTab && audienceUnresolved) return;
     submitInFlightRef.current = true;
     setIsSubmittingComment(true);
     let success = false;
@@ -382,12 +388,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           // Never sent with an internal note, even though the draft is kept.
           showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
           // Audience-aware sources only: native calls keep their exact argument list.
-          ...(audiences ? ([audienceId] as [string | undefined]) : ([] as [])),
+          ...(audiences ? ([selectedAudience?.id] as [string | undefined]) : ([] as [])),
         );
         if (success) {
           emailRecipients.reset();
           setIsInternalToggle(false);
-          setAudienceId(audiences?.defaultId);
+          setAudienceId(undefined);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
@@ -854,7 +860,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </Label>
               <CustomSelect
                 id={`${compId}-audience-select`}
-                value={audienceId ?? audiences.defaultId}
+                value={selectedAudience?.id ?? ''}
                 options={audiences.options.map((option) => ({ value: option.id, label: option.label }))}
                 onValueChange={setAudienceId}
                 className="!w-auto"
@@ -986,7 +992,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             autoFocus
           />
         </Suspense>
-        {composerFooter?.({ audienceId: audiences ? (audienceId ?? audiences.defaultId) : undefined, disabled: isSubmitting })}
+        {composerFooter?.({ audienceId: selectedAudience?.id, disabled: isSubmitting })}
         <div className="flex justify-end space-x-2 mt-1">
           <Button
             id={`${compId}-add-comment-btn`}
@@ -994,6 +1000,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             disabled={
               isSubmitting
               || composeUploadSession.isUploading
+              || (!hideInternalTab && audienceUnresolved)
               || !scheduleIsValid
               || (showEmailRecipients && !isInternalToggle && emailRecipients.hasErrors)
             }

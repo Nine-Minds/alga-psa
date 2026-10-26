@@ -1438,7 +1438,8 @@
       "agentAlreadyAssigned": "Deze gebruiker is al toegewezen als extra behandelaar.",
       "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
-      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw."
+      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "audienceRequired": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is al een hoofdticket van een bundel en kan niet als onderliggend ticket worden toegevoegd. Hef de bundel eerst op of gebruik het als hoofdticket.",

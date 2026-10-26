@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
-import { assertCommentThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { assertCommentThreadAudience, nativeThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import logger from '@alga-psa/core/logger';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -106,7 +106,9 @@ const Comment = {
     }
   },
 
-  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, input: Omit<IComment, 'tenant'>, inputCollaboration?: CommentCollaborationContext): Promise<string> => {
+  /** `nativeAudience` is the audience a native (non-collaboration) top-level write names; see `nativeThreadAudience`. */
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, input: Omit<IComment, 'tenant'>, inputCollaboration?: CommentCollaborationContext,
+    nativeAudience?: string | null): Promise<string> => {
     const collaboration = inputCollaboration ? { ...inputCollaboration } : undefined;
     const comment = collaboration ? { ...input } : input;
     if (collaboration && !knexOrTrx.isTransaction) throw new Error('Collaboration comments require the owning transaction');
@@ -192,6 +194,9 @@ const Comment = {
           commentId = commentId || idsResult.rows?.[0]?.comment_id;
           threadId = parent.thread_id;
         } else {
+          const threadAudience = collaboration
+            ? { collaboration_audience: collaboration.audience }
+            : await nativeThreadAudience(trx, tenant, { isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: nativeAudience });
           const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
           const generatedIds = idsResult.rows?.[0];
           commentId = commentId || generatedIds?.comment_id;
@@ -204,7 +209,7 @@ const Comment = {
             project_task_id: null,
             root_comment_id: commentId,
             is_internal: Boolean(comment.is_internal),
-            ...(collaboration ? { collaboration_audience: collaboration.audience } : {}),
+            ...threadAudience,
             reply_count: 0,
             last_activity_at: now,
             created_at: now,

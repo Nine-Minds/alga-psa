@@ -324,6 +324,21 @@ export interface TicketConversationAudiences {
 }
 
 /**
+ * The audience a composer shows and submits: the explicit pick when it is still
+ * offered, otherwise the default when it is offered, otherwise none. Options
+ * load asynchronously, so a composer must derive this on every render instead of
+ * capturing `defaultId` once; `undefined` means the audience is unresolved and
+ * the composer must not submit (fail closed, never requester-visible by default).
+ */
+export function resolveComposerAudience(
+  audiences: TicketConversationAudiences,
+  explicitId: string | undefined,
+): TicketConversationAudienceOption | undefined {
+  return audiences.options.find((option) => option.id === explicitId)
+    ?? audiences.options.find((option) => option.id === audiences.defaultId);
+}
+
+/**
  * Restrictions for the rich-text editor used by the conversation composer.
  * Native leaves everything unrestricted. All flags default to `false`
  * (allowed); `true` means "disallow".

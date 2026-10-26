@@ -687,6 +687,7 @@
         "organization_private": "Synligt endast för behörig personal i din organisation."
       },
       "unknownOutcome": "Det gick inte att bekräfta om meddelandet sparades. Försök igen för att kontrollera samma begäran.",
+      "audienceUnresolved": "Vem som kan se kommentaren läses fortfarande in. Kontrollera målgruppen och skicka igen.",
       "files": {
         "choose": "Bifoga filer",
         "help": "Upp till {{count}} filer, {{size}} MiB vardera. Filer delas med meddelandets målgrupp.",

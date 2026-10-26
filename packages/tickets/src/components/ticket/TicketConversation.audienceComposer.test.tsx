@@ -228,6 +228,50 @@ describe('TicketConversation composer with a co-managed audience control (T009)'
     expect(onAddNewComment.mock.calls[0].at(-1)).toBe('requester');
   });
 
+  // P0 regression (guide 12): the composer opened before the audience options loaded, displayed
+  // "Shared IT teams" from the default, but submitted no audience and is_internal=false.
+  it('submits the default audience it displays when the options load after the composer opened', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const native = composeTicketDataSource(nativeTicketDataSource, {});
+    const view = renderConversation({ onAddNewComment }, native);
+    fireEvent.click(view.container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    // Options resolve while the composer is open.
+    view.rerender(<TicketDataSourceProvider dataSource={audienceSource}><TicketConversation {...defaultProps} onAddNewComment={onAddNewComment} /></TicketDataSourceProvider>);
+    const select = await screen.findByTestId('ticket-conversation-audience-select') as HTMLSelectElement;
+    expect(select.value).toBe('shared_it');
+    fireEvent.click(view.container.querySelector('#ticket-conversation-add-comment-btn')!);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    const args = onAddNewComment.mock.calls[0];
+    expect(args[0]).toBe(true);
+    expect(args.at(-1)).toBe('shared_it');
+  });
+
+  it('keeps an explicit pick across an options reload and submits it', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const view = renderConversation({ onAddNewComment }, audienceSource);
+    fireEvent.click(view.container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    fireEvent.change(await screen.findByTestId('ticket-conversation-audience-select'), { target: { value: 'organization_private' } });
+    const reloaded = composeTicketDataSource(nativeTicketDataSource, { conversation: { audiences: { ...audienceSource.conversation.audiences!, options: [...audienceSource.conversation.audiences!.options] } } });
+    view.rerender(<TicketDataSourceProvider dataSource={reloaded}><TicketConversation {...defaultProps} onAddNewComment={onAddNewComment} /></TicketDataSourceProvider>);
+    expect((screen.getByTestId('ticket-conversation-audience-select') as HTMLSelectElement).value).toBe('organization_private');
+    fireEvent.click(view.container.querySelector('#ticket-conversation-add-comment-btn')!);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(onAddNewComment.mock.calls[0][0]).toBe(true);
+    expect(onAddNewComment.mock.calls[0].at(-1)).toBe('organization_private');
+  });
+
+  it('cannot submit while no offered audience resolves (options not loaded yet)', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const loading = composeTicketDataSource(nativeTicketDataSource, { conversation: { audiences: { ...audienceSource.conversation.audiences!, options: [] } } });
+    const view = renderConversation({ onAddNewComment }, loading);
+    fireEvent.click(view.container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    const button = view.container.querySelector('#ticket-conversation-add-comment-btn') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    await act(async () => {});
+    expect(onAddNewComment).not.toHaveBeenCalled();
+  });
+
   it('without an audience-aware source the native Internal toggle remains and no audience argument is sent', async () => {
     const onAddNewComment = vi.fn().mockResolvedValue(true);
     const { container } = renderConversation({ onAddNewComment });

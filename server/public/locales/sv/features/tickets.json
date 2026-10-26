@@ -1446,7 +1446,8 @@
       "agentAlreadyAssigned": "Den här användaren är redan tilldelad som ytterligare handläggare.",
       "teamNotFound": "Teamet hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
       "teamLeadNotFound": "Det valda teamet har ingen teamledare. Välj ett annat team eller tilldela en teamledare först.",
-      "commentNotFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om sidan och försök igen."
+      "commentNotFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ärende {{tickets}} är redan huvudärende i en grupp och kan inte läggas till som underärende. Lös upp gruppen först eller använd ärendet som huvudärende.",

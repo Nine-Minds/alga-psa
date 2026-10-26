@@ -22,7 +22,8 @@ export type TicketErrorCode =
   | 'RESOURCE_ALREADY_EXISTS'
   | 'TEAM_NOT_FOUND'
   | 'TEAM_LEAD_NOT_FOUND'
-  | 'COMMENT_NOT_FOUND';
+  | 'COMMENT_NOT_FOUND'
+  | 'CO_MANAGED_AUDIENCE_REQUIRED';
 
 const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
   TICKET_NOT_FOUND: 'Ticket not found. It may have been deleted or moved. Please refresh and try again.',
@@ -31,6 +32,7 @@ const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
   TEAM_NOT_FOUND: 'Team not found. It may have been deleted. Please refresh and try again.',
   TEAM_LEAD_NOT_FOUND: 'The selected team does not have a team lead. Choose another team or assign a lead first.',
   COMMENT_NOT_FOUND: 'Comment not found. It may have been deleted. Please refresh and try again.',
+  CO_MANAGED_AUDIENCE_REQUIRED: 'Choose who can see this comment before posting it.',
 };
 
 const TICKET_CODE_MESSAGE_KEYS: Record<TicketErrorCode, string> = {
@@ -40,6 +42,7 @@ const TICKET_CODE_MESSAGE_KEYS: Record<TicketErrorCode, string> = {
   TEAM_NOT_FOUND: 'features/tickets:errors.action.teamNotFound',
   TEAM_LEAD_NOT_FOUND: 'features/tickets:errors.action.teamLeadNotFound',
   COMMENT_NOT_FOUND: 'features/tickets:errors.action.commentNotFound',
+  CO_MANAGED_AUDIENCE_REQUIRED: 'features/tickets:errors.action.audienceRequired',
 };
 
 /** Read by callers that need to tell "not found" apart after the message is localized. */

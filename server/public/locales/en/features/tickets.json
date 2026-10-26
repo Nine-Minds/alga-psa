@@ -1446,7 +1446,8 @@
       "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
       "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
       "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
-      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again.",
+      "audienceRequired": "Choose who can see this comment before posting it."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",

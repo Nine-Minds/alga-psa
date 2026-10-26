@@ -687,6 +687,7 @@
         "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van uw organisatie."
       },
       "unknownOutcome": "We konden niet bevestigen of het bericht is opgeslagen. Probeer opnieuw om hetzelfde verzoek te controleren.",
+      "audienceUnresolved": "Wie deze opmerking kan zien, wordt nog geladen. Controleer het publiek en verstuur opnieuw.",
       "files": {
         "choose": "Bestanden bijvoegen",
         "help": "Maximaal {{count}} bestanden van elk {{size}} MiB. Bestanden worden gedeeld met de doelgroep van dit bericht.",

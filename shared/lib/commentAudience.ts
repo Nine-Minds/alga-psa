@@ -5,6 +5,32 @@ export type CommentAudience = 'requester' | 'shared_it' | 'organization_private'
 export class CommentAudienceError extends Error {
   constructor() { super('This comment does not have a valid audience for the requested operation.'); this.name = 'CommentAudienceError'; }
 }
+/** A co-managed workspace's requester-visible comment that did not name its audience. */
+export class CoManagedAudienceRequiredError extends Error {
+  readonly code = 'CO_MANAGED_AUDIENCE_REQUIRED' as const;
+  constructor() { super('Choose who can see this comment before posting it.'); this.name = 'CoManagedAudienceRequiredError'; }
+}
+/** Audiences a native (non-collaboration) command may name. Shared IT needs the co-managed command's authority. */
+export type NativeCommentAudience = Extract<CommentAudience, 'requester' | 'organization_private'>;
+/**
+ * Thread audience column for a native top-level comment. In a co-managed workspace a
+ * staff comment the requester can read must say so explicitly: a missing audience fails
+ * closed instead of defaulting to requester-visible. Internal notes without an audience
+ * stay organization-private (the legacy rule above), so they never widen.
+ */
+export async function nativeThreadAudience(trx: Knex | Knex.Transaction, tenant: string,
+  input: { isInternal: boolean; authorType: string; audience?: string | null }): Promise<{ collaboration_audience?: NativeCommentAudience }> {
+  const named = input.audience;
+  if (named != null && ((named !== 'requester' && named !== 'organization_private') || input.isInternal !== (named !== 'requester'))) {
+    throw new CommentAudienceError();
+  }
+  if (named == null && (input.isInternal || input.authorType !== 'internal')) return {};
+  const workspace = await tenantDb(trx, tenant).table('tenants').first('product_code');
+  // Outside co-managed workspaces native threads keep their legacy (unlabelled) shape.
+  if (workspace?.product_code !== 'co_managed') return {};
+  if (named == null) throw new CoManagedAudienceRequiredError();
+  return { collaboration_audience: named };
+}
 /** Legacy internal notes must never become shared IT notes by inference. */
 export function resolveCommentAudience(thread: { collaboration_audience?: unknown; is_internal?: unknown }): CommentAudience {
   const audience = thread.collaboration_audience;

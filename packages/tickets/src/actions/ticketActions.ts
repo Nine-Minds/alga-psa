@@ -2676,6 +2676,8 @@ export const bulkUpdateTicketStatus = withAuth(async (
             ticketId,
             content: resolutionContent,
             isInternal: resolutionComment?.isInternal === true,
+            // The dialog's Internal switch is the author's explicit audience choice.
+            audience: resolutionComment?.isInternal === true ? 'organization_private' : 'requester',
             isResolution: true,
             closesTicket: true,
             notificationSuppression: {

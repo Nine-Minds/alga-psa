@@ -187,7 +187,7 @@ describe('T006 field edits and pickers', () => {
     expect(source.screen.readOnly).toBe(true);
     expect(source.screen.frozenFields).toEqual([...TICKET_SCREEN_FIELDS]);
     expect(await source.ticket.updateTicketWithCache('ticket-a', { title: 'x' } as never, undefined as never)).toEqual({ actionError: 'coManaged.editor.errors.readOnly' });
-    expect(await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', rich('hi'), false)).toEqual({ actionError: 'coManaged.editor.errors.forbidden' });
+    expect(await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', rich('hi'), false, false, false, undefined, undefined, undefined, { audienceId: 'requester' })).toEqual({ actionError: 'coManaged.editor.errors.forbidden' });
     expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled();
   });
@@ -236,7 +236,7 @@ describe('T007 conversation', () => {
   it('turns a failed write into a returned error, not a throw', async () => {
     mocks.create.mockResolvedValueOnce({ ok: false, code: 'unknownOutcome' });
     const source = build();
-    expect(await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'hi', false)).toEqual({ actionError: 'coManaged.conversation.unknownOutcome' });
+    expect(await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'hi', false, false, false, undefined, undefined, undefined, { audienceId: 'requester' })).toEqual({ actionError: 'coManaged.conversation.unknownOutcome' });
   });
 
   it('edits and deletes only the viewer\'s own items, through the mutation command', async () => {
@@ -324,7 +324,7 @@ describe('T008 composer and attachments', () => {
     staging.add([first]);
     let release!: (value: any) => void;
     mocks.submit.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-    const saving = source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'message', false);
+    const saving = source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'message', false, false, false, undefined, undefined, undefined, { audienceId: 'requester' });
     await waitFor(() => expect(release).toBeTypeOf('function'));
     staging.add([next]);
     release({ ok: true, receipt: { commentId: 'own', storeTenant: 'customer-a', threadId: 'town' } });
@@ -373,5 +373,18 @@ describe('T012 MSP shared route', () => {
     expect(page).toMatch(/<CoManagedFeatureBoundary><SharedTicketScreen /);
     expect(page).toMatch(/getSharedTicketDetailsAction/);
     expect(page).not.toMatch(/CoManagedTicketPanel/);
+  });
+});
+
+describe('P0 privacy: audience is never inferred', () => {
+  it('refuses a shared-ticket write that names no audience instead of defaulting to requester-visible', async () => {
+    const source = build();
+    const top = await source.comments.addTicketCommentWithCacheForCurrentUser('ticket-a', 'hi', false);
+    const reply = await source.comments.createComment({ ticket_id: 'ticket-a', note: 'hi', is_internal: false, parent_comment_id: 'c-1' } as any);
+    expect(top).toEqual({ actionError: 'coManaged.conversation.audienceUnresolved' });
+    expect(reply).toEqual({ actionError: 'coManaged.conversation.audienceUnresolved' });
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.priv).not.toHaveBeenCalled();
+    expect(mocks.submit).not.toHaveBeenCalled();
   });
 });
