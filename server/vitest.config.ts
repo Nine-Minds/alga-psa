@@ -232,6 +232,13 @@ export default defineConfig({
       // db's ./workDate export maps to src/lib/workDate (names don't mirror the
       // src layout), so a prefix alias can't reach it — alias it explicitly.
       { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+      // Same as workDate: ./tenantDb maps to src/lib, not a mirror path. The
+      // client-creation seam (shared/models/clientCreation.ts) imports this
+      // subpath directly to dodge the barrel's turbopack shim; without this
+      // alias Vite falls through to the real package "exports" map, which
+      // only resolves once packages/db has a built dist — not guaranteed in
+      // every CI lane (e.g. workspace-unit never builds it).
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
       // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 
