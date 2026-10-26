@@ -909,7 +909,7 @@ export function BentoHero({
                     {ticket.ticket_number ? (
                       <span className="mr-2 font-semibold text-[rgb(var(--color-text-400))]">#{ticket.ticket_number}</span>
                     ) : null}
-                    {displayedTitle}
+                    <span>{displayedTitle}</span>
                   </span>
                   <button
                     id={`${id}-title-edit`}

@@ -457,7 +457,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             <ContentCard
                 id={id}
                 collapsible
-                defaultExpanded={false}
+                defaultExpanded={associatedAssets.length > 0}
                 title={t('associatedAssets.title', { defaultValue: 'Assets' })}
                 headerIcon={<Monitor className="w-5 h-5" />}
                 count={associatedAssets.length}

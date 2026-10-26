@@ -48,14 +48,14 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
     await expect(staffPage.locator('#ticket-details-bento-hero-assignee-picker')).toContainText('primary admin');
     const conversation = staffPage.locator('#ticket-details-bento-timeline-tile');
     for (const [text, isInternal] of [[reply, false], [internal, true]] as const) {
-      await conversation.getByRole('button', { name: 'Add Comment', exact: true }).click();
+      await conversation.getByRole('button', { name: /^(Write a reply|Reply to )/ }).first().click();
       const visibility = conversation.getByRole('group', { name: 'Reply visibility' });
       const lane = visibility.getByRole('button', { name: isInternal ? 'Internal' : 'Client', exact: true });
       await lane.click();
       await expect(lane).toHaveAttribute('aria-pressed', 'true');
       await conversation.locator('[contenteditable="true"]:visible').fill(text);
       await conversation.getByRole('button', { name: 'Send', exact: true }).click();
-      await expect(conversation.getByRole('button', { name: 'Add Comment', exact: true })).toBeVisible();
+      await expect(conversation.getByRole('button', { name: /^(Write a reply|Reply to )/ }).first()).toBeVisible();
       await expect(conversation.getByText(text, { exact: true })).toBeVisible();
     }
     await staffPage.reload();

@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Offline",
       "{{from}} → {{to}}",
       "RMA {{id}}",
       "AI",
