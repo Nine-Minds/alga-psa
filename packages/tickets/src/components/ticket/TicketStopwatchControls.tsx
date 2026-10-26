@@ -108,6 +108,24 @@ export function TicketStopwatchControls({
   // user's open session (it stays stoppable).
   if (!enabled && !onThisTicket) {
     if (variant === 'chip') return null;
+    // The notes body is the only place a manual entry's work description is typed when the
+    // hero chip is absent: the disabled board hides the clock and its controls, not this field.
+    if (variant === 'notes') {
+      return (
+        <div id={`${id}-stopwatch`}>
+          <Label htmlFor={`${id}-stopwatch-description`}>{t('stopwatch.workDescription', 'Work description')}</Label>
+          <Input
+            id={`${id}-stopwatch-description`}
+            data-testid={`${id}-stopwatch-description`}
+            value={timeDescription}
+            onChange={(event) => onTimeDescriptionChange(event.target.value)}
+            onBlur={handleDescriptionBlur}
+            placeholder={t('stopwatch.whatAreYouWorkingOn', 'What are you working on?')}
+            containerClassName="mb-0"
+          />
+        </div>
+      );
+    }
     return (
       <p
         className="text-sm text-muted-foreground"
@@ -129,6 +147,8 @@ export function TicketStopwatchControls({
 
   // LEVERAGE: pattern stopwatch-controls — chip and tile render the same
   // play/pause/stop cluster; a shared StopwatchButtons piece would serve both.
+  // The Work description label+input is also written three times (chip popover,
+  // notes-off branch, tile body); a shared WorkDescriptionField would serve all.
   if (variant === 'chip') {
     // Running on another ticket/task: name it and offer the switch, so moving
     // the clock to this ticket stays one click from the header.

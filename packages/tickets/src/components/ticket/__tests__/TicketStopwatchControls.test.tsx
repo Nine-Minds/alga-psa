@@ -215,6 +215,36 @@ describe('TicketStopwatchControls', () => {
     expect(screen.getByTestId('t-stopwatch-switch')).toBeInTheDocument();
   });
 
+  describe('notes variant with the board stopwatch off', () => {
+    it('renders only the editable Work description, no message or controls', () => {
+      const onChange = vi.fn();
+      renderControls(makeValue(null), { variant: 'notes', enabled: false, onTimeDescriptionChange: onChange });
+
+      fireEvent.change(screen.getByTestId('t-stopwatch-description'), { target: { value: 'Swapped drive' } });
+      expect(onChange).toHaveBeenCalledWith('Swapped drive');
+      expect(screen.queryByTestId('t-stopwatch-disabled-message')).toBeNull();
+      expect(screen.queryByTestId('t-stopwatch-start')).toBeNull();
+      expect(screen.queryByTestId('t-stopwatch-stop')).toBeNull();
+      expect(document.getElementById('t-stopwatch-clock')).toBeNull();
+    });
+
+    // The notes body never renders the clock cluster (the hero chip owns it), so with an open
+    // session it takes the normal path: no disabled message, description stays editable, and
+    // the session is stoppable from the chip even though the board has the stopwatch off.
+    it('keeps an open session on this ticket on the normal path and stoppable', () => {
+      const value = makeValue(makeSession());
+      renderControls(value, { variant: 'notes', enabled: false });
+
+      expect(screen.queryByTestId('t-stopwatch-disabled-message')).toBeNull();
+      expect(screen.getByLabelText('Work description')).toBeInTheDocument();
+      cleanup();
+
+      renderControls(value, { variant: 'chip', enabled: false });
+      fireEvent.click(screen.getByTestId('t-stopwatch-stop'));
+      expect(value.requestStop).toHaveBeenCalledWith(expect.any(Function));
+    });
+  });
+
   it('persists the description on blur only for this ticket session', () => {
     const value = makeValue(makeSession());
     renderControls(value, { timeDescription: 'Replaced toner' });
