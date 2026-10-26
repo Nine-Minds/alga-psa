@@ -7,6 +7,7 @@ import {
   createClientWithDefaults,
   type CreateClientWithDefaultsData,
 } from '@alga-psa/shared/models/clientCreation';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import {
   buildClientCreatedPayload,
 } from '@alga-psa/workflow-streams';
@@ -131,7 +132,7 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
 });
 
 export const createOrFindIntegrationContactByEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: {
     email: string;
@@ -182,6 +183,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       role: input.title,
       is_inactive: false,
     }, tenant, trx);
+    queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
     const client = await tenantDb(trx, tenant).table('clients')
       .select('client_name')

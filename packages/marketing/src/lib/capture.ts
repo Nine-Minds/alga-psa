@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { queueContactCreated, queueContactUpdated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { persistGeneratedSuggestions, type GeneratedSuggestion } from '@alga-psa/opportunities/lib';
 import { recordMarketingEngagement } from './engagements';
 import { normalizeEmail } from './suppression';
@@ -94,6 +95,7 @@ export async function submitCaptureInternal(
           await db.table('contacts')
             .where({ tenant, contact_name_id: contact.contact_name_id })
             .update({ client_id: clientId, updated_at: now });
+          queueContactUpdated(trx, tenant, contact, { ...contact, client_id: clientId }, ['client_id']);
           contact = { ...contact, client_id: clientId };
         } else {
           const [createdContact] = await db.table('contacts')
@@ -103,7 +105,8 @@ export async function submitCaptureInternal(
               email,
               client_id: clientId,
             })
-            .returning(['contact_name_id', 'full_name']);
+            .returning('*');
+          queueContactCreated(trx, tenant, createdContact);
           contact = { ...createdContact, client_id: clientId };
           contactCreated = true;
         }

@@ -1,5 +1,6 @@
 'use server';
 
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
@@ -53,15 +54,8 @@ import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
-import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationRecord,
-  type AuthorizationSubject,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
@@ -127,6 +121,8 @@ function computeProjectScheduleAmountsForNotification(
 export type ProjectUpdateResult = IProject & {
     deposit_reconciliation_needed?: boolean;
     products_moved_to_hold?: number;
+    /** Set when the project was just closed with reserved or staged stock still claimed for it (C6). */
+    active_staging_claims?: number;
 };
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -308,110 +304,6 @@ async function getContactFullNameByContactNameId(params: {
         .where({ contact_name_id: params.contactNameId })
         .first<{ full_name: string }>('full_name');
     return row?.full_name ?? null;
-}
-
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
-
-function toProjectAuthorizationRecord(project: Partial<IProject>): AuthorizationRecord {
-  const assignedUserIds =
-    typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-
-  return {
-    id: project.project_id ?? null,
-    ownerUserId: project.assigned_to ?? null,
-    assignedUserIds,
-    clientId: project.client_id ?? null,
-  };
-}
-
-async function createProjectReadAuthorizer(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<(project: Partial<IProject>) => Promise<boolean>> {
-  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-
-  return async (project: Partial<IProject>): Promise<boolean> => {
-    const projectId = project.project_id;
-    if (!projectId) {
-      return false;
-    }
-
-    const decision = await authorizationKernel.authorizeResource({
-      subject,
-      resource: {
-        type: 'project',
-        action: 'read',
-        id: projectId,
-      },
-      record: toProjectAuthorizationRecord(project),
-      requestCache,
-      knex: trx,
-    });
-
-    return decision.allowed;
-  };
 }
 
 async function filterAuthorizedProjects<T extends Partial<IProject>>(
@@ -657,7 +549,7 @@ export const searchProjectListIds = withAuth(async (
 
   const prefixTsquery = buildProjectListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId
@@ -1790,7 +1682,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        const { beforeProject, updatedProject, billingCloseResult } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
@@ -1809,7 +1701,12 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
             const billingCloseResult = transitionedToClosed
                 ? await closeProjectBillingSchedule(trx, tenant, projectId)
                 : undefined;
-            return { beforeProject, updatedProject: project, billingCloseResult };
+            // Stale reservations (C6): a project closing with stock still reserved or staged for it
+            // keeps that stock away from everyone else; the editor offers to release it.
+            const activeStagingClaims = transitionedToClosed
+                ? await countActiveStockClaims(trx, tenant, projectId)
+                : 0;
+            return { beforeProject, updatedProject: project, billingCloseResult, activeStagingClaims };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -1888,6 +1785,9 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         }
         const depositReconciliationNeeded = billingCloseResult?.depositReconciliationNeeded ?? false;
         const productsMovedToHold = billingCloseResult?.productsMovedToHold ?? 0;
+        if (activeStagingClaims > 0) {
+            Object.assign(updatedProject, { active_staging_claims: activeStagingClaims });
+        }
         return billingCloseResult === undefined
             ? updatedProject
             : Object.assign(updatedProject, {

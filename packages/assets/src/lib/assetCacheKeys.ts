@@ -20,3 +20,27 @@ export function matchAssetCacheKeys(
     typeof key[1] === 'string' &&
     wanted.has(key[1]);
 }
+
+/**
+ * SWR key for the assets linked to a ticket/project (the ticket Assets tile).
+ * Anything that links or unlinks assets from outside the tile — e.g. Receive
+ * equipment — revalidates it with `mutate(matchEntityAssetsCacheKeys(...))`.
+ */
+export function entityAssetsCacheKey(
+  entityType: 'ticket' | 'project',
+  entityId: string
+): readonly ['entity-assets', 'ticket' | 'project', string] {
+  return ['entity-assets', entityType, entityId] as const;
+}
+
+/** Key filter matching `entityAssetsCacheKey` for one entity. */
+export function matchEntityAssetsCacheKeys(
+  entityType: 'ticket' | 'project',
+  entityId: string
+): (key: unknown) => boolean {
+  return (key: unknown): boolean =>
+    Array.isArray(key) &&
+    key[0] === 'entity-assets' &&
+    key[1] === entityType &&
+    key[2] === entityId;
+}

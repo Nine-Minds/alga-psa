@@ -424,7 +424,7 @@ describe('compareSimulations', () => {
       }),
     ]);
 
-    const comparison = compareSimulations(baseline, scenario);
+    const comparison = compareSimulations(baseline, scenario)!;
     expect(comparison.periods[0].lines).toEqual([
       expect.objectContaining({ kind: 'added', delta: 4000 }),
       expect.objectContaining({ kind: 'changed', delta: 2500 }),
@@ -432,6 +432,25 @@ describe('compareSimulations', () => {
     ]);
     expect(comparison.periods[0].total_delta).toBe(4000);
     expect(comparison.horizon_total_delta).toBe(4000);
+  });
+
+  it('does not compare when either side is blocked, so a refusal never reads as a $0 change', () => {
+    const blocked: ContractSimulationResult = {
+      scenario_id: 'scenario',
+      currency_code: 'USD',
+      horizon: { start_date: '2026-08-01', period_count: 1 },
+      periods: [],
+      diagnostics: [
+        {
+          severity: 'error',
+          code: 'CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION',
+          message: 'blocked',
+        },
+      ],
+    };
+    const priced = result([]);
+    expect(compareSimulations(blocked, priced)).toBeNull();
+    expect(compareSimulations(priced, blocked)).toBeNull();
   });
 });
 

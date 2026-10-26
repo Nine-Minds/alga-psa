@@ -2,6 +2,10 @@ import {
   buildClientAnniversaryUpcomingPayload,
   buildClientArchivedPayload,
   buildClientCreatedPayload,
+  buildClientLocationCreatedPayload,
+  buildClientLocationDeactivatedPayload,
+  buildClientLocationDeletedPayload,
+  buildClientLocationUpdatedPayload,
   buildClientMergedPayload,
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
@@ -29,6 +33,7 @@ import { IDS, NOW, EARLIER } from '../fixtures';
  */
 
 const CLIENT_ACTIONS = 'packages/clients/src/actions/clientActions.ts';
+const CLIENT_LOCATION_MODEL = 'packages/clients/src/models/clientLocation.ts';
 const CLIENT_SERVICE = 'server/src/lib/api/services/ClientService.ts';
 const CONTACT_ACTIONS = 'packages/clients/src/actions/contact-actions/contactActions.tsx';
 const CONTACT_SERVICE = 'server/src/lib/api/services/ContactService.ts';
@@ -42,6 +47,10 @@ type CrmEventType =
   | 'CLIENT_OWNER_ASSIGNED'
   | 'CLIENT_MERGED'
   | 'CLIENT_ARCHIVED'
+  | 'CLIENT_LOCATION_CREATED'
+  | 'CLIENT_LOCATION_UPDATED'
+  | 'CLIENT_LOCATION_DEACTIVATED'
+  | 'CLIENT_LOCATION_DELETED'
   | 'CLIENT_ANNIVERSARY_UPCOMING'
   | 'CONTACT_CREATED'
   | 'CONTACT_UPDATED'
@@ -86,6 +95,73 @@ const contactBefore = {
 const contactAfter = { ...contactBefore, full_name: 'Jane Q. Doe', role: 'Operations lead', updated_at: NOW };
 
 export const crmContracts = {
+  CLIENT_LOCATION_CREATED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${CLIENT_LOCATION_MODEL}#createLocation`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildClientLocationCreatedPayload({
+            locationId: IDS.location,
+            clientId: IDS.client,
+            isDefault: true,
+            createdByUserId: IDS.user,
+            createdAt: NOW,
+          }),
+      },
+    ],
+  },
+  CLIENT_LOCATION_UPDATED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${CLIENT_LOCATION_MODEL}#updateLocation`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildClientLocationUpdatedPayload({
+            locationId: IDS.location,
+            clientId: IDS.client,
+            before: { city: 'Springfield', is_active: true, updated_at: EARLIER },
+            after: { city: 'Shelbyville', is_active: true, updated_at: NOW },
+            updatedByUserId: IDS.user,
+            updatedAt: NOW,
+          }),
+      },
+    ],
+  },
+  CLIENT_LOCATION_DEACTIVATED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${CLIENT_LOCATION_MODEL}#updateLocation`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildClientLocationDeactivatedPayload({
+            locationId: IDS.location,
+            clientId: IDS.client,
+            deactivatedByUserId: IDS.user,
+            deactivatedAt: NOW,
+          }),
+      },
+    ],
+  },
+  CLIENT_LOCATION_DELETED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${CLIENT_LOCATION_MODEL}#deleteLocation`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildClientLocationDeletedPayload({
+            locationId: IDS.location,
+            clientId: IDS.client,
+            deletedByUserId: IDS.user,
+            deletedAt: NOW,
+          }),
+      },
+    ],
+  },
   CLIENT_CREATED: {
     status: 'covered',
     cases: [

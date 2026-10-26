@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
+import { isClientUserType } from '@alga-psa/types';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -119,7 +120,7 @@ export async function canAccessAttachmentTicket(conn: Connection, tenant: string
   const ticket = await db.table('tickets').where({ ticket_id: ticketId }).first();
   if (!user || !ticket) return false;
   if (user.user_type === 'internal') return true;
-  if (user.user_type !== 'client' || !user.contact_id) return false;
+  if (!isClientUserType(user.user_type) || !user.contact_id) return false;
   const contact = await db.table('contacts').where({ contact_name_id: user.contact_id }).first();
   if (!contact?.client_id || contact.client_id !== ticket.client_id) return false;
   if (!contact.portal_visibility_group_id) return true;

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } fr
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
+import { deriveWorkReason } from '../../lib/deriveWorkReason';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -88,8 +89,8 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
@@ -97,7 +98,7 @@ import { PartialBlock, StyledText } from '@blocknote/core';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { ResponseStateBadge, LabelPrintDialog } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
@@ -131,6 +132,7 @@ import {
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import { isChildWorkflowLocked } from '../../lib/bundleWorkflowLock';
 import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
@@ -260,6 +262,7 @@ interface TicketDetailsProps {
      * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
      */
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+    renderReceiveEquipment?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
      * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
@@ -350,6 +353,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderReceiveEquipment,
     renderCreateWorkflowFromTicket,
     renderClientDetails,
     isAlgaDeskMode = false,
@@ -375,6 +379,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // preference rather than per-message state.
     useInboundEmailViewPreference();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const [isPrintWorkTagOpen, setIsPrintWorkTagOpen] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
         bootstrap?.canViewCommentMetadataDebug ?? false,
     );
@@ -569,6 +574,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         ticket.priority_id,
     ]);
 
+    // Reason prefill: subcategory name, else category name (same rule as the server provider). The dialog
+    // sends an override only if the user edits the field.
+    const printWorkReason = useMemo(() => {
+        const nameOf = (categoryId?: string | null) =>
+            categoryId ? initialCategories.find((c) => c.category_id === categoryId)?.category_name : undefined;
+        return deriveWorkReason(nameOf(ticket.subcategory_id), nameOf(ticket.category_id)) ?? '';
+    }, [initialCategories, ticket.category_id, ticket.subcategory_id]);
+
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),
         [checklistItems]
@@ -723,6 +736,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
     const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
     const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isModeSwitchPending, setIsModeSwitchPending] = useState(false);
     const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
@@ -3408,12 +3422,18 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router, onSaved, t]);
 
-    const handleToggleBundleMode = useCallback(async () => {
-        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+    const performBundleModeChange = useCallback(async (
+        nextMode: 'link_only' | 'sync_updates',
+        onClosedMaster?: ClosedMasterChoice,
+    ) => {
+        if (!ticket.ticket_id) return;
         try {
             setIsUpdatingBundleSettings(true);
-            const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
-            const result = await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
+            const result = await updateBundleSettingsAction({
+                masterTicketId: ticket.ticket_id,
+                mode: nextMode,
+                ...(onClosedMaster ? { onClosedMaster } : {}),
+            });
             if (isReturnedActionError(result)) {
                 handleTicketActionError(result, t('messages.updateBundleSettingsFailed'));
                 return;
@@ -3426,7 +3446,44 @@ const handleClose = () => {
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
+    }, [ticket.ticket_id, router, onSaved, t]);
+
+    // Switching to sync_updates on a closed master needs the same explicit
+    // choice as adding a child to one, so the closed-master dialog is reused.
+    const handleToggleBundleMode = useCallback(async () => {
+        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+        const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
+        if (nextMode === 'link_only') {
+            await performBundleModeChange(nextMode);
+            return;
+        }
+        try {
+            setIsUpdatingBundleSettings(true);
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                handleTicketActionError(context, t('messages.updateBundleSettingsFailed'));
+                return;
+            }
+            if (!context.isClosed) {
+                setIsUpdatingBundleSettings(false);
+                await performBundleModeChange(nextMode);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(null);
+            setIsModeSwitchPending(true);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
+        } finally {
+            setIsUpdatingBundleSettings(false);
+        }
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, t, performBundleModeChange]);
 
     if (!tenant) {
         return (
@@ -3449,6 +3506,13 @@ const handleClose = () => {
             ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
+    // Children lock their workflow fields only under a sync_updates master;
+    // bundle.mode is the master's ticket_bundle_settings.mode from the detail load.
+    const bundleWorkflowLocked = isChildWorkflowLocked({
+        isBundledChild: Boolean(bundle?.isBundleChild),
+        masterSettings: { mode: bundle?.mode },
+    });
+
     const bundleAndCloseBanners = (
         <>
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
@@ -3457,7 +3521,10 @@ const handleClose = () => {
                                         <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
                                             {bundle.masterTicket.ticket_number}
                                         </a>
-                                        . Workflow fields are locked; work from the master ticket.
+                                        .{' '}
+                                        {bundleWorkflowLocked
+                                            ? t('details.bundle.childLockedNotice', 'Workflow fields are locked; work from the master ticket.')
+                                            : t('details.bundle.childLinkedNotice', 'It is linked to the master and managed on its own.')}
                                     </div>
                                 ) : null}
 
@@ -3508,7 +3575,7 @@ const handleClose = () => {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500 mb-2">
-                                            {t('details.bundle.childrenDescription')}
+                                            {t('details.bundle.childrenDescription', 'Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.')}
                                         </div>
                                         <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
                                             <div className="relative flex-1">
@@ -3623,7 +3690,7 @@ const handleClose = () => {
                                         {autoCloseState && (
                                             <div
                                                 id={`${id}-auto-close-banner`}
-                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
                                             >
                                                 {t('details.autoClose', "Will close automatically on {{date}} unless there's new activity.", {
                                                     date: formatDate(new Date(autoCloseState.scheduled_close_at), { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -3637,8 +3704,8 @@ const handleClose = () => {
                                                 id={`${id}-checklist-progress-chip`}
                                                 className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
                                                     checklistSummary.requiredDone === checklistSummary.requiredTotal
-                                                        ? 'border-green-300 bg-green-50 text-green-800'
-                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
+                                                        ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-300'
+                                                        : 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
                                                 }`}
                                                 onClick={() =>
                                                     document
@@ -3654,23 +3721,136 @@ const handleClose = () => {
         </>
     );
 
+    // Secondary ticket actions. Entry shows the menu in the page header; Grid
+    // puts it beside the hero's Resolve / All fields cluster.
+    const moreActionsMenu = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    id={`${id}-more-actions-button`}
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                    id={`${id}-print-work-tag-button`}
+                    onSelect={() => setIsPrintWorkTagOpen(true)}
+                >
+                    <Printer className="h-4 w-4 mr-2" />
+                    {t('actions.printWorkTag', 'Print work tag')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    id={`${id}-duplicate-ticket-button`}
+                    onSelect={() => router.push(buildCreateTicketHref({
+                        duplicateFromTicketId: ticket.ticket_id,
+                        isAlgaDeskMode,
+                    }))}
+                >
+                    <Copy className="h-4 w-4 mr-2" />
+                    {t('actions.duplicate', { defaultValue: 'Duplicate' })}
+                </DropdownMenuItem>
+                {templatePermissions.create ? (
+                    <DropdownMenuItem
+                        id={`${id}-create-template-menu-item`}
+                        onSelect={() => router.push(
+                            `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                        )}
+                    >
+                        <LayoutTemplate className="h-4 w-4 mr-2" />
+                        {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                    </DropdownMenuItem>
+                ) : null}
+                {canCreateWorkflowFromTicket ? (
+                    <DropdownMenuItem
+                        id="create-workflow-from-ticket-menu-item"
+                        onSelect={() => setCreateWorkflowOpen(true)}
+                    >
+                        <Workflow className="mr-2 h-4 w-4" />
+                        {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                    </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    id={`${id}-delete-ticket-button`}
+                    onSelect={handleDeleteTicket}
+                    className="text-red-600 focus:text-red-700"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('actions.delete', { defaultValue: 'Delete' })}
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
+    const ticketOriginBadge = (
+        <TicketOriginBadge
+            origin={ticketOrigin}
+            labels={ticketOriginLabels}
+            size="sm"
+            className="flex-shrink-0"
+            systemLabel={originExternalLink?.display.label ?? null}
+        />
+    );
+
+    // Created / Updated stamps. Entry shows them under the header; Grid folds
+    // them into the hero's single metadata line.
+    const ticketTimestamps = (
+        <>
+                    {ticket.entered_at && (
+                        <p>
+                            {t('fields.created', 'Created')} {createdRelativeTime || (() => {
+                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
+                            })()}
+                        </p>
+                    )}
+                    {ticket.updated_at && (() => {
+                        const updatedTime = updatedRelativeTime || (() => {
+                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
+                        })();
+                        const updatedByName = updatedByUser
+                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                            : '';
+                        return (
+                            <p data-testid="ticket-updated-at">
+                                {updatedByName
+                                    ? t('fields.updatedAtBy', {
+                                        defaultValue: 'Updated {{time}} by {{name}}',
+                                        time: updatedTime,
+                                        name: updatedByName,
+                                    })
+                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
+                            </p>
+                        );
+                    })()}
+        </>
+    );
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-[rgb(var(--color-app-ground))]">
-                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
+                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex items-start gap-2">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
-                            <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
+                            <BackNav href="/msp/tickets" variant="ghost" size="sm">← {t('navigation.tickets', 'Tickets')}</BackNav>
                         </div>
                     )}
                     <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-wrap">
                                 {!isInDrawer && ticket.ticket_id && (
                                     <TicketNavigation currentTicketId={ticket.ticket_id} initialAdjacent={bootstrap?.streams?.adjacentTickets} />
                                 )}
-                                <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                                {responseStateTrackingEnabled && ticket.response_state ? (
+                                {!useGridLayout ? (
+                                    <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                                ) : null}
+                                {/* Grid shows reply status as a hero field; don't repeat it here. */}
+                                {!useGridLayout && responseStateTrackingEnabled && ticket.response_state ? (
                                     <ResponseStateBadge
                                         responseState={ticket.response_state}
                                         size="sm"
@@ -3678,13 +3858,7 @@ const handleClose = () => {
                                         className="flex-shrink-0"
                                     />
                                 ) : null}
-                                <TicketOriginBadge
-                                    origin={ticketOrigin}
-                                    labels={ticketOriginLabels}
-                                    size="sm"
-                                    className="flex-shrink-0"
-                                    systemLabel={originExternalLink?.display.label ?? null}
-                                />
+                                {!useGridLayout ? ticketOriginBadge : null}
                                 {recurringSource ? (
                                     <Link
                                         id="ticket-recurring-source-link"
@@ -3736,9 +3910,24 @@ const handleClose = () => {
                                 {ticketLive.enabled && ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
                                     <PresenceBar users={livePresenceUsers} />
                                 ) : null}
-                                {ticketLive.enabled && connectionStatusLabel ? (
-                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
-                                        {connectionStatusLabel}
+                                {useGridLayout && ticketLive.enabled && connectionStatusLabel ? (
+                                    <span
+                                        className="inline-flex h-6 w-6 items-center justify-center"
+                                        data-testid="ticket-live-connection-status"
+                                        title={connectionStatusLabel}
+                                        aria-label={connectionStatusLabel}
+                                    >
+                                        <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                                    </span>
+                                ) : null}
+                                {!useGridLayout && ticketLive.enabled && connectionStatusLabel ? (
+                                    <span
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 whitespace-nowrap"
+                                        data-testid="ticket-live-connection-status"
+                                        title={connectionStatusLabel}
+                                    >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                                        {t('liveUpdates.connection.offlineShort', 'Offline')}
                                     </span>
                                 ) : null}
                                 {!isInDrawer ? (
@@ -3758,55 +3947,7 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
-                                <Button
-                                    id={`${id}-duplicate-ticket-button`}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => router.push(buildCreateTicketHref({
-                                        duplicateFromTicketId: ticket.ticket_id,
-                                        isAlgaDeskMode,
-                                    }))}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                    <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
-                                </Button>
-                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                id={`${id}-more-actions-button`}
-                                                variant="outline"
-                                                size="sm"
-                                                aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
-                                            >
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            {templatePermissions.create ? (
-                                                <DropdownMenuItem
-                                                    id={`${id}-create-template-menu-item`}
-                                                    onClick={() => router.push(
-                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
-                                                    )}
-                                                >
-                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
-                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
-                                                </DropdownMenuItem>
-                                            ) : null}
-                                            {canCreateWorkflowFromTicket ? (
-                                                <DropdownMenuItem
-                                                    id="create-workflow-from-ticket-menu-item"
-                                                    onSelect={() => setCreateWorkflowOpen(true)}
-                                                >
-                                                    <Workflow className="mr-2 h-4 w-4" />
-                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
-                                                </DropdownMenuItem>
-                                            ) : null}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                ) : null}
+                                {!useGridLayout ? moreActionsMenu : null}
                                 {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
                                     ? renderCreateWorkflowFromTicket({
                                         ticketId: ticket.ticket_id as string,
@@ -3816,16 +3957,6 @@ const handleClose = () => {
                                         onOpenChange: setCreateWorkflowOpen,
                                     })
                                     : null}
-                                <Button
-                                    id={`${id}-delete-ticket-button`}
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleDeleteTicket}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>{t('actions.delete', { defaultValue: 'Delete' })}</span>
-                                </Button>
                             </div>
                         </div>
                         <h1
@@ -3836,36 +3967,11 @@ const handleClose = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
-                    {ticket.entered_at && (
-                        <p>
-                            {t('fields.created', 'Created')} {createdRelativeTime || (() => {
-                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
-                            })()}
-                        </p>
-                    )}
-                    {ticket.updated_at && (() => {
-                        const updatedTime = updatedRelativeTime || (() => {
-                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
-                        })();
-                        const updatedByName = updatedByUser
-                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
-                            : '';
-                        return (
-                            <p data-testid="ticket-updated-at">
-                                {updatedByName
-                                    ? t('fields.updatedAtBy', {
-                                        defaultValue: 'Updated {{time}} by {{name}}',
-                                        time: updatedTime,
-                                        name: updatedByName,
-                                    })
-                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
-                            </p>
-                        );
-                    })()}
-                </div>
+                {!useGridLayout ? (
+                    <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
+                        {ticketTimestamps}
+                    </div>
+                ) : null}
                 {/* Delete Ticket Dialog (with dependency validation) */}
                 <DeleteEntityDialog
                     id={`${id}-delete-ticket-dialog`}
@@ -4172,6 +4278,7 @@ const handleClose = () => {
                     onClose={() => {
                         setIsClosedMasterChoiceOpen(false);
                         setPendingClosedMasterChildId(null);
+                        setIsModeSwitchPending(false);
                     }}
                     className="max-w-lg"
                 >
@@ -4180,7 +4287,9 @@ const handleClose = () => {
                             {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                            {isModeSwitchPending
+                                ? t('details.bundle.modeSwitchDialogIntro', 'The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.')
+                                : t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
                         </p>
                         {closedMasterContext && (
                             <div className="mt-4">
@@ -4191,6 +4300,7 @@ const handleClose = () => {
                                     onChange={setClosedMasterChoice}
                                     hasResolutionComment={closedMasterContext.hasResolutionComment}
                                     masterStatusName={closedMasterContext.masterStatusName}
+                                    variant={isModeSwitchPending ? 'switch' : 'add'}
                                 />
                             </div>
                         )}
@@ -4202,6 +4312,7 @@ const handleClose = () => {
                                 onClick={() => {
                                     setIsClosedMasterChoiceOpen(false);
                                     setPendingClosedMasterChildId(null);
+                                    setIsModeSwitchPending(false);
                                 }}
                             >
                                 {t('actions.cancel', 'Cancel')}
@@ -4209,8 +4320,15 @@ const handleClose = () => {
                             <Button
                                 id={`${id}-bundle-closed-master-confirm`}
                                 type="button"
-                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                disabled={!closedMasterChoice || (!pendingClosedMasterChildId && !isModeSwitchPending)}
                                 onClick={async () => {
+                                    if (isModeSwitchPending && closedMasterChoice) {
+                                        const choice = closedMasterChoice;
+                                        setIsClosedMasterChoiceOpen(false);
+                                        setIsModeSwitchPending(false);
+                                        await performBundleModeChange('sync_updates', choice);
+                                        return;
+                                    }
                                     if (!pendingClosedMasterChildId || !closedMasterChoice) return;
                                     const childId = pendingClosedMasterChildId;
                                     const choice = closedMasterChoice;
@@ -4219,7 +4337,9 @@ const handleClose = () => {
                                     await performAddChildToBundle(childId, choice);
                                 }}
                             >
-                                {t('details.bundle.add', 'Add')}
+                                {isModeSwitchPending
+                                    ? t('details.bundle.modeSwitchConfirm', 'Switch to Sync Updates')
+                                    : t('details.bundle.add', 'Add')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -4258,6 +4378,31 @@ const handleClose = () => {
                 {bundleAndCloseBanners}
                 {useGridLayout ? (
                 <TicketBentoLayout
+                    heroMeta={
+                        <>
+                            {ticketOriginBadge}
+                            {/* Relative stamps; the absolute time is the tooltip. */}
+                            {ticket.entered_at && hasHydrated ? (
+                                <p title={formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>
+                                    {t('fields.created', 'Created')} {formatTicketRelativeToNow(ticket.entered_at, locale)}
+                                </p>
+                            ) : null}
+                            {ticket.updated_at && hasHydrated ? (
+                                <p data-testid="ticket-updated-at" title={formatTicketDateTime(ticket.updated_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>
+                                    {(() => {
+                                        const time = formatTicketRelativeToNow(ticket.updated_at, locale);
+                                        const name = updatedByUser
+                                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                                            : '';
+                                        return name
+                                            ? t('fields.updatedAtBy', { defaultValue: 'Updated {{time}} by {{name}}', time, name })
+                                            : `${t('fields.updated', 'Updated')} ${time}`;
+                                    })()}
+                                </p>
+                            ) : null}
+                        </>
+                    }
+                    heroMoreActions={moreActionsMenu}
                     id={`${id}-bento`}
                     titleRef={cardTitleRef}
                     ticket={ticket as any}
@@ -4272,12 +4417,13 @@ const handleClose = () => {
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}
                     hideScheduling={hideScheduling}
-                    workflowLocked={Boolean(bundle?.isBundleChild)}
+                    workflowLocked={bundleWorkflowLocked}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
+                    receiveEquipmentActions={renderReceiveEquipment?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -4407,10 +4553,11 @@ const handleClose = () => {
                                     initialCategories={initialCategories}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
-                                    isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    isBundledChild={bundleWorkflowLocked}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                                    renderReceiveEquipmentActions={renderReceiveEquipment}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -4628,10 +4775,11 @@ const handleClose = () => {
                             initialCategories={initialCategories}
                             itilImpact={itilImpact}
                             itilUrgency={itilUrgency}
-                            isBundledChild={Boolean(bundle?.isBundleChild)}
+                            isBundledChild={bundleWorkflowLocked}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
                             renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                                    renderReceiveEquipmentActions={renderReceiveEquipment}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}
@@ -4747,6 +4895,17 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            {isPrintWorkTagOpen && (
+                <LabelPrintDialog
+                    isOpen={isPrintWorkTagOpen}
+                    onClose={() => setIsPrintWorkTagOpen(false)}
+                    labelClass="ticket-work-tag"
+                    ids={[ticket.ticket_id as string]}
+                    defaultTitle={ticket.title ?? ''}
+                    defaultDetail={printWorkReason}
+                    idPrefix={`${id}-print-work-tag`}
+                />
+            )}
         </ReflectionContainer>
     );
 };

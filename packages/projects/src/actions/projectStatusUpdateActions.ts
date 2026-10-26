@@ -4,7 +4,7 @@ import Handlebars from 'handlebars';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
@@ -73,10 +73,6 @@ interface ProjectRow {
   client_location_email: string | null;
 }
 
-function normalizeHost(host: string): string {
-  return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-}
-
 function getBaseUrl(): string {
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -89,22 +85,17 @@ function getBaseUrl(): string {
  */
 async function resolveProjectPortalUrl(knex: Knex, tenant: string, projectId: string): Promise<string> {
   const path = `/client-portal/projects/${projectId}`;
-  let portalHost: string | null = null;
-
   try {
-    const portalDomain = await getPortalDomain(knex, tenant);
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
-      portalHost = portalDomain.domain;
+    // Only an *active* vanity domain that serves the client portal drops the ?tenant= slug.
+    const resolved = await resolveTenantAppBase(tenant, 'client_portal', { knex });
+    if (resolved.source === 'vanity') {
+      return `${resolved.baseUrl}${path}`;
     }
   } catch (error) {
     logger.warn('[projectStatusUpdate] Failed to resolve portal domain for project link', {
       tenant,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-  }
-
-  if (portalHost) {
-    return `https://${normalizeHost(portalHost)}${path}`;
   }
 
   return `${getBaseUrl()}${path}?tenant=${buildTenantPortalSlug(tenant)}`;

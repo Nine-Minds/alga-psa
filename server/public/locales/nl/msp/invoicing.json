@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factuur definitief gemaakt, maar een vervolgstap is niet voltooid: {{steps}}. De factuur is definitief; u kunt die stap opnieuw proberen.",
+      "steps": {
+        "credit_auto_apply": "automatische tegoedtoepassing",
+        "project_deposit_credits": "projectaanbetalingstegoeden",
+        "workflow_events": "workflowgebeurtenissen",
+        "accounting_export": "boekhoudexport",
+        "replenishment_status": "status prepaid-aanvulling",
+        "autopay": "automatische betaling"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
       "voiding": "Ongeldig maken…"
+    },
+    "history": {
+      "title": "Geschiedenis",
+      "empty": "Geen geschiedenis vastgelegd.",
+      "loadFailed": "Factuurgeschiedenis laden mislukt.",
+      "system": "Systeem",
+      "ops": {
+        "invoice_finalized": "Definitief gemaakt",
+        "invoice_unfinalized": "Heropend",
+        "invoice_deleted": "Verwijderd"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "geen"
     }
   },
   "templateEditor": {
@@ -1377,7 +1401,7 @@
       "mediaSource": "Afbeeldingsbron",
       "mediaSourceLogo": "Bedrijfslogo",
       "mediaSourceCustom": "Eigen afbeelding",
-      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit het klantrecord van uw eigen bedrijf.",
       "mediaSourceUrl": "Bron-URL",
       "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Hernoemen",
@@ -2382,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Documenten doorzoeken",
-      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten, dus zij kunnen het niet openen in het klantenportaal. Het wordt nog steeds weergegeven op facturen en in PDF's van offertes die het gebruiken.",
       "updating": "Bijwerken...",
       "markVisible": "Markeren als zichtbaar voor klanten",
       "visibleInPortal": "Zichtbaar in het klantenportaal",
@@ -2431,11 +2455,13 @@
     "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
     "availableLayouts": "Beschikbare indelingen",
     "actions": {
-      "newLayout": "Nieuwe indeling"
+      "newLayout": "Nieuwe indeling",
+      "setDefaultForClass": "Instellen als standaard voor {{class}}"
     },
     "columns": {
       "name": "Naam",
-      "source": "Bron"
+      "source": "Bron",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standaard)",
@@ -2467,7 +2493,10 @@
         "details": "Indelingsgegevens"
       },
       "fields": {
-        "version": "Versie"
+        "version": "Versie",
+        "labelClass": "Labelklasse",
+        "labelFields": "Velden die op het label worden getoond",
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
@@ -2505,7 +2534,8 @@
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
       "pickList": "Picklijst",
-      "workTag": "Werklabel / Label"
+      "workTag": "Werklabel / Label",
+      "stagingManifest": "Paklijst"
     }
   },
   "errors": {
@@ -2513,7 +2543,8 @@
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
-      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",
@@ -2535,7 +2566,9 @@
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
-      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant.",
+      "deleteNotDraft": "Alleen conceptfacturen kunnen worden verwijderd; annuleer de factuur in plaats daarvan.",
+      "deleteHasPayments": "Facturen met geregistreerde betalingen kunnen niet worden verwijderd."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

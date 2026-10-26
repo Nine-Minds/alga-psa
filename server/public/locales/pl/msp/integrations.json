@@ -425,26 +425,75 @@
           "test": "Testuj połączenie",
           "testing": "Testowanie…"
         },
-        "description": "Wprowadź URL swojej instancji CIPP oraz token API, aby umożliwić Alga wykrywanie i synchronizację danych Entra.",
-        "encryptionNote": "Klucz API jest szyfrowany w spoczynku i po zapisaniu nigdy nie jest ponownie pokazywany.",
+        "description": "Wprowadź dane klienta API CIPP, aby umożliwić Alga wykrywanie i synchronizację danych Entra.",
+        "encryptionNote": "Klucz tajny klienta jest szyfrowany w spoczynku i po zapisaniu nigdy nie jest ponownie pokazywany.",
         "errors": {
           "missingFields": "Zarówno Base URL, jak i token API są wymagane.",
           "testFirst": "Przetestuj połączenie przed zapisaniem.",
-          "unknown": "Wystąpił nieznany błąd."
+          "unknown": "Wystąpił nieznany błąd.",
+          "missingApiClientFields": "URL API, Identyfikator aplikacji (klienta), klucz tajny klienta i Identyfikator organizacji Microsoft są wymagane."
         },
         "fields": {
           "apiToken": "Token API",
-          "apiTokenHelp": "W CIPP: Ustawienia → CIPP → Dostęp API. Skopiuj klucz API, a nie sekret klienta Azure.",
+          "apiTokenHelp": "Statyczny klucz API ze starszej wersji CIPP. CIPP nie wydaje już takich kluczy; preferuj klienta API.",
           "apiTokenPlaceholder": "Wprowadź token...",
-          "baseUrl": "Bazowy URL CIPP",
-          "baseUrlHelp": "To host aplikacji funkcyjnej CIPP-API (na przykład my-cipp-api.azurewebsites.net), a nie frontend CIPP, do którego się logujesz.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL API CIPP",
+          "baseUrlHelp": "URL API CIPP, z końcowym /api lub bez niego.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Wklej URL API wyświetlany w CIPP. Kończy się na /api; działa z tym sufiksem lub bez niego.",
+          "clientId": "Identyfikator aplikacji (klienta)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Klucz tajny klienta",
+          "clientSecretPlaceholder": "Wprowadź klucz tajny klienta...",
+          "clientSecretHelp": "CIPP pokazuje klucz tajny tylko raz, gdy zapisujesz klienta za pomocą Save to Azure. Jeśli już go nie masz, utwórz nowy klucz tajny i wprowadź go tutaj.",
+          "tenantId": "Identyfikator organizacji Microsoft",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "Identyfikator organizacji Microsoft widoczny na stronie CIPP-API, obok klienta."
         },
         "test": {
           "passed": "CIPP odpowiedział. Liczba widocznych organizacji: {{count}}.",
           "required": "Przetestuj połączenie przed zapisaniem."
         },
-        "title": "Połącz CIPP"
+        "title": "Połącz CIPP",
+        "reconnectTitle": "Połącz ponownie CIPP",
+        "legacyDescription": "Wprowadź URL API CIPP oraz starszy, statyczny klucz API. CIPP nie wydaje już takich kluczy, więc jeśli to możliwe, użyj klienta API.",
+        "reconnectNote": "URL API, Identyfikator aplikacji (klienta) i Identyfikator organizacji Microsoft są uzupełniane na podstawie bieżącego połączenia. Wprowadź ponownie klucz tajny klienta. Bieżące połączenie działa nadal, dopóki nowe dane nie przejdą testu i nie zapiszesz zmian.",
+        "reconnectNoteLegacy": "URL API jest uzupełniany na podstawie bieżącego połączenia. Wprowadź Identyfikator aplikacji (klienta), klucz tajny klienta i Identyfikator organizacji Microsoft z CIPP > Integrations > CIPP-API. Bieżące połączenie działa nadal, dopóki nowe dane nie przejdą testu i nie zapiszesz zmian.",
+        "legacyNote": "Starsze klucze API służą wyłącznie do połączeń utworzonych, zanim CIPP wprowadził klientów API. Istniejące połączenia nadal działają.",
+        "legacyEncryptionNote": "Klucz API jest szyfrowany w spoczynku i po zapisaniu nigdy nie jest ponownie pokazywany.",
+        "help": {
+          "title": "Gdzie znaleźć te dane w CIPP",
+          "steps": {
+            "openIntegration": "W CIPP przejdź do Integrations > CIPP-API.",
+            "createClient": "Wybierz Create New Client.",
+            "enable": "Włącz klienta.",
+            "saveToAzure": "Wybierz Save to Azure.",
+            "copySecret": "Skopiuj klucz tajny klienta. CIPP pokazuje go tylko raz.",
+            "copyDetails": "Skopiuj z tej samej strony Identyfikator organizacji Microsoft i URL API oraz Identyfikator aplikacji (klienta)."
+          },
+          "tenantIdDelay": "Po pierwszym zapisie Identyfikator organizacji Microsoft może pojawić się dopiero po 5–15 minutach. Jeśli go jeszcze nie ma, poczekaj i odśwież stronę CIPP.",
+          "restrictions": "Jeśli klient korzysta z Allowed IP Ranges, dodaj tam adresy IP ruchu wychodzącego Alga. Jeśli korzysta z Custom Role, rola musi zezwalać na listtenants, listusers, listgroups, listusergroups i ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Użyj zamiast tego starszego klucza API",
+          "useApiClient": "Użyj zamiast tego klienta API CIPP (zalecane)"
+        },
+        "failure": {
+          "unreachable": "Nie można połączyć się z CIPP pod tym adresem URL",
+          "tokenRejected": "Microsoft odrzucił logowanie klienta API",
+          "apiRefused": "CIPP odrzucił token dostępu",
+          "legacyRejected": "CIPP odrzucił klucz API",
+          "roleBlocked": "Rola niestandardowa CIPP blokuje uprawnienie potrzebne do synchronizacji",
+          "transport": {
+            "dns": "Nie można połączyć się z {{host}}: nie można rozwiązać nazwy hosta. Sprawdź adres URL API pod kątem literówek; skopiuj go z CIPP > Integrations > CIPP-API.",
+            "refused": "Nie można połączyć się z {{host}}: połączenie zostało odrzucone. Host istnieje, ale nie przyjmuje połączeń. Sprawdź adres URL API i czy aplikacja funkcji CIPP-API działa.",
+            "timeout": "Nie można połączyć się z {{host}}: upłynął limit czasu żądania. Host może być niedostępny lub zapora blokuje nasz ruch. Sprawdź adres URL API i spróbuj ponownie.",
+            "tls": "Nie można połączyć się z {{host}}: jego certyfikat TLS nie został zaakceptowany. Użyj adresu URL API https widocznego w CIPP > Integrations > CIPP-API.",
+            "network": "Nie można połączyć się z {{host}}: żądanie sieciowe nie powiodło się, zanim CIPP odpowiedział. Sprawdź adres URL API i spróbuj ponownie."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych organizacji; nic nie zostało zapisane. Uprawnienia zostały zaakceptowane — zwykle oznacza to, że organizacja partnerska nie jest wdrożona w Microsoft 365 Lighthouse lub nie ma aktywnych relacji GDAP.",
             "tokenRejected": "Microsoft odrzucił token dostępu połączenia; nic nie zostało zapisane. Rozpocznij połączenie ponownie."
           },
-          "cippServerLabel": "Serwer CIPP",
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Bezpośrednio"
-          }
+          },
+          "authTypeLabel": "Uwierzytelnianie",
+          "authTypes": {
+            "api_client": "Klient API",
+            "legacy_api_token": "Starszy klucz API"
+          },
+          "apiUrlLabel": "URL API",
+          "clientIdLabel": "Identyfikator aplikacji (klienta)",
+          "cippTenantIdLabel": "Identyfikator organizacji Microsoft",
+          "legacyNotice": "To połączenie używa starszego klucza API CIPP. Synchronizacja działa bez zmian. Połącz ponownie, aby przejść na klienta API CIPP.",
+          "reconnectCipp": "Połącz ponownie"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga odczytuje organizacje przez instancję CIPP, którą już prowadzisz.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "Hosta aplikacji funkcyjnej CIPP-API, nie frontendu CIPP.",
-              "apiKey": "Klucza API CIPP z dostępem do listy dzierżaw.",
+              "apiHost": "URL API, Identyfikator aplikacji (klienta) i Identyfikator organizacji Microsoft z CIPP > Integrations > CIPP-API.",
+              "apiKey": "Klucz tajny klienta API, który CIPP pokazuje tylko raz.",
               "instance": "Działającej instancji CIPP."
             }
           },
@@ -1703,10 +1761,15 @@
           "consentNotGranted": "Microsoft nie potwierdził zgody administratora.",
           "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
           "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
-          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",
+          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji.",
           "missingCode": "Microsoft nie zwrócił kodu autoryzacyjnego. Rozpocznij konfigurację ponownie.",
-          "sessionMismatch": "Twoja sesja AlgaPSA nie odpowiada administratorowi, który rozpoczął tę konfigurację. Zaloguj się i spróbuj ponownie.",
-          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft."
+          "sessionMismatch": "Ta konfiguracja została rozpoczęta w innej przeglądarce lub w oknie prywatnym. Dokończ ją w tym samym oknie, w którym ją rozpoczęto, albo użyj linku zatwierdzenia.",
+          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft.",
+          "policyBlocked": "Zasady dostępu warunkowego lub zasady urządzeń w Twojej organizacji Microsoft zablokowały logowanie. Poproś administratora Microsoft o wyłączenie tej aplikacji spod zasad albo zatwierdź z urządzenia dozwolonego przez zasady.",
+          "adminRequired": "Aplikację musi zatwierdzić administrator globalny Microsoft. Skopiuj link zatwierdzenia i wyślij go tej osobie.",
+          "wrongTenant": "Użyte konto Microsoft należy do innej organizacji Microsoft niż ta, która jest konfigurowana.",
+          "appNotFound": "Nie znaleziono aplikacji Microsoft w tej organizacji Microsoft. Mogła zostać usunięta albo podano nieprawidłową organizację Microsoft. Możesz ręcznie skonfigurować inną aplikację.",
+          "quoteDiagnostics": "Podaj to podczas sprawdzania dzienników logowania Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Identyfikator klienta",
@@ -4162,13 +4225,16 @@
             "callControl": "Sterowanie połączeniami",
             "xapi": "API konfiguracji",
             "lastChecked": "Ostatnie sprawdzenie",
-            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji."
+            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji.",
+            "usersBlocked": "Rola aplikacji API 3CX nie może odczytywać użytkowników. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Rola aplikacji API 3CX nie może zarządzać kontaktami. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Numery wewnętrzne",
             "sync": "Synchronizuj z centrali",
             "lastSync": "Ostatnia synchronizacja",
             "empty": "Nie zsynchronizowano jeszcze numerów wewnętrznych.",
+            "emptyAfterSync": "3CX nie zwrócił włączonych użytkowników; sprawdź uprawnienia aplikacji API",
             "dn": "Numer wewnętrzny",
             "pbxUser": "Użytkownik centrali",
             "algaUser": "Użytkownik AlgaPSA",

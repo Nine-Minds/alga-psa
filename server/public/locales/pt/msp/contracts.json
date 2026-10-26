@@ -96,7 +96,7 @@
     },
     "timing": {
       "advance": "Antecipadamente",
-      "arrears": "Em atraso"
+      "arrears": "No final do período"
     }
   },
   "po": {
@@ -772,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Taxa básica padrão:",
-      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "defaultRatePlaceholder": "Padrão: {{rate}}",
       "enterBaseRate": "Insira a taxa básica",
       "leaveBlankDefault": "Deixe em branco para usar a taxa padrão",
       "notSet": "Não definido",
@@ -780,7 +780,7 @@
       "title": "Configuração de taxa fixa"
     },
     "hourlyConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "hourlyRate": "Taxa horária",
       "minimumBillableMinutes": "Minutos mínimos faturáveis",
       "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
@@ -806,7 +806,7 @@
     },
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
@@ -1291,9 +1291,7 @@
     },
     "loadingTemplate": "Carregando modelo...",
     "servicesLabel": "Serviços",
-    "summary": {
-      "clientCurrency": "Moeda do cliente"
-    },
+    "summary": {},
     "templateBadge": "Modelo",
     "templateNotFound": "Modelo de contrato não encontrado",
     "templateSnapshotTitle": "Instantâneo do modelo",
@@ -1338,6 +1336,16 @@
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
       "title": "Simulação do modelo"
+    },
+    "pricing": {
+      "title": "Preços por moeda",
+      "addCurrency": "Adicionar moeda",
+      "removeCurrency": "Remover",
+      "missing": "{{count}} valor(es) em falta",
+      "baseCurrency": "(moeda base)",
+      "changeBaseCurrency": "Alterar moeda base",
+      "changeBaseConfirm": "Alterar a moeda base para {{currency}}? Os valores existentes NÃO são convertidos: mantêm o valor numérico e passam a ser lidos como {{currency}}.",
+      "noSlots": "Este modelo ainda não tem valores para precificar."
     },
     "discounts": {
       "title": "Descontos padrão do contrato",
@@ -1545,6 +1553,9 @@
       "confirm": "Confirmar e continuar",
       "cancel": "Voltar"
     },
+    "templatePicker": {
+      "needsRates": "Requer tarifas em {{currency}}"
+    },
     "discounts": {
       "help": "Descontos gerais aplicam-se a cada cobrança elegível faturada por este contrato. Eles são criados junto com o contrato ao concluir a configuração, e a simulação abaixo os calcula.",
       "draftDialog": {
@@ -1674,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Cadência de cobrança:",
         "notSpecified": "Não especificado",
-        "templateLabel": "Modelo:"
+        "templateLabel": "Modelo:",
+        "currencyLabel": "Moeda base:"
       },
       "selectTemplateOptional": "Selecione um modelo (opcional)",
       "startFromTemplate": "Começar a partir do modelo"
@@ -1732,10 +1744,6 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    },
-    "advanceSuggestion": {
-      "message": "Com faturamento em atraso, esta linha só pode ser faturada depois que seu primeiro período de serviço terminar. Com faturamento antecipado pelo ciclo do contrato, ela é faturada na data de início.",
-      "action": "Faturar antecipadamente pelo ciclo do contrato"
     }
   },
   "wizardProducts": {
@@ -1986,7 +1994,7 @@
     },
     "total": {
       "title": "Total Mensal Estimado",
-      "description": "Somente cobranças fixas. Faturamento por hora e serviços de uso separadamente com base no uso real.",
+      "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
       "perMonth": "por mês",
       "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
     },
@@ -2026,8 +2034,15 @@
     "unitRate": "Tarifa unitária",
     "serviceRate": "Tarifa do serviço",
     "noCurrencyPrice": "Não há preço em {{currency}} para este serviço. Informe uma tarifa ou o contrato não poderá ser criado.",
-    "templateRateNote": "Do modelo (o valor não está associado a uma moeda).",
-    "reviewTitle": "Linhas criadas a partir do modelo"
+    "reviewTitle": "Linhas criadas a partir do modelo",
+    "fallbackAlert": "Este modelo não tem tarifas em {{currency}}. A estrutura é copiada; introduza abaixo os valores em {{currency}}. Os valores do modelo são mostrados apenas como referência e não são convertidos.",
+    "templateReference": "Modelo: {{amount}} {{currency}}",
+    "catalogPrice": "Preço do catálogo",
+    "fromTemplateCurrency": "Do modelo ({{currency}})",
+    "fromTemplatePriceSet": "Das tarifas em {{currency}} do modelo",
+    "noCurrencyAmount": "Sem valor em {{currency}}. Introduza um, caso contrário o contrato não pode ser criado.",
+    "overtimeRate": "Tarifa de horas extra",
+    "bucketOverageRate": "Tarifa de excedente"
   },
   "templateWizard": {
     "title": {
@@ -2071,8 +2086,10 @@
           "usage": "Uso"
         }
       },
-      "recurringQuantityInvalid": "A quantidade recorrente de \"{{serviceName}}\" deve ser um número inteiro igual ou superior a zero e qualquer tarifa unitária deve ser um valor válido."
-    }
+      "recurringQuantityInvalid": "A quantidade recorrente de \"{{serviceName}}\" deve ser um número inteiro igual ou superior a zero e qualquer tarifa unitária deve ser um valor válido.",
+      "currencyRequired": "A moeda base é obrigatória"
+    },
+    "currency": "Moeda base *"
   },
   "templateBasics": {
     "heading": "Noções básicas do modelo",
@@ -2090,7 +2107,8 @@
     "help": {
       "templateName": "Use um nome descritivo para que as equipes possam identificar rapidamente o modelo certo.",
       "internalNotes": "Essas notas permanecem com o modelo para fornecer contexto quando os colegas de equipe o utilizam.",
-      "billingFrequency": "Define a cadência padrão quando o modelo é aplicado. Ainda pode ser ajustado por cliente."
+      "billingFrequency": "Define a cadência padrão quando o modelo é aplicado. Ainda pode ser ajustado por cliente.",
+      "currency": "As tarifas introduzidas neste assistente estão nesta moeda. Os preços noutras moedas podem ser adicionados depois ao modelo. Os valores nunca são convertidos."
     }
   },
   "templateFixed": {
@@ -2225,7 +2243,7 @@
   },
   "templateReview": {
     "heading": "Modelo de revisão",
-    "description": "Confirme o conteúdo do modelo. As tarifas são determinadas pelo preço de cada serviço na moeda do cliente quando um contrato é criado a partir deste modelo.",
+    "description": "Confirme o conteúdo do modelo. As tarifas são guardadas na moeda base do modelo. As outras moedas usam os conjuntos de preços do modelo, ou introduz os valores ao criar um contrato.",
     "sections": {
       "basics": "Noções básicas do modelo",
       "fixedFeeServices": "Serviços de taxa fixa",
@@ -2237,7 +2255,8 @@
     "fields": {
       "templateName": "Nome do modelo",
       "billingFrequency": "Frequência de cobrança",
-      "internalNotes": "Notas internas"
+      "internalNotes": "Notas internas",
+      "baseCurrency": "Moeda base"
     },
     "fallback": {
       "none": "-",
@@ -2273,8 +2292,7 @@
       "serviceLabel": "Serviço:",
       "invoiceWindowLabel": "Janela de fatura:",
       "unitRateLabel": "Tarifa unitária:",
-      "unitRateFromCatalog": "Preço de catálogo na moeda do cliente",
-      "unitRateNeutral": "{{rate}} na moeda do cliente"
+      "unitRateFromCatalog": "Preço de catálogo na moeda do cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tempo mínimo faturável:",
@@ -2288,7 +2306,7 @@
       "hoursIncluded": "Horas {{value}} incluídas",
       "unitsIncluded": "{{value}} {{unit}} incluído",
       "unitsFallback": "unidades",
-      "overage": "Excedente ${{amount}}/{{unit}}",
+      "overage": "Excedente {{amount}}/{{unit}}",
       "hourSingular": "hora",
       "unitSingular": "unidade",
       "rolloverEnabled": "Rollover ativado",
@@ -2405,6 +2423,22 @@
       "description": "Este contrato não tem linhas de contrato. Adicione primeiro linhas de contrato e depois volte para simular.",
       "title": "Ainda nada para simular"
     },
+    "errors": {
+      "title": "Não é possível executar a simulação",
+      "baselineTitle": "O contrato atual não pode ser simulado, então não há nada para comparar",
+      "unsupportedLineType": "A linha de contrato \"{{lineName}}\" tem o tipo de linha \"{{lineType}}\", que o simulador não consegue calcular. Altere a linha para Fixa, Por hora ou Uso e simule novamente.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" tem o tipo de configuração \"{{configurationType}}\", que o simulador não consegue calcular. Defina o serviço como Fixo, Por hora, Uso ou Pacote e simule novamente.",
+      "serviceNotInCatalog": "A linha de contrato \"{{lineName}}\" usa um serviço que não está mais no catálogo de serviços ({{serviceId}}). Remova-o da linha ou restaure o serviço e simule novamente.",
+      "poolMissing": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" está configurado como pacote, mas não tem um pool de horas incluídas. Adicione as horas incluídas do pool na linha de contrato e simule novamente.",
+      "contractNotFound": "Este contrato não está disponível. Ele pode ter sido excluído; recarregue a página.",
+      "clientNotAvailable": "O cliente desta simulação não está disponível. Ele pode ter sido excluído; escolha outro cliente.",
+      "clientRequired": "Selecione um cliente antes de simular.",
+      "historyRequiresClient": "As premissas históricas exigem um cenário vinculado a um cliente real. Escolha um cliente para esta simulação e tente novamente.",
+      "invalidReplayRange": "O intervalo de reprodução não é válido. Escolha um intervalo que termine depois de começar e abranja no máximo 120 períodos de faturamento.",
+      "scenarioInvalid": "Este cenário não pode ser simulado porque sua configuração está incompleta. Recarregue a página e tente novamente.",
+      "scenarioReferenceInvalid": "Este cenário se refere a algo que não está mais disponível, como uma linha de contrato, um serviço, uma alíquota de imposto ou um local do cliente. Recarregue a página para começar do contrato atual.",
+      "unexpected": "O simulador não pôde ser executado devido a um erro inesperado. Tente novamente; se o problema continuar, entre em contato com o suporte."
+    },
     "explanation": {
       "amount": "Valor",
       "close": "Fechar",
@@ -2451,6 +2485,7 @@
       "simulatedDelta": "diferença simulada"
     },
     "runBar": {
+      "blocked": "Simulação indisponível",
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
       "horizonOption": "{{count}} períodos de faturamento do cliente",
       "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
@@ -2459,6 +2494,7 @@
       "simulating": "Simulando…",
       "stale": "Alterações não simuladas",
       "staleBanner": "Estes valores vêm da simulação anterior. Atualize a simulação para incluir as suas alterações mais recentes.",
+      "staleBlockedBanner": "Esta mensagem é da simulação anterior. Atualize a simulação para incluir suas alterações mais recentes.",
       "updateSimulation": "Atualizar simulação"
     },
     "scenario": {
@@ -2493,7 +2529,7 @@
       "editDetails": "Editar regras",
       "editDetailsFor": "Editar detalhes de {{line}}",
       "fields": {
-        "adjustmentAmount": "Valor do ajuste em dólares",
+        "adjustmentAmount": "Valor do ajuste",
         "adjustmentDescription": "Descrição do ajuste",
         "adjustmentPeriod": "Período do ajuste",
         "billingFrequency": "Frequência de faturamento",
@@ -2511,16 +2547,16 @@
         "lineType": "Tipo de linha",
         "minimumBillableMinutes": "Minutos mínimos faturáveis",
         "minimumUsage": "Uso mínimo",
-        "overtimeRate": "Tarifa de hora extra ($/h)",
+        "overtimeRate": "Tarifa de hora extra por hora",
         "overtimeThreshold": "Limite de horas extras (horas)",
         "roundUpMinutes": "Arredondar para minutos",
         "scheduleEffectiveDate": "Data de vigência do cronograma",
         "scheduleEndDate": "Data de término do cronograma",
-        "scheduleRate": "Tarifa do cronograma em dólares",
+        "scheduleRate": "Tarifa do cronograma",
         "serviceQuantity": "Quantidade de licenças ou produtos",
         "tierMaximum": "Máximo da faixa",
         "tierMinimum": "Mínimo da faixa",
-        "tierRate": "Tarifa da faixa em dólares",
+        "tierRate": "Tarifa da faixa",
         "usageUnit": "Unidade de uso"
       },
       "frequencies": {
@@ -2545,7 +2581,7 @@
       "placeholders": {
         "minimum": "mínimo",
         "minimumMinutes": "minutos mínimos",
-        "overtimeRate": "hora extra $/h",
+        "overtimeRate": "tarifa de hora extra por hora",
         "roundMinutes": "arredondamento em minutos",
         "thresholdHours": "horas do limite"
       },
@@ -2585,7 +2621,8 @@
         "value": "Valor",
         "appliesTo": "Aplica-se a",
         "description": "Descrição",
-        "amount": "Valor ($)",
+        "amount": "Valor",
+        "rate": "Tarifa",
         "billingPeriod": "Período de faturamento",
         "timing": "Momento"
       }
@@ -2685,6 +2722,10 @@
       "duplicate": "Já existe um registro correspondente do assistente de contrato.",
       "resumeUnsupportedShape": "Este rascunho não pode ser retomado no assistente sem alterar os seus preços: {{lines}}",
       "fixedLineNoService": "A linha fixa \"{{lineName}}\" tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir.",
+      "templateAmountsMissing": "Não é possível criar o contrato em {{currency}}. Os seguintes valores não têm montante em {{currency}}: {{amounts}}. Introduza um valor para cada um ou adicione tarifas em {{currency}} ao modelo.",
+      "currencyPricingMissing": "Não é possível criar o contrato em {{currency}}. Não há preço em {{currency}} definido para: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" não é um código de moeda ISO 4217 válido",
+      "templateCurrencyHasPriceSet": "Este modelo já tem uma tabela de preços em {{currency}}. Elimine-a antes de tornar {{currency}} a moeda base.",
       "standingTerms": "Este rascunho contém condições de desconto recorrentes. Edite os separadores Linhas e Descontos para as preservar."
     },
     "pricingSchedule": {
@@ -2725,7 +2766,8 @@
       "advance": "Faturada antecipadamente pelo ciclo do contrato: a primeira fatura está disponível a partir de {{date}}, a data de início do contrato."
     },
     "client": {
-      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando o período de faturamento atual do cliente termina.",
+      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início.",
+      "arrearsPartial": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início. Como a data de início cai no meio desse período, ela cobre {{periodStart}} – {{periodEnd}}.",
       "advance": "Faturada antecipadamente pelo calendário de faturamento do cliente: a primeira fatura está disponível a partir de {{date}}, o início do período de faturamento do cliente que contém a data de início do contrato."
     }
   },
@@ -2737,6 +2779,11 @@
   },
   "sellHourBlockNote": {
     "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
+  },
+  "review": {
+    "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
+    "saveMissingTemplateRates": "Adicionar ao modelo as tarifas em {{currency}} em falta",
+    "updateTemplateRates": "Atualizar as tarifas em {{currency}} do modelo com estes valores"
   },
   "billingTimingField": {
     "arrears": "Pós-pago",
@@ -2938,5 +2985,9 @@
       "invalidBlock": "Preencha o tamanho, o preço e os gatilhos de cada linha de bloco pré-pago antes de concluir.",
       "rateRequired": "O serviço de bloco pré-pago \"{{serviceName}}\" precisa de uma tarifa horária superior a zero (as horas além do bloco são faturadas a essa tarifa)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Primeira fatura: a fatura de {{invoiceDate}} cobre {{periodStart}} – {{periodEnd}} (faturada em atraso). Escolha Antecipado para faturá-la na fatura do período que começa em {{advanceInvoiceDate}}.",
+    "billInAdvance": "Faturar antecipadamente"
   }
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
+import { queueContactCreated, queueContactUpdated } from '../lib/contactEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
@@ -389,7 +390,12 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
               : undefined,
           };
 
-          return ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+          const before = await ContactModel.getContactById(existingMapping.algaEntityId, ctx.tenant, trx);
+          const updated = await ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+          if (before) {
+            queueContactUpdated(trx, ctx.tenant, before as any, updated as any, Object.keys(input).filter((k) => (input as any)[k] !== undefined));
+          }
+          return updated;
         }
 
         const input: CreateContactInput = {
@@ -404,6 +410,7 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
             : undefined,
         };
         const created = await ContactModel.createContact(input, ctx.tenant, trx);
+        queueContactCreated(trx, ctx.tenant, created as any);
 
         await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'contact', created.contact_name_id, mappedValues.external_id, {
           knex: trx,

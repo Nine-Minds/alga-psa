@@ -1580,7 +1580,31 @@
     }
   },
   "labels": {
-    "printColumns": "Druckspalten"
+    "printColumns": "Druckspalten",
+    "dialog": {
+      "assetTitle": "Asset-Etiketten drucken",
+      "count_one": "{{count}} ausgewählt",
+      "count_other": "{{count}} ausgewählt",
+      "failed": "Die Etiketten konnten nicht gedruckt werden.",
+      "item": "Element",
+      "layout": "Layout",
+      "linkedAsset": "Verknüpftes Asset",
+      "noAsset": "Kein Asset",
+      "notFound": "Diese Datensätze konnten nicht geöffnet werden.",
+      "openPdf": "PDF öffnen",
+      "printed_one": "{{count}} Etikett gedruckt.",
+      "printed_other": "{{count}} Etiketten gedruckt.",
+      "printing": "Wird vorbereitet…",
+      "print": "Drucken",
+      "reason": "Grund",
+      "skipFailures": "Diese überspringen und den Rest drucken",
+      "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
+      "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
+      "template": "Vorlage",
+      "ticketTitle": "Arbeitsetiketten drucken",
+      "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
+      "useTemplate": "{{template}} verwenden"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Abhängigkeiten werden geprüft",

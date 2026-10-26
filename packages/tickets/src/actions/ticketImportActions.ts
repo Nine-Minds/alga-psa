@@ -2,6 +2,7 @@
 
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -736,6 +737,9 @@ export const importTickets = withAuth(async (
 
     // Contacts created during import, keyed by "contactName\0clientId" to deduplicate
     const createdContactMap = new Map<string, string>();
+    // Rows to announce once the import is settled: createSingleTicket runs inside savepoints that
+    // can roll back, so a contact is only published if it still exists at the end.
+    const createdContactRows = new Map<string, any>();
 
     async function createSingleTicket(rt: ResolvedTicket): Promise<{ ticket_id: string; ticket_number: string } | null> {
       const { ticket, clientId, statusId, priorityId, categoryId, isClosed } = rt;
@@ -759,9 +763,10 @@ export const importTickets = withAuth(async (
               created_at: trx.raw('now()'),
               updated_at: trx.raw('now()'),
             })
-            .returning(['contact_name_id']);
+            .returning(['contact_name_id', 'full_name', 'client_id', 'created_at']);
           contactId = newContact.contact_name_id as string;
           createdContactMap.set(dedupeKey, contactId);
+          createdContactRows.set(contactId, newContact);
         }
       }
 
@@ -940,6 +945,16 @@ export const importTickets = withAuth(async (
             details: { bypass_source: 'import' },
           });
         }
+      }
+    }
+
+    if (createdContactRows.size > 0) {
+      const surviving = await tenantScopedTable('contacts')
+        .whereIn('contact_name_id', [...createdContactRows.keys()])
+        .select('contact_name_id');
+      for (const { contact_name_id } of surviving as Array<{ contact_name_id: string }>) {
+        const row = createdContactRows.get(contact_name_id);
+        if (row) queueContactCreated(trx, tenant, row, { actorUserId: user.user_id });
       }
     }
 

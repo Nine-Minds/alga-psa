@@ -475,7 +475,7 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
             .pluck("slug"),
         ),
       ).toEqual(
-        new Set(["active", "in_stock", "maintenance", "inactive", "retired"]),
+        new Set(["active", "in_stock", "maintenance", "held_by_msp", "inactive", "retired"]),
       );
       expect(
         new Set(

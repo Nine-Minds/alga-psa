@@ -14,6 +14,7 @@ export * from './services';
 export * from './taxRates';
 export * from './defaultTaxRate';
 export * from './invoiceTemplates';
+export * from './templateAmounts';
 export * from './templateClone';
 export * from './taxSettings';
 export * from './billingSchedule';

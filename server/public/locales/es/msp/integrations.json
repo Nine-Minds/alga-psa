@@ -425,26 +425,75 @@
           "test": "Probar conexión",
           "testing": "Probando…"
         },
-        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
-        "encryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "description": "Introduzca los datos de un cliente de API de CIPP para que Alga pueda descubrir y sincronizar los datos de Entra.",
+        "encryptionNote": "El secreto de cliente se cifra en reposo y no se vuelve a mostrar después de guardar.",
         "errors": {
           "missingFields": "Se requieren tanto la URL base como el token de API.",
           "testFirst": "Pruebe la conexión antes de guardar.",
-          "unknown": "Se produjo un error desconocido."
+          "unknown": "Se produjo un error desconocido.",
+          "missingApiClientFields": "La URL de la API, el Id. de aplicación (cliente), el secreto de cliente y el Id. de inquilino son obligatorios."
         },
         "fields": {
           "apiToken": "Token de API",
-          "apiTokenHelp": "En CIPP: Configuración → CIPP → Acceso a API. Copie la clave de API, no un secreto de cliente de Azure.",
+          "apiTokenHelp": "La clave de API estática de una versión anterior de CIPP. CIPP ya no las emite; prefiera un cliente de API.",
           "apiTokenPlaceholder": "Introduzca el token...",
-          "baseUrl": "URL base de CIPP",
-          "baseUrlHelp": "Este es el host de la function app CIPP-API (por ejemplo my-cipp-api.azurewebsites.net), no el frontend de CIPP donde inicia sesión.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL de la API de CIPP",
+          "baseUrlHelp": "La URL de la API de CIPP, con o sin el /api final.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL de la API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Pegue la URL de la API que muestra CIPP. Termina en /api; funciona con o sin ese sufijo.",
+          "clientId": "Id. de aplicación (cliente)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Secreto de cliente",
+          "clientSecretPlaceholder": "Introduzca el secreto de cliente...",
+          "clientSecretHelp": "CIPP muestra el secreto una sola vez, cuando guarda el cliente con Save to Azure. Si ya no lo tiene, cree un secreto nuevo e introdúzcalo aquí.",
+          "tenantId": "Id. de inquilino",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "El Id. de inquilino que se muestra en la página CIPP-API, junto al cliente."
         },
         "test": {
           "passed": "CIPP respondió. {{count}} inquilinos visibles.",
           "required": "Pruebe la conexión antes de guardar."
         },
-        "title": "Conectar CIPP"
+        "title": "Conectar CIPP",
+        "reconnectTitle": "Reconectar CIPP",
+        "legacyDescription": "Introduzca la URL de su API de CIPP y una clave de API estática heredada. CIPP ya no emite estas claves, así que use un cliente de API si puede.",
+        "reconnectNote": "La URL de la API, el Id. de aplicación (cliente) y el Id. de inquilino se rellenan a partir de la conexión actual. Vuelva a introducir el secreto de cliente. La conexión actual sigue funcionando hasta que los nuevos datos superen una prueba y usted guarde.",
+        "reconnectNoteLegacy": "La URL de la API se rellena a partir de la conexión actual. Introduzca el Id. de aplicación (cliente), el secreto de cliente y el Id. de inquilino de CIPP > Integrations > CIPP-API. La conexión actual sigue funcionando hasta que los nuevos datos superen una prueba y usted guarde.",
+        "legacyNote": "Las claves de API heredadas son solo para conexiones creadas antes de que CIPP introdujera los clientes de API. Las conexiones existentes siguen funcionando.",
+        "legacyEncryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "help": {
+          "title": "Dónde encontrar estos datos en CIPP",
+          "steps": {
+            "openIntegration": "En CIPP, vaya a Integrations > CIPP-API.",
+            "createClient": "Elija Create New Client.",
+            "enable": "Habilite el cliente.",
+            "saveToAzure": "Elija Save to Azure.",
+            "copySecret": "Copie el secreto de cliente. CIPP lo muestra una sola vez.",
+            "copyDetails": "Copie el Id. de inquilino y la URL de la API de esa misma página, junto con el Id. de aplicación (cliente)."
+          },
+          "tenantIdDelay": "El Id. de inquilino puede tardar de 5 a 15 minutos en aparecer tras el primer guardado. Si aún no está, espere y actualice la página de CIPP.",
+          "restrictions": "Si el cliente usa Allowed IP Ranges, añada allí las IP de salida de Alga. Si usa un Custom Role, el rol debe permitir listtenants, listusers, listgroups, listusergroups y ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Usar en su lugar una clave de API heredada",
+          "useApiClient": "Usar en su lugar un cliente de API de CIPP (recomendado)"
+        },
+        "failure": {
+          "unreachable": "No se pudo acceder a CIPP en esta URL",
+          "tokenRejected": "Microsoft rechazó el inicio de sesión del cliente de API",
+          "apiRefused": "CIPP rechazó el token de acceso",
+          "legacyRejected": "CIPP rechazó la clave de API",
+          "roleBlocked": "El rol personalizado de CIPP bloquea un permiso que la sincronización necesita",
+          "transport": {
+            "dns": "No se pudo conectar con {{host}}: el nombre de host no se resuelve. Revise la URL de la API; cópiela desde CIPP > Integrations > CIPP-API.",
+            "refused": "No se pudo conectar con {{host}}: la conexión fue rechazada. El host existe, pero no acepta conexiones. Revise la URL de la API y que la aplicación de funciones CIPP-API esté en ejecución.",
+            "timeout": "No se pudo conectar con {{host}}: se agotó el tiempo de espera. Puede que el host no esté disponible o que un firewall descarte nuestro tráfico. Revise la URL de la API e inténtelo de nuevo.",
+            "tls": "No se pudo conectar con {{host}}: no se aceptó su certificado TLS. Use la URL https de la API que aparece en CIPP > Integrations > CIPP-API.",
+            "network": "No se pudo conectar con {{host}}: la solicitud de red falló antes de que CIPP respondiera. Revise la URL de la API e inténtelo de nuevo."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft inició su sesión, pero no se pudo leer la lista de inquilinos gestionados; no se guardó nada. Sus permisos fueron aceptados — normalmente significa que el inquilino de partner no está incorporado a Microsoft 365 Lighthouse o no tiene relaciones GDAP activas.",
             "tokenRejected": "Microsoft rechazó el token de acceso de la conexión; no se guardó nada. Inicie la conexión de nuevo."
           },
-          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Directo"
-          }
+          },
+          "authTypeLabel": "Autenticación",
+          "authTypes": {
+            "api_client": "Cliente de API",
+            "legacy_api_token": "Clave de API heredada"
+          },
+          "apiUrlLabel": "URL de la API",
+          "clientIdLabel": "Id. de aplicación (cliente)",
+          "cippTenantIdLabel": "Id. de inquilino",
+          "legacyNotice": "Esta conexión usa una clave de API de CIPP heredada. Sigue sincronizando sin cambios. Reconecte para cambiar a un cliente de API de CIPP.",
+          "reconnectCipp": "Reconectar"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga lee los inquilinos a través de la instancia de CIPP que ya ejecuta.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "El host de la function app CIPP-API, no el frontend de CIPP.",
-              "apiKey": "Una clave de API de CIPP con acceso a la lista de inquilinos.",
+              "apiHost": "La URL de la API, el Id. de aplicación (cliente) y el Id. de inquilino de CIPP > Integrations > CIPP-API.",
+              "apiKey": "El secreto del cliente de API, que CIPP muestra una sola vez.",
               "instance": "Una instancia de CIPP en funcionamiento."
             }
           },
@@ -1703,10 +1761,15 @@
           "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador.",
           "consentPersistFailed": "No se pudo registrar el consentimiento del administrador de Microsoft.",
           "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
-          "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",
+          "microsoftError": "Microsoft no pudo completar la solicitud de configuración.",
           "missingCode": "Microsoft no devolvió un código de autorización. Inicie de nuevo la configuración.",
-          "sessionMismatch": "Su sesión de AlgaPSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo.",
-          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft."
+          "sessionMismatch": "Esta configuración se inició en otro navegador o en una ventana privada. Termínela en la misma ventana en la que la inició, o use el enlace de aprobación.",
+          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft.",
+          "policyBlocked": "Una directiva de acceso condicional o de dispositivo de su inquilino de Microsoft bloqueó el inicio de sesión. Pida a su administrador de Microsoft que exima esta aplicación, o apruebe desde un dispositivo que su directiva permita.",
+          "adminRequired": "Un administrador global de Microsoft debe aprobar la aplicación. Copie el enlace de aprobación y envíeselo.",
+          "wrongTenant": "La cuenta de Microsoft utilizada pertenece a un inquilino de Microsoft distinto del que se está configurando.",
+          "appNotFound": "No se encontró la aplicación de Microsoft en ese inquilino de Microsoft. Puede que se haya eliminado o que el inquilino de Microsoft sea incorrecto. Puede configurar otra aplicación manualmente.",
+          "quoteDiagnostics": "Indique esto al revisar los registros de inicio de sesión de Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID de cliente",
@@ -4162,13 +4225,16 @@
             "callControl": "Control de llamadas",
             "xapi": "API de configuración",
             "lastChecked": "Última comprobación",
-            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función."
+            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función.",
+            "usersBlocked": "El rol de la aplicación API de 3CX no puede leer usuarios. Concédale los derechos necesarios en 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "El rol de la aplicación API de 3CX no puede gestionar contactos. Concédale los derechos necesarios en 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Extensiones",
             "sync": "Sincronizar desde la centralita",
             "lastSync": "Última sincronización",
             "empty": "Aún no se han sincronizado extensiones.",
+            "emptyAfterSync": "3CX no devolvió usuarios habilitados; revise los permisos de la aplicación API",
             "dn": "Extensión",
             "pbxUser": "Usuario de la centralita",
             "algaUser": "Usuario de AlgaPSA",

@@ -425,26 +425,75 @@
           "test": "Verbinding testen",
           "testing": "Testen…"
         },
-        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
-        "encryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "description": "Voer de gegevens van een CIPP-API-client in zodat Alga Entra-gegevens kan ontdekken en synchroniseren.",
+        "encryptionNote": "Het clientgeheim wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
         "errors": {
           "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
           "testFirst": "Test de verbinding voordat u opslaat.",
-          "unknown": "Er is een onbekende fout opgetreden."
+          "unknown": "Er is een onbekende fout opgetreden.",
+          "missingApiClientFields": "API-URL, Toepassings-ID (client), clientgeheim en Tenant-ID zijn allemaal vereist."
         },
         "fields": {
           "apiToken": "API-token",
-          "apiTokenHelp": "In CIPP: Instellingen → CIPP → API-toegang. Kopieer de API-sleutel, niet een Azure-clientgeheim.",
+          "apiTokenHelp": "De statische API-sleutel uit een oudere CIPP-versie. CIPP geeft deze niet meer uit; geef de voorkeur aan een API-client.",
           "apiTokenPlaceholder": "Voer token in...",
-          "baseUrl": "CIPP-basis-URL",
-          "baseUrlHelp": "Dit is de host van de CIPP-API function app (bijvoorbeeld my-cipp-api.azurewebsites.net), niet de CIPP-frontend waarop u zich aanmeldt.",
-          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
+          "baseUrl": "CIPP-API-URL",
+          "baseUrlHelp": "De CIPP-API-URL, met of zonder de afsluitende /api.",
+          "baseUrlPlaceholder": "https://cipp.uwdomein.com",
+          "apiUrl": "API-URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Plak de API-URL die in CIPP wordt getoond. Deze eindigt op /api; het werkt met of zonder dat achtervoegsel.",
+          "clientId": "Toepassings-ID (client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Clientgeheim",
+          "clientSecretPlaceholder": "Voer clientgeheim in...",
+          "clientSecretHelp": "CIPP toont het geheim maar één keer, wanneer u de client opslaat met Save to Azure. Als u het niet meer hebt, maak dan een nieuw geheim aan en voer dat hier in.",
+          "tenantId": "Tenant-ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "De Tenant-ID die op de pagina CIPP-API naast de client wordt getoond."
         },
         "test": {
           "passed": "CIPP antwoordde. {{count}} tenants zichtbaar.",
           "required": "Test de verbinding voordat u opslaat."
         },
-        "title": "CIPP verbinden"
+        "title": "CIPP verbinden",
+        "reconnectTitle": "CIPP opnieuw verbinden",
+        "legacyDescription": "Voer uw CIPP-API-URL en een verouderde statische API-sleutel in. CIPP geeft deze sleutels niet meer uit, gebruik dus bij voorkeur een API-client.",
+        "reconnectNote": "De API-URL, Toepassings-ID (client) en Tenant-ID worden ingevuld op basis van de huidige verbinding. Voer het clientgeheim opnieuw in. De huidige verbinding blijft werken totdat de nieuwe gegevens een test doorstaan en u opslaat.",
+        "reconnectNoteLegacy": "De API-URL wordt ingevuld op basis van de huidige verbinding. Voer het Toepassings-ID (client), het clientgeheim en het Tenant-ID in vanuit CIPP > Integrations > CIPP-API. De huidige verbinding blijft werken totdat de nieuwe gegevens een test doorstaan en u opslaat.",
+        "legacyNote": "Verouderde API-sleutels zijn alleen bedoeld voor verbindingen die zijn gemaakt voordat CIPP API-clients introduceerde. Bestaande verbindingen blijven werken.",
+        "legacyEncryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "help": {
+          "title": "Waar u deze gegevens in CIPP vindt",
+          "steps": {
+            "openIntegration": "Ga in CIPP naar Integrations > CIPP-API.",
+            "createClient": "Kies Create New Client.",
+            "enable": "Schakel de client in.",
+            "saveToAzure": "Kies Save to Azure.",
+            "copySecret": "Kopieer het clientgeheim. CIPP toont het maar één keer.",
+            "copyDetails": "Kopieer de Tenant-ID en de API-URL van diezelfde pagina, samen met de Toepassings-ID (client)."
+          },
+          "tenantIdDelay": "Het kan 5 tot 15 minuten duren voordat de Tenant-ID na de eerste keer opslaan verschijnt. Is hij er nog niet, wacht dan en vernieuw de CIPP-pagina.",
+          "restrictions": "Als de client Allowed IP Ranges gebruikt, voeg dan de egress-IP's van Alga daar toe. Als de client een Custom Role gebruikt, moet de rol listtenants, listusers, listgroups, listusergroups en ListMailboxes toestaan."
+        },
+        "shape": {
+          "useLegacy": "In plaats daarvan een verouderde API-sleutel gebruiken",
+          "useApiClient": "In plaats daarvan een CIPP-API-client gebruiken (aanbevolen)"
+        },
+        "failure": {
+          "unreachable": "CIPP is op deze URL niet bereikbaar",
+          "tokenRejected": "Microsoft heeft de aanmelding van de API-client geweigerd",
+          "apiRefused": "CIPP heeft het toegangstoken geweigerd",
+          "legacyRejected": "CIPP heeft de API-sleutel geweigerd",
+          "roleBlocked": "De aangepaste CIPP-rol blokkeert een machtiging die de synchronisatie nodig heeft",
+          "transport": {
+            "dns": "{{host}} is niet bereikbaar: de hostnaam kan niet worden omgezet. Controleer de API-URL op typefouten; kopieer deze uit CIPP > Integrations > CIPP-API.",
+            "refused": "{{host}} is niet bereikbaar: de verbinding werd geweigerd. De host bestaat, maar accepteert geen verbindingen. Controleer de API-URL en of de CIPP-API-functie-app draait.",
+            "timeout": "{{host}} is niet bereikbaar: er is een time-out opgetreden. De host is mogelijk offline of een firewall blokkeert ons verkeer. Controleer de API-URL en probeer het opnieuw.",
+            "tls": "{{host}} is niet bereikbaar: het TLS-certificaat werd niet geaccepteerd. Gebruik de https-API-URL uit CIPP > Integrations > CIPP-API.",
+            "network": "{{host}} is niet bereikbaar: het netwerkverzoek is mislukt voordat CIPP antwoordde. Controleer de API-URL en probeer het opnieuw."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -797,7 +846,6 @@
             "validationFailed": "Microsoft heeft u aangemeld, maar de lijst met beheerde tenants kon niet worden gelezen; er is niets opgeslagen. Uw machtigingen zijn geaccepteerd — meestal is de partnertenant niet aangesloten op Microsoft 365 Lighthouse of zijn er geen actieve GDAP-relaties.",
             "tokenRejected": "Microsoft heeft het toegangstoken van de verbinding geweigerd; er is niets opgeslagen. Start de verbinding opnieuw."
           },
-          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
@@ -810,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direct"
-          }
+          },
+          "authTypeLabel": "Verificatie",
+          "authTypes": {
+            "api_client": "API-client",
+            "legacy_api_token": "Verouderde API-sleutel"
+          },
+          "apiUrlLabel": "API-URL",
+          "clientIdLabel": "Toepassings-ID (client)",
+          "cippTenantIdLabel": "Tenant-ID",
+          "legacyNotice": "Deze verbinding gebruikt een verouderde CIPP-API-sleutel. Ze blijft ongewijzigd synchroniseren. Maak opnieuw verbinding om over te stappen op een CIPP-API-client.",
+          "reconnectCipp": "Opnieuw verbinden"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1067,8 @@
             "description": "Alga leest tenants via de CIPP-instantie die u al draait.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "De host van de CIPP-API function app, niet de CIPP-frontend.",
-              "apiKey": "Een CIPP API-sleutel met toegang tot de tenantlijst.",
+              "apiHost": "De API-URL, Toepassings-ID (client) en Tenant-ID uit CIPP > Integrations > CIPP-API.",
+              "apiKey": "Het geheim van de API-client, dat CIPP maar één keer toont.",
               "instance": "Een draaiende CIPP-instantie."
             }
           },
@@ -1703,10 +1761,15 @@
           "consentNotGranted": "Microsoft heeft de toestemming van de beheerder niet bevestigd.",
           "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
-          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
+          "microsoftError": "Microsoft kon de installatieaanvraag niet voltooien.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
-          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden."
+          "sessionMismatch": "Deze installatie is gestart in een andere browser of in een privévenster. Rond haar af in hetzelfde venster waarin u bent begonnen, of gebruik de goedkeuringslink.",
+          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden.",
+          "policyBlocked": "Een Conditional Access- of apparaatbeleid in uw Microsoft-tenant heeft de aanmelding geblokkeerd. Vraag uw Microsoft-beheerder deze app uit te zonderen, of keur goed vanaf een apparaat dat uw beleid toestaat.",
+          "adminRequired": "Een globale Microsoft-beheerder moet de app goedkeuren. Kopieer de goedkeuringslink en stuur die naar deze persoon.",
+          "wrongTenant": "Het gebruikte Microsoft-account hoort bij een andere Microsoft-tenant dan degene die wordt geconfigureerd.",
+          "appNotFound": "De Microsoft-app is niet gevonden in die Microsoft-tenant. Mogelijk is hij verwijderd of is de Microsoft-tenant onjuist. U kunt handmatig een andere app instellen.",
+          "quoteDiagnostics": "Vermeld dit bij het controleren van de Entra-aanmeldlogboeken: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Client ID",
@@ -4162,13 +4225,16 @@
             "callControl": "Oproepbesturing",
             "xapi": "Configuratie-API",
             "lastChecked": "Laatst gecontroleerd",
-            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken."
+            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken.",
+            "usersBlocked": "De rol van de 3CX API-app mag geen gebruikers lezen. Geef de rol de benodigde rechten in 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "De rol van de 3CX API-app mag geen contacten beheren. Geef de rol de benodigde rechten in 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Toestellen",
             "sync": "Synchroniseren vanaf PBX",
             "lastSync": "Laatste synchronisatie",
             "empty": "Nog geen toestellen gesynchroniseerd.",
+            "emptyAfterSync": "3CX heeft geen ingeschakelde gebruikers teruggegeven; controleer de rechten van de API-app",
             "dn": "Toestel",
             "pbxUser": "PBX-gebruiker",
             "algaUser": "AlgaPSA-gebruiker",

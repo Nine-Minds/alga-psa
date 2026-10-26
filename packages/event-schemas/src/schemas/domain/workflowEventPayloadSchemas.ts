@@ -88,6 +88,10 @@ import {
 } from './billingEventSchemas';
 import {
   clientArchivedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
@@ -149,6 +153,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -324,6 +329,10 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ClientOwnerAssigned.v1': clientOwnerAssignedEventPayloadSchema,
   'payload.ClientMerged.v1': clientMergedEventPayloadSchema,
   'payload.ClientArchived.v1': clientArchivedEventPayloadSchema,
+  'payload.ClientLocationCreated.v1': clientLocationCreatedEventPayloadSchema,
+  'payload.ClientLocationUpdated.v1': clientLocationUpdatedEventPayloadSchema,
+  'payload.ClientLocationDeactivated.v1': clientLocationDeactivatedEventPayloadSchema,
+  'payload.ClientLocationDeleted.v1': clientLocationDeletedEventPayloadSchema,
   'payload.ContactCreated.v1': contactCreatedEventPayloadSchema,
   'payload.ContactUpdated.v1': contactUpdatedEventPayloadSchema,
   'payload.ContactPrimarySet.v1': contactPrimarySetEventPayloadSchema,
@@ -382,6 +391,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.AssetAssigned.v1': assetAssignedEventPayloadSchema,
   'payload.AssetUnassigned.v1': assetUnassignedEventPayloadSchema,
   'payload.AssetWarrantyExpiring.v1': assetWarrantyExpiringEventPayloadSchema,
+  'payload.AssetCustodyChanged.v1': assetCustodyChangedEventPayloadSchema,
   'payload.FileUploaded.v1': fileUploadedEventPayloadSchema,
   'payload.MediaProcessingSucceeded.v1': mediaProcessingSucceededEventPayloadSchema,
   'payload.MediaProcessingFailed.v1': mediaProcessingFailedEventPayloadSchema,

@@ -1,8 +1,9 @@
-import type {
-  ContractSimulationResult,
-  SimulatedInvoiceLine,
-  SimulationComparison,
-  SimulationLineDelta,
+import {
+  isSimulationBlocked,
+  type ContractSimulationResult,
+  type SimulatedInvoiceLine,
+  type SimulationComparison,
+  type SimulationLineDelta,
 } from '@alga-psa/types';
 
 interface AggregatedLine {
@@ -37,11 +38,21 @@ function aggregateLines(lines: SimulatedInvoiceLine[]): Map<string, AggregatedLi
   return aggregated;
 }
 
-/** Pure, order-stable comparison of a scenario run against its baseline. */
+/**
+ * Pure, order-stable comparison of a scenario run against its baseline.
+ *
+ * Returns null when either side is blocked (a blocking diagnostic, no
+ * periods): a blocked side has no figures, so any delta against it would read
+ * as a misleading change (or as a $0 change). Callers show the blocked side's
+ * diagnostic instead.
+ */
 export function compareSimulations(
   baseline: ContractSimulationResult,
   scenario: ContractSimulationResult,
-): SimulationComparison {
+): SimulationComparison | null {
+  if (isSimulationBlocked(baseline) || isSimulationBlocked(scenario)) {
+    return null;
+  }
   const baselinePeriods = new Map(
     baseline.periods.map((period) => [
       `${period.period_start}:${period.period_end}`,

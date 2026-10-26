@@ -177,6 +177,7 @@ export const sendUserInvitation = withAuth(async (
       scopedDb.tenantJoin(tenantDefaultClientQuery, 'clients', 'clients.client_id', 'tenant_companies.client_id');
       const tenantDefaultClient = await tenantDefaultClientQuery as { client_name: string } | undefined;
 
+      // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for an MSP-recipient link (/auth/team/setup is not surface-routable by path, left canonical).
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL ||
         process.env.NEXTAUTH_URL ||

@@ -2,9 +2,13 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { mutate } from 'swr';
 import AssociatedAssets from './AssociatedAssets';
+import { listEntityAssets } from '../actions/assetActions';
+import { entityAssetsCacheKey, matchEntityAssetsCacheKeys } from '../lib/assetCacheKeys';
 
 vi.mock('../actions/assetActions', () => ({ listEntityAssets: vi.fn(async () => []), createAssetAssociation: vi.fn(), removeAssetAssociation: vi.fn(), listAssets: vi.fn(async () => ({ assets: [], total: 0 })) }));
+vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('../actions/remoteAccessLinkActions', () => ({ hasRemoteAccessLinks: vi.fn(async () => false) }));
 vi.mock('../actions/assetDrawerActions', () => ({ loadAssetDetailDrawerData: vi.fn() }));
 vi.mock('../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value: any) => value }));
@@ -40,5 +44,38 @@ describe('AssociatedAssets asset name width', () => {
     expect(remove.getAttribute('title')).toBe('Remove');
     expect(remove.textContent).toBe('×');
     await waitFor(() => expect(name).toBeTruthy());
+  });
+});
+
+describe('AssociatedAssets shared SWR key', () => {
+  const a1 = { asset_id: 'a1', asset_type: 'workstation', name: 'First', status: 'active', asset_tag: 'T1', client_id: 'c1' } as any;
+  const a2 = { asset_id: 'a2', asset_type: 'workstation', name: 'Lenovo ThinkPad T14', status: 'held_by_msp', asset_tag: 'T2', client_id: 'c1' } as any;
+  // Global SWR cache is shared across tests, so each test uses its own ticket id.
+  const renderTile = (entityId: string, initial?: Promise<any[]>) => render(
+    <AssociatedAssets id="ticket-assets" entityId={entityId} entityType="ticket" clientId="c1" initialAssets={initial} />
+  );
+
+  it('does not fetch on mount when seeded with initialAssets', async () => {
+    vi.mocked(listEntityAssets).mockClear();
+    renderTile('seed-ticket', Promise.resolve([a1]));
+    await screen.findByRole('button', { name: 'First' });
+    expect(listEntityAssets).not.toHaveBeenCalled();
+  });
+
+  it('refetches and shows a newly linked asset when the shared key is mutated (Receive equipment)', async () => {
+    vi.mocked(listEntityAssets).mockReset();
+    vi.mocked(listEntityAssets).mockResolvedValue([a1] as any);
+    renderTile('recv-ticket', Promise.resolve([a1]));
+    await screen.findByRole('button', { name: 'First' });
+    vi.mocked(listEntityAssets).mockResolvedValue([a1, a2] as any);
+    await mutate(matchEntityAssetsCacheKeys('ticket', 'recv-ticket'));
+    expect(await screen.findByRole('button', { name: 'Lenovo ThinkPad T14' })).toBeTruthy();
+    expect(listEntityAssets).toHaveBeenCalledWith('recv-ticket', 'ticket');
+  });
+
+  it('exposes a stable key', () => {
+    expect(entityAssetsCacheKey('ticket', 't1')).toEqual(['entity-assets', 'ticket', 't1']);
+    expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'ticket', 't1'])).toBe(true);
+    expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'project', 't1'])).toBe(false);
   });
 });

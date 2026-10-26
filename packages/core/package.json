@@ -22,6 +22,10 @@
       "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
     },
+    "./address": {
+      "import": "./dist/lib/address.js",
+      "types": "./src/lib/address.ts"
+    },
     "./fileNames": {
       "import": "./dist/lib/fileNames.js",
       "types": "./src/lib/fileNames.ts"

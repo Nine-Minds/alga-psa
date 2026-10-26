@@ -65,6 +65,10 @@ import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
@@ -136,6 +140,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -366,6 +371,10 @@ export const EVENT_TYPES = [
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
   'CLIENT_DELETED',
+  'CLIENT_LOCATION_CREATED',
+  'CLIENT_LOCATION_UPDATED',
+  'CLIENT_LOCATION_DEACTIVATED',
+  'CLIENT_LOCATION_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
@@ -495,6 +504,7 @@ export const EVENT_TYPES = [
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
+  'ASSET_CUSTODY_CHANGED',
   'FILE_UPLOADED',
   'MEDIA_PROCESSING_SUCCEEDED',
   'MEDIA_PROCESSING_FAILED',
@@ -889,7 +899,7 @@ export const ClientEventPayloadSchema = BasePayloadSchema.extend({
 
 export const UserEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
-  userType: z.enum(['internal', 'client']).optional(),
+  userType: z.enum(['internal', 'client', 'service']).optional(),
   email: z.string().email().optional(),
   changedFields: z.array(z.string()).optional(),
   roleIds: z.array(z.string().uuid()).optional(),
@@ -1399,6 +1409,10 @@ export const EventPayloadSchemas = {
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
   CLIENT_DELETED: clientDeletedEventPayloadSchema,
+  CLIENT_LOCATION_CREATED: clientLocationCreatedEventPayloadSchema,
+  CLIENT_LOCATION_UPDATED: clientLocationUpdatedEventPayloadSchema,
+  CLIENT_LOCATION_DEACTIVATED: clientLocationDeactivatedEventPayloadSchema,
+  CLIENT_LOCATION_DELETED: clientLocationDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
@@ -1529,6 +1543,7 @@ export const EventPayloadSchemas = {
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,
+  ASSET_CUSTODY_CHANGED: assetCustodyChangedEventPayloadSchema,
   FILE_UPLOADED: fileUploadedEventPayloadSchema,
   MEDIA_PROCESSING_SUCCEEDED: mediaProcessingSucceededEventPayloadSchema,
   MEDIA_PROCESSING_FAILED: mediaProcessingFailedEventPayloadSchema,
@@ -1719,7 +1734,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   // matching workflow at payload validation. Default it at the stream boundary
   // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
   // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
-  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers. The workflow
+  // worker repeats the default from the envelope timestamp at its consumer boundary
+  // (WorkflowRuntimeV2EventStreamWorker.normalizeSourcePayload), so three layers now stamp one field.
   const rawPayload = event.payload as Record<string, unknown> | undefined;
   const payload =
     rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'

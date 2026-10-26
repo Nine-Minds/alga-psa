@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { TemplateAst } from '@alga-psa/types';
+import { LABEL_CLASSES, LABEL_HIDEABLE_FIELDS, type TemplateAst } from '@alga-psa/types';
 import {
   CUSTOM_PAGE_SIZE_UNITS,
   INVOICE_PRINT_MARGIN_MM_RANGE,
@@ -566,6 +566,11 @@ export const templateAstSchema = z.object({
     locale: z.string().optional(),
     currencyCode: z.string().optional(),
     printSettings: printSettingsSchema.optional(),
+    // Optional and ignored outside `work-tag` documents (invoice / quote ASTs never carry them).
+    labelClass: z.enum(LABEL_CLASSES).optional(),
+    labelSettings: z.object({
+      hiddenFields: z.array(z.enum(LABEL_HIDEABLE_FIELDS)).optional(),
+    }).strict().optional(),
   }).strict().optional(),
   styles: z.object({
     tokens: z.record(cssIdentifierSchema, z.object({

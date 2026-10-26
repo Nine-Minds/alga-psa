@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Comment model method signature changes
 'use server'
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -17,6 +18,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
 import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
+import { resolveCommentMergeTokens } from '../../lib/cannedResponses/commentMerge';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -72,7 +74,7 @@ async function assertClientCanCreateComment(
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
-  if (user?.user_type !== 'client') {
+  if (!isClientUserType(user?.user_type)) {
     return;
   }
 
@@ -115,6 +117,26 @@ async function assertClientCanCreateComment(
 
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
+  }
+
+  // Comment.insert re-roots a client reply aimed at an internal thread into a
+  // fresh public thread (D1, for inbound email whose headers resolve to an
+  // internal thread). A portal user never sees internal threads, so an explicit
+  // parent_comment_id pointing at one is rejected here instead.
+  if (comment.parent_comment_id) {
+    const parentThread = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'comments as parent', tenant),
+        'comment_threads as thread',
+        'parent.thread_id',
+        'thread.thread_id'
+      )
+      .select('thread.is_internal as thread_is_internal')
+      .where('parent.comment_id', comment.parent_comment_id)
+      .first();
+    if (parentThread?.thread_is_internal) {
+      throw new Error('Reply visibility must match the thread root visibility');
+    }
   }
 }
 
@@ -187,6 +209,18 @@ export const createComment = withAuth(async (
       throw new Error('Only internal MSP users may schedule client-visible comments');
     }
     normalizeScheduledPublication(comment);
+
+    // Canned responses: the picker resolves merge fields as it inserts, so the agent sees final text. This
+    // pass catches tokens that remain (hand-typed, or pasted from another response). Same pure resolver, same
+    // context loader. Unknown tokens are left as written; known tokens with no value become ''. Only MSP
+    // authors: a client-portal comment is never rewritten.
+    if (comment.note && comment.ticket_id && comment.author_type === 'internal') {
+      const { knex: mergeDb } = await createTenantKnex();
+      const noteToResolve = comment.note;
+      comment.note = await withTransaction(mergeDb, (trx: Knex.Transaction) =>
+        resolveCommentMergeTokens(trx, tenant!, comment.ticket_id, user.user_id, comment.author_type, noteToResolve)
+      );
+    }
 
     // Convert BlockNote JSON to Markdown if note exists
     if (comment.note) {
@@ -333,7 +367,8 @@ export const createComment = withAuth(async (
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
 
-          const isInternalUser = user?.user_type === 'internal';
+          // internal | service are both 'user' authors (a service user is never a contact author).
+          const isInternalUser = isMspPrincipalUserType(user?.user_type);
           const hasContactId = Boolean(user?.contact_id);
           const author = isInternalUser
             ? { authorType: 'user', authorId: comment.user_id }
@@ -533,7 +568,11 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
       // Set author_type based on user type
       if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+        comment.author_type = isClientUserType(user.user_type)
+          ? 'client'
+          : isMspPrincipalUserType(user.user_type)
+            ? 'internal'
+            : 'unknown';
       } else {
         comment.author_type = 'unknown';
       }

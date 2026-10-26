@@ -10,6 +10,8 @@ export default defineConfig({
     'schemas/index': 'src/schemas/index.ts',
     'services/index': 'src/services/index.ts',
     'lib/catalog/serviceCatalogPricing': 'src/lib/catalog/serviceCatalogPricing.ts',
+    'lib/catalog/productCatalogCore': 'src/lib/catalog/productCatalogCore.ts',
+    'lib/payments/invoicePaymentUrls': 'src/lib/payments/invoicePaymentUrls.ts',
   },
   format: ['esm'],
   dts: false,

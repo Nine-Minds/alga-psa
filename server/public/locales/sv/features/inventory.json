@@ -32,7 +32,8 @@
     "to": "Till",
     "today": "Idag",
     "total": "Totalt",
-    "unknown": "Okänd"
+    "unknown": "Okänd",
+    "recordUnavailable": "Hittades inte, eller så saknar du åtkomst"
   },
   "counts": {
     "adjustments": "Justeringar: {{count}}",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}} d hos leverantören",
     "filters": {
       "statusActive": "Visar returärenden med status {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA-referens",
+      "product": "Produkt",
+      "returnedSerial": "Serienummer för returnerad enhet",
+      "opened": "Öppnad",
+      "updated": "Uppdaterad",
+      "age": "Ålder (dagar)",
+      "reason": "Orsak",
+      "viewUnit": "Visa enhet",
+      "viewAsset": "Visa tillgång"
     }
   },
   "salesOrders": {
@@ -1698,6 +1711,12 @@
       "failed": "Det gick inte att återlägga returen i lager.",
       "restocking": "Återlägger i lager…",
       "submit": "Återlägg i lager"
+    },
+    "printLabel": "Skriv ut etikett",
+    "printWithTemplate": "Skriv ut med {{code}}",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Försäljningsorder {{number}}"
     }
   },
   "transfers": {

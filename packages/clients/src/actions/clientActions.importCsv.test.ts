@@ -43,6 +43,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   tenantDb: tenantDbMock,
   withTransaction: withTransactionMock,
+  registerAfterCommit: vi.fn(),
 }));
 
 vi.mock('../lib/authHelpers', () => ({

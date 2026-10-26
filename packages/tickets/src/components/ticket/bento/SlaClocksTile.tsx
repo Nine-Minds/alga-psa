@@ -112,6 +112,10 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
 
   const clocks = useMemo(() => computeSlaClocks(ticket, now), [ticket, now]);
 
+  // No policy: nothing to watch and nothing to add here, so no tile. (When a
+  // policy applies, the hero also shows the resolution clock.)
+  if (!clocks.policyApplied) return null;
+
   return (
     <BentoTile
       id={id}

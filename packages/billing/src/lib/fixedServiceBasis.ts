@@ -1,5 +1,6 @@
 import type { FixedPricingBasis } from '@alga-psa/types';
 import { isUnitPricedFixedConfig } from './usageSemantics';
+import { normalizeToMonthlyCents } from '@alga-psa/shared/billingClients/recurringMemberRate';
 
 // Client-safe re-export, as resolveFixedLineRate is re-exported for billing.
 export * from '@alga-psa/shared/billingClients/fixedMemberRate';
@@ -64,25 +65,6 @@ export function fixedServicesRecurringTotalCents(
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
 }
 
-// LEVERAGE: pattern monthly-cadence-normalization — twin of shared/billingClients/contractMonthlyValue.normalizeToMonthlyCents;
-// that module imports the server DB layer, so client-side wizard code cannot import it. The pure cadence math
-// belongs in a client-safe layer both import.
-function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      return Math.round(amountCents);
-  }
-}
-
 /**
  * Monthly-normalized sum of {@link fixedServicesRecurringTotalCents} over every
  * fixed line. Each line is normalized by its own billing frequency (falling
@@ -117,7 +99,7 @@ export function getFixedServiceBasisIssue(
   service: FixedServiceBasisFields,
   options: { requireUnitRate?: boolean } = {},
 ): FixedServiceBasisIssue | null {
-  // Templates are currency-neutral: their unit rate is an optional default and
+  // A template's unit rate is an optional default in the template's base currency;
   // an empty one follows the catalog price in the contract's currency.
   const requireUnitRate = options.requireUnitRate ?? true;
   if (isUnitFixedService(service)) {

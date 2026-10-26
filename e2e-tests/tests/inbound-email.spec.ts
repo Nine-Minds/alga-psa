@@ -273,7 +273,7 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
 
     const agentReply = `Agent transport response ${actors.runId}`;
     const conversation = page.locator('#ticket-details-bento-timeline-tile');
-    await conversation.getByRole('button', { name: 'Add Comment', exact: true }).click();
+    await conversation.locator('#ticket-details-bento-timeline-tile-add-comment-btn, #ticket-details-bento-timeline-tile-composer-dock-trigger').filter({ visible: true }).first().click();
     await conversation.getByRole('group', { name: 'Reply visibility' }).getByRole('button', { name: 'Client', exact: true }).click();
     await conversation.locator('[contenteditable="true"]:visible').fill(agentReply);
     await conversation.getByRole('button', { name: 'Send', exact: true }).click();
