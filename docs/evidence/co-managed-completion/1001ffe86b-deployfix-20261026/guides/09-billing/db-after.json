@@ -1,0 +1,145 @@
+{
+  "prices": [],
+  "contract": {
+    "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+    "is_active": false,
+    "status": "pending",
+    "end_date": null,
+    "contract_status": "active",
+    "currency_code": "USD"
+  },
+  "entries": [
+    {
+      "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "2888e49a-4670-416d-8536-0720b483204f",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "d52924b9-b13e-4432-98c9-749ddef8870d",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "715aaae6-f601-410c-9503-53170b1ca849",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "87568b45-b19d-48ae-bbf6-7762a07394d5",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "c8a7659c-88de-4c61-a6ea-58e440d02175",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+      "invoice_number": "INV-000003",
+      "status": "draft",
+      "subtotal": 42500,
+      "tax": 0,
+      "total_amount": 42500,
+      "currency_code": "USD",
+      "created_at": "2026-10-26T08:28:39.664389+00:00"
+    }
+  ],
+  "billingEmail": ""
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "action": "generateTicketInvoice",
+    "control": "Quick invoice",
+    "actionId": "7f5975f827a7612ade3bedc51aeb9b385fc4b87cbf",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"success\":false,\"code\":\"PERMISSION_DENIED\",\"message\":\"Permission denied: billing create required\",\"error\":\"Permission denied: billing create required\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "addChecklistItem",
+    "control": "Checklist add",
+    "actionId": "7fb0755b6f28af22a491681785dc6a1b6182f0fd2c",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"tenant\":\"3261f313-8e04-45df-94bc-0343e92ba454\",\"checklist_item_id\":\"8b578a73-8d42-40d3-bb58-92676269762c\",\"ticket_id\":\"0a767ca1-0f61-4817-a1af-e8d4183ff402\",\"item_name\":\"Direct write after departure\",\"description\":null,\"order_number\":0,\"assigned_to\":null,\"is_required\":true,\"completed\":false,\"completed_by\":null,\"completed_at\":null,\"source\":\"manual\",\"template_id\":null,\"created_by\":\"6d4bb919-9ac4-470a-8928-314043d1a613\",\"created_at\":\"$D2026-10-26T07:34:30.230Z\",\"updated_at\":\"$D2026-10-26T07:34:30.230Z\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "addExternalLink",
+    "control": "External link add",
+    "actionId": "7f9a08753119eaf8425f84ee7e59f798779983a39e",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"portal_visible\":false,\"link_id\":\"1c95765a-a482-4349-80ac-41083d6dd49e\",\"ticket_id\":\"0a767ca1-0f61-4817-a1af-e8d4183ff402\",\"entity_type\":\"ticket\",\"entity_id\":\"0a767ca1-0f61-4817-a1af-e8d4183ff402\",\"system\":\"jira\",\"external_id\":\"AFTER-DEPARTURE-1\",\"external_parent_id\":null,\"realm\":null,\"url\":\"https://example.test/after-departure\",\"relationship\":\"reference\",\"actor\":null,\"external_status\":null,\"external_updated_at\":null,\"last_synced_at\":null,\"metadata\":null,\"created_at\":\"$D2026-10-26T07:34:30.254Z\",\"updated_at\":\"$D2026-10-26T07:34:30.254Z\",\"display\":{\"label\":\"Jira\",\"icon\":\"SquareKanban\",\"href\":\"https://example.test/after-departure\",\"realmLabel\":\"Site\"}}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "addTicketCommentWithCache",
+    "control": "Comment add",
+    "actionId": "7fed4477000204a61c91779fdd89fc656817ad1e1e",
+    "status": 200,
+    "body": "2:\"$Sreact.fragment\"\n5:I[791133,[],\"\"]\n6:I[204297,[],\"\"]\n8:I[791133,[],\"LoadingBoundaryProvider\"]\n:HL[\"/_next/static/css/ea577d2f967c2e95.css\",\"style\"]\n:HL[\"/_next/static/css/5cf07be61698dd98.css\",\"style\"]\n:HL[\"/_next/static/css/d1819de920e34bd6.css\",\"style\"]\n:HL[\"/_next/static/css/7c61d208ceb7b770.css\",\"style\"]\n:HL[\"/_next/static/css/6b16db27448702fa.css\",\"style\"]\n:HL[\"/_next/static/css/b4561ef42822e33b.css\",\"style\"]\n:HL[\"/_next/static/css/a8f72c11aacf730b.css\",\"style\"]\n:HL[\"/_next/static/css/2c429cfa051a9ee2.css\",\"style\"]\n:HL[\"/_next/static/css/f2fbee51eb7829ea.css\",\"style\"]\n:HL[\"/_next/static/css/13dcc5ea1f9a68a9.css\",\"style\"]\n:HL[\"/_next/static/css/06875aecf9b3568e.css\",\"style\"]\n:HL[\"/_next/static/css/4db83eb7c81484c5.css\",\"style\"]\n7:X\n0:{\"a\":\"$@1\",\"f\":[[[\"\",{\"children\":[\"msp\",{\"modal\":[\"(__SLOT__)\",{\"children\":[[\"catchAll\",\"tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402\",\"c\",[\"(.)create-asset\",\"(.)create-client\",\"(.)create-contact\",\"(.)create-opportunity\",\"(.)create-product\",\"(.)create-project\",\"(.)create-service\",\"(.)create-ticket\",\"account\",\"add-ons\",\"assets\",\"billing\",\"chat\",\"clients\",\"co-managed\",\"co-management\",\"contacts\",\"create-asset\",\"create-client\",\"create-contact\",\"create-opportunity\",\"create-product\",\"create-project\",\"create-service\",\"create-ticket\",\"credentials\",\"dashboard\",\"document-templates\",\"documents\",\"email-logs\",\"extensions\",\"go\",\"interactions\",\"inventory\",\"invoices\",\"jobs\",\"knowledge-base\",\"licenses\",\"marketing\",\"onboarding\",\"opportunities\",\"platform-up",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "createComment",
+    "control": "Reply/comment create",
+    "actionId": "7f69f9e21dc3c489ba7da242248762921d9d513ba1",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "addTicketMaterial",
+    "control": "Material add",
+    "actionId": "7f05f1e9014c047488bd987a053a23f3f9f0797357",
+    "status": 500,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:E{\"digest\":\"3414481795\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "createAssetAssociation",
+    "control": "Asset add",
+    "actionId": "7f897c707ac944f829752aa7d1572871995892f633",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"actionError\":\"Asset not found. It may have been deleted. Please refresh and try again.\",\"messageKey\":\"msp/assets:errors.asset.notFoundRefresh\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "addTicket",
+    "control": "Duplicate (creates a ticket)",
+    "actionId": "7f68ce2c247b42ab6ea35cbe1399df78e4818e6f6c",
+    "status": 500,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:E{\"digest\":\"2696030715\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "deleteTicket",
+    "control": "Delete",
+    "actionId": "7f4a5dcaeca0ed3f058781af76924150ded0e6d05a",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"success\":false,\"canDelete\":false,\"code\":\"VALIDATION_FAILED\",\"message\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\",\"dependencies\":[],\"alternatives\":[]}\n",
+    "readOnlyMessage": true
+  }
+]

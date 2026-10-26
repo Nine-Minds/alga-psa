@@ -1,0 +1,188 @@
+{
+  "scenario": "10-departure-ended-workspace",
+  "recordedAt": "2026-10-26T06:43:46.537Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-23862757",
+    "revision": "238627579d5143cbfafb52a4ab82ab5b2a4ed135+da39a3ee5e6b",
+    "buildId": "build-1792995121422"
+  },
+  "assertions": [
+    {
+      "id": "access-page-ended-not-load-error",
+      "passed": true,
+      "at": "2026-10-26T06:43:50.504Z",
+      "data": {
+        "text": "Upgrade to AlgaPSA\nExport workspace\nEnd co-management\nCo-managed access\n\nCo-managed IT ended Oct 25, 2026\n\nOz no longer has access. Shared work history is retained and read-only.\n\nOpen Shared work archive\nReload current access"
+      }
+    },
+    {
+      "id": "sla-page-ended-not-load-error",
+      "passed": true,
+      "at": "2026-10-26T06:43:52.496Z"
+    },
+    {
+      "id": "entry-offers-no-write-control",
+      "passed": true,
+      "at": "2026-10-26T06:43:58.532Z",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "id": "grid-offers-no-write-control",
+      "passed": true,
+      "at": "2026-10-26T06:44:01.151Z",
+      "data": {
+        "found": [
+          "ticket-details-bento-scheduled-work-tile-schedule-link"
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T06:43:46.572Z",
+      "seconds": 0.035,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-23862757",
+        "revision": "238627579d5143cbfafb52a4ab82ab5b2a4ed135+da39a3ee5e6b",
+        "buildId": "build-1792995121422",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T06:43:48.522Z",
+      "seconds": 1.985,
+      "actor": "kansas",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T06:43:48.522Z",
+      "seconds": 1.985,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Kansas admin: access and SLA pages show the ended state instead of \"Could not load access settings\""
+    },
+    {
+      "at": "2026-10-26T06:43:50.402Z",
+      "seconds": 3.865,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T06:43:50.504Z",
+      "seconds": 3.967,
+      "actor": "kansas",
+      "title": "access-page-ended-not-load-error",
+      "data": {
+        "text": "Upgrade to AlgaPSA\nExport workspace\nEnd co-management\nCo-managed access\n\nCo-managed IT ended Oct 25, 2026\n\nOz no longer has access. Shared work history is retained and read-only.\n\nOpen Shared work archive\nReload current access"
+      }
+    },
+    {
+      "at": "2026-10-26T06:43:52.457Z",
+      "seconds": 5.92,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/co-management/sla"
+    },
+    {
+      "at": "2026-10-26T06:43:52.496Z",
+      "seconds": 5.959,
+      "actor": "kansas",
+      "title": "sla-page-ended-not-load-error"
+    },
+    {
+      "at": "2026-10-26T06:43:52.496Z",
+      "seconds": 5.959,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions"
+    },
+    {
+      "at": "2026-10-26T06:43:55.854Z",
+      "seconds": 9.317,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T06:43:58.532Z",
+      "seconds": 11.995,
+      "actor": "kansas",
+      "title": "entry-offers-no-write-control",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "at": "2026-10-26T06:44:01.151Z",
+      "seconds": 14.614,
+      "actor": "kansas",
+      "title": "grid-offers-no-write-control",
+      "data": {
+        "found": [
+          "ticket-details-bento-scheduled-work-tile-schedule-link"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T06:44:01.152Z",
+      "seconds": 14.615,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Direct writes behind the hidden controls are refused by the server; nothing changes"
+    },
+    {
+      "at": "2026-10-26T06:44:01.361Z",
+      "seconds": 14.824,
+      "actor": "kansas",
+      "title": "server-action-ids",
+      "data": {
+        "createAssetAssociation": "7ffab8b0522a1b2c652c6e71033a745e55c84029d2",
+        "deleteTicket": "7f355716804a9f22ecfa2435aa85526c3cbd2b5b24",
+        "addTicket": "7fb4f2e3a32cd3efe789325986007a114c45bcd8cc",
+        "addTicketCommentWithCache": "7fffff4df6cc9612e96d079beb1788bc75ac2fb2fc",
+        "createComment": "7fc196d65ee9c06ea30da58819317b727e2e8c7623",
+        "generateTicketInvoice": "7fc8ae5b041fba4a72d554e02f2bbe506450fb7307",
+        "addChecklistItem": "7f9316eff04c1cbabe462615f130492d2594c2391e",
+        "addExternalLink": "7faa10d2fba90c7be3ccae72dc553db125518ee3fa",
+        "addTicketMaterial": "7fbd72da3ae0cba474a56172a03c5605bd202e3a36"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 1.985,
+      "title": "Kansas admin: access and SLA pages show the ended state instead of \"Could not load access settings\"",
+      "end": 5.959
+    },
+    {
+      "start": 5.959,
+      "title": "Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions",
+      "end": 14.615
+    },
+    {
+      "start": 14.615,
+      "title": "Direct writes behind the hidden controls are refused by the server; nothing changes",
+      "end": 16.31
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Cannot read properties of undefined (reading 'board_id')",
+  "durationSeconds": 16.36,
+  "actors": [
+    {
+      "name": "kansas",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

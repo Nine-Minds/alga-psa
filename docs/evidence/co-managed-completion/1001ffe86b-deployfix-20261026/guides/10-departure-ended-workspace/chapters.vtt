@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:01.942 --> 00:00:05.897
+Kansas admin: access and SLA pages show the ended state instead of "Could not load access settings"
+
+2
+00:00:05.897 --> 00:00:14.526
+Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions
+
+3
+00:00:14.526 --> 00:00:16.916
+Direct writes behind the hidden controls are refused by the server; nothing changes
+
+4
+00:00:16.916 --> 00:00:24.230
+Control: Alice's active White Rabbit ticket still offers the same actions

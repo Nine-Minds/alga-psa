@@ -1,0 +1,260 @@
+{
+  "scenario": "09-billing",
+  "recordedAt": "2026-10-26T08:27:14.841Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-1001ffe86",
+    "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+    "buildId": "build-1793002032501"
+  },
+  "assertions": [
+    {
+      "id": "setup-17-co-managed-entries-on-the-line",
+      "passed": true,
+      "at": "2026-10-26T08:27:16.035Z",
+      "data": {
+        "count": 17
+      }
+    },
+    {
+      "id": "setup-contract-terms-15-15-and-100-per-hour",
+      "passed": true,
+      "at": "2026-10-26T08:27:16.035Z",
+      "data": {
+        "line": {
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "minimum_billable_time": 15,
+          "round_up_to_nearest": 15
+        },
+        "serviceConfig": [
+          {
+            "config_id": "1df5ccc3-718d-4d09-987e-e6f6f4ec824c",
+            "custom_rate": null,
+            "hourly_rate": 10000,
+            "minimum_billable_time": 0,
+            "round_up_to_nearest": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "workaround-price-present-before",
+      "passed": true,
+      "at": "2026-10-26T08:27:16.035Z",
+      "data": [
+        {
+          "price_id": "2398a0c0-48c5-4689-9957-cb13d4f67d44",
+          "currency_code": "USD",
+          "rate": 10000,
+          "effective_date": "1970-01-01"
+        }
+      ]
+    },
+    {
+      "id": "workaround-price-removed",
+      "passed": true,
+      "at": "2026-10-26T08:27:16.450Z",
+      "data": {
+        "after": []
+      }
+    },
+    {
+      "id": "old-draft-reversed-and-entries-released",
+      "passed": true,
+      "at": "2026-10-26T08:27:22.102Z",
+      "data": {
+        "oldDraft": []
+      }
+    },
+    {
+      "id": "contract-restored",
+      "passed": true,
+      "at": "2026-10-26T08:27:25.662Z",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending",
+        "end_date": null,
+        "contract_status": "active",
+        "currency_code": "USD"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T08:27:14.885Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-1001ffe86",
+        "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+        "buildId": "build-1793002032501",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:16.035Z",
+      "seconds": 1.194,
+      "title": "setup-17-co-managed-entries-on-the-line",
+      "data": {
+        "count": 17
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:16.035Z",
+      "seconds": 1.194,
+      "title": "setup-contract-terms-15-15-and-100-per-hour",
+      "data": {
+        "line": {
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "minimum_billable_time": 15,
+          "round_up_to_nearest": 15
+        },
+        "serviceConfig": [
+          {
+            "config_id": "1df5ccc3-718d-4d09-987e-e6f6f4ec824c",
+            "custom_rate": null,
+            "hourly_rate": 10000,
+            "minimum_billable_time": 0,
+            "round_up_to_nearest": 0
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:16.035Z",
+      "seconds": 1.194,
+      "title": "chapter",
+      "data": "Remove the catalog-price workaround (stored USD price for Basic Support)"
+    },
+    {
+      "at": "2026-10-26T08:27:16.035Z",
+      "seconds": 1.194,
+      "title": "workaround-price-present-before",
+      "data": [
+        {
+          "price_id": "2398a0c0-48c5-4689-9957-cb13d4f67d44",
+          "currency_code": "USD",
+          "rate": 10000,
+          "effective_date": "1970-01-01"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T08:27:16.450Z",
+      "seconds": 1.609,
+      "title": "workaround-price-removed",
+      "data": {
+        "after": []
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:18.346Z",
+      "seconds": 3.505,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:18.347Z",
+      "seconds": 3.506,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Reverse the phantom-priced draft INV-000002 through the invoice page"
+    },
+    {
+      "at": "2026-10-26T08:27:20.296Z",
+      "seconds": 5.455,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/74d3c735-1184-4ec2-999b-49a1d07feb5c"
+    },
+    {
+      "at": "2026-10-26T08:27:22.102Z",
+      "seconds": 7.261,
+      "actor": "qa",
+      "title": "old-draft-reversed-and-entries-released",
+      "data": {
+        "oldDraft": []
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:22.102Z",
+      "seconds": 7.261,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore the White Rabbit hourly contract"
+    },
+    {
+      "at": "2026-10-26T08:27:24.103Z",
+      "seconds": 9.262,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T08:27:25.662Z",
+      "seconds": 10.821,
+      "actor": "qa",
+      "title": "contract-restored",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending",
+        "end_date": null,
+        "contract_status": "active",
+        "currency_code": "USD"
+      }
+    },
+    {
+      "at": "2026-10-26T08:27:25.662Z",
+      "seconds": 10.821,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Generate from Automatic Invoices with no catalog price: the contract rate and 15-minute terms price the time"
+    },
+    {
+      "at": "2026-10-26T08:27:27.708Z",
+      "seconds": 12.867,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 1.194,
+      "title": "Remove the catalog-price workaround (stored USD price for Basic Support)",
+      "end": 3.506
+    },
+    {
+      "start": 3.506,
+      "title": "Reverse the phantom-priced draft INV-000002 through the invoice page",
+      "end": 7.261
+    },
+    {
+      "start": 7.261,
+      "title": "Restore the White Rabbit hourly contract",
+      "end": 10.821
+    },
+    {
+      "start": 10.821,
+      "title": "Generate from Automatic Invoices with no catalog price: the contract rate and 15-minute terms price the time",
+      "end": 23.15
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "preview-shows-425-and-no-missing-pricing {\"preview\":\"Invoice Preview\\n\\nThis is a preview of how the invoice will look when finalized.\\n\\nWhite Rabbit has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.\\n\\nClose Preview\\nGenerate Invoice\"}",
+  "durationSeconds": 23.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
+  "builtFrom": "git HEAD 1001ffe86b via `npm run build` in ee/temporal-workflows and services/workflow-worker",
+  "restartedAt": "2026-10-26T08:04:43.564Z",
+  "health": {
+    "temporal-worker:8375": "healthy",
+    "workflow-worker:4374": {
+      "ready": true,
+      "startedAt": "2026-10-26T08:04:43.564Z",
+      "workers": {
+        "temporal": true,
+        "eventStream": true,
+        "dataStoreSweep": true
+      }
+    }
+  },
+  "distSpotCheck": {
+    "ee/temporal-workflows/dist/shared/lib/commentAudience.js contains nativeThreadAudience": true,
+    "services/workflow-worker/dist/shared/lib/commentAudience.js contains nativeThreadAudience": true,
+    "ee/temporal-workflows/dist/packages/co-managed/src/managementPolicy.js contains latestRetained": true
+  },
+  "note": "Earlier in the round the workers ran dists built at 28dc8156d7, 22c832d4b4, 415019b46c and 9f87789071; the final rebuild makes the recorded revision the candidate itself."
+}

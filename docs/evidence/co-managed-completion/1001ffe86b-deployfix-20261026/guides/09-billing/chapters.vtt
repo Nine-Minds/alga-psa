@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:01.378 --> 00:00:03.618
+Remove the catalog-price workaround (stored USD price for Basic Support)
+
+2
+00:00:03.618 --> 00:00:04.174
+Reverse the phantom-priced draft INV-000002 through the invoice page
+
+3
+00:00:04.174 --> 00:00:06.739
+Restore the White Rabbit hourly contract
+
+4
+00:00:06.739 --> 00:00:09.194
+Give White Rabbit a billing email (required to issue an invoice; cleared again at the end)
+
+5
+00:00:09.194 --> 00:00:24.785
+Generate from Automatic Invoices with no catalog price: the contract rate and 15-minute terms price the time
+
+6
+00:00:24.785 --> 00:00:30.268
+Open the new draft: the UI shows $425.00, 0.25 h lines at $100.00, $25.00 each
+
+7
+00:00:30.268 --> 00:00:39.928
+Regenerate: Automatic Invoices offers nothing for the same time, so it is not billed twice
+
+8
+00:00:39.928 --> 00:00:45.150
+Restore: terminate the disposable contract again; the corrected draft is kept

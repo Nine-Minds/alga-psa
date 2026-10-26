@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:01.985 --> 00:00:05.959
+Kansas admin: access and SLA pages show the ended state instead of "Could not load access settings"
+
+2
+00:00:05.959 --> 00:00:14.615
+Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions
+
+3
+00:00:14.615 --> 00:00:16.310
+Direct writes behind the hidden controls are refused by the server; nothing changes

@@ -1,0 +1,74 @@
+[
+  {
+    "action": "generateTicketInvoice",
+    "control": "Quick invoice",
+    "actionId": "7f7f54e61e65080aed67013300154d0dfea20043f2",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"success\":false,\"code\":\"PERMISSION_DENIED\",\"message\":\"Permission denied: billing create required\",\"error\":\"Permission denied: billing create required\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "addChecklistItem",
+    "control": "Checklist add",
+    "actionId": "7f6102c86aa09929b3b2be1e5999dc0f6497008dda",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "addExternalLink",
+    "control": "External link add",
+    "actionId": "7f9306873769df802aae22c7b137ceb497b0fcfa00",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "addTicketCommentWithCache",
+    "control": "Comment add",
+    "actionId": "7f7027c763acd3458b80446e594cdc1c1268b814ab",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "createComment",
+    "control": "Reply/comment create",
+    "actionId": "7fa976123ec72d538223d4eb1a501ff007a1919575",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "addTicketMaterial",
+    "control": "Material add",
+    "actionId": "7ff211f58eef0ccac6827a0cab32da088a7b6ddb14",
+    "status": 500,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:E{\"digest\":\"1730424678\"}\n",
+    "readOnlyMessage": false
+  },
+  {
+    "action": "createAssetAssociation",
+    "control": "Asset add",
+    "actionId": "7f56fc337b1908d08bfd9af34cf7b0841faae68ae7",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "addTicket",
+    "control": "Duplicate (creates a ticket)",
+    "actionId": "7f058ad1aab9514ebb1ceed4cf3f5e5d9d96f406c1",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"actionError\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\"}\n",
+    "readOnlyMessage": true
+  },
+  {
+    "action": "deleteTicket",
+    "control": "Delete",
+    "actionId": "7f05eb6ec6a73231862175fd77156dcfe0d662bceb",
+    "status": 200,
+    "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1793002032501\"}\n1:{\"success\":false,\"canDelete\":false,\"code\":\"VALIDATION_FAILED\",\"message\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\",\"dependencies\":[],\"alternatives\":[]}\n",
+    "readOnlyMessage": true
+  }
+]

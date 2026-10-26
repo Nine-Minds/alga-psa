@@ -1,0 +1,20 @@
+[
+  {
+    "scenario": "10-departure-sponsor",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-1001ffe86",
+      "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+      "buildId": "build-1793002032501"
+    }
+  },
+  {
+    "scenario": "10-departure-ended-workspace",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-1001ffe86",
+      "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+      "buildId": "build-1793002032501"
+    }
+  }
+]

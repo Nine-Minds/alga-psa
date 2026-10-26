@@ -1,0 +1,41 @@
+{
+  "build": {
+    "dist": ".next-review-final-1001ffe86",
+    "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+    "buildId": "build-1793002032501"
+  },
+  "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+  "ticket": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+  "before": {
+    "tickets": 1,
+    "comments": 0,
+    "checklist": 0,
+    "materials": 0,
+    "externalLinks": 0,
+    "invoices": 0,
+    "assetAssociations": 0,
+    "interactions": 0,
+    "ticket": {
+      "ticket_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+      "title": "Kansas Farms barn Wi-Fi drops",
+      "status_id": "edd6e44e-45b6-496d-b5d3-d14dc79d8086",
+      "updated_at": "2026-10-26T00:12:03.642+00:00"
+    }
+  },
+  "after": {
+    "tickets": 1,
+    "comments": 0,
+    "checklist": 0,
+    "materials": 0,
+    "externalLinks": 0,
+    "invoices": 0,
+    "assetAssociations": 0,
+    "interactions": 0,
+    "ticket": {
+      "ticket_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+      "title": "Kansas Farms barn Wi-Fi drops",
+      "status_id": "edd6e44e-45b6-496d-b5d3-d14dc79d8086",
+      "updated_at": "2026-10-26T00:12:03.642+00:00"
+    }
+  }
+}

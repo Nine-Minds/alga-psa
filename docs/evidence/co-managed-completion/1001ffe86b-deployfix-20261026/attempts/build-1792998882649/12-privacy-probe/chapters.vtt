@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:02.481 --> 00:00:08.341
+Entry: the composer opens on "Shared IT teams" and Alice posts without touching it
+
+2
+00:00:08.341 --> 00:00:11.083
+Entry: re-selecting the displayed "Shared IT teams" (the original probe step) posts the same audience
+
+3
+00:00:11.083 --> 00:00:13.814
+Entry: a "Private to White Rabbit IT" note is stored organization-private
+
+4
+00:00:13.814 --> 00:00:18.201
+Grid: the bento composer highlights "Shared IT teams" and posts it
+
+5
+00:00:18.201 --> 00:00:22.808
+Positive control: a "Requester and IT teams" reply is requester-visible and mailed to the requester
+
+6
+00:00:22.808 --> 00:00:25.181
+Delivery: the requester receives only the requester reply (database rows and SMTP sink)
+
+7
+00:00:25.181 --> 00:00:28.470
+Reload: the timeline keeps each note under its audience

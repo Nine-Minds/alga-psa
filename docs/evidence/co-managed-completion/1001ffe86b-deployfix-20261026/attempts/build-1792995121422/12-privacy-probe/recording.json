@@ -1,0 +1,529 @@
+{
+  "scenario": "12-privacy-probe",
+  "recordedAt": "2026-10-26T06:40:55.922Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-23862757",
+    "revision": "238627579d5143cbfafb52a4ab82ab5b2a4ed135+da39a3ee5e6b",
+    "buildId": "build-1792995121422"
+  },
+  "assertions": [
+    {
+      "id": "ticket-requester-is-the-probe-contact",
+      "passed": true,
+      "at": "2026-10-26T06:40:56.878Z",
+      "data": {
+        "ticket_number": "000016",
+        "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+        "email": "cm-review-20261026-12-b.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "entry-default-audience-shown",
+      "passed": true,
+      "at": "2026-10-26T06:41:05.901Z",
+      "data": {
+        "shown": "Shared IT teams"
+      }
+    },
+    {
+      "id": "entry-default-stored-shared-it-internal",
+      "passed": true,
+      "at": "2026-10-26T06:41:06.227Z",
+      "data": {
+        "comment_id": "8b498d83-e22f-470b-b824-6e10097f76c3",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:06.081+00:00",
+        "thread_id": "8b498d83-e22f-470b-b824-6e10097f76c3",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "id": "entry-reselected-stored-shared-it-internal",
+      "passed": true,
+      "at": "2026-10-26T06:41:09.671Z",
+      "data": {
+        "shown": "Shared IT teams",
+        "comment_id": "88a2b064-ad99-4c1b-9501-178a51b448dd",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:08.804+00:00",
+        "thread_id": "88a2b064-ad99-4c1b-9501-178a51b448dd",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "id": "entry-private-stored-organization-private",
+      "passed": true,
+      "at": "2026-10-26T06:41:12.268Z",
+      "data": {
+        "shown": "Private to White Rabbit IT",
+        "comment_id": "0cf7089d-5b6a-4f36-bd9e-2ac66c2d9b1e",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:12.137+00:00",
+        "thread_id": "0cf7089d-5b6a-4f36-bd9e-2ac66c2d9b1e",
+        "collaboration_audience": "organization_private",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "id": "grid-shared-it-lane-selected-by-default",
+      "passed": true,
+      "at": "2026-10-26T06:41:16.120Z"
+    },
+    {
+      "id": "grid-stored-shared-it-internal",
+      "passed": true,
+      "at": "2026-10-26T06:41:16.440Z",
+      "data": {
+        "comment_id": "3b5d9e79-59d5-4207-8753-9dd54669c5dc",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:16.3+00:00",
+        "thread_id": "3b5d9e79-59d5-4207-8753-9dd54669c5dc",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "id": "requester-reply-stored-requester-visible",
+      "passed": true,
+      "at": "2026-10-26T06:41:20.806Z",
+      "data": {
+        "shown": "Requester and IT teams",
+        "comment_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+        "is_internal": false,
+        "created_at": "2026-10-26T06:41:20.643+00:00",
+        "thread_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+        "collaboration_audience": "requester",
+        "thread_is_internal": false
+      }
+    },
+    {
+      "id": "default-no-requester-delivery-row",
+      "passed": true,
+      "at": "2026-10-26T06:41:21.916Z",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "id": "reselected-no-requester-delivery-row",
+      "passed": true,
+      "at": "2026-10-26T06:41:22.209Z",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "id": "private-no-requester-delivery-row",
+      "passed": true,
+      "at": "2026-10-26T06:41:22.521Z",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "id": "grid-no-requester-delivery-row",
+      "passed": true,
+      "at": "2026-10-26T06:41:22.811Z",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "id": "smtp-sink-nothing-for-requester-from-shared-it-notes",
+      "passed": true,
+      "at": "2026-10-26T06:41:22.830Z",
+      "data": [
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        }
+      ]
+    },
+    {
+      "id": "requester-reply-reached-requester",
+      "passed": true,
+      "at": "2026-10-26T06:41:23.141Z",
+      "data": {
+        "comment": {
+          "comment_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+          "is_internal": false,
+          "created_at": "2026-10-26T06:41:20.643+00:00",
+          "thread_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+          "collaboration_audience": "requester",
+          "thread_is_internal": false
+        },
+        "deliveries": {
+          "requester": [
+            {
+              "delivery_key": "co-managed-requester-comment:c64b2666-7dd6-4c61-8ced-4b233f628e61:81245210-accc-40ad-afaa-6680a85a75b0:2ef238bf-306a-4c0c-87b9-a45ead17f528:498984b7-3950-5116-a6df-504ec391c2d9:email",
+              "recipient_kind": "requester_contact",
+              "status": "delivered"
+            }
+          ],
+          "native": []
+        },
+        "requesterMails": [
+          {
+            "to": [
+              "cm-review-20261026-12-b.requester@whiterabbit.test"
+            ],
+            "subject": "New comment on a ticket",
+            "receivedAt": "2026-10-26T06:41:20.987Z"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T06:40:55.975Z",
+      "seconds": 0.053,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-23862757",
+        "revision": "238627579d5143cbfafb52a4ab82ab5b2a4ed135+da39a3ee5e6b",
+        "buildId": "build-1792995121422",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T06:40:56.878Z",
+      "seconds": 0.956,
+      "title": "ticket-requester-is-the-probe-contact",
+      "data": {
+        "ticket_number": "000016",
+        "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+        "email": "cm-review-20261026-12-b.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T06:40:59.095Z",
+      "seconds": 3.173,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T06:40:59.095Z",
+      "seconds": 3.173,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Entry: the composer opens on \"Shared IT teams\" and Alice posts without touching it"
+    },
+    {
+      "at": "2026-10-26T06:41:02.595Z",
+      "seconds": 6.673,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T06:41:05.901Z",
+      "seconds": 9.979,
+      "actor": "alice",
+      "title": "entry-default-audience-shown",
+      "data": {
+        "shown": "Shared IT teams"
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:06.228Z",
+      "seconds": 10.306,
+      "actor": "alice",
+      "title": "entry-default-stored-shared-it-internal",
+      "data": {
+        "comment_id": "8b498d83-e22f-470b-b824-6e10097f76c3",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:06.081+00:00",
+        "thread_id": "8b498d83-e22f-470b-b824-6e10097f76c3",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:06.228Z",
+      "seconds": 10.306,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Entry: re-selecting the displayed \"Shared IT teams\" (the original probe step) posts the same audience"
+    },
+    {
+      "at": "2026-10-26T06:41:09.671Z",
+      "seconds": 13.749,
+      "actor": "alice",
+      "title": "entry-reselected-stored-shared-it-internal",
+      "data": {
+        "shown": "Shared IT teams",
+        "comment_id": "88a2b064-ad99-4c1b-9501-178a51b448dd",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:08.804+00:00",
+        "thread_id": "88a2b064-ad99-4c1b-9501-178a51b448dd",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:09.672Z",
+      "seconds": 13.75,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Entry: a \"Private to White Rabbit IT\" note is stored organization-private"
+    },
+    {
+      "at": "2026-10-26T06:41:12.268Z",
+      "seconds": 16.346,
+      "actor": "alice",
+      "title": "entry-private-stored-organization-private",
+      "data": {
+        "shown": "Private to White Rabbit IT",
+        "comment_id": "0cf7089d-5b6a-4f36-bd9e-2ac66c2d9b1e",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:12.137+00:00",
+        "thread_id": "0cf7089d-5b6a-4f36-bd9e-2ac66c2d9b1e",
+        "collaboration_audience": "organization_private",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:12.268Z",
+      "seconds": 16.346,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Grid: the bento composer highlights \"Shared IT teams\" and posts it"
+    },
+    {
+      "at": "2026-10-26T06:41:16.120Z",
+      "seconds": 20.198,
+      "actor": "alice",
+      "title": "grid-shared-it-lane-selected-by-default"
+    },
+    {
+      "at": "2026-10-26T06:41:16.440Z",
+      "seconds": 20.518,
+      "actor": "alice",
+      "title": "grid-stored-shared-it-internal",
+      "data": {
+        "comment_id": "3b5d9e79-59d5-4207-8753-9dd54669c5dc",
+        "is_internal": true,
+        "created_at": "2026-10-26T06:41:16.3+00:00",
+        "thread_id": "3b5d9e79-59d5-4207-8753-9dd54669c5dc",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:16.441Z",
+      "seconds": 20.519,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Positive control: a \"Requester and IT teams\" reply is requester-visible and mailed to the requester"
+    },
+    {
+      "at": "2026-10-26T06:41:20.806Z",
+      "seconds": 24.884,
+      "actor": "alice",
+      "title": "requester-reply-stored-requester-visible",
+      "data": {
+        "shown": "Requester and IT teams",
+        "comment_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+        "is_internal": false,
+        "created_at": "2026-10-26T06:41:20.643+00:00",
+        "thread_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+        "collaboration_audience": "requester",
+        "thread_is_internal": false
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:20.806Z",
+      "seconds": 24.884,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Delivery: the requester receives only the requester reply (database rows and SMTP sink)"
+    },
+    {
+      "at": "2026-10-26T06:41:21.916Z",
+      "seconds": 25.995,
+      "actor": "alice",
+      "title": "default-no-requester-delivery-row",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:22.209Z",
+      "seconds": 26.287,
+      "actor": "alice",
+      "title": "reselected-no-requester-delivery-row",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:22.521Z",
+      "seconds": 26.599,
+      "actor": "alice",
+      "title": "private-no-requester-delivery-row",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:22.811Z",
+      "seconds": 26.889,
+      "actor": "alice",
+      "title": "grid-no-requester-delivery-row",
+      "data": {
+        "requester": [],
+        "native": []
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:22.830Z",
+      "seconds": 26.908,
+      "actor": "alice",
+      "title": "smtp-sink-nothing-for-requester-from-shared-it-notes",
+      "data": [
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        },
+        {
+          "marker": "DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1792996855729",
+          "toRequester": 0,
+          "anyRecipient": []
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T06:41:23.141Z",
+      "seconds": 27.219,
+      "actor": "alice",
+      "title": "requester-reply-reached-requester",
+      "data": {
+        "comment": {
+          "comment_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+          "is_internal": false,
+          "created_at": "2026-10-26T06:41:20.643+00:00",
+          "thread_id": "2ef238bf-306a-4c0c-87b9-a45ead17f528",
+          "collaboration_audience": "requester",
+          "thread_is_internal": false
+        },
+        "deliveries": {
+          "requester": [
+            {
+              "delivery_key": "co-managed-requester-comment:c64b2666-7dd6-4c61-8ced-4b233f628e61:81245210-accc-40ad-afaa-6680a85a75b0:2ef238bf-306a-4c0c-87b9-a45ead17f528:498984b7-3950-5116-a6df-504ec391c2d9:email",
+              "recipient_kind": "requester_contact",
+              "status": "delivered"
+            }
+          ],
+          "native": []
+        },
+        "requesterMails": [
+          {
+            "to": [
+              "cm-review-20261026-12-b.requester@whiterabbit.test"
+            ],
+            "subject": "New comment on a ticket",
+            "receivedAt": "2026-10-26T06:41:20.987Z"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T06:41:23.142Z",
+      "seconds": 27.22,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Reload: the timeline keeps each note under its audience"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 3.173,
+      "title": "Entry: the composer opens on \"Shared IT teams\" and Alice posts without touching it",
+      "end": 10.306
+    },
+    {
+      "start": 10.306,
+      "title": "Entry: re-selecting the displayed \"Shared IT teams\" (the original probe step) posts the same audience",
+      "end": 13.75
+    },
+    {
+      "start": 13.75,
+      "title": "Entry: a \"Private to White Rabbit IT\" note is stored organization-private",
+      "end": 16.346
+    },
+    {
+      "start": 16.346,
+      "title": "Grid: the bento composer highlights \"Shared IT teams\" and posts it",
+      "end": 20.519
+    },
+    {
+      "start": 20.519,
+      "title": "Positive control: a \"Requester and IT teams\" reply is requester-visible and mailed to the requester",
+      "end": 24.884
+    },
+    {
+      "start": 24.884,
+      "title": "Delivery: the requester receives only the requester reply (database rows and SMTP sink)",
+      "end": 27.22
+    },
+    {
+      "start": 27.22,
+      "title": "Reload: the timeline keeps each note under its audience",
+      "end": 30.349999999999998
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Shared IT and private notes may still notify MSP/customer technicians; only requester delivery is asserted absent."
+  ],
+  "durationSeconds": 30.4,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

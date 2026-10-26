@@ -1,0 +1,356 @@
+{
+  "prices": [
+    {
+      "price_id": "2398a0c0-48c5-4689-9957-cb13d4f67d44",
+      "currency_code": "USD",
+      "rate": 10000,
+      "effective_date": "1970-01-01"
+    }
+  ],
+  "contract": {
+    "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+    "is_active": false,
+    "status": "pending",
+    "end_date": null,
+    "contract_status": "active",
+    "currency_code": "USD"
+  },
+  "entries": [
+    {
+      "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "2888e49a-4670-416d-8536-0720b483204f",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "d52924b9-b13e-4432-98c9-749ddef8870d",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "billable_duration": 1,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "715aaae6-f601-410c-9503-53170b1ca849",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "87568b45-b19d-48ae-bbf6-7762a07394d5",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "c8a7659c-88de-4c61-a6ea-58e440d02175",
+      "billable_duration": 15,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    },
+    {
+      "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+      "billable_duration": 6,
+      "invoiced": true,
+      "approval_status": "APPROVED",
+      "work_item_type": "co_managed"
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_id": "74d3c735-1184-4ec2-999b-49a1d07feb5c",
+      "invoice_number": "INV-000002",
+      "status": "draft",
+      "subtotal": 21002,
+      "tax": 0,
+      "total_amount": 21002,
+      "currency_code": "USD",
+      "created_at": "2026-10-26T03:44:46.605361+00:00"
+    }
+  ],
+  "oldDraftCharges": [
+    {
+      "item_id": "02aa2700-a546-4aaa-8f80-31aeda49c058",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "05245293-8a3a-4631-9618-3be08275ec42",
+      "description": "Basic Support",
+      "quantity": 0.1,
+      "unit_price": 10000,
+      "net_amount": 1000,
+      "tax_amount": 0,
+      "total_price": 1000,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "13d235be-e6d7-4f95-99f4-43300c090534",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "16ffb62a-dbfd-4cde-9788-bdc7dee575c8",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "1d697c84-a3cc-471d-bbab-bf58f37bae76",
+      "description": "Basic Support",
+      "quantity": 0.1,
+      "unit_price": 10000,
+      "net_amount": 1000,
+      "tax_amount": 0,
+      "total_price": 1000,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "20baa514-cf10-4d69-b103-398dc3e87b6f",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "23ae14f7-d870-4f60-8b41-2a5c82bb9e41",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "2587d9bc-87f7-4d3e-bde3-c507cf586a50",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "5e2d5608-3198-4219-a784-92e214ca9bbd",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "641fb490-11f5-41a0-abae-0cee3ebf3993",
+      "description": "Basic Support",
+      "quantity": 0.1,
+      "unit_price": 10000,
+      "net_amount": 1000,
+      "tax_amount": 0,
+      "total_price": 1000,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "93d40413-d402-4457-9896-27dbd8a75289",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "a0cb29f6-1db9-4b6d-9a90-7856f57dd6cc",
+      "description": "Basic Support",
+      "quantity": 0.1,
+      "unit_price": 10000,
+      "net_amount": 1000,
+      "tax_amount": 0,
+      "total_price": 1000,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "b7b2c8f5-abb3-4853-99d6-30143eac0f38",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "cc2de6a8-9766-4daf-acd8-00cbfe161358",
+      "description": "Basic Support",
+      "quantity": 0.016667,
+      "unit_price": 10000,
+      "net_amount": 167,
+      "tax_amount": 0,
+      "total_price": 167,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "d875735e-afde-4dc5-b2b6-03cc3ff17398",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "e1f530b6-6932-4c35-a765-744ac55bfab1",
+      "description": "Basic Support",
+      "quantity": 0.1,
+      "unit_price": 10000,
+      "net_amount": 1000,
+      "tax_amount": 0,
+      "total_price": 1000,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    },
+    {
+      "item_id": "f4738682-25f9-49d8-9b40-62182c24ddc1",
+      "description": "Basic Support",
+      "quantity": 0.25,
+      "unit_price": 10000,
+      "net_amount": 2500,
+      "tax_amount": 0,
+      "total_price": 2500,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+    }
+  ],
+  "oldDraftSources": [
+    "2888e49a-4670-416d-8536-0720b483204f",
+    "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+    "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+    "3b2deed8-b692-41d4-a8eb-211a6876189a",
+    "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+    "702f57e7-4040-44c6-af4b-14d7defff6ae",
+    "715aaae6-f601-410c-9503-53170b1ca849",
+    "802d1a8a-25e6-49a6-91c6-24052843e843",
+    "87568b45-b19d-48ae-bbf6-7762a07394d5",
+    "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+    "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+    "c8a7659c-88de-4c61-a6ea-58e440d02175",
+    "d52924b9-b13e-4432-98c9-749ddef8870d",
+    "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+    "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+    "f22d39e6-e5a3-4354-b41d-48d204a55286",
+    "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+  ],
+  "line": {
+    "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+    "minimum_billable_time": 15,
+    "round_up_to_nearest": 15
+  },
+  "serviceConfig": [
+    {
+      "config_id": "1df5ccc3-718d-4d09-987e-e6f6f4ec824c",
+      "custom_rate": null,
+      "hourly_rate": 10000,
+      "minimum_billable_time": 0,
+      "round_up_to_nearest": 0
+    }
+  ]
+}

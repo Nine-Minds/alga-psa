@@ -1,0 +1,223 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing&subtab=drafts&invoiceId=492d46aa-b120-4bbd-973d-819427450461",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n6\nQT\nBilling\nInvoicing\nGenerate\nDrafts\nFinalized\nProject Billing\n3 columns hidden.\nShow all\n\t\nInvoice Number\n\t\nClient\n\t\nAmount\n\t\nActions\n\n\n\t\nINV-000003\n\t\nWhite Rabbit\n\t\n$425.00\n\t\nInvoice Details\n\nEdit draft invoice metadata before finalizing.\n\nInvoice Number\nStatus\nDraft\nInvoice Date\nDue Date\nClient\nWhite Rabbit\nAmount\n$425.00\nCancel\nSave\nInvoice Preview\nTax: Internal\nDetailed Template (Standard)\nFinalize Invoice\nDownload PDF\nReverse Draft\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\nBasic Support\n\nOz\n\nINVOICE\n\nInvoice #:\nINV-000003\nIssue Date:\n26/10/2026\nDue Date:\n25/11/2026\nPO #:\n-\n\nFrom\n\nOz\n\nBill To\n\nWhite Rabbit\n\n42 Rabbit Hole Lane, Underland Woods, Wonderland, WND, 1234, United Kingdom\n\nDescription\tQty\tRate\tAmount\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nSubtotal\n$425.00\nTax\n$0.00\nTotal\n$425.00",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "6",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3p_-trigger-0",
+      "text": "Generate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3p_-trigger-1",
+      "text": "Drafts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3p_-trigger-2",
+      "text": "Finalized",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3p_-trigger-3",
+      "text": "Project Billing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-all-drafts",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-492d46aa-b120-4bbd-973d-819427450461",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-row-actions-492d46aa-b120-4bbd-973d-819427450461",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-invoice-number-input",
+      "text": "",
+      "value": "INV-000003",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-invoice-date-input",
+      "text": "",
+      "value": "10/26/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "draft-due-date-input",
+      "text": "",
+      "value": "11/25/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-invoice-details-cancel",
+      "text": "Cancel",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "draft-invoice-details-save",
+      "text": "Save",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_5a_",
+      "text": " Detailed Template (Standard)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-finalize",
+      "text": "Finalize Invoice",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-download-pdf",
+      "text": "Download PDF",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "invoice-reverse-draft-button",
+      "text": "Reverse Draft",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,704 @@
+{
+  "scenario": "09-billing",
+  "recordedAt": "2026-10-26T08:28:18.963Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-1001ffe86",
+    "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+    "buildId": "build-1793002032501"
+  },
+  "assertions": [
+    {
+      "id": "setup-17-co-managed-entries-on-the-line",
+      "passed": true,
+      "at": "2026-10-26T08:28:20.199Z",
+      "data": {
+        "count": 17
+      }
+    },
+    {
+      "id": "setup-contract-terms-15-15-and-100-per-hour",
+      "passed": true,
+      "at": "2026-10-26T08:28:20.341Z",
+      "data": {
+        "line": {
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "minimum_billable_time": 15,
+          "round_up_to_nearest": 15
+        },
+        "serviceConfig": [
+          {
+            "config_id": "1df5ccc3-718d-4d09-987e-e6f6f4ec824c",
+            "custom_rate": null,
+            "hourly_rate": 10000,
+            "minimum_billable_time": 0,
+            "round_up_to_nearest": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "workaround-price-removed",
+      "passed": true,
+      "at": "2026-10-26T08:28:20.642Z",
+      "data": {
+        "after": [],
+        "removedIn": "attempt 1 on this build"
+      }
+    },
+    {
+      "id": "old-draft-reversed-and-entries-released",
+      "passed": true,
+      "at": "2026-10-26T08:28:23.137Z",
+      "data": {
+        "oldDraft": []
+      }
+    },
+    {
+      "id": "contract-restored",
+      "passed": true,
+      "at": "2026-10-26T08:28:25.702Z",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending",
+        "end_date": null,
+        "contract_status": "active",
+        "currency_code": "USD"
+      }
+    },
+    {
+      "id": "billing-email-set-for-generation",
+      "passed": true,
+      "at": "2026-10-26T08:28:28.157Z",
+      "data": {
+        "before": ""
+      }
+    },
+    {
+      "id": "preview-shows-425-and-no-missing-pricing",
+      "passed": true,
+      "at": "2026-10-26T08:28:39.529Z",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nSubtotal\t$425.00\nTax\t$0.00\nTotal\t$425.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "id": "db-invoice-subtotal-and-total-exactly-425",
+      "passed": true,
+      "at": "2026-10-26T08:28:41.161Z",
+      "data": {
+        "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500,
+        "currency_code": "USD",
+        "created_at": "2026-10-26T08:28:39.664389+00:00"
+      }
+    },
+    {
+      "id": "db-17-charges-each-15-minutes-at-100-is-25",
+      "passed": true,
+      "at": "2026-10-26T08:28:41.162Z",
+      "data": {
+        "charges": [
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ]
+        ]
+      }
+    },
+    {
+      "id": "db-every-entry-invoiced-once-on-this-draft",
+      "passed": true,
+      "at": "2026-10-26T08:28:43.477Z",
+      "data": {
+        "sources": 17
+      }
+    },
+    {
+      "id": "db-no-catalog-price-was-used",
+      "passed": true,
+      "at": "2026-10-26T08:28:43.748Z",
+      "data": {
+        "prices": []
+      }
+    },
+    {
+      "id": "ui-new-draft-shows-exact-amounts",
+      "passed": true,
+      "at": "2026-10-26T08:28:49.230Z",
+      "data": {
+        "number": "INV-000003"
+      }
+    },
+    {
+      "id": "no-ready-row-for-the-invoiced-time",
+      "passed": true,
+      "at": "2026-10-26T08:28:58.611Z",
+      "data": {
+        "ready": 0
+      }
+    },
+    {
+      "id": "one-draft-carries-the-time",
+      "passed": true,
+      "at": "2026-10-26T08:28:58.891Z",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft",
+          "subtotal": 42500,
+          "tax": 0,
+          "total_amount": 42500,
+          "currency_code": "USD",
+          "created_at": "2026-10-26T08:28:39.664389+00:00"
+        }
+      ]
+    },
+    {
+      "id": "restore-contract-terminated-draft-kept-billing-email-restored",
+      "passed": true,
+      "at": "2026-10-26T08:29:04.042Z",
+      "data": {
+        "contract": {
+          "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+          "is_active": false,
+          "status": "pending",
+          "end_date": null,
+          "contract_status": "active",
+          "currency_code": "USD"
+        },
+        "billingEmail": ""
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T08:28:19.012Z",
+      "seconds": 0.049,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-1001ffe86",
+        "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+        "buildId": "build-1793002032501",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:20.199Z",
+      "seconds": 1.236,
+      "title": "setup-17-co-managed-entries-on-the-line",
+      "data": {
+        "count": 17
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:20.341Z",
+      "seconds": 1.378,
+      "title": "setup-contract-terms-15-15-and-100-per-hour",
+      "data": {
+        "line": {
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "minimum_billable_time": 15,
+          "round_up_to_nearest": 15
+        },
+        "serviceConfig": [
+          {
+            "config_id": "1df5ccc3-718d-4d09-987e-e6f6f4ec824c",
+            "custom_rate": null,
+            "hourly_rate": 10000,
+            "minimum_billable_time": 0,
+            "round_up_to_nearest": 0
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:20.341Z",
+      "seconds": 1.378,
+      "title": "chapter",
+      "data": "Remove the catalog-price workaround (stored USD price for Basic Support)"
+    },
+    {
+      "at": "2026-10-26T08:28:20.642Z",
+      "seconds": 1.679,
+      "title": "workaround-price-removed",
+      "data": {
+        "after": [],
+        "removedIn": "attempt 1 on this build"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:22.581Z",
+      "seconds": 3.618,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:22.581Z",
+      "seconds": 3.618,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Reverse the phantom-priced draft INV-000002 through the invoice page"
+    },
+    {
+      "at": "2026-10-26T08:28:23.137Z",
+      "seconds": 4.174,
+      "actor": "qa",
+      "title": "old-draft-reversed-and-entries-released",
+      "data": {
+        "oldDraft": []
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:23.137Z",
+      "seconds": 4.174,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore the White Rabbit hourly contract"
+    },
+    {
+      "at": "2026-10-26T08:28:25.160Z",
+      "seconds": 6.197,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T08:28:25.702Z",
+      "seconds": 6.739,
+      "actor": "qa",
+      "title": "contract-restored",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending",
+        "end_date": null,
+        "contract_status": "active",
+        "currency_code": "USD"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:25.702Z",
+      "seconds": 6.739,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Give White Rabbit a billing email (required to issue an invoice; cleared again at the end)"
+    },
+    {
+      "at": "2026-10-26T08:28:27.790Z",
+      "seconds": 8.827,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T08:28:28.157Z",
+      "seconds": 9.194,
+      "actor": "qa",
+      "title": "billing-email-set-for-generation",
+      "data": {
+        "before": ""
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:28.157Z",
+      "seconds": 9.194,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Generate from Automatic Invoices with no catalog price: the contract rate and 15-minute terms price the time"
+    },
+    {
+      "at": "2026-10-26T08:28:30.094Z",
+      "seconds": 11.131,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T08:28:39.529Z",
+      "seconds": 20.566,
+      "actor": "qa",
+      "title": "preview-shows-425-and-no-missing-pricing",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nSubtotal\t$425.00\nTax\t$0.00\nTotal\t$425.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:41.161Z",
+      "seconds": 22.198,
+      "actor": "qa",
+      "title": "db-invoice-subtotal-and-total-exactly-425",
+      "data": {
+        "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500,
+        "currency_code": "USD",
+        "created_at": "2026-10-26T08:28:39.664389+00:00"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:41.162Z",
+      "seconds": 22.199,
+      "actor": "qa",
+      "title": "db-17-charges-each-15-minutes-at-100-is-25",
+      "data": {
+        "charges": [
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ],
+          [
+            0.25,
+            10000,
+            2500
+          ]
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:43.477Z",
+      "seconds": 24.514,
+      "actor": "qa",
+      "title": "db-every-entry-invoiced-once-on-this-draft",
+      "data": {
+        "sources": 17
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:43.748Z",
+      "seconds": 24.785,
+      "actor": "qa",
+      "title": "db-no-catalog-price-was-used",
+      "data": {
+        "prices": []
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:43.748Z",
+      "seconds": 24.785,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Open the new draft: the UI shows $425.00, 0.25 h lines at $100.00, $25.00 each"
+    },
+    {
+      "at": "2026-10-26T08:28:45.669Z",
+      "seconds": 26.706,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/492d46aa-b120-4bbd-973d-819427450461"
+    },
+    {
+      "at": "2026-10-26T08:28:49.230Z",
+      "seconds": 30.267,
+      "actor": "qa",
+      "title": "ui-new-draft-shows-exact-amounts",
+      "data": {
+        "number": "INV-000003"
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:49.231Z",
+      "seconds": 30.268,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Regenerate: Automatic Invoices offers nothing for the same time, so it is not billed twice"
+    },
+    {
+      "at": "2026-10-26T08:28:51.206Z",
+      "seconds": 32.243,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T08:28:58.611Z",
+      "seconds": 39.648,
+      "actor": "qa",
+      "title": "no-ready-row-for-the-invoiced-time",
+      "data": {
+        "ready": 0
+      }
+    },
+    {
+      "at": "2026-10-26T08:28:58.891Z",
+      "seconds": 39.928,
+      "actor": "qa",
+      "title": "one-draft-carries-the-time",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft",
+          "subtotal": 42500,
+          "tax": 0,
+          "total_amount": 42500,
+          "currency_code": "USD",
+          "created_at": "2026-10-26T08:28:39.664389+00:00"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T08:28:58.891Z",
+      "seconds": 39.928,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore: terminate the disposable contract again; the corrected draft is kept"
+    },
+    {
+      "at": "2026-10-26T08:29:00.863Z",
+      "seconds": 41.9,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T08:29:03.108Z",
+      "seconds": 44.145,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T08:29:04.042Z",
+      "seconds": 45.079,
+      "actor": "qa",
+      "title": "restore-contract-terminated-draft-kept-billing-email-restored",
+      "data": {
+        "contract": {
+          "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+          "is_active": false,
+          "status": "pending",
+          "end_date": null,
+          "contract_status": "active",
+          "currency_code": "USD"
+        },
+        "billingEmail": ""
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 1.378,
+      "title": "Remove the catalog-price workaround (stored USD price for Basic Support)",
+      "end": 3.618
+    },
+    {
+      "start": 3.618,
+      "title": "Reverse the phantom-priced draft INV-000002 through the invoice page",
+      "end": 4.174
+    },
+    {
+      "start": 4.174,
+      "title": "Restore the White Rabbit hourly contract",
+      "end": 6.739
+    },
+    {
+      "start": 6.739,
+      "title": "Give White Rabbit a billing email (required to issue an invoice; cleared again at the end)",
+      "end": 9.194
+    },
+    {
+      "start": 9.194,
+      "title": "Generate from Automatic Invoices with no catalog price: the contract rate and 15-minute terms price the time",
+      "end": 24.785
+    },
+    {
+      "start": 24.785,
+      "title": "Open the new draft: the UI shows $425.00, 0.25 h lines at $100.00, $25.00 each",
+      "end": 30.268
+    },
+    {
+      "start": 30.268,
+      "title": "Regenerate: Automatic Invoices offers nothing for the same time, so it is not billed twice",
+      "end": 39.928
+    },
+    {
+      "start": 39.928,
+      "title": "Restore: terminate the disposable contract again; the corrected draft is kept",
+      "end": 45.150000000000006
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "The workaround price row was deleted directly in the database: the service editor has no remove control for a service's only price row and displays the legacy default rate even when no row is stored.",
+    "Draft only; nothing finalized or emailed."
+  ],
+  "durationSeconds": 45.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

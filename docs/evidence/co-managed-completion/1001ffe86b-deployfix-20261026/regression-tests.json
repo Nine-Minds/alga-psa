@@ -1,0 +1,121 @@
+{
+  "candidate": "1001ffe86b",
+  "note": "Regression and mutation runs for the deploy-fix round. 'mutation' = the fix file(s) reverted to HEAD~ (git show) while the tests ran, then restored; each listed test went red.",
+  "runs": [
+    {
+      "name": "composer-async-audience",
+      "command": "cd packages/tickets && npx vitest run src/components/ticket/TicketConversation.audienceComposer.test.tsx src/components/ticket/bento/BentoTimelineTile.audienceComposer.test.tsx",
+      "result": "9 passed; mutation (TicketConversation.tsx + BentoTimelineTile.tsx reverted): 4 failed"
+    },
+    {
+      "name": "provider-and-shared-source-fail-closed",
+      "command": "cd server && npx vitest run src/test/unit/product/coManagedLocalTicketDataSource.test.tsx src/test/unit/product/coManagedSharedTicketDataSource.test.tsx",
+      "result": "42 passed; mutation (CoManagedLocalTicketDataSourceProvider.tsx + sharedTicketDataSource.tsx reverted): 5 failed"
+    },
+    {
+      "name": "server-audience-refusal-postgresql",
+      "command": "bootstrap suite -t 'names no audience|without a named audience'",
+      "result": "4 passed; mutation (nativeThreadAudience made permissive): 4 failed"
+    },
+    {
+      "name": "billing-contract-terms-compute",
+      "command": "cd packages/billing && npx vitest run src/lib/billing/compute/",
+      "result": "109 passed; mutation (computeTimeBasedCharges.ts reverted): 6 failed (minimum, rounding, $425.00 guide entries, contract over catalog, custom rate fallback, per-service terms)"
+    },
+    {
+      "name": "billing-engine-contract-terms",
+      "command": "cd server && npx vitest run src/test/unit/billing/billingEngine.endExclusiveQueries.test.ts",
+      "result": "6 passed; mutation (billingEngine.ts + calculateContractCharge.ts reverted): T13 engine case failed"
+    },
+    {
+      "name": "client-ended-state",
+      "command": "cd server && npx vitest run src/test/unit/product/coManagedClientManagement.test.tsx src/test/unit/product/coManagedClientIntegration.test.tsx",
+      "result": "43 passed; mutation (CoManagedClientView.tsx + CoManagedClientSummary.tsx reverted): 2 failed"
+    },
+    {
+      "name": "ended-access-and-sla-pages",
+      "command": "cd server && npx vitest run src/test/unit/product/coManagedPolicyPanel.test.tsx src/test/unit/product/coManagedSlaPolicyPanel.test.tsx src/test/unit/product/coManagedSponsorRouteSelection.test.ts",
+      "result": "23 passed; mutation (both panels reverted): 2 failed"
+    },
+    {
+      "name": "read-only-seam",
+      "command": "cd packages/tickets && npx vitest run src/lib/__tests__/ticketDataSourceReadOnly.test.ts src/components/ticket/bento/DocumentsTile.test.tsx src/components/ticket/bento/TicketBentoLayout.capabilities.test.tsx src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx src/components/ticket/bento/dataTiles.callsEmails.test.tsx",
+      "result": "passed; mutations: capability mask/documents tile/Grid layout 3 failed, frozen title 1 failed, schedule link 1 failed"
+    },
+    {
+      "name": "documents-read-only",
+      "command": "cd server && npx vitest run src/test/unit/documents/ticketDocumentsMetadata.test.tsx",
+      "result": "2 passed; mutation (Documents.tsx + TicketDocumentsSection.tsx reverted): 1 failed"
+    },
+    {
+      "name": "ticket-delete-lifecycle-postgresql",
+      "command": "bootstrap suite -t 'refuses to delete a ticket in a read-only'",
+      "result": "1 passed; mutation (deleteTicketChildRecords.ts reverted): 1 failed"
+    },
+    {
+      "name": "ended-workspace-writers-postgresql",
+      "command": "bootstrap suite -t 'refuses checklist, external-link, comment, ticket, asset and document'",
+      "result": "1 passed (optimized comment, checklist add, external-link add, ticket creation, asset association, document link, block document: all CO_MANAGED_READ_ONLY, tables unchanged); mutation (tickets writers reverted): failed; mutation (asset/document writers reverted): failed"
+    },
+    {
+      "name": "vault-lifecycle-gate",
+      "command": "cd ee/server && npx vitest run src/__tests__/unit/credentials",
+      "result": "180 passed (180); mutation (credentialActions.ts reverted): read-only vault case failed"
+    },
+    {
+      "name": "client-ended-default-selection-postgresql",
+      "command": "bootstrap suite (registerCoManagedManagementPolicyTests)",
+      "result": "passed within the full suite"
+    },
+    {
+      "name": "packages-billing-unit",
+      "command": "cd packages/billing && npx vitest run",
+      "result": "1949 passed (1949)"
+    },
+    {
+      "name": "server-unit-product-billing-documents",
+      "command": "cd server && npx vitest run src/test/unit/product/ src/test/unit/billing/ src/test/unit/documents/",
+      "result": "1758 passed, 19 skipped, 1 failed + 1 file error: customerTicketsRows returnTo expectation predates this round (a46feefa6f), taxRateCaps.db requires an explicitly named test database"
+    },
+    {
+      "name": "packages-documents-unit",
+      "command": "cd packages/documents && npx vitest run",
+      "result": "81 passed (81)"
+    },
+    {
+      "name": "ee-credentials-unit",
+      "command": "cd ee/server && npx vitest run src/__tests__/unit/credentials",
+      "result": "179 passed (179)"
+    },
+    {
+      "name": "packages-tickets-unit",
+      "command": "cd packages/tickets && npx vitest run",
+      "result": "1444 passed, 7 failed: boardActions.coManagedDeactivation/portalStatusGuard cannot resolve @alga-psa/core/config/deletion in this vitest environment; neither those tests nor their imports are touched by this round"
+    },
+    {
+      "name": "packages-assets-and-documents-unit",
+      "command": "cd packages/assets && npx vitest run; cd packages/documents && npx vitest run",
+      "result": "assets 249 passed (249); documents 81 passed (81) (after rebuilding the licensing dist for the new lifecycle-error entry)"
+    },
+    {
+      "name": "server-and-ee-unit-for-touched-actions",
+      "command": "server src/test/unit files importing asset/document/checklist/external-link actions; ee unit files importing asset/document actions",
+      "result": "server 180 passed (30 files); ee 147 passed (4 files)"
+    },
+    {
+      "name": "packages-licensing-unit",
+      "command": "cd packages/licensing && npx vitest run",
+      "result": "43 passed (43)"
+    },
+    {
+      "name": "canonical-bootstrap-suite",
+      "command": ". scripts/dev/load-env-local.sh server/.env.local; DB_NAME_SERVER=server_co_managed VITEST_SEED=20260610; cd server && npx vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts",
+      "result": "1487 passed (1487) at 1001ffe86b (also 1487/1487 at 9f87789071)"
+    },
+    {
+      "name": "typecheck",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit (server, inside the board review build); npx tsc --noEmit -p packages/{billing,tickets,co-managed,assets,documents}",
+      "result": "all exit 0. server: board build log 'Typecheck passed for 1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b' (review launcher runs tsc --noEmit with NODE_OPTIONS=--max-old-space-size=12288); packages tickets/assets/documents/licensing at 1001ffe86b; billing and co-managed unchanged since their passing runs this round"
+    }
+  ]
+}

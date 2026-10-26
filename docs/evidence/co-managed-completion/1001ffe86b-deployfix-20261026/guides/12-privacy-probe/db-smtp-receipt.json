@@ -1,0 +1,124 @@
+{
+  "ticket": {
+    "id": "81245210-accc-40ad-afaa-6680a85a75b0",
+    "ticket_number": "000016",
+    "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+    "email": "cm-review-20261026-12-b.requester@whiterabbit.test"
+  },
+  "markers": {
+    "m1": "DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1793003128343",
+    "m2": "DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1793003128343",
+    "m3": "DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1793003128343",
+    "m4": "DEPLOYFIX-REQUESTER-REPLY-FOR-REQUESTER 1793003128343",
+    "m5": "DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1793003128343"
+  },
+  "receipts": {
+    "default": {
+      "comment": {
+        "comment_id": "864eea79-f24a-49cd-a266-e565385e6e5c",
+        "is_internal": true,
+        "created_at": "2026-10-26T08:25:37.18+00:00",
+        "thread_id": "864eea79-f24a-49cd-a266-e565385e6e5c",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      },
+      "deliveries": {
+        "requester": [],
+        "native": []
+      }
+    },
+    "reselected": {
+      "comment": {
+        "comment_id": "3364e119-93ea-46a2-bd76-dbc40a6b6f07",
+        "is_internal": true,
+        "created_at": "2026-10-26T08:25:39.987+00:00",
+        "thread_id": "3364e119-93ea-46a2-bd76-dbc40a6b6f07",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      },
+      "deliveries": {
+        "requester": [],
+        "native": []
+      }
+    },
+    "private": {
+      "comment": {
+        "comment_id": "748eb699-1fad-4518-b904-b68e1ff973b0",
+        "is_internal": true,
+        "created_at": "2026-10-26T08:25:42.744+00:00",
+        "thread_id": "748eb699-1fad-4518-b904-b68e1ff973b0",
+        "collaboration_audience": "organization_private",
+        "thread_is_internal": true
+      },
+      "deliveries": {
+        "requester": [],
+        "native": []
+      }
+    },
+    "grid": {
+      "comment": {
+        "comment_id": "df732709-e4ac-420d-939b-6b4ae101dc38",
+        "is_internal": true,
+        "created_at": "2026-10-26T08:25:47.131+00:00",
+        "thread_id": "df732709-e4ac-420d-939b-6b4ae101dc38",
+        "collaboration_audience": "shared_it",
+        "thread_is_internal": true
+      },
+      "deliveries": {
+        "requester": [],
+        "native": []
+      }
+    },
+    "requesterReply": {
+      "comment": {
+        "comment_id": "8b0898d2-8e40-46cc-b447-1e850d1763d7",
+        "is_internal": false,
+        "created_at": "2026-10-26T08:25:51.746+00:00",
+        "thread_id": "8b0898d2-8e40-46cc-b447-1e850d1763d7",
+        "collaboration_audience": "requester",
+        "thread_is_internal": false
+      },
+      "deliveries": {
+        "requester": [
+          {
+            "delivery_key": "co-managed-requester-comment:c64b2666-7dd6-4c61-8ced-4b233f628e61:81245210-accc-40ad-afaa-6680a85a75b0:8b0898d2-8e40-46cc-b447-1e850d1763d7:e71a0b8e-2a22-5585-97ac-bd17138ece73:email",
+            "recipient_kind": "requester_contact",
+            "status": "delivered"
+          }
+        ],
+        "native": []
+      },
+      "requesterMails": [
+        {
+          "to": [
+            "cm-review-20261026-12-b.requester@whiterabbit.test"
+          ],
+          "subject": "New comment on a ticket",
+          "receivedAt": "2026-10-26T08:25:52.088Z"
+        }
+      ]
+    }
+  },
+  "leakedToRequester": [
+    {
+      "marker": "DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1793003128343",
+      "toRequester": 0,
+      "anyRecipient": []
+    },
+    {
+      "marker": "DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1793003128343",
+      "toRequester": 0,
+      "anyRecipient": []
+    },
+    {
+      "marker": "DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1793003128343",
+      "toRequester": 0,
+      "anyRecipient": []
+    },
+    {
+      "marker": "DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1793003128343",
+      "toRequester": 0,
+      "anyRecipient": []
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "scenario": "10-departure-ended-workspace",
+  "recordedAt": "2026-10-26T07:34:14.818Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-415019b4",
+    "revision": "415019b46c03d1a1a40b9711662adb06d399188d+da39a3ee5e6b",
+    "buildId": "build-1792998882649"
+  },
+  "assertions": [
+    {
+      "id": "access-page-ended-not-load-error",
+      "passed": true,
+      "at": "2026-10-26T07:34:18.990Z",
+      "data": {
+        "text": "Upgrade to AlgaPSA\nExport workspace\nEnd co-management\nCo-managed access\n\nCo-managed IT ended Oct 25, 2026\n\nOz no longer has access. Shared work history is retained and read-only.\n\nOpen Shared work archive\nReload current access"
+      }
+    },
+    {
+      "id": "sla-page-ended-not-load-error",
+      "passed": true,
+      "at": "2026-10-26T07:34:21.033Z"
+    },
+    {
+      "id": "entry-offers-no-write-control",
+      "passed": true,
+      "at": "2026-10-26T07:34:27.162Z",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "id": "grid-offers-no-write-control",
+      "passed": true,
+      "at": "2026-10-26T07:34:29.794Z",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "id": "direct-generateTicketInvoice-refused",
+      "passed": true,
+      "at": "2026-10-26T07:34:32.489Z",
+      "data": {
+        "status": 200,
+        "readOnly": false,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"success\":false,\"code\":\"PERMISSION_DENIED\",\"message\":\"Permission denied: billing create required\",\"error\":\"Permission denied: billing create required\"}\n"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T07:34:14.864Z",
+      "seconds": 0.046,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-415019b4",
+        "revision": "415019b46c03d1a1a40b9711662adb06d399188d+da39a3ee5e6b",
+        "buildId": "build-1792998882649",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:16.909Z",
+      "seconds": 2.091,
+      "actor": "kansas",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:16.909Z",
+      "seconds": 2.091,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Kansas admin: access and SLA pages show the ended state instead of \"Could not load access settings\""
+    },
+    {
+      "at": "2026-10-26T07:34:18.893Z",
+      "seconds": 4.075,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T07:34:18.990Z",
+      "seconds": 4.172,
+      "actor": "kansas",
+      "title": "access-page-ended-not-load-error",
+      "data": {
+        "text": "Upgrade to AlgaPSA\nExport workspace\nEnd co-management\nCo-managed access\n\nCo-managed IT ended Oct 25, 2026\n\nOz no longer has access. Shared work history is retained and read-only.\n\nOpen Shared work archive\nReload current access"
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:20.981Z",
+      "seconds": 6.163,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/co-management/sla"
+    },
+    {
+      "at": "2026-10-26T07:34:21.033Z",
+      "seconds": 6.215,
+      "actor": "kansas",
+      "title": "sla-page-ended-not-load-error"
+    },
+    {
+      "at": "2026-10-26T07:34:21.033Z",
+      "seconds": 6.215,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions"
+    },
+    {
+      "at": "2026-10-26T07:34:24.482Z",
+      "seconds": 9.664,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T07:34:27.162Z",
+      "seconds": 12.344,
+      "actor": "kansas",
+      "title": "entry-offers-no-write-control",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:29.794Z",
+      "seconds": 14.976,
+      "actor": "kansas",
+      "title": "grid-offers-no-write-control",
+      "data": {
+        "found": []
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:29.794Z",
+      "seconds": 14.976,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Direct writes behind the hidden controls are refused by the server; nothing changes"
+    },
+    {
+      "at": "2026-10-26T07:34:30.026Z",
+      "seconds": 15.208,
+      "actor": "kansas",
+      "title": "server-action-ids",
+      "data": {
+        "createAssetAssociation": "7f897c707ac944f829752aa7d1572871995892f633",
+        "deleteTicket": "7f4a5dcaeca0ed3f058781af76924150ded0e6d05a",
+        "addTicket": "7f68ce2c247b42ab6ea35cbe1399df78e4818e6f6c",
+        "addTicketCommentWithCache": "7fed4477000204a61c91779fdd89fc656817ad1e1e",
+        "createComment": "7f69f9e21dc3c489ba7da242248762921d9d513ba1",
+        "generateTicketInvoice": "7f5975f827a7612ade3bedc51aeb9b385fc4b87cbf",
+        "addChecklistItem": "7fb0755b6f28af22a491681785dc6a1b6182f0fd2c",
+        "addExternalLink": "7f9a08753119eaf8425f84ee7e59f798779983a39e",
+        "addTicketMaterial": "7f05f1e9014c047488bd987a053a23f3f9f0797357"
+      }
+    },
+    {
+      "at": "2026-10-26T07:34:32.489Z",
+      "seconds": 17.671,
+      "actor": "kansas",
+      "title": "direct-generateTicketInvoice-refused",
+      "data": {
+        "status": 200,
+        "readOnly": false,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792998882649\"}\n1:{\"success\":false,\"code\":\"PERMISSION_DENIED\",\"message\":\"Permission denied: billing create required\",\"error\":\"Permission denied: billing create required\"}\n"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.091,
+      "title": "Kansas admin: access and SLA pages show the ended state instead of \"Could not load access settings\"",
+      "end": 6.215
+    },
+    {
+      "start": 6.215,
+      "title": "Kansas ticket in Entry and Grid: no Duplicate, Delete, Create Task, Quick invoice or add actions",
+      "end": 14.976
+    },
+    {
+      "start": 14.976,
+      "title": "Direct writes behind the hidden controls are refused by the server; nothing changes",
+      "end": 18.55
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "direct-addChecklistItem-refused {\"status\":200,\"readOnly\":false,\"body\":\"0:{\\\"a\\\":\\\"$@1\\\",\\\"f\\\":\\\"\\\",\\\"q\\\":\\\"\\\",\\\"i\\\":false,\\\"b\\\":\\\"build-1792998882649\\\"}\\n1:{\\\"tenant\\\":\\\"3261f313-8e04-45df-94bc-0343e92ba454\\\",\\\"checklist_item_id\\\":\\\"8b578a73-8d42-40d3-bb58-92676269762c\\\",\\\"ticket_id\\\":\\\"0a767ca1-0f61-4817-a1af-e8d4183ff402\\\",\\\"item_name\\\":\\\"Di\"}",
+  "durationSeconds": 18.6,
+  "actors": [
+    {
+      "name": "kansas",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

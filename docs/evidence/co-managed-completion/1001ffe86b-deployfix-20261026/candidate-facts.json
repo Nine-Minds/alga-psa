@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-10-26T08:04:08.404Z",
+  "candidate": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
+  "provenance": {
+    "app": {
+      "revision": null
+    },
+    "worker": {
+      "revision": null
+    },
+    "migrations": "sha256:45093475b95a0f8616dd2066983e63df",
+    "config": "sha256:bac51e51904540c60120240d65de27ef",
+    "simulator": "sha256:c4383b99747336d32ad5cba5165d909f",
+    "inputs": {
+      "migrations": [
+        {
+          "path": "server/migrations",
+          "tree": "b5f3404146f62a7f5a183fb0fde6fada5cd2c437"
+        },
+        {
+          "path": "ee/server/migrations",
+          "tree": "83c1856a5dd9d9132391dd9da4c5599c2216b705"
+        }
+      ],
+      "config": [
+        {
+          "path": "docker-compose.yaml",
+          "tree": "8ee152aaa05d1254e37ca1d161522d8176af8e7b"
+        },
+        {
+          "path": "docker-compose.ee.yaml",
+          "tree": "e6a51193c5e744a1a024eec3b03f1ee85f7aae57"
+        },
+        {
+          "path": "docker-compose.e2e-emulators.yaml",
+          "tree": "bb3df55beb7072666dd936df1ed3a88b80dd1195"
+        },
+        {
+          "path": ".env.example",
+          "tree": "dcc4995d53fdbbe53e8d80c550bb45336ba96d23"
+        }
+      ],
+      "simulator": [
+        {
+          "path": "packages/emulators",
+          "tree": "dbda2738114d57f7af857c2e8aebf7606e777ad9"
+        }
+      ]
+    }
+  },
+  "worktreeClean": false,
+  "pr": {
+    "number": 3363,
+    "head": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
+    "state": "OPEN",
+    "isDraft": true
+  },
+  "mergeability": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "checkedAtSha": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca"
+  },
+  "ci": null
+}

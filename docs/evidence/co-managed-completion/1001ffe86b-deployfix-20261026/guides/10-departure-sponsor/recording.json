@@ -1,0 +1,268 @@
+{
+  "scenario": "10-departure-sponsor",
+  "recordedAt": "2026-10-26T08:26:02.492Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-1001ffe86",
+    "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+    "buildId": "build-1793002032501"
+  },
+  "assertions": [
+    {
+      "id": "kansas-relationship-terminated",
+      "passed": true,
+      "at": "2026-10-26T08:26:02.688Z",
+      "data": {
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "id": "kansas-tab-ended-with-date",
+      "passed": true,
+      "at": "2026-10-26T08:26:06.688Z",
+      "data": {
+        "endedOn": "Ended Oct 25, 2026"
+      }
+    },
+    {
+      "id": "kansas-tab-not-enabled-and-setup-absent",
+      "passed": true,
+      "at": "2026-10-26T08:26:06.689Z"
+    },
+    {
+      "id": "kansas-tab-reads-no-live-seat-usage",
+      "passed": true,
+      "at": "2026-10-26T08:26:06.689Z"
+    },
+    {
+      "id": "kansas-tab-links-shared-work-archive",
+      "passed": true,
+      "at": "2026-10-26T08:26:31.695Z"
+    },
+    {
+      "id": "kansas-summary-ended-not-enable",
+      "passed": true,
+      "at": "2026-10-26T08:26:31.697Z",
+      "data": {
+        "summary": "Relationship ended\nEnded Oct 25, 2026\nView history"
+      }
+    },
+    {
+      "id": "archive-page-opens",
+      "passed": true,
+      "at": "2026-10-26T08:26:34.809Z"
+    },
+    {
+      "id": "white-rabbit-tab-active",
+      "passed": true,
+      "at": "2026-10-26T08:26:40.831Z"
+    },
+    {
+      "id": "white-rabbit-summary-active-with-seats-and-manage",
+      "passed": true,
+      "at": "2026-10-26T08:26:40.833Z",
+      "data": {
+        "summary": "Active\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "id": "white-rabbit-tab-exposes-departure",
+      "passed": true,
+      "at": "2026-10-26T08:26:40.833Z"
+    },
+    {
+      "id": "absent-relationship-offers-enable-and-setup",
+      "passed": true,
+      "at": "2026-10-26T08:26:42.840Z",
+      "data": {
+        "summary": "Co-managed IT not enabled\nEnable co-managed IT"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T08:26:02.537Z",
+      "seconds": 0.045,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-1001ffe86",
+        "revision": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca+da39a3ee5e6b",
+        "buildId": "build-1793002032501",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:02.688Z",
+      "seconds": 0.196,
+      "title": "kansas-relationship-terminated",
+      "data": {
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:04.606Z",
+      "seconds": 2.114,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:04.606Z",
+      "seconds": 2.114,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "QA opens Kansas Farms: the Co-managed IT tab shows the ended relationship, not \"not enabled\""
+    },
+    {
+      "at": "2026-10-26T08:26:06.618Z",
+      "seconds": 4.126,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/c1f52e41-5f29-46db-88a8-4341fbbe2868?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T08:26:06.688Z",
+      "seconds": 4.196,
+      "actor": "qa",
+      "title": "kansas-tab-ended-with-date",
+      "data": {
+        "endedOn": "Ended Oct 25, 2026"
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:06.689Z",
+      "seconds": 4.197,
+      "actor": "qa",
+      "title": "kansas-tab-not-enabled-and-setup-absent"
+    },
+    {
+      "at": "2026-10-26T08:26:06.689Z",
+      "seconds": 4.197,
+      "actor": "qa",
+      "title": "kansas-tab-reads-no-live-seat-usage"
+    },
+    {
+      "at": "2026-10-26T08:26:31.695Z",
+      "seconds": 29.203,
+      "actor": "qa",
+      "title": "kansas-tab-links-shared-work-archive"
+    },
+    {
+      "at": "2026-10-26T08:26:31.697Z",
+      "seconds": 29.205,
+      "actor": "qa",
+      "title": "kansas-summary-ended-not-enable",
+      "data": {
+        "summary": "Relationship ended\nEnded Oct 25, 2026\nView history"
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:31.697Z",
+      "seconds": 29.205,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "The Shared work archive opens from the ended relationship"
+    },
+    {
+      "at": "2026-10-26T08:26:34.809Z",
+      "seconds": 32.317,
+      "actor": "qa",
+      "title": "archive-page-opens"
+    },
+    {
+      "at": "2026-10-26T08:26:34.809Z",
+      "seconds": 32.317,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Control: White Rabbit IT stays an active relationship"
+    },
+    {
+      "at": "2026-10-26T08:26:36.768Z",
+      "seconds": 34.277,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T08:26:40.831Z",
+      "seconds": 38.339,
+      "actor": "qa",
+      "title": "white-rabbit-tab-active"
+    },
+    {
+      "at": "2026-10-26T08:26:40.833Z",
+      "seconds": 38.341,
+      "actor": "qa",
+      "title": "white-rabbit-summary-active-with-seats-and-manage",
+      "data": {
+        "summary": "Active\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "at": "2026-10-26T08:26:40.833Z",
+      "seconds": 38.341,
+      "actor": "qa",
+      "title": "white-rabbit-tab-exposes-departure"
+    },
+    {
+      "at": "2026-10-26T08:26:40.834Z",
+      "seconds": 38.342,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Control: a client with no relationship offers Enable and setup"
+    },
+    {
+      "at": "2026-10-26T08:26:42.791Z",
+      "seconds": 40.299,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f2334ed4-1c31-4b4d-b771-80edb684b551?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T08:26:42.840Z",
+      "seconds": 40.348,
+      "actor": "qa",
+      "title": "absent-relationship-offers-enable-and-setup",
+      "data": {
+        "summary": "Co-managed IT not enabled\nEnable co-managed IT"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.114,
+      "title": "QA opens Kansas Farms: the Co-managed IT tab shows the ended relationship, not \"not enabled\"",
+      "end": 29.205
+    },
+    {
+      "start": 29.205,
+      "title": "The Shared work archive opens from the ended relationship",
+      "end": 32.317
+    },
+    {
+      "start": 32.317,
+      "title": "Control: White Rabbit IT stays an active relationship",
+      "end": 38.342
+    },
+    {
+      "start": 38.342,
+      "title": "Control: a client with no relationship offers Enable and setup",
+      "end": 41.230000000000004
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 41.28,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

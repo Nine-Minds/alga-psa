@@ -1,0 +1,46 @@
+[
+  {
+    "evidence": "deployfix-12-privacy-probe",
+    "webm": "guides/12-privacy-probe/walkthrough.webm",
+    "sha256": "baf6f231daf41adca5abcd0ea56bce1726f17a2013348fa1aef49df5cb93dad7",
+    "durationSeconds": 29,
+    "vtt": "guides/12-privacy-probe/chapters.vtt",
+    "vttSha256": "9330e534b91ac86e80f28f732c5a6759c5f9df2f80a68be43d4948c3f386ec2b",
+    "recording": "guides/12-privacy-probe/recording.json",
+    "recordingSha256": "f2cd21e839afd32ca66fd0d31087135c83203d3cfc6d8273ec93a9ebe003b976",
+    "chapters": 7
+  },
+  {
+    "evidence": "deployfix-09-billing",
+    "webm": "guides/09-billing/walkthrough.webm",
+    "sha256": "12853bd5722012d95517401a1cdfef01ff8f0cba3ace294b779bdd93c5784dbb",
+    "durationSeconds": 45.2,
+    "vtt": "guides/09-billing/chapters.vtt",
+    "vttSha256": "0142c2c5eaad324f1c51643cb6040a30f2e21edb587d2e36e91e923adce72e2d",
+    "recording": "guides/09-billing/recording.json",
+    "recordingSha256": "d61bcae7c052d5085149bd5f2369d2f456b2c754c9fda1183bc4a1b191847145",
+    "chapters": 8
+  },
+  {
+    "evidence": "deployfix-10-departure-sponsor",
+    "webm": "guides/10-departure-sponsor/walkthrough.webm",
+    "sha256": "eaecf2a810a0f8fd091add54f98602e7635bd421b0a21aa3656d07ff20427b80",
+    "durationSeconds": 41.28,
+    "vtt": "guides/10-departure-sponsor/chapters.vtt",
+    "vttSha256": "ca8e7aa62dffe59010016f93fed5eae5e3451550490b4dd616b363d77e70e7ae",
+    "recording": "guides/10-departure-sponsor/recording.json",
+    "recordingSha256": "e9ba0bb0b7920c6373022923dedfc6dc8dfb09174629de127a2fc430b776c9a1",
+    "chapters": 4
+  },
+  {
+    "evidence": "deployfix-10-departure-ended-workspace",
+    "webm": "guides/10-departure-ended-workspace/walkthrough.webm",
+    "sha256": "4c6b029fb4a5ad82aea2e5b0e9e8f3fbfcf80dd45f3f62bb187646332ae87fd0",
+    "durationSeconds": 24.28,
+    "vtt": "guides/10-departure-ended-workspace/chapters.vtt",
+    "vttSha256": "d7a3d5d7394adb9e05e9d56dc8a65c83a45eb1ded8f8068f3eb4ffa516c273a6",
+    "recording": "guides/10-departure-ended-workspace/recording.json",
+    "recordingSha256": "625d9c5361f8c6870c3346062b085b0ea27e1b9084df7fb7559563fffeee1073",
+    "chapters": 4
+  }
+]
