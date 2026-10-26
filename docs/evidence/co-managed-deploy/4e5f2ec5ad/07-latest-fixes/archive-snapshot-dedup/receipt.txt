@@ -1,0 +1,17 @@
+# Archive snapshot dedup on a sharing reduction (production build-1793009958637)
+Trigger: Alice switched White Rabbit board_scope -> escalation_only (07-latest-fixes/dormant-board-grants). Snapshot rows captured:
+min	max	count
+2026-10-26 11:01:58.721668+00	2026-10-26 11:01:58.817917+00	22
+(1 row)
+Per DEPLOY-4E5F comment (all retained evidence rows ever):
+marker	event_type	count
+DEPLOY-4E5F-ALICE-REQUESTER-CONTROL	TICKET_COMMENT_ARCHIVED	1
+DEPLOY-4E5F-ALICE-SHARED-IT	TICKET_COMMENT_ARCHIVED	1
+DEPLOY-4E5F-ALICE-SHARED-IT-2	TICKET_COMMENT_ADDED	1
+DEPLOY-4E5F-QA-MSP-PRIVATE	private_comment_create	1
+DEPLOY-4E5F-QA-MSP-PRIVATE-2	private_comment_create	1
+DEPLOY-4E5F-QA-SHARED-IT	TICKET_COMMENT_ADDED	1
+DEPLOY-4E5F-QA-SHARED-IT-2	TICKET_COMMENT_ADDED	1
+(7 rows)
+Expected: live-captured comments (TICKET_COMMENT_ADDED) are NOT snapshotted again; uncaptured shared/requester comments snapshotted once; customer-private notes never captured. Result: PASS (no marker has >1 row).
+Not exercised: departure/closure finalizer path (would require ending a relationship; covered by coManagedBootstrap integration case at this HEAD, 1491/1491).

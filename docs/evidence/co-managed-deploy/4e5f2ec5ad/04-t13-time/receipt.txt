@@ -1,0 +1,8 @@
+# T13 time (production build-1793009958637)
+## customer operational (Alice, White Rabbit IT, shared project task 'CM-REVIEW-20261026-06 final Task A' via native Add time entry; dialog has no service/contract fields)
+tenant	entry_id	work_item_type	work_item_id	service_id	contract_line_id	billable_duration	minutes	approval_status	invoiced
+c64b2666-7dd6-4c61-8ced-4b233f628e61	d54ee563-c88e-490a-80e0-67e042e068f7	project_task	ccbcc459-1986-4226-bf92-f0499093b006			0	10	DRAFT	f
+(1 row)
+## MSP commercial (QA, shared ticket 000016 via Add Time Entry; service Basic Support; contract line resolved only while the client contract is active, otherwise the dialog routes to the system default contract)
+entry b01d616f-6622-4d28-b8e9-a604ec55d2e1 tenant Oz, work_item_type co_managed -> co_managed_time_work_references ticket 000016 customer c64b2666, service 3105a420 Basic Support, contract_line 9e12f69d, billable 30, sheet 206e125c; submitted, approved by QA (disposable team), never offered for billing (see 02-billing FAIL), then deleted during cleanup
+## native billing path: co_managed MSP time billed through the ordinary Automatic Invoices engine (02-billing PASS); customer operational entry carries no service/contract and billable 0, never appears on a sponsor invoice

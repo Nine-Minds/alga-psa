@@ -1,0 +1,17 @@
+# Dormant board grants + stale revision (build-1793009958637)
+## before
+relationship_id	board_id	can_collaborate
+2be5cb32-91e8-491a-9ec4-16ab019c7d40	76cc335e-e600-4e0c-b964-bad0628c6958	t
+(1 row)
+revision 82 board_scope
+## after tab B escalation_only save: revision 83, grant row retained (76cc335e Service Desk, can_collaborate=t); UI note: board access list kept while only escalated tickets are shared
+## stale tab A (loaded rev 82) changed Service Desk Collaborate->View and saved: UI 'Could not confirm the save. Retry the same changes, or reload current access before editing again.'; DB unchanged rev 83, can_collaborate=t
+## QA during escalation_only: un-escalated 000016 -> 'This ticket or access list could not be loaded. Your access may have changed. Restricted ticket'; sponsor access panel shows Escalated tickets only with empty Boards/Projects
+## restored board_scope by Alice (tab B reloaded): now
+visibility_mode	revision
+board_scope	84
+(1 row)
+board_id	can_collaborate
+76cc335e-e600-4e0c-b964-bad0628c6958	t
+(1 row)
+## QA re-admitted: 000016 conversation loads with DEPLOY-4E5F-ALICE-SHARED-IT visible

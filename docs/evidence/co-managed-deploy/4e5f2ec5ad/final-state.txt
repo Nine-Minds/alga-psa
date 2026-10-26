@@ -1,0 +1,37 @@
+# Final fixture state 2026-10-26T11:16:48Z
+relationship_id	state	visibility_mode	revision	ended_at
+ad0808b5-25df-4e95-987a-aa650c8ba24f	terminated	board_scope	3	2026-10-26 00:13:30.705+00
+2be5cb32-91e8-491a-9ec4-16ab019c7d40	active	board_scope	86	
+(2 rows)
+board_id	can_collaborate
+76cc335e-e600-4e0c-b964-bad0628c6958	t
+(1 row)
+allocation_id	seats	state
+573598ea-8bbc-49c7-81b5-98136929182d	1	released
+7e5d128c-b67d-42e2-ac86-adfc03b3b75a	1	active
+(2 rows)
+state	count	sum
+active	4	4
+released	10	10
+(2 rows)
+ticket_number	assigned_to
+000016	
+(1 row)
+is_active	status	end_date
+f	pending	
+(1 row)
+billing_email
+<null>
+(1 row)
+invoice_number	status	total_amount
+INV-000003	draft	42500
+(1 row)
+disposable_teams
+0
+(1 row)
+grant_id	revoked
+8a457942-bcb9-4980-b4f4-7e6a1681bcfc	t
+(1 row)
+approval_status
+CHANGES_REQUESTED
+(1 row)

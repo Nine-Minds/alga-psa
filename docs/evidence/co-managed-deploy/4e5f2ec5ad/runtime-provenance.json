@@ -1,0 +1,28 @@
+{
+  "candidate": "4e5f2ec5adc88469112587bd17329279b4f0ec66",
+  "pr": 3363,
+  "headParity": { "local": "4e5f2ec5ad", "origin/feature/co-managed-it": "4e5f2ec5ad", "prHead": "4e5f2ec5ad", "checkedAt": "2026-10-26T10:17Z" },
+  "reviewApp": {
+    "admission": "board workflow-ensure-service --name=review-app --readinessPort=23374 --readinessPath=/api/health; admitted (created=true, session card-service:964ce5e0-…:review-app:22) at 2026-10-26T10:18:42Z",
+    "priorOccupant": "card-owned suspended review-app (1001ffe86b, build-1793002032501) stopped with run-card-service.sh review-app --stop; its orphaned next-server (pid 2375312, this worktree, dist .next-review-final-1001ffe86) was TERMed to free :23374",
+    "launcher": "scripts/dev/run-co-managed-review-app.sh via run-card-service.sh review-app",
+    "dist": "server/.next-review-final-4e5f2ec5",
+    "buildId": "build-1793009958637",
+    "stamp": "4e5f2ec5adc88469112587bd17329279b4f0ec66+da39a3ee5e6b",
+    "fingerprintNote": "da39a3ee5e6b = empty tracked diff (clean tree) through typecheck, build-deps and next build",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "health": "/api/health 200 after phase=serving",
+    "nextServer": { "pid": 3100930, "startedAt": "2026-10-26T10:33:25Z" },
+    "supervisor": { "pid": 3035857, "childPid": 3035871 }
+  },
+  "workers": {
+    "env": "CO_MANAGED_WORKER_APPLICATION_URL=http://feature-co-managed-it.localhost:23374 bash scripts/dev/generate-co-managed-worker-env.sh (also copied onboarding seeds into ee/temporal-workflows/dist/seeds)",
+    "build": "~/.alga-dev/releases/202610232337-g5429853d2c/scripts/build-service.sh <worktree> ee/temporal-workflows and services/workflow-worker at 4e5f2ec5ad (clean tree)",
+    "coldRestart": "run-card-service.sh <name> --stop, then alga-dev workflow-restart-service",
+    "temporal-worker": { "childPid": 3109157, "supervisorPid": 3109150, "startedAt": "2026-10-26T10:34:45Z", "cwd": "ee/temporal-workflows", "entry": "dist/ee/temporal-workflows/src/worker.js", "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c", "changedModuleSha256": { "dist/packages/co-managed/src/managementPolicy.js (contains canSetUp)": "35b7cef4edcf9fd9e657529b08eabd06453576cae5b856b5708238f79b82c8a7" }, "health": "8375/health healthy, queues RUNNING", "previousChild": 2274989 },
+    "workflow-worker": { "childPid": 3111766, "supervisorPid": 3111761, "startedAt": "2026-10-26T10:35:18Z", "cwd": "services/workflow-worker", "entry": "node --env-file=.env . (dist/services/workflow-worker/src/index.js)", "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1", "health": "4374/health ready; temporal/eventStream/dataStoreSweep true", "previousChild": 2273929 },
+    "entryShaNote": "Entry files are unchanged byte-for-byte from the previous round (incremental tsc rewrites only changed modules); the changed module hash is recorded instead."
+  },
+  "data": { "database": "co-managed-it-postgres 127.0.0.1:5376/server_co_managed", "smtp": "local smtp-sink simulator :3025 (read via :9177/control/smtp-sink/state/emails)", "stripe": "not used", "graph": "not used" },
+  "sessions": "QA via workflow-open-review --service=review-app (signedInAs qa@emeraldcity.oz); Alice, Kansas admin and QA re-sign-ins through the app's own /api/auth/csrf + /api/auth/callback/credentials endpoints in the card browser"
+}

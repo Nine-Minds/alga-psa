@@ -1,0 +1,58 @@
+# T09 receipts (production build-1793009958637, 4e5f2ec5ad+da39a3ee5e6b) captured 2026-10-26T10:50:38Z
+## customer-store comments (owner tenant White Rabbit IT)
+comment_id	is_internal	collaboration_audience	created_at	marker
+0bfa294e-3cc2-4127-94aa-6b981e9b206a	t	shared_it	2026-10-26 10:40:53.908+00	DEPLOY-4E5F-ALICE-SHARED-IT
+6517a423-c850-47f4-8833-6d9bbacc631e	t	organization_private	2026-10-26 10:41:01.139+00	DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE
+29e8d180-b5a6-489f-b826-53e2e8ac48be	f	requester	2026-10-26 10:41:07.45+00	DEPLOY-4E5F-ALICE-REQUESTER-CONTROL
+f05dc1fd-1968-4170-8e41-4f37414ad7dc	t	shared_it	2026-10-26 10:41:54.869+00	DEPLOY-4E5F-QA-SHARED-IT
+0e3e4c54-82d6-4b7d-b783-a02e118afc9b	t	shared_it	2026-10-26 10:44:29.377+00	DEPLOY-4E5F-ALICE-SHARED-IT-2
+b63b6caa-0323-43d6-83b7-8df1de1a56cc	t	organization_private	2026-10-26 10:44:36.099+00	DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE-2
+0f54fa31-e0d1-4898-943a-6734f42628d4	t	shared_it	2026-10-26 10:47:29.077+00	DEPLOY-4E5F-QA-SHARED-IT-2
+(7 rows)
+## MSP-private store (sponsor tenant Oz)
+tenant	comment_id	actor_display_name	actor_organization_name	created_at	marker
+fa7f912f-6b62-463e-85cc-ffedab47ac44	b840096c-5fef-4542-bea0-8659fe7f8968	QA Tester	Oz	2026-10-26 10:42:11.553262+00	DEPLOY-4E5F-QA-MSP-PRIVATE
+fa7f912f-6b62-463e-85cc-ffedab47ac44	b57ec1c2-2630-429b-9c4f-927134fd6d3d	QA Tester	Oz	2026-10-26 10:47:37.491269+00	DEPLOY-4E5F-QA-MSP-PRIVATE-2
+(2 rows)
+## MSP-private markers present in customer store (expect 0)
+count
+0
+(1 row)
+## customer outbox events for MSP-private ids (expect 0)
+count
+0
+(1 row)
+## requester deliveries for all markers
+marker	recipient_kind	status
+DEPLOY-4E5F-ALICE-SHARED-IT		
+DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE		
+DEPLOY-4E5F-ALICE-REQUESTER-CONTROL	requester_contact	delivered
+DEPLOY-4E5F-QA-SHARED-IT		
+DEPLOY-4E5F-ALICE-SHARED-IT-2		
+DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE-2		
+DEPLOY-4E5F-QA-SHARED-IT-2		
+(7 rows)
+## sponsor (MSP) staff email deliveries
+marker	email	audience	status
+DEPLOY-4E5F-ALICE-SHARED-IT-2	qa@emeraldcity.oz	shared_it	delivered
+(1 row)
+## customer staff email deliveries
+marker	email	audience	status
+DEPLOY-4E5F-QA-SHARED-IT-2	alice@whiterabbit.test	shared_it	delivered
+(1 row)
+## in-app notifications since start
+tenant	email	template_name	msg	created_at
+fa7f912f-6b62-463e-85cc-ffedab47ac44	qa@emeraldcity.oz	ticket-comment-added	Alice Liddell (White Rabbit IT) commented on ticket #000016: "DEPLOY-4E5F-ALICE-SHARED-IT-2"	2026-10-26 10:44:29.411768+00
+c64b2666-7dd6-4c61-8ced-4b233f628e61	alice@whiterabbit.test	ticket-assigned	Ticket #000016 "CM-REVIEW-20261026-12-b requester mail ticket" (Low) has been assigned to you by Alice Liddell	2026-10-26 10:47:03.862709+00
+c64b2666-7dd6-4c61-8ced-4b233f628e61	alice@whiterabbit.test	ticket-comment-added	QA Tester (Oz) commented on ticket #000016: "DEPLOY-4E5F-QA-SHARED-IT-2"	2026-10-26 10:47:29.114287+00
+(3 rows)
+## in-app notifications mentioning private markers (expect 0)
+count
+0
+(1 row)
+## SMTP sink (simulator smtp-sink :3025) since start
+2026-10-26T10:41:07.680Z ['cm-review-20261026-12-b.requester@whiterabbit.test'] New comment on a ticket ['ALICE-REQUESTER-CONTROL']
+2026-10-26T10:44:29.926Z ['qa@emeraldcity.oz'] New comment on a shared ticket ['ALICE-SHARED-IT-2']
+2026-10-26T10:47:15.780Z ['alice@whiterabbit.test'] [Ticket #000016] Ticket Assigned • CM-REVIEW-20261026-12-b requester mail ticket (Low) []
+2026-10-26T10:47:15.965Z ['cm-review-20261026-12-b.requester@whiterabbit.test'] [Ticket #000016] Your Ticket Is Being Worked On • CM-REVIEW-20261026-12-b requester mail ticket []
+2026-10-26T10:47:29.318Z ['alice@whiterabbit.test'] New comment on a ticket ['QA-SHARED-IT-2']

@@ -1,0 +1,6 @@
+# Ended Kansas workspace (build-1793009958637) as admin@kansasfarms.test
+Ticket #000001 'Kansas Farms barn Wi-Fi drops' loads (read retained). No Add Comment, no Save Changes, no enabled Delete/Duplicate/Resolve/Create Task/Link/Quick invoice/Add Time Entry/Escalate buttons.
+No direct server-action write probes were sent on this build (UI-level only).
+tickets	comments	checklist	time_entries	relationship
+1	0	0	0	terminated 2026-10-26 00:13:30.705+00
+(1 row)
