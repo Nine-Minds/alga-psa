@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeAnchorSettingsForCycle } from '@alga-psa/shared/billingClients/billingCycleAnchors';
 import type { BillingCycleType } from '@alga-psa/types';
-import { resolveFirstInvoiceDate, type FirstInvoiceClientSchedule } from './firstInvoiceDate';
+import { resolveArrearsFirstInvoiceHint, resolveFirstInvoiceDate, type FirstInvoiceClientSchedule } from './firstInvoiceDate';
 
 function clientSchedule(
   billingCycle: BillingCycleType,
@@ -25,6 +25,10 @@ describe('resolveFirstInvoiceDate — contract cadence', () => {
       invoiceDate: '2025-02-15',
       servicePeriodStart: '2025-01-15',
       servicePeriodEnd: '2025-02-15',
+      servicePeriodEndInclusive: '2025-02-14',
+      schedulePeriodStart: '2025-01-15',
+      schedulePeriodEnd: '2025-02-15',
+      startsMidPeriod: false,
     });
   });
 
@@ -42,6 +46,10 @@ describe('resolveFirstInvoiceDate — contract cadence', () => {
       invoiceDate: '2025-01-15',
       servicePeriodStart: '2025-01-15',
       servicePeriodEnd: '2025-02-15',
+      servicePeriodEndInclusive: '2025-02-14',
+      schedulePeriodStart: '2025-01-15',
+      schedulePeriodEnd: '2025-02-15',
+      startsMidPeriod: false,
     });
   });
 
@@ -94,6 +102,10 @@ describe('resolveFirstInvoiceDate — client cadence', () => {
       // The covered part is clipped to the contract start.
       servicePeriodStart: '2025-01-15',
       servicePeriodEnd: '2025-02-01',
+      servicePeriodEndInclusive: '2025-01-31',
+      schedulePeriodStart: '2025-01-01',
+      schedulePeriodEnd: '2025-02-01',
+      startsMidPeriod: true,
     });
   });
 
@@ -105,7 +117,13 @@ describe('resolveFirstInvoiceDate — client cadence', () => {
         startDate: '2025-02-01',
         clientSchedule: clientSchedule('monthly'),
       }),
-    ).toMatchObject({ invoiceDate: '2025-03-01', servicePeriodStart: '2025-02-01', servicePeriodEnd: '2025-03-01' });
+    ).toMatchObject({
+      invoiceDate: '2025-03-01',
+      servicePeriodStart: '2025-02-01',
+      servicePeriodEnd: '2025-03-01',
+      servicePeriodEndInclusive: '2025-02-28',
+      startsMidPeriod: false,
+    });
   });
 
   it('arrears: honours a non-default client anchor day', () => {
@@ -145,6 +163,10 @@ describe('resolveFirstInvoiceDate — client cadence', () => {
       invoiceDate: '2025-01-01',
       servicePeriodStart: '2025-01-15',
       servicePeriodEnd: '2025-02-01',
+      servicePeriodEndInclusive: '2025-01-31',
+      schedulePeriodStart: '2025-01-01',
+      schedulePeriodEnd: '2025-02-01',
+      startsMidPeriod: true,
     });
   });
 
@@ -188,5 +210,63 @@ describe('resolveFirstInvoiceDate — inputs', () => {
       scenario: 'client_arrears',
       invoiceDate: '2025-02-01',
     });
+  });
+});
+
+describe('resolveArrearsFirstInvoiceHint', () => {
+  const base = {
+    lineType: 'Fixed',
+    cadenceOwner: 'client' as const,
+    billingTiming: 'arrears' as const,
+    startDate: '2026-10-20',
+    clientSchedule: clientSchedule('monthly'),
+  };
+
+  it('monthly cycle, start 10/20: Nov 1 invoice covers Oct 20 – Oct 31; In Advance bills on Oct 1', () => {
+    expect(resolveArrearsFirstInvoiceHint(base)).toEqual({
+      invoiceDate: '2026-11-01',
+      periodStart: '2026-10-20',
+      periodEndInclusive: '2026-10-31',
+      advanceInvoiceDate: '2026-10-01',
+    });
+  });
+
+  it('day-15 anchor, start 10/20: covers Oct 20 – Nov 14, invoice Nov 15', () => {
+    expect(
+      resolveArrearsFirstInvoiceHint({ ...base, clientSchedule: clientSchedule('monthly', { dayOfMonth: 15 }) }),
+    ).toMatchObject({ invoiceDate: '2026-11-15', periodStart: '2026-10-20', periodEndInclusive: '2026-11-14' });
+  });
+
+  it('quarterly cycle covers through the end of the quarter', () => {
+    expect(
+      resolveArrearsFirstInvoiceHint({ ...base, startDate: '2026-02-10', clientSchedule: clientSchedule('quarterly') }),
+    ).toEqual({
+      invoiceDate: '2026-04-01',
+      periodStart: '2026-02-10',
+      periodEndInclusive: '2026-03-31',
+      advanceInvoiceDate: '2026-01-01',
+    });
+  });
+
+  it.each([
+    ['advance timing', { billingTiming: 'advance' as const }],
+    ['contract cadence', { cadenceOwner: 'contract' as const }],
+    ['cycle-aligned start', { startDate: '2026-10-01' }],
+    ['Hourly line', { lineType: 'Hourly' }],
+    ['schedule unavailable', { clientSchedule: null }],
+    ['missing start date', { startDate: null }],
+  ])('returns null for %s', (_label, override) => {
+    expect(resolveArrearsFirstInvoiceHint({ ...base, ...override })).toBeNull();
+  });
+
+  it('with today: shows while the invoice date is in the future, hides on or after it', () => {
+    expect(resolveArrearsFirstInvoiceHint(base, new Date(2026, 9, 13))).not.toBeNull();
+    expect(resolveArrearsFirstInvoiceHint(base, new Date(2026, 10, 1))).toBeNull();
+    expect(resolveArrearsFirstInvoiceHint(base, new Date(2026, 11, 5))).toBeNull();
+  });
+
+  it('compares local calendar days, not UTC midnight', () => {
+    // Oct 31 at 23:30 local is still before the Nov 1 invoice date, whatever UTC says.
+    expect(resolveArrearsFirstInvoiceHint(base, new Date(2026, 9, 31, 23, 30))).not.toBeNull();
   });
 });

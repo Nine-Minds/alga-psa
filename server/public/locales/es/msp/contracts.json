@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
-    },
-    "advanceSuggestion": {
-      "message": "Con facturación a plazo vencido, esta línea no se puede facturar hasta que termine su primer período de servicio. Con facturación anticipada según el ciclo del contrato, se factura en la fecha de inicio.",
-      "action": "Facturar por anticipado según el ciclo del contrato"
     }
   },
   "wizardProducts": {
@@ -2770,7 +2766,8 @@
       "advance": "Facturada por anticipado según el ciclo del contrato: la primera factura está disponible desde el {{date}}, la fecha de inicio del contrato."
     },
     "client": {
-      "arrears": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación actual del cliente.",
+      "arrears": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación del cliente que contiene la fecha de inicio.",
+      "arrearsPartial": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación del cliente que contiene la fecha de inicio. Como la fecha de inicio cae a mitad de ese período, cubre {{periodStart}} – {{periodEnd}}.",
       "advance": "Facturada por anticipado según el calendario de facturación del cliente: la primera factura está disponible desde el {{date}}, el inicio del período de facturación del cliente que incluye la fecha de inicio del contrato."
     }
   },
@@ -2988,5 +2985,9 @@
       "invalidBlock": "Complete el tamaño, el precio y los disparadores de cada línea de bloque prepagado antes de finalizar.",
       "rateRequired": "El servicio de bloque prepagado \"{{serviceName}}\" necesita una tarifa por hora superior a cero (las horas que excedan el bloque se facturan a esa tarifa)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Primera factura: la factura del {{invoiceDate}} cubre {{periodStart}} – {{periodEnd}} (facturada a plazo vencido). Elija Por adelantado para facturarla en la factura del período que comienza el {{advanceInvoiceDate}}.",
+    "billInAdvance": "Facturar por adelantado"
   }
 }
