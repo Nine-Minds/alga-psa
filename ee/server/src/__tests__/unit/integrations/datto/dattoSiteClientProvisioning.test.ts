@@ -28,6 +28,12 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (knex: any, fn: any) => fakeTransaction(knex, fn),
 }));
 
+// The shared client-creation seam imports tenantDb from this subpath (not the
+// barrel above) to dodge a turbopack shim, so it needs its own mock too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({ table: (t: string) => conn.__table(t) }),
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
