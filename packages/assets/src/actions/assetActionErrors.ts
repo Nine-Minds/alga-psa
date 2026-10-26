@@ -1,4 +1,4 @@
-import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import {
   actionError,
   actionErrorFromValidationIssue,

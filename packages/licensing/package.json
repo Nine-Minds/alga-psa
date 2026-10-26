@@ -16,6 +16,10 @@
       "types": "./src/lifecycle.ts",
       "import": "./dist/lifecycle.js"
     },
+    "./lifecycle-error": {
+      "types": "./src/lifecycle-error.ts",
+      "import": "./dist/lifecycle-error.js"
+    },
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts",
