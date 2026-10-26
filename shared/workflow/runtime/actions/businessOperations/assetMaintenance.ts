@@ -214,7 +214,7 @@ export function registerAssetMaintenanceActions(): void {
       let subcategoryId: string | undefined;
       if (input.category_id) {
         const category = await db.table('categories').where({ category_id: input.category_id })
-          .first<{ board_id: string | null; parent_category: string | null }>();
+          .first<{ category_id: string; board_id: string | null; parent_category: string | null }>();
         // Board-less categories are tenant-global; otherwise the category must live on the selected board.
         if (!category || (category.board_id && category.board_id !== input.board_id)) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id must exist and belong to the selected board' });

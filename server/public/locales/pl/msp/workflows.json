@@ -1598,7 +1598,7 @@
         "board_id": "Proszę najpierw wybrać stałą tablicę, aby wczytać opcje kategorii."
       },
       "ticket-category-any": {
-        "board_id": "Choose a fixed Board first to load category options."
+        "board_id": "Proszę najpierw wybrać stałą tablicę, aby wczytać opcje kategorii."
       },
       "ticket-status": {
         "board_id": "Proszę najpierw wybrać stałą tablicę, aby wczytać opcje statusu.",
