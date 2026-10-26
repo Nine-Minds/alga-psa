@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Utilisez le format AAAA-MM-JJ.",
       "warrantyDateInvalid": "Cette date n'existe pas.",
       "warrantyInputInvalid": "Certaines informations ne sont pas valides. Vérifiez-les et réessayez.",
-      "baseUrlMissing": "L'URL de l'application n'est pas configurée."
+      "baseUrlMissing": "L'URL de l'application n'est pas configurée.",
+      "vendorSystemNotFound": "Ce système de dossier fournisseur n'est pas disponible.",
+      "vendorSystemTemplateInvalid": "Le modèle de lien de ce système ne peut pas être utilisé pour un dossier fournisseur."
     },
     "salesOrders": {
       "clientRequired": "Sélectionnez un client avant de créer la commande client.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Répercuter le dossier fournisseur sur le ticket",
       "mirrored": "Dossier fournisseur ajouté au ticket.",
       "mirrorFailed": "Impossible d'ajouter le dossier fournisseur au ticket.",
+      "mirrorSystem": "Système du dossier fournisseur",
+      "mirrorSystemGeneric": "Lien générique",
       "assetLink": "Actif : {{name}}",
       "ticketLink": "Ticket : {{number}}",
       "timeline": "Historique",

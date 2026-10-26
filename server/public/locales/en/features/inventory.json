@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Use the format YYYY-MM-DD.",
       "warrantyDateInvalid": "That is not a real calendar date.",
       "warrantyInputInvalid": "Some of the details are not valid. Check them and try again.",
-      "baseUrlMissing": "The application URL is not configured."
+      "baseUrlMissing": "The application URL is not configured.",
+      "vendorSystemNotFound": "That vendor-case system is not available.",
+      "vendorSystemTemplateInvalid": "That system's link template can't be used for a vendor case."
     },
     "salesOrders": {
       "clientRequired": "Select a client before creating the sales order.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Mirror vendor case to ticket",
       "mirrored": "Vendor case added to the ticket.",
       "mirrorFailed": "Couldn't add the vendor case to the ticket.",
+      "mirrorSystem": "Vendor case system",
+      "mirrorSystemGeneric": "Generic link",
       "assetLink": "Asset: {{name}}",
       "ticketLink": "Ticket: {{number}}",
       "timeline": "History",

@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Gebruik het formaat JJJJ-MM-DD.",
       "warrantyDateInvalid": "Dat is geen geldige datum.",
       "warrantyInputInvalid": "Sommige gegevens zijn ongeldig. Controleer ze en probeer het opnieuw.",
-      "baseUrlMissing": "De applicatie-URL is niet geconfigureerd."
+      "baseUrlMissing": "De applicatie-URL is niet geconfigureerd.",
+      "vendorSystemNotFound": "Dat systeem voor leveranciersdossiers is niet beschikbaar.",
+      "vendorSystemTemplateInvalid": "De linksjabloon van dat systeem kan niet voor een leveranciersdossier worden gebruikt."
     },
     "salesOrders": {
       "clientRequired": "Selecteer een klant voordat u de verkooporder aanmaakt.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Leveranciersdossier naar ticket spiegelen",
       "mirrored": "Leveranciersdossier toegevoegd aan het ticket.",
       "mirrorFailed": "Leveranciersdossier kon niet aan het ticket worden toegevoegd.",
+      "mirrorSystem": "Systeem voor leveranciersdossier",
+      "mirrorSystemGeneric": "Algemene link",
       "assetLink": "Asset: {{name}}",
       "ticketLink": "Ticket: {{number}}",
       "timeline": "Geschiedenis",

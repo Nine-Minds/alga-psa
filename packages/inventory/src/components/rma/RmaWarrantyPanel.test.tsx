@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RmaWarrantyPanel } from './RmaWarrantyPanel';
 import { WARRANTY_ACTIONS, allowedWarrantyActions, nextWarrantyStatus } from '../../lib/rma/stateMachine';
@@ -31,7 +32,13 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: () => null }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: () => null }));
 vi.mock('@alga-psa/ui/components/TextArea', () => ({ TextArea: () => null }));
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: () => null }));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ id, value, options, onValueChange }: any) => (
+    <select id={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
+      {options?.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
 
@@ -107,5 +114,30 @@ describe('RmaWarrantyPanel (T029)', () => {
     render(<RmaWarrantyPanel rma={{ ...base, ticket_id: null, status: 'open' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} onMirrorToTicket={vi.fn()} />);
     expect(document.getElementById('rma-warranty-mirror-ticket')).toBeNull();
     expect(document.getElementById('rma-warranty-ticket-link')).toBeNull();
+  });
+
+  it('shows the vendor-case system picker only when systems are supplied, and passes the selection to onMirrorToTicket', () => {
+    const onMirror = vi.fn(async () => undefined);
+    const { unmount } = render(<RmaWarrantyPanel rma={{ ...base, status: 'open' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} onMirrorToTicket={onMirror} />);
+    expect(document.getElementById('rma-warranty-mirror-system')).toBeNull();
+    fireEvent.click(document.getElementById('rma-warranty-mirror-ticket')!);
+    expect(onMirror).toHaveBeenLastCalledWith(expect.anything(), undefined);
+    unmount();
+
+    render(
+      <RmaWarrantyPanel
+        rma={{ ...base, status: 'open' } as any}
+        vendors={[]}
+        locations={[]}
+        onChanged={vi.fn()}
+        onMirrorToTicket={onMirror}
+        vendorCaseSystems={[{ key: 'custom:dell', label: 'Dell portal' }]}
+      />,
+    );
+    const picker = document.getElementById('rma-warranty-mirror-system') as HTMLSelectElement;
+    expect(picker).toBeTruthy();
+    fireEvent.change(picker, { target: { value: 'custom:dell' } });
+    fireEvent.click(document.getElementById('rma-warranty-mirror-ticket')!);
+    expect(onMirror).toHaveBeenLastCalledWith(expect.objectContaining({ rma_id: base.rma_id }), 'custom:dell');
   });
 });

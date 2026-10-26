@@ -86,10 +86,14 @@ export interface RmaWarrantyPanelProps {
   /** Called with the reloaded case after any transition. */
   onChanged: (rma: IRmaCase) => void | Promise<void>;
   /** Supplied by the composition root (inventory cannot import the ticket package). Hidden when absent. */
-  onMirrorToTicket?: (rma: IRmaCase) => Promise<void>;
+  onMirrorToTicket?: (rma: IRmaCase, systemKey?: string) => Promise<void>;
+  /** Tenant custom external systems (`custom:<slug>`) the vendor case can be mirrored to. No picker when absent or empty. */
+  vendorCaseSystems?: Array<{ key: string; label: string }>;
+  /** Initially selected `custom:<slug>`; empty/absent means the generic link. */
+  selectedVendorCaseSystem?: string;
 }
 
-export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorToTicket }: RmaWarrantyPanelProps) {
+export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorToTicket, vendorCaseSystems, selectedVendorCaseSystem }: RmaWarrantyPanelProps) {
   const { t } = useTranslation('features/inventory');
   const { print, isPrinting } = useLabelPrint();
   const dash = t('common.emptyValue', '—');
@@ -98,6 +102,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
   const [form, setForm] = useState<ActionForm>(() => emptyForm(rma, locations));
   const [busy, setBusy] = useState(false);
   const [mirroring, setMirroring] = useState(false);
+  const [systemKey, setSystemKey] = useState<string>(selectedVendorCaseSystem ?? '');
 
   const loadEvents = useCallback(async () => {
     try {
@@ -273,7 +278,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     if (!onMirrorToTicket) return;
     setMirroring(true);
     try {
-      await onMirrorToTicket(rma);
+      await onMirrorToTicket(rma, systemKey || undefined);
     } finally {
       setMirroring(false);
     }
@@ -450,6 +455,19 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
         >
           {t('rma.warranty.printSlip', 'Print return slip')}
         </Button>
+        {onMirrorToTicket && rma.ticket_id && vendorCaseSystems && vendorCaseSystems.length > 0 && (
+          <CustomSelect
+            id="rma-warranty-mirror-system"
+            label={t('rma.warranty.mirrorSystem', 'Vendor case system')}
+            value={systemKey}
+            placeholder={t('rma.warranty.mirrorSystemGeneric', 'Generic link')}
+            options={[
+              { value: '', label: t('rma.warranty.mirrorSystemGeneric', 'Generic link') },
+              ...vendorCaseSystems.map((s) => ({ value: s.key, label: s.label })),
+            ]}
+            onValueChange={(v: string) => setSystemKey(v)}
+          />
+        )}
         {onMirrorToTicket && rma.ticket_id && (
           <Button id="rma-warranty-mirror-ticket" size="sm" variant="outline" disabled={mirroring || !rma.rma_reference} onClick={() => void mirror()}>
             {t('rma.warranty.mirrorToTicket', 'Mirror vendor case to ticket')}

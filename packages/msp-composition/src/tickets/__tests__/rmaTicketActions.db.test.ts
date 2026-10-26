@@ -74,7 +74,9 @@ beforeAll(async () => {
   holder.user = { user_id: userId, user_type: 'internal', first_name: 'Mirror', last_name: 'Operator', username: `mirror-${tenant}` };
 });
 afterAll(async () => { await knex?.destroy(); });
-beforeEach(() => {
+beforeEach(async () => {
+  // Each test starts from no links: the suite runs shuffled, so tests must not lean on one another's rows.
+  if (holder.tenant) await knex('external_entity_links').where({ tenant: holder.tenant, ticket_id: ticketId }).del();
   holder.rma = { rma_id: rmaId, rma_number: 'RMA-00007', ticket_id: ticketId, rma_reference: 'DELL-7788', status: 'sent_to_vendor', vendor_name: 'Dell' };
 });
 
@@ -103,6 +105,7 @@ describe('mirrorRmaToTicketLinks (real external-link persistence)', () => {
   });
 
   it('replaces the link when the vendor case number changed, still leaving exactly one row', async () => {
+    await mirrorRmaToTicketLinks(rmaId);
     holder.rma = { ...holder.rma, rma_reference: 'DELL-9999' };
     const result: any = await mirrorRmaToTicketLinks(rmaId);
     expect(result.actionError ?? result.permissionError, JSON.stringify(result)).toBeUndefined();
@@ -113,9 +116,92 @@ describe('mirrorRmaToTicketLinks (real external-link persistence)', () => {
   });
 
   it('another RMA on the same ticket gets its own link', async () => {
+    await mirrorRmaToTicketLinks(rmaId);
     const otherId = randomUUID();
     holder.rma = { ...holder.rma, rma_id: otherId, rma_number: 'RMA-00008', rma_reference: 'DELL-1234' };
     await mirrorRmaToTicketLinks(otherId);
     expect(await links()).toHaveLength(2);
+  });
+
+  describe('vendor case via the tenant custom external system', () => {
+    const slug = `vendorportal_${randomUUID().slice(0, 8).replace(/-/g, '')}`;
+    const key = `custom:${slug}`;
+    const otherTenant = randomUUID();
+    const foreignKey = `custom:foreign_${randomUUID().slice(0, 8).replace(/-/g, '')}`;
+    const urlFor = (ref: string) => `https://vendor.example.test/cases/${encodeURIComponent(ref)}`;
+
+    beforeAll(async () => {
+      await knex('tenants').insert({ tenant: otherTenant, client_name: `Other ${otherTenant}`, email: `o-${otherTenant}@example.invalid`, product_code: 'psa' });
+      await knex('tenant_external_systems').insert([
+        { tenant: holder.tenant, key, label: 'Vendor portal', url_template: 'https://vendor.example.test/cases/{external_id}' },
+        { tenant: holder.tenant, key: 'custom:realmy', label: 'Realm system', url_template: 'https://r.example.test/{realm}/{external_id}' },
+        { tenant: holder.tenant, key: 'custom:notemplate', label: 'No template', url_template: null },
+        { tenant: otherTenant, key: foreignKey, label: 'Foreign', url_template: 'https://foreign.example.test/{external_id}' },
+      ]);
+    });
+    beforeEach(async () => {
+      await links().del();
+      holder.rma = { rma_id: rmaId, rma_number: 'RMA-00007', ticket_id: ticketId, rma_reference: 'DELL-7788', status: 'sent_to_vendor', vendor_name: 'Dell' };
+    });
+    afterAll(async () => {
+      await knex('tenant_external_systems').whereIn('tenant', [holder.tenant, otherTenant]).del();
+      await knex('tenants').where({ tenant: otherTenant }).del();
+    });
+
+    it('stores the custom system with the rendered template URL, and a second call still leaves one row', async () => {
+      const first: any = await mirrorRmaToTicketLinks(rmaId, key);
+      expect(first.actionError ?? first.permissionError, JSON.stringify(first)).toBeUndefined();
+      let rows = await links();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].system).toBe(key);
+      expect(rows[0].url).toBe(urlFor('DELL-7788'));
+      const second: any = await mirrorRmaToTicketLinks(rmaId, key);
+      expect(second.link_id).toBe(first.link_id);
+      rows = await links();
+      expect(rows).toHaveLength(1);
+    });
+
+    it('rejects an unknown slug and another tenant\'s slug, writing no link', async () => {
+      for (const bad of ['custom:does_not_exist', foreignKey, 'slack', 'generic', 'not a key']) {
+        const result: any = await mirrorRmaToTicketLinks(rmaId, bad);
+        expect(result.actionError, bad).toBeTruthy();
+        expect(result.messageKey, bad).toBe('features/inventory:errors.rma.vendorSystemNotFound');
+        expect(await links(), bad).toHaveLength(0);
+      }
+    });
+
+    it('rejects a template that needs {realm}, writing no link', async () => {
+      const result: any = await mirrorRmaToTicketLinks(rmaId, 'custom:realmy');
+      expect(result.messageKey).toBe('features/inventory:errors.rma.vendorSystemTemplateInvalid');
+      expect(await links()).toHaveLength(0);
+    });
+
+    it('uses the RMA record URL as the explicit URL when the system has no template', async () => {
+      const result: any = await mirrorRmaToTicketLinks(rmaId, 'custom:notemplate');
+      expect(result.actionError, JSON.stringify(result)).toBeUndefined();
+      const rows = await links();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].system).toBe('custom:notemplate');
+      expect(rows[0].url).toBe(`https://psa.example.test/msp/inventory/rma?rmaId=${rmaId}`);
+    });
+
+    it('falls back to generic + the RMA record URL when no system is passed', async () => {
+      const result: any = await mirrorRmaToTicketLinks(rmaId);
+      expect(result.actionError ?? result.permissionError, JSON.stringify(result)).toBeUndefined();
+      const rows = await links();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].system).toBe('generic');
+      expect(rows[0].url).toBe(`https://psa.example.test/msp/inventory/rma?rmaId=${rmaId}`);
+    });
+
+    it('switching from generic to custom replaces the link instead of adding a second one', async () => {
+      await mirrorRmaToTicketLinks(rmaId);
+      const result: any = await mirrorRmaToTicketLinks(rmaId, key);
+      expect(result.actionError, JSON.stringify(result)).toBeUndefined();
+      const rows = await links();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].system).toBe(key);
+      expect(rows[0].url).toBe(urlFor('DELL-7788'));
+    });
   });
 });

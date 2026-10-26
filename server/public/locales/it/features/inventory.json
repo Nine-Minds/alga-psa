@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Usa il formato AAAA-MM-GG.",
       "warrantyDateInvalid": "Non è una data valida.",
       "warrantyInputInvalid": "Alcuni dati non sono validi. Controllali e riprova.",
-      "baseUrlMissing": "L'URL dell'applicazione non è configurato."
+      "baseUrlMissing": "L'URL dell'applicazione non è configurato.",
+      "vendorSystemNotFound": "Quel sistema per le pratiche del fornitore non è disponibile.",
+      "vendorSystemTemplateInvalid": "Il modello di collegamento di quel sistema non può essere usato per una pratica del fornitore."
     },
     "salesOrders": {
       "clientRequired": "Seleziona un cliente prima di creare l'ordine di vendita.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Replica la pratica del fornitore sul ticket",
       "mirrored": "Pratica del fornitore aggiunta al ticket.",
       "mirrorFailed": "Impossibile aggiungere la pratica del fornitore al ticket.",
+      "mirrorSystem": "Sistema della pratica del fornitore",
+      "mirrorSystemGeneric": "Collegamento generico",
       "assetLink": "Asset: {{name}}",
       "ticketLink": "Ticket: {{number}}",
       "timeline": "Cronologia",

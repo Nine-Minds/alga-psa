@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Użyj formatu RRRR-MM-DD.",
       "warrantyDateInvalid": "To nie jest prawidłowa data.",
       "warrantyInputInvalid": "Niektóre dane są nieprawidłowe. Sprawdź je i spróbuj ponownie.",
-      "baseUrlMissing": "Adres URL aplikacji nie jest skonfigurowany."
+      "baseUrlMissing": "Adres URL aplikacji nie jest skonfigurowany.",
+      "vendorSystemNotFound": "Ten system spraw dostawcy jest niedostępny.",
+      "vendorSystemTemplateInvalid": "Szablonu linku tego systemu nie można użyć dla sprawy dostawcy."
     },
     "salesOrders": {
       "clientRequired": "Wybierz klienta przed utworzeniem zamówienia sprzedaży.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Powiel sprawę dostawcy w zgłoszeniu",
       "mirrored": "Sprawa dostawcy została dodana do zgłoszenia.",
       "mirrorFailed": "Nie udało się dodać sprawy dostawcy do zgłoszenia.",
+      "mirrorSystem": "System sprawy dostawcy",
+      "mirrorSystemGeneric": "Link ogólny",
       "assetLink": "Zasób: {{name}}",
       "ticketLink": "Zgłoszenie: {{number}}",
       "timeline": "Historia",

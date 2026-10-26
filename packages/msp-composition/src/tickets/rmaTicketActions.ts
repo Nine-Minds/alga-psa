@@ -8,7 +8,10 @@ import {
 } from "@alga-psa/tickets/actions/externalLinks/externalLinkActions";
 import { openWarrantyClaim, getRmaCase } from "@alga-psa/inventory/actions";
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from "@alga-psa/ui/lib/errorHandling";
-import { recordUrl, type IRmaCase } from "@alga-psa/types";
+import {
+  customExternalSystemToDefinition, isCustomExternalSystemKey, recordUrl, renderExternalLinkUrl,
+  type IRmaCase, type ITenantExternalSystem,
+} from "@alga-psa/types";
 
 /**
  * Ticket-aware wrappers for warranty claims (alga-2026-0002683 C5).
@@ -43,7 +46,7 @@ export const openWarrantyClaimFromTicket = withAuth(
 // case is mirrored as a generic external link whose metadata carries the rma_id. A first-class linked-record
 // table (or the ticket-conversations vendor thread) would replace this.
 export const mirrorRmaToTicketLinks = withAuth(
-  async (user, _ctx, rmaId: string): Promise<{ link_id: string } | RmaTicketError> => {
+  async (user, { tenant }, rmaId: string, systemKey?: string): Promise<{ link_id: string } | RmaTicketError> => {
     const rma = await getRmaCase(rmaId);
     if (!rma || "actionError" in rma || "permissionError" in rma) {
       return (rma as RmaTicketError | null) ?? actionError("RMA case not found.", "features/inventory:errors.rma.caseNotFound");
@@ -52,37 +55,75 @@ export const mirrorRmaToTicketLinks = withAuth(
     if (!rma.rma_reference) {
       return actionError("Add the vendor's case number first.", "features/inventory:errors.rma.referenceRequired");
     }
-    // The external-link store needs an absolute http(s) url for a `generic` system; C1's recordUrl gives the RMA record's.
+    // The explicit-URL fallback (and the `generic` system) needs an absolute http(s) url; C1's recordUrl gives the RMA record's.
     const baseUrl = process.env.NEXTAUTH_URL;
     if (!baseUrl) return actionError("The application URL is not configured.", "features/inventory:errors.rma.baseUrlMissing");
-    const url = recordUrl("rma", rma.rma_id, baseUrl);
+    const recordLink = recordUrl("rma", rma.rma_id, baseUrl);
+
+    // No system chosen: the built-in `generic` system with the RMA record URL. A chosen system must be one of
+    // this tenant's `custom:<slug>` rows (a row existing is what "active" means; deleting it deactivates it).
+    let system = "generic";
+    let url = recordLink;
+    if (systemKey !== undefined && systemKey !== null && systemKey !== "") {
+      const notFound = () => actionError("That vendor-case system is not available.", "features/inventory:errors.rma.vendorSystemNotFound");
+      if (!isCustomExternalSystemKey(systemKey)) return notFound();
+      const { knex } = await createTenantKnex();
+      const row = (await knex("tenant_external_systems").where({ tenant, key: systemKey }).first()) as ITenantExternalSystem | undefined;
+      const definition = row ? customExternalSystemToDefinition(row) : null;
+      if (!definition) return notFound();
+      system = definition.key;
+      if (definition.urlTemplate) {
+        // Only {external_id} is available; no realm exists for an RMA, so a {realm} template cannot render.
+        const rendered = definition.urlTemplate.includes("{realm}")
+          ? null
+          : renderExternalLinkUrl(definition, { external_id: rma.rma_reference, realm: null, url: null });
+        if (!rendered) {
+          return actionError("That system's link template can't be used for a vendor case.", "features/inventory:errors.rma.vendorSystemTemplateInvalid");
+        }
+        url = rendered;
+      }
+      // A null url_template keeps the explicit RMA record URL: the store requires some URL for such a system.
+    }
     const fields = {
       external_status: rma.status,
       metadata: { source: "rma", rma_id: rma.rma_id, rma_number: rma.rma_number, vendor_name: rma.vendor_name ?? null },
     };
 
-    // Upsert keyed by (ticket, metadata.rma_id): clicking twice refreshes the one link instead of adding another.
+    // Upsert keyed by (ticket, metadata.rma_id) regardless of system: clicking twice refreshes the one link instead
+    // of adding another, and switching system replaces it.
     const links = await getTicketExternalLinks(rma.ticket_id);
     if (!Array.isArray(links)) return asError(links, "Could not read the ticket's links.");
-    const existing = links.find((l) => l.system === "generic" && (l.metadata as { rma_id?: string } | null)?.rma_id === rma.rma_id);
-    if (existing && existing.external_id === rma.rma_reference) {
+    const existing = links.find((l) => (l.metadata as { rma_id?: string } | null)?.rma_id === rma.rma_id);
+    if (existing && existing.system === system && existing.external_id === rma.rma_reference) {
       const updated = await updateExternalLink(existing.link_id, { url, ...fields });
       return "link_id" in (updated as object) ? { link_id: existing.link_id } : asError(updated, "Could not update the link.");
     }
-    // The vendor case number changed (external_id is not patchable): replace the stale link.
+    // The system or the vendor case number changed (neither is patchable): replace the stale link.
     if (existing) {
       const removed = await removeExternalLink(existing.link_id);
       if (!("link_id" in (removed as object))) return asError(removed, "Could not replace the link.");
     }
     const result = await addExternalLink({
       ticket_id: rma.ticket_id,
-      system: "generic",
+      system,
       external_id: rma.rma_reference,
       relationship: "reference",
       url,
       ...fields,
     });
     return "link_id" in (result as object) ? { link_id: (result as { link_id: string }).link_id } : asError(result, "Could not add the link.");
+  },
+);
+
+export interface RmaVendorCaseSystem { key: string; label: string }
+
+/** The tenant's custom external systems, offered as targets for "Mirror vendor case to ticket". */
+export const listRmaVendorCaseSystems = withAuth(
+  async (user, { tenant }): Promise<RmaVendorCaseSystem[]> => {
+    if (!(await hasPermission(user, "ticket", "update"))) return [];
+    const { knex } = await createTenantKnex();
+    const rows = (await knex("tenant_external_systems").where({ tenant }).orderBy("label")) as ITenantExternalSystem[];
+    return rows.map((r) => ({ key: r.key, label: r.label }));
   },
 );
 

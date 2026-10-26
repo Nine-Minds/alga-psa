@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Use el formato AAAA-MM-DD.",
       "warrantyDateInvalid": "Esa no es una fecha válida.",
       "warrantyInputInvalid": "Algunos datos no son válidos. Revíselos e inténtelo de nuevo.",
-      "baseUrlMissing": "La URL de la aplicación no está configurada."
+      "baseUrlMissing": "La URL de la aplicación no está configurada.",
+      "vendorSystemNotFound": "Ese sistema de casos de proveedor no está disponible.",
+      "vendorSystemTemplateInvalid": "La plantilla de enlace de ese sistema no se puede usar para un caso de proveedor."
     },
     "salesOrders": {
       "clientRequired": "Seleccione un cliente antes de crear la orden de venta.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Reflejar caso del proveedor en el ticket",
       "mirrored": "Caso del proveedor agregado al ticket.",
       "mirrorFailed": "No se pudo agregar el caso del proveedor al ticket.",
+      "mirrorSystem": "Sistema del caso del proveedor",
+      "mirrorSystemGeneric": "Enlace genérico",
       "assetLink": "Activo: {{name}}",
       "ticketLink": "Ticket: {{number}}",
       "timeline": "Historial",

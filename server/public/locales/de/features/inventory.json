@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Verwenden Sie das Format JJJJ-MM-TT.",
       "warrantyDateInvalid": "Das ist kein gültiges Datum.",
       "warrantyInputInvalid": "Einige Angaben sind ungültig. Prüfen Sie sie und versuchen Sie es erneut.",
-      "baseUrlMissing": "Die Anwendungs-URL ist nicht konfiguriert."
+      "baseUrlMissing": "Die Anwendungs-URL ist nicht konfiguriert.",
+      "vendorSystemNotFound": "Dieses Lieferantenvorgangs-System ist nicht verfügbar.",
+      "vendorSystemTemplateInvalid": "Die Link-Vorlage dieses Systems kann nicht für einen Lieferantenvorgang verwendet werden."
     },
     "salesOrders": {
       "clientRequired": "Wählen Sie einen Kunden aus, bevor Sie den Kundenauftrag anlegen.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Lieferantenvorgang im Ticket spiegeln",
       "mirrored": "Lieferantenvorgang wurde zum Ticket hinzugefügt.",
       "mirrorFailed": "Lieferantenvorgang konnte nicht zum Ticket hinzugefügt werden.",
+      "mirrorSystem": "System für Lieferantenvorgang",
+      "mirrorSystemGeneric": "Allgemeiner Link",
       "assetLink": "Asset: {{name}}",
       "ticketLink": "Ticket: {{number}}",
       "timeline": "Verlauf",

@@ -90,11 +90,14 @@ export function RmaManager({
   initialCases,
   initialDeadOwed,
   mirrorRmaToTicket,
+  vendorCaseSystems,
 }: {
   initialCases: IRmaCase[];
   initialDeadOwed: DeadUnitOwedRow[];
   /** Composition-root action (inventory cannot import the ticket package). Enables "Mirror vendor case to ticket". */
-  mirrorRmaToTicket?: (rmaId: string) => Promise<unknown>;
+  mirrorRmaToTicket?: (rmaId: string, systemKey?: string) => Promise<unknown>;
+  /** Tenant custom external systems a vendor case can be mirrored to (`custom:<slug>`); no picker when empty. */
+  vendorCaseSystems?: Array<{ key: string; label: string }>;
 }) {
   const { money: fmtMinorUnits } = useCurrencyFormat();
   const money = formatMoney(fmtMinorUnits);
@@ -389,10 +392,10 @@ export function RmaManager({
     router.push(`${pathname}?${next.toString()}`);
   };
 
-  const mirrorToTicket = async (rma: IRmaCase) => {
+  const mirrorToTicket = async (rma: IRmaCase, systemKey?: string) => {
     if (!mirrorRmaToTicket) return;
     try {
-      const result = await mirrorRmaToTicket(rma.rma_id);
+      const result = await mirrorRmaToTicket(rma.rma_id, systemKey);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
@@ -701,6 +704,7 @@ export function RmaManager({
               vendors={vendors}
               locations={locations}
               onMirrorToTicket={mirrorRmaToTicket ? mirrorToTicket : undefined}
+              vendorCaseSystems={vendorCaseSystems}
               onChanged={async (updated) => {
                 setRmaDetail(updated);
                 await reload();

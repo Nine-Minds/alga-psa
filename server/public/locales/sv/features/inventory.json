@@ -612,7 +612,9 @@
       "warrantyDateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
       "warrantyDateInvalid": "Det är inte ett giltigt datum.",
       "warrantyInputInvalid": "Vissa uppgifter är ogiltiga. Kontrollera dem och försök igen.",
-      "baseUrlMissing": "Programmets URL är inte konfigurerad."
+      "baseUrlMissing": "Programmets URL är inte konfigurerad.",
+      "vendorSystemNotFound": "Det systemet för leverantörsärenden är inte tillgängligt.",
+      "vendorSystemTemplateInvalid": "Det systemets länkmall kan inte användas för ett leverantörsärende."
     },
     "salesOrders": {
       "clientRequired": "Välj en kund innan du skapar försäljningsordern.",
@@ -1363,6 +1365,8 @@
       "mirrorToTicket": "Spegla leverantörsärende till ärendet",
       "mirrored": "Leverantörsärendet lades till i ärendet.",
       "mirrorFailed": "Det gick inte att lägga till leverantörsärendet i ärendet.",
+      "mirrorSystem": "System för leverantörsärende",
+      "mirrorSystemGeneric": "Allmän länk",
       "assetLink": "Tillgång: {{name}}",
       "ticketLink": "Ärende: {{number}}",
       "timeline": "Historik",

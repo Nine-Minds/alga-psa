@@ -1,6 +1,6 @@
 import { listRmaCases, deadUnitsOwedReport } from '@alga-psa/inventory/actions';
 import { RmaManager } from '@alga-psa/inventory/components';
-import { mirrorRmaToTicketLinks } from '@alga-psa/msp-composition/tickets/rmaTicketActions';
+import { mirrorRmaToTicketLinks, listRmaVendorCaseSystems, type RmaVendorCaseSystem } from '@alga-psa/msp-composition/tickets/rmaTicketActions';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
@@ -41,6 +41,12 @@ export default async function RmaPage() {
   } catch (error) {
     console.error('Failed to load RMA cases:', error);
   }
+  let vendorCaseSystems: RmaVendorCaseSystem[] = [];
+  try {
+    vendorCaseSystems = await listRmaVendorCaseSystems();
+  } catch (error) {
+    console.error('Failed to load custom vendor-case systems:', error);
+  }
   try {
     const result = await deadUnitsOwedReport();
     if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -52,7 +58,7 @@ export default async function RmaPage() {
     console.error('Failed to load dead units owed report:', error);
   }
 
-  return <RmaManager initialCases={initialCases} initialDeadOwed={initialDeadOwed} mirrorRmaToTicket={mirrorRmaToTicketLinks} />;
+  return <RmaManager initialCases={initialCases} initialDeadOwed={initialDeadOwed} mirrorRmaToTicket={mirrorRmaToTicketLinks} vendorCaseSystems={vendorCaseSystems} />;
 }
 
 export const dynamic = 'force-dynamic';

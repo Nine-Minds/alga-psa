@@ -374,7 +374,7 @@
       "Events and audit"
     ],
     "implemented": true,
-    "note": "rma_reference mirrored as a ticket external link only; vendor-conversation link deferred until ticket-conversations merges"
+    "note": "rma_reference mirrored as a ticket external link using the tenant's custom:<slug> system (validated tenant-scoped in tenant_external_systems; a row existing means active; url from url_template with {external_id}, or the RMA record URL when the template is null; {realm} templates rejected); generic + RMA record URL only when no system is chosen; vendor-conversation link deferred until ticket-conversations merges"
   },
   {
     "id": "F027",
