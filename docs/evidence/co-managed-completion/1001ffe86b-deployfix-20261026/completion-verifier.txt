@@ -1,9 +1,8 @@
 co-managed completion gate — docs/evidence/co-managed-completion/1001ffe86b-deployfix-20261026/manifest.json
-candidate: 1001ffe86b8aad4a43f9f6ff18667be6f631e6ca
-requirements: blocked-external=2 implemented-unverified=248 verified=10
+candidate: 4680a4f712c0407bdebc518db16e933e498ccefc
+requirements: blocked-external=2 implemented-unverified=244 verified=14
 
 implementationReady: false
-  - evidence deployfix-regression-tests: unknown type "test"
   - T01: implemented-unverified — not accepted on this candidate
   - T02: implemented-unverified — not accepted on this candidate
   - T03: implemented-unverified — not accepted on this candidate
@@ -43,11 +42,13 @@ implementationReady: false
   - clientIntegration:F016: implemented-unverified — not accepted on this candidate
   - clientIntegration:F019: implemented-unverified — not accepted on this candidate
   - clientIntegration:F020: implemented-unverified — not accepted on this candidate
-  … and 209 more
+  - clientIntegration:F021: implemented-unverified — not accepted on this candidate
+  … and 204 more
 
 humanReviewReady: false
   - implementationReady is false
-  - delivered worktree is not clean
+  - running app revision 1001ffe86b8aad4a43f9f6ff18667be6f631e6ca is not the candidate
+  - running worker revision 1001ffe86b8aad4a43f9f6ff18667be6f631e6ca is not the candidate
   - mergeable is CONFLICTING
   - mergeStateStatus is DIRTY
   - manifest.ci.checks is missing or empty
@@ -61,4 +62,3 @@ productionReady: false
   - external-license-issuance: not accepted by the release owner
   - microsoft-real-application: not accepted by the release owner
   - deployed-storage-and-migrations: not accepted by the release owner
-exit=1

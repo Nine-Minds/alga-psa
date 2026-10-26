@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "collectedAt": "2026-10-26T08:04:08.404Z",
-  "candidate": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
+  "collectedAt": "2026-10-26T08:47:06.020Z",
+  "candidate": "4680a4f712c0407bdebc518db16e933e498ccefc",
   "provenance": {
     "app": {
       "revision": null
@@ -49,17 +49,17 @@
       ]
     }
   },
-  "worktreeClean": false,
+  "worktreeClean": true,
   "pr": {
     "number": 3363,
-    "head": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
+    "head": "4680a4f712c0407bdebc518db16e933e498ccefc",
     "state": "OPEN",
     "isDraft": true
   },
   "mergeability": {
     "mergeable": "CONFLICTING",
     "mergeStateStatus": "DIRTY",
-    "checkedAtSha": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca"
+    "checkedAtSha": "4680a4f712c0407bdebc518db16e933e498ccefc"
   },
   "ci": null
 }

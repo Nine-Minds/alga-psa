@@ -1,6 +1,6 @@
 {
-  "candidate": "1001ffe86b8aad4a43f9f6ff18667be6f631e6ca",
-  "generatedAt": "2026-10-26T08:29:55.076Z",
+  "candidate": "4680a4f712c0407bdebc518db16e933e498ccefc",
+  "generatedAt": "2026-10-26T08:47:06.410Z",
   "claim": "Required IDs and referenced source files are present; this census does not prove full implementation or runtime acceptance.",
   "rows": [
     {

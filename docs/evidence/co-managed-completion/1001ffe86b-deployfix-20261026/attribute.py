@@ -56,7 +56,7 @@ for eid, (d, cmd, receipts) in runs.items():
         'dependencyAnalysis': f'Ran on {build_id} served on :23374 from {DIST} (stamp {stamp}); HEAD differs from the source only in docs/evidence.'}
 (OUT / 'media-audit.json').write_text(json.dumps(media, indent=2) + '\n')
 tests = json.load(open(OUT / 'regression-tests.json'))
-manifest['evidence']['deployfix-regression-tests'] = {'type': 'test', 'sha': S, 'command': '; '.join(t['command'] for t in tests['runs']),
+manifest['evidence']['deployfix-regression-tests'] = {'type': 'automated', 'sha': S, 'command': '; '.join(t['command'] for t in tests['runs']),
     'result': json.dumps({t['name']: t['result'] for t in tests['runs']}), 'artifact': 'regression-tests.json', 'artifactAvailable': True,
     'artifactSha256': digest(OUT / 'regression-tests.json'), 'dependencyAnalysis': 'Regression and mutation runs for the three fixes at the candidate source.'}
 
@@ -90,16 +90,33 @@ put('clientIntegration:F010', U, [P10S, 'guide-01-onboarding'], 'State-appropria
 put('clientIntegration:F018', V, [P10S, P10C, TST], 'All clauses exercised on the served build: the active White Rabbit tab exposes End co-management; the ended Kansas Farms tab and summary show the end date and navigate to the Shared work archive (opened); the ended view reads no live customer usage (Seats released, no live seat count; PostgreSQL asserts usedSeats null for an ended relationship) and its labels come from the sponsor-owned operation.')
 put('clientIntegration:T009', U, [P10S, 'guide-01-onboarding', 'guide-10-departure-and-archives'], 'The ended-state clause (ended state uses retained history, no setup) is fixed and proven on the served build. Still required: the fixed-client setup journey with reserved progress, pending acceptance, original-operation reopen after failure/reload, invitation expiry versus delivery failure, and summary/usage refresh after allocation or recovery.')
 
-keys = {r['key'] for r in inv['rows']}; assert set(D) <= keys
+# --- remaining rows: clause attribution from the evidence above (complete_attribution.py) ----------------------
+import sys; sys.path.insert(0, str(OUT)); from complete_attribution import DECISIONS as REST, N as NOGUIDE, P as PARTIAL, X_SELFHOST, X_RESTORE, X_UPGRADE
+assert not set(REST) & set(D), 'complete_attribution must not re-decide a deploy-fix or carried decision'
+for key, d in REST.items():
+    D[key] = {**d, 'source': 'full-manifest attribution from existing evidence (no new runs)'}
+# Coverage label for the decisions made before this pass. All of them cite at least one executed guide; the
+# overrides are rows whose only exercised content is a blocked section or a boundary observation.
+EXISTING = {'T03': (NOGUIDE, X_SELFHOST), 'T18': (PARTIAL, X_RESTORE), 'T19': (PARTIAL, X_UPGRADE)}
+for key, d in D.items():
+    if 'coverage' in d: continue
+    cov, ext = EXISTING.get(key, (None, None))
+    d['coverage'] = cov or {V: 'guide-verified', B: 'blocked-external'}.get(d['status'], PARTIAL)
+    if ext: d['external'] = ext
+keys = {r['key'] for r in inv['rows']}; assert set(D) == keys, sorted(keys ^ set(D))
+for key, d in D.items():
+    assert d['status'] in (V, U, B), key
+    assert (d['status'] == V) == (d['coverage'] == 'guide-verified'), key
+    assert d['status'] != V or any(manifest['evidence'][e]['type'] != 'analysis' for e in d['evidence']), key
 for r in inv['rows']:
     d = D.get(r['key'])
     if d:
         r['status'] = d['status']; r['justification'] = d['justification']; r['remainingAcceptance'] = '' if d['status'] == V else d['justification']
-        r['evidence'] = [{'id': e} for e in d['evidence']]
-    else:
-        r['justification'] = 'No full clause attribution established. ' + r['remainingAcceptance']
+        r['evidence'] = [{'id': e} for e in d['evidence']]; r['coverage'] = d['coverage']
+        if d.get('external'): r['externalPrerequisite'] = d['external']
     m = {x['key']: x for x in manifest['requirements']}[r['key']]
-    m.update(status=r['status'], justification=r['justification'], evidence=r['evidence']); m['requiredInCard'] = r['status'] != B
+    m.update(status=r['status'], justification=r['justification'], evidence=r['evidence'], coverage=r['coverage']); m['requiredInCard'] = r['status'] != B
+    if r.get('externalPrerequisite'): m['externalPrerequisite'] = r['externalPrerequisite']
     if r['status'] == B: m['externalOwner'] = 'release-operator'
 for d in D.values():
     for e in d['evidence']: assert e in manifest['evidence'], e
@@ -113,10 +130,21 @@ manifest['openDefects'] = []
 manifest['reviewEnvironment'] = {'stable': False, 'observedMinutes': 0, 'healingEvents': None, 'note': 'No stability observation in this bounded round.'}
 (OUT / 'source-delta.json').write_text(json.dumps({'runtime': S, 'candidate': C, 'changedFiles': changed}, indent=2) + '\n')
 inv['evidence'] = manifest['evidence']; inv['totals']['byStatus'] = dict(collections.Counter(r['status'] for r in inv['rows']))
+inv['totals']['byCoverage'] = dict(collections.Counter(r['coverage'] for r in inv['rows']))
+inv['totals']['inCardWithExternalPrerequisite'] = sum(1 for r in inv['rows'] if r.get('externalPrerequisite') and r['status'] != B)
 (OUT / 'attribution-decisions.json').write_text(json.dumps({'candidate': C, 'runtime': S, 'buildId': build_id,
-    'policy': 'Rows move to verified only when every clause was exercised on the served build; partially re-run rows leave failed for implemented-unverified with the gap named; everything else carries the 071cb21b12 decision and its 54e75edfab evidence unchanged.',
+    'policy': 'Rows move to verified only when every clause of the row contract is exercised by an executed guide assertion (or, for a test row, its named automated run at the candidate) with a recorded dependency note when the guide ran on 54e75edfab; partially re-run rows leave failed for implemented-unverified with the gap named; the 071cb21b12 and deploy-fix decisions are kept; the remaining rows are decided in complete_attribution.py from existing evidence only.',
+    'coverageVocabulary': {'guide-verified': 'every clause exercised by an executed guide assertion', 'guide-partial': 'some clauses exercised; the justification names those that are not',
+        'no-guide-coverage': 'no executed guide assertion exercises any clause; the justification names the clause needing evidence', 'blocked-external': 'plan-declared external real-provider row'},
+    'totals': {'byStatus': inv['totals']['byStatus'], 'byCoverage': inv['totals']['byCoverage'], 'inCardWithExternalPrerequisite': inv['totals']['inCardWithExternalPrerequisite']},
     'decisions': D}, indent=2) + '\n')
 for f, x in [('inventory.json', inv), ('manifest.json', manifest)]: (OUT / f).write_text(json.dumps(x, indent=2) + '\n')
-(OUT / 'inventory.md').write_text('# Deploy-fix attribution\n\n' + json.dumps(inv['totals']) + '\n\n| Key | Status | Justification / remaining acceptance |\n|---|---|---|\n' + '\n'.join('| ' + r['key'] + ' | ' + r['status'] + ' | ' + r['justification'].replace('|', '/') + ' |' for r in inv['rows']) + '\n')
-(OUT / 'remaining-acceptance.md').write_text('# Named unaccepted requirements\n\n' + '\n'.join('- **' + r['key'] + '** (' + r['status'] + '): ' + r['remainingAcceptance'] for r in inv['rows'] if r['status'] != V) + '\n')
+(OUT / 'inventory.md').write_text('# Deploy-fix attribution\n\n' + json.dumps(inv['totals']) + '\n\n| Key | Status | Coverage | Justification / remaining acceptance |\n|---|---|---|---|\n' + '\n'.join('| ' + r['key'] + ' | ' + r['status'] + ' | ' + r['coverage'] + ' | ' + r['justification'].replace('|', '/') + ' |' for r in inv['rows']) + '\n')
+def _line(r):
+    ext = f" — external prerequisite: {r['externalPrerequisite']}" if r.get('externalPrerequisite') else ''
+    return '- **' + r['key'] + '** (' + r['status'] + '): ' + r['remainingAcceptance'] + ext
+_sections = [('no-guide-coverage', 'No guide exercises any clause'), ('guide-partial', 'Guide-exercised in part; the unexercised clause is named'), ('blocked-external', 'Plan-declared external rows')]
+(OUT / 'remaining-acceptance.md').write_text('# Named unaccepted requirements\n\n' + json.dumps({'byStatus': inv['totals']['byStatus'], 'byCoverage': inv['totals']['byCoverage'],
+    'inCardWithExternalPrerequisite': inv['totals']['inCardWithExternalPrerequisite']}) + '\n\n' + '\n'.join(
+    f'## {title} ({sum(1 for r in inv["rows"] if r["coverage"] == cov)})\n\n' + '\n'.join(_line(r) for r in inv['rows'] if r['coverage'] == cov) + '\n' for cov, title in _sections))
 print(OUT); print(inv['totals'])
