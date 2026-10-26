@@ -15,12 +15,13 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { useTicketScreenReadOnly } from './TicketDataSourceContext';
 
 interface TicketCredentialsSectionProps {
   ticketId: string;
   /** Owning client of the ticket (same-client link/create prefill). */
   clientId: string | null;
+  /** The ticket screen is read-only (for example an ended co-managed workspace): list without attach/manage. */
+  readOnly?: boolean;
 }
 
 const VaultEntityCredentialsSection = dynamic(
@@ -34,8 +35,7 @@ const VaultEntityCredentialsSection = dynamic(
   }
 );
 
-export function TicketCredentialsSection({ ticketId, clientId }: TicketCredentialsSectionProps) {
-  const readOnly = useTicketScreenReadOnly();
+export function TicketCredentialsSection({ ticketId, clientId, readOnly = false }: TicketCredentialsSectionProps) {
   return (
     <VaultEntityCredentialsSection entityType="ticket" entityId={ticketId} defaultClientId={clientId} readOnly={readOnly} />
   );

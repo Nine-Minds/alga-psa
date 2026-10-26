@@ -852,7 +852,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
           Mirrors the Entry view's placement after Documents. */}
       {capabilities.credentials ? (
-        <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+        <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} readOnly={screenReadOnly} />
       ) : null}
 
       {capabilities.externalLinks ? (

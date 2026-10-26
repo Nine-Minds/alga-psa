@@ -41,6 +41,14 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// Lifecycle admission is proven against PostgreSQL in the co-managed bootstrap suite; this SLA
+// unit test only asserts that the delete path asks for it.
+const lifecycle = vi.hoisted(() => ({ assert: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  assertCoManagedOperationalWrite: lifecycle.assert,
+}));
+
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
@@ -157,5 +165,6 @@ describe('ticketActions deleteTicket', () => {
     );
 
     expect(backend.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
+    expect(lifecycle.assert).toHaveBeenCalledWith(expect.anything(), 'tenant-1');
   });
 });

@@ -4516,6 +4516,7 @@ const handleClose = () => {
                         <TicketCredentialsSection
                             ticketId={ticket.ticket_id || ''}
                             clientId={ticket.client_id ?? null}
+                            readOnly={dataSource.screen.readOnly === true}
                         />
                         ) : null}
 
