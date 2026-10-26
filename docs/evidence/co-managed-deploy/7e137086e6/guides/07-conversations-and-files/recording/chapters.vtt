@@ -1,0 +1,49 @@
+WEBVTT
+
+1
+00:00:00.048 --> 00:00:07.415
+Before you start: requester and disposable shared ticket (customer native screens)
+
+2
+00:00:07.415 --> 00:00:14.556
+1. Shared IT teams message with an attached file (QA)
+
+3
+00:00:14.556 --> 00:00:18.289
+1. Customer reads the shared message and file
+
+4
+00:00:18.289 --> 00:00:42.506
+1. Organization-private messages from each side, then requester audience
+
+5
+00:00:42.506 --> 00:00:46.358
+1. Requester sees only requester-audience content in the portal
+
+6
+00:00:46.358 --> 00:01:00.996
+2. Author removes a disposable attachment; old link stops downloading
+
+7
+00:01:00.996 --> 00:01:13.400
+2. Uncertain send: server saved the message but the response was lost
+
+8
+00:01:13.400 --> 00:01:47.906
+3. Reply from the other organization, edit, and delete the root
+
+9
+00:01:47.906 --> 00:02:10.795
+4. Whole-thread audience change: MSP-private thread with reply and file
+
+10
+00:02:10.795 --> 00:02:25.044
+4. Restrict the disclosed thread back to Shared IT teams
+
+11
+00:02:25.044 --> 00:02:52.578
+5. Requester task conversation (portal) on a requester-visible shared task
+
+12
+00:02:52.578 --> 00:02:56.910
+5. Cleanup: customer removes the requester project grant

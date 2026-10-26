@@ -1,0 +1,244 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/dashboard",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nHome\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nGOOD EVENING, QA\nWelcome to Your MSP Command Center\n\nTrack onboarding progress, configure critical services, and keep every client experience consistent.\n\nComplete your setup\n\nWork through each step to unlock the full MSP dashboard experience.\n\nOnboarding Wizard\n0%\n\nPROGRESS\n\n0 of 5 Steps\n\nJust getting started!\nHide\n\nSTEP 1\n\nNOT STARTED\nSecure Identity & SSO\n\nConnect Google Workspace or Microsoft 365 so admins sign in with managed identities.\n\nAdd an SSO provider\nLink the first team member\nAdd Google Workspace or Microsoft 365 credentials to enable SSO for your team.\nConnect SSO\nHide\n\nSTEP 2\n\nNOT STARTED\nSet Up Customer Portal\n\nConfigure your portal so customers can sign in on your domain with your branding.\n\nPortal custom domain\nPortal color and logo customizations\nInvite your first contact to the portal\nOpen Portal Settings\nHide\n\nSTEP 3\n\nIN PROGRESS\nImport Core Data\n\nAdd contacts so you can start working for clients and keep workflows moving.\n\nCOMPLETE YOUR FIRST IMPORT OR CREATE 5 CONTACTS\n\nCreate your first 5 contacts\nCreate Contacts\nHide\n\nSTEP 4\n\nNOT STARTED\nCalendar Sync\n\nConnect Google or Outlook calendars to keep dispatch and client appointments aligned.\n\nAdd a calendar provider\nConnect and authorize the provider\nConfigure Calendar\nHide\n\nSTEP 5\n\nNOT STARTED\nConfigure Email\n\nSet up inbound ticket email and verify an outbound sending domain for reliable delivery.\n\nConfigure inbound email\nConfigure outbound custom email domain\nConfigure Email\nPlatform Features\nTicket Management\n\nStreamline support with routing, SLA tracking, and guided workflows.\n\nSystem Monitoring\n\nWatch critical signals across clients and trigger automation when needed.\n\nSecurity Management\n\nManage policies, approvals, and audit responses in one place.\n\nProject Management\n\nOrganize delivery plans, tasks, and milestones for every engagement.\n\nReporting & Analytics\n\nBuild rollups on utilization, SLA attainment, and profitability.\n\nSchedule Management\n\nCoordinate onsite visits and remote sessions with bi-directional sync.\n\nHide\nDownload AlgaPSA Mobile app\n\nScan a QR code with your phone to download the AlgaPSA mobile app.\n\nApp Store (iOS)\nGoogle Play (Android)\nNeed a deeper dive?\n\nExplore deployment runbooks and best practices in the knowledge base.\n\nVisit resources",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_2b_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-onboarding-step-identity_sso",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-onboarding-step-client_portal_domain",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-onboarding-step-data_import",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-onboarding-step-calendar_sync",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-onboarding-step-managed_email",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "dismiss-dashboard-mobile-app-card",
+      "text": "Hide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "zoom-app-store-qr",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "zoom-play-store-qr",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

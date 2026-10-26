@@ -1,0 +1,118 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/sla",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nSLA\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nSLA Settings\n\nConfigure service level agreement policies, business hours, and pause rules\n\nDashboard\nPolicies\nBusiness Hours\nPause Rules\nEscalation\nLast 30 days\nRefresh\n\nOverall Compliance\n\n100%\n\n0 tickets tracked\n\nResponse SLA\n\n100%\n\n0 met / 0 breached\n\nAt Risk\n\n0\n\ntickets approaching breach\n\nCurrently Paused\n\n0\n\ntickets with paused SLA\n\nCompliance Trend\nNo trend data available for the selected period\nSLA Compliance\n100%\nResponse SLA\n100%\nResolution SLA\n100%\nBreaches by Priority\nNo breach data available\nTickets At Risk\nNo tickets currently at risk of SLA breach\nRecent Breaches\nNo SLA breaches in the selected period",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-0",
+      "text": "Dashboard",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-1",
+      "text": "Policies",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-2",
+      "text": "Business Hours",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-3",
+      "text": "Pause Rules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-4",
+      "text": "Escalation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_18_",
+      "text": "Last 30 days",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "refresh-sla-dashboard",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

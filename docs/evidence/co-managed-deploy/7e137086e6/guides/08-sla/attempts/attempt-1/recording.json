@@ -1,0 +1,65 @@
+{
+  "scenario": "attempt-1",
+  "recordedAt": "2026-10-26T03:43:28.764Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:43:28.805Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:29.685Z",
+      "seconds": 0.921,
+      "title": "chapter",
+      "data": "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)"
+    },
+    {
+      "at": "2026-10-26T03:43:31.641Z",
+      "seconds": 2.877,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:33.673Z",
+      "seconds": 4.909,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.921,
+      "title": "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)",
+      "end": 33.870000000000005
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#add-sla-policy-button')\n",
+  "durationSeconds": 33.92,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

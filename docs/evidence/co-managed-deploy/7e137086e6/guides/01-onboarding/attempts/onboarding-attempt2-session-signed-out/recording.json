@@ -1,0 +1,195 @@
+{
+  "scenario": "onboarding-recording",
+  "recordedAt": "2026-10-26T03:24:33.380Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "one-workspace-for-this-client-awaiting-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:25:15.151Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-2 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-2 IT Administrator cm-review-20261026-01-accept-2@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "100eadb4-a955-405f-b402-75e84c809826"
+      }
+    },
+    {
+      "id": "seats-reserved-once",
+      "passed": true,
+      "at": "2026-10-26T03:25:15.952Z",
+      "data": {
+        "allocation": {
+          "allocation_id": "6a0436f0-49a2-49ad-b259-b7c5f92f1e8f",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 3
+        }
+      }
+    },
+    {
+      "id": "msp-has-no-live-relationship-before-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:25:16.130Z"
+    },
+    {
+      "id": "resend-keeps-one-workspace-and-one-allocation",
+      "passed": true,
+      "at": "2026-10-26T03:25:19.268Z",
+      "data": {
+        "retryLabel": "Resend administrator invitation",
+        "mailCount": 2
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:24:33.429Z",
+      "seconds": 0.049,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:24:35.763Z",
+      "seconds": 2.383,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:24:35.763Z",
+      "seconds": 2.383,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Create one workspace for one client"
+    },
+    {
+      "at": "2026-10-26T03:24:37.965Z",
+      "seconds": 4.585,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-26T03:24:38.322Z",
+      "seconds": 4.942,
+      "actor": "qa",
+      "title": "client-created",
+      "data": {
+        "clientName": "CM-REVIEW-20261026-01 Accept-2",
+        "clientId": "cc9725bd-95ab-4c02-ace9-a25efff42351"
+      }
+    },
+    {
+      "at": "2026-10-26T03:24:40.493Z",
+      "seconds": 7.113,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/cc9725bd-95ab-4c02-ace9-a25efff42351?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:25:11.681Z",
+      "seconds": 38.301,
+      "actor": "qa",
+      "title": "observed-status-labels",
+      "data": [
+        "Queued"
+      ]
+    },
+    {
+      "at": "2026-10-26T03:25:15.151Z",
+      "seconds": 41.771,
+      "actor": "qa",
+      "title": "one-workspace-for-this-client-awaiting-acceptance",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-2 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-2 IT Administrator cm-review-20261026-01-accept-2@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "100eadb4-a955-405f-b402-75e84c809826"
+      }
+    },
+    {
+      "at": "2026-10-26T03:25:15.952Z",
+      "seconds": 42.572,
+      "actor": "qa",
+      "title": "seats-reserved-once",
+      "data": {
+        "allocation": {
+          "allocation_id": "6a0436f0-49a2-49ad-b259-b7c5f92f1e8f",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 3
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:25:16.130Z",
+      "seconds": 42.75,
+      "actor": "qa",
+      "title": "msp-has-no-live-relationship-before-acceptance"
+    },
+    {
+      "at": "2026-10-26T03:25:16.131Z",
+      "seconds": 42.751,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Recover the existing setup (resend invitation)"
+    },
+    {
+      "at": "2026-10-26T03:25:19.268Z",
+      "seconds": 45.888,
+      "actor": "qa",
+      "title": "resend-keeps-one-workspace-and-one-allocation",
+      "data": {
+        "retryLabel": "Resend administrator invitation",
+        "mailCount": 2
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.383,
+      "title": "1. Create one workspace for one client",
+      "end": 42.751
+    },
+    {
+      "start": 42.751,
+      "title": "3. Recover the existing setup (resend invitation)",
+      "end": 71.95
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('[id$=\"-status\"]').first() to be visible\n",
+  "durationSeconds": 72,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

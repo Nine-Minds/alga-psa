@@ -1,0 +1,75 @@
+{
+  "before": {
+    "assignments": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "relationship_role": "technician"
+      }
+    ],
+    "periods": [
+      {
+        "period_id": "81dcf8ea-4c28-4e53-8831-ef92075030e0",
+        "start_date": "2026-09-01",
+        "end_date": "2026-10-01"
+      },
+      {
+        "period_id": "3dc1af2c-a862-4d38-8620-84ecbdb5556a",
+        "start_date": "2026-10-12",
+        "end_date": "2026-10-19"
+      },
+      {
+        "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+        "start_date": "2026-10-19",
+        "end_date": "2026-11-02"
+      }
+    ],
+    "contract": []
+  },
+  "after": {
+    "assignments": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "relationship_role": "technician"
+      }
+    ],
+    "periods": [
+      {
+        "period_id": "81dcf8ea-4c28-4e53-8831-ef92075030e0",
+        "start_date": "2026-09-01",
+        "end_date": "2026-10-01"
+      },
+      {
+        "period_id": "3dc1af2c-a862-4d38-8620-84ecbdb5556a",
+        "start_date": "2026-10-12",
+        "end_date": "2026-10-19"
+      },
+      {
+        "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+        "start_date": "2026-10-19",
+        "end_date": "2026-11-02"
+      }
+    ],
+    "contract": [
+      {
+        "contract_id": "19921bc5-ab8d-4b33-a4e1-39a4dd1f7464",
+        "contract_name": "CM-REVIEW-20261026-09 hourly contract",
+        "status": "active",
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+        "is_active": true,
+        "start_date": "2026-10-01"
+      }
+    ],
+    "lines": [
+      {
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "contract_line_name": "CM-REVIEW-20261026-09 hourly contract - Hourly",
+        "contract_line_type": "Hourly",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "custom_rate": null
+      }
+    ]
+  }
+}

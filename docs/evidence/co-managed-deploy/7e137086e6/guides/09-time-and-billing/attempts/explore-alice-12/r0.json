@@ -1,0 +1,307 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/email",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nEmail\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nEmail\nEmail Configuration\n\nConfigure email providers, domains, and settings\n\nInbound Email\nOutbound Email\nConfigure outbound email for your organization.\nOutbound Provider\n\nChoose how outbound emails are sent from your organization.\n\nNine Minds Managed\n\nEmails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.\n\nManaged Domains\n\nAdd a custom domain and follow the DNS instructions to verify ownership.\n\nDomain\nAdd Domain\n\nNo managed domains yet. Add one to get started.\n\nSender addresses\n\nCreate named addresses to use across your outbound email.\n\nAdd sender\nSender routing\n\nChoose which sender each mail class uses.\n\nDefault (all other mail)\nSender\nNone (use provider From)\nDisplay name\nSave Settings\nTicket email\nSender\nUse default\nDisplay name\nSave Settings\n\nInbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.\n\nProject email\nSender\nUse default\nDisplay name\nSave Settings\nBilling email\nSender\nUse default\nDisplay name\nSave Settings\nSales email\nSender\nUse default\nDisplay name\nSave Settings\nScheduling email\nSender\nUse default\nDisplay name\nSave Settings\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board’s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Inbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Outbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "outbound-provider-select",
+      "text": "Nine Minds Managed",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "managed-domain-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-managed-domain-button",
+      "text": "Add Domain",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-add-open",
+      "text": "Add sender",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-default-sender",
+      "text": "None (use provider From)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-default-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-default-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-ticket-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-ticket-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-ticket-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-project-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-project-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-project-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-billing-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-billing-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-billing-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-sales-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-sales-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-sales-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-scheduling-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-scheduling-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-scheduling-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-survey-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-survey-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-survey-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-account-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-account-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-account-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-general-sender",
+      "text": "Use default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email-sender-route-general-display-name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "email-sender-route-general-save",
+      "text": "Save Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "open-outbound-diagnostics",
+      "text": "Run Outbound Diagnostics",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

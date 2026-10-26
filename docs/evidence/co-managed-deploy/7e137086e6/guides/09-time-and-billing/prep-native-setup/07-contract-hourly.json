@@ -1,0 +1,237 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=client-contracts",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nContracts\nUpcoming Renewals (0)\nQuick Add\nCreate Contract\nNo client contracts match your search.\nCreate New Contract\nContract Basics\n2\nFixed Fee Services\n3\nProducts\n4\nHourly Services\n5\nUsage-Based Services\n6\nReview & Create\nHourly Services\n\nConfigure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.\n\nWhat are Hourly Services? These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.\n\nMinimum Billable Time (minutes)\n\ne.g., 15 minutes - any time entry less than this will be rounded up\n\nRound Up To Nearest (minutes)\n\ne.g., 15 minutes - time entries will be rounded up to the nearest interval\n\nHourly Services\nService 1\nBasic Support\nHourly Rate\n$\n\n$100.00/hour\n\nNo USD catalog price; using the catalog default rate.\n\nAdd Hourly Service\nBucket pools for this line\nAdd Pool\n\nA contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab.\n\nNo bucket pools on this line yet. Add a pool to include prepaid hours.\n\nAlternate Billing Frequency (Optional)\n\nOptional: Override the contract's billing frequency (Monthly) for this specific contract line.\n\nUse contract billing frequency (Monthly)\nHourly Services Summary\n\nServices: 1\n\nBack\nSave as Draft\nSkip\nNext",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Contracts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Upcoming Renewals (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contract-button",
+      "text": "Quick Add",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-wizard-button",
+      "text": "Create Contract",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-1",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-2",
+      "text": "2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-3",
+      "text": "3",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-4",
+      "text": "4",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-5",
+      "text": "5",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-6",
+      "text": "6",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "minimum-billable-time",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "round-up-to",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "hourly-service-0",
+      "text": "Basic Support",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "hourly-rate-0",
+      "text": "",
+      "value": "100.00",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-hourly-service-0",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-hourly-service-button",
+      "text": "Add Hourly Service",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-add-bucket-pool-button",
+      "text": "Add Pool",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "billing-frequency-override",
+      "text": "Use contract billing frequency (Monthly)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-back",
+      "text": "Back",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-save-draft",
+      "text": "Save as Draft",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-skip",
+      "text": "Skip",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-next",
+      "text": "Next",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

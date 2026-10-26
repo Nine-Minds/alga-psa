@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.191 --> 00:00:12.852
+Preparation: disposable board, non-administrator user and invitation
+
+2
+00:00:12.852 --> 00:00:21.626
+1. Approve one board operation
+
+3
+00:00:21.626 --> 00:00:41.616
+2. Perform only the approved change
+
+4
+00:00:41.616 --> 00:00:57.398
+3. Prove revocation closes an open editor
+
+5
+00:00:57.398 --> 00:01:27.845
+4. Edit a non-administrator profile
+
+6
+00:01:27.845 --> 00:01:50.699
+4. Resend a customer-created invitation
+
+7
+00:01:50.699 --> 00:02:09.550
+Revoke review approvals and confirm retained state

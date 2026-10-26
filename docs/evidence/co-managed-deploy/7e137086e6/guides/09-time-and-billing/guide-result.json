@@ -1,0 +1,74 @@
+{
+  "guide": "guides/09-time-and-billing.html",
+  "coverage": "covered",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "Before you start", "result": "Pass", "evidence": "prep-customer-workspace-has-current-time-period, prep-customer-shares-disposable-project-collaborate; prep-native-setup (qa-collaborate-assignment-persists-after-reload, current-time-period-listed-after-reload, white-rabbit-contract-listed-after-reload); prep-approver-team; prep-billing-email-reopen-sheet; prep-catalog-usd-price", "note": "Preparation done through the native UI in separately recorded prep scenarios: the QA technician assignment (missing from the reprovisioned data even though the brief lists it), an Oz time period from 2026-10-19 to 2026-11-01, a White Rabbit hourly contract, an approval team led by QA, a White Rabbit billing email, and a stored USD price for Basic Support. Inside the recording, Alice creates a disposable ticket, project, phase and task and grants the project Collaborate access. The White Rabbit time period was created by Alice in attempt run-b." },
+    { "section": "1. Persist one commercial entry", "result": "Pass", "evidence": "s1-exactly-one-persisted-entry, s1-entry-owned-by-oz-qualified-co-managed-not-foreign-id, s1-adds-exactly-15-commercial-minutes-on-contract-line, s1-msp-effort-delta-is-15-minutes, s1-entry-listed-on-ticket-after-reload; s1-02-form.png, s1-03-after-reload.png", "note": "QA opened Add Time Entry on the native shared ticket, entered the date first, then service Basic Support, 15 minutes and a note, and saved once. One Oz entry persisted: work_item_type co_managed, with a work reference to the customer ticket rather than its foreign ID, 15 commercial minutes, and the contract line set. It is listed after reload." },
+    { "section": "2. Check stopwatch and customer effort separately", "result": "Pass", "evidence": "s2-stopwatch-stop-creates-exactly-one-commercial-entry, s2-no-open-timer-remains, s2-customer-ticket-shows-effort-summary-without-time-entry-flow, s2-customer-entry-is-operational-without-commercial-attributes, s2-msp-task-entry-commercial-qualified, alice/qa-combined-effort-is-sum-of-customer-and-msp, alice/qa-does-not-see-other-organization-note, s2-both-views-show-the-same-effort", "note": "Native stopwatch: start, about 5 s, stop. The form prefilled 1 minute and saving produced exactly one entry; the session is logged and no timer remains open. The customer's native ticket (AlgaDesk workspace) shows only a Customer/MSP/Combined effort summary and offers no time-entry flow. The operational customer entry was therefore recorded on the disposable shared task: 5 minutes, billing_mode operational, billable 0, no service or contract line. On the same task QA logged 6 commercial minutes. Both organizations see 0.08 / 0.1 / 0.18 hours, and neither sees the other's note. There was no viewer account in this round, so the guide's viewer check was not run." },
+    { "section": "3. Follow the entry into normal timesheets", "result": "Pass", "evidence": "s3-timesheet-lists-commercial-15m, s3-timesheet-lists-stopwatch, s3-timesheet-lists-commercial-task-6m, s3-all-three-shared-entries-on-the-current-sheet, s3-sheet-submitted-after-reload, s3-approver-sees-shared-entries, s3-sheet-and-entries-approved-after-reload", "note": "All three shared rows are visible and identifiable in the native timesheet List view. The sheet was submitted and then approved on Timesheet Approvals. The approver is the same QA user: no separate MSP approver identity was available, Glinda was excluded, and QA needed a disposable team-lead role. Approving the sheet also approves every other QA entry in that period, including guide-06 entry 705281b3." },
+    { "section": "4. Reconcile commercial billing", "result": "Pass", "evidence": "s4-preview-lists-contract-time, s4-draft-for-white-rabbit-not-finalized, s4-each-commercial-entry-invoiced-exactly-once, s4-draft-sources-equal-the-approved-contract-line-entries-on-the-sheet, s4-customer-operational-entry-never-invoiced, s4-draft-invoice-opens-with-its-number; s4-02-preview.png, s4-03-draft-invoice.png", "note": "Automatic Invoices: the date filter was set to 11/01/2026 and the Ready Oct 2026 group for the contract was previewed, then a draft was generated. Draft INV-000002 is for White Rabbit, totals $210.02 and is not finalized. Its source entries are exactly the 17 approved contract-line entries on the sheet: run f plus the earlier attempts a–e, each invoiced once. The customer operational entry is not invoiced. Nothing was finalized or emailed." },
+    { "section": "Restore", "result": "Pass", "evidence": "restore-guide-09-project-grants-removed-after-reload, restore-disposable-approval-team-deleted-after-reload, restore-white-rabbit-billing-email-cleared-after-reload, restore-disposable-contract-terminated-draft-retained", "note": "The following were restored: all CM-REVIEW-20261026-09* project grants removed, approval team deleted, billing email cleared, and the disposable contract terminated (client contract is_active=false). The Basic Support USD price row could not be removed: with a single price the editor offers no remove control (attempts/restore-catalog-usd-price-no-remove-control)." }
+  ],
+  "actors": [
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP, fa7f912f-6b62-463e-85cc-ffedab47ac44)" },
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer, c64b2666-7dd6-4c61-8ced-4b233f628e61)" }
+  ],
+  "steps": [
+    "Alice created disposable ticket 'CM-REVIEW-20261026-09-f printer spooler time ticket' on Service Desk, plus a project, phase and task, and granted the project Collaborate access in Co-managed access.",
+    "QA opened the shared ticket and added a 15-minute Basic Support time entry, choosing the date before the service, then reloaded.",
+    "QA started the native stopwatch, stopped it after about 5 s, chose the service and saved the prefilled 1-minute entry, then reloaded.",
+    "Alice opened the native customer ticket and saw only the effort summary, with no time-entry flow.",
+    "Alice logged 5 operational minutes on the shared task. QA logged 6 commercial minutes on the same task.",
+    "Both Alice and QA reloaded the task's Recorded effort.",
+    "QA opened Time Entry, selected the 2026-10-19 period, checked the three rows in List view, and submitted the sheet.",
+    "QA, as team lead, opened Timesheet Approvals and approved the sheet, then reloaded.",
+    "QA opened Billing > Invoicing > Automatic Invoices, filtered to 11/01/2026, selected the Ready White Rabbit contract group, previewed it, and generated a draft.",
+    "QA opened draft INV-000002.",
+    "Restore: Alice removed the project grants. QA deleted the approval team, cleared the billing email, and terminated the disposable contract."
+  ],
+  "outcomes": [
+    "Oz entry ab5eb485 persisted after reload: co_managed work reference to the customer ticket, 15 commercial minutes, Basic Support, contract line 9e12f69d.",
+    "Stopwatch produced exactly one entry (2e383d4d, 1 minute) and no running or paused session remains.",
+    "Customer entry (White Rabbit tenant) persisted as operational: billable 0, no service or contract line.",
+    "Combined effort on the shared task equals customer plus MSP (0.08 + 0.1 = 0.18 h) in both organizations' views.",
+    "Timesheet b1adac9e was approved after reload. All three run-f shared entries are APPROVED.",
+    "Draft INV-000002 ($210.02, status draft, finalized_at null) traces to exactly the approved contract-line entries on the sheet. The customer entry is not invoiced."
+  ],
+  "defects": [
+    "Billing: the hourly contract-line rate is ignored for time charges. The contract wizard stores the hourly rate (100.00) in contract_line_service_hourly_configs.hourly_rate, but the hourly time charge resolves its rate only from entry custom rate, then user-type rate, then service_prices in the contract currency (packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts ~L270-292; the loader in billingEngine.ts ~L5376 selects only sp.rate). Repro: create an hourly contract in the wizard for a service with no USD service_prices row (the wizard shows 'No USD catalog price; using the catalog default rate' and a prefilled 100.00), approve time on it, then Automatic Invoices > Preview. The preview shows only 'Something went wrong generating the invoice. Quote reference 55fbe048'; the server log says 'Missing pricing for time entry on service \"Basic Support\" ... in USD'. Recorded in attempts/run-d-failed-missing-usd-price.",
+    "Billing: the wizard's minimum billable time and round-up values (15/15) are stored on contract_lines, but contract_line_service_hourly_configs holds 0/0. The preview and draft bill 1-minute entries as 0.0167 h ($1.67) and 6-minute entries as 0.1 h, with no 15-minute minimum.",
+    "Service catalog: Edit Service displays a USD $100.00 price for Basic Support when no service_prices row exists; the legacy default_rate is shown as if it were a stored USD price. Saving unchanged creates the row. A single price row has no remove control, so the row cannot be removed through the UI."
+  ],
+  "limitations": [
+    "Approver and billing operator are the same QA user as the technician. QA got approval rights only by leading a disposable team created for this guide (since deleted).",
+    "Customer operational time and the combined-effort comparison use a disposable shared project task: the customer's native ticket in the AlgaDesk workspace has no time-entry flow.",
+    "Viewer comparison ('the viewer must not gain a time-entry flow') was not run: no viewer account (noassign@emeraldcity.oz) exists in the reprovisioned data.",
+    "Five earlier attempts (a–e) left commercial entries on the same contract line and sheet; the draft includes them. Attempt e's draft INV-000001 was reversed through Drafts > Reverse draft before the clean run.",
+    "Approving the QA sheet also approved guide-06's QA entry 705281b3 (12 min, no contract line, not invoiced). It remains APPROVED.",
+    "The 'contract line' in this run is a disposable hourly contract prepared in this round. A USD catalog price row had to be stored for Basic Support (see defects). That row remains."
+  ],
+  "missingResources": [],
+  "dataLeftBehind": [
+    "Time entries: 17 Oz commercial entries (runs a–f, CM-REVIEW-20261026-09-*) and 5 White Rabbit operational entries (runs b–f); all retained as time evidence.",
+    "Draft invoice INV-000002 (74d3c735-1184-4ec2-999b-49a1d07feb5c), $210.02, draft only.",
+    "Disposable White Rabbit tickets, projects, phases and tasks for runs a–f (CM-REVIEW-20261026-09-a..f). Project grants were removed.",
+    "Oz time period 2026-10-19 to 2026-11-01 (a9f7bb1e) and a White Rabbit time period over the same range; both hold time entries.",
+    "Contract 'CM-REVIEW-20261026-09 hourly contract' (19921bc5), terminated (client contract inactive).",
+    "Basic Support service_prices USD 10000 row (not removable via the UI).",
+    "QA co-managed technician (Collaborate) assignment on White Rabbit, added via the client's Co-managed IT view. Left in place because the brief's baseline expects it and concurrent agents (06) rely on it.",
+    "Fixture ticket 000001: a co_managed work reference was registered when QA opened it during exploration, and an exploratory stopwatch session was discarded (status discarded, no entry)."
+  ],
+  "dbReceipts": [
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/db-receipts-f.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/fixtures-f.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/prep-native-setup/prep-receipt.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/prep-approver-team/receipt.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/prep-billing-email-reopen-sheet/receipt.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/prep-catalog-usd-price/receipt.json",
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/prep-reverse-run-e-draft/receipt.json"
+  ],
+  "recordingDir": "docs/evidence/co-managed-deploy/7e137086e6/guides/09-time-and-billing/recording",
+  "durationSeconds": 118.32,
+  "chapterCount": 7
+}

@@ -1,0 +1,138 @@
+{
+  "scenario": "onboarding-recording",
+  "recordedAt": "2026-10-26T03:35:22.056Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "one-workspace-for-this-client-awaiting-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:36:08.090Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-5 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-5 IT Administrator cm-review-20261026-01-accept-5@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "01bc16ac-a3e3-43e9-92ac-eef150899611"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:35:22.107Z",
+      "seconds": 0.051,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:24.373Z",
+      "seconds": 2.317,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:24.373Z",
+      "seconds": 2.317,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Create one workspace for one client"
+    },
+    {
+      "at": "2026-10-26T03:35:26.539Z",
+      "seconds": 4.483,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-26T03:35:26.903Z",
+      "seconds": 4.847,
+      "actor": "qa",
+      "title": "client-created",
+      "data": {
+        "clientName": "CM-REVIEW-20261026-01 Accept-5",
+        "clientId": "daf80ed5-cddd-4523-ac5b-a423a3988391"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:29.034Z",
+      "seconds": 6.978,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/daf80ed5-cddd-4523-ac5b-a423a3988391?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:36:00.218Z",
+      "seconds": 38.162,
+      "actor": "qa",
+      "title": "observed-status-labels",
+      "data": [
+        "Queued"
+      ]
+    },
+    {
+      "at": "2026-10-26T03:36:01.826Z",
+      "seconds": 39.77,
+      "actor": "qa",
+      "title": "qa-session-lost-relogin",
+      "data": {
+        "route": "/msp/clients/daf80ed5-cddd-4523-ac5b-a423a3988391?tab=co-managed"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:03.636Z",
+      "seconds": 41.58,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:05.591Z",
+      "seconds": 43.535,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/daf80ed5-cddd-4523-ac5b-a423a3988391?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:36:08.090Z",
+      "seconds": 46.034,
+      "actor": "qa",
+      "title": "one-workspace-for-this-client-awaiting-acceptance",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-5 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-5 IT Administrator cm-review-20261026-01-accept-5@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "01bc16ac-a3e3-43e9-92ac-eef150899611"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.317,
+      "title": "1. Create one workspace for one client",
+      "end": 47.75
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "seats-reserved-once {\"allocation\":{\"allocation_id\":\"ed83214a-e797-4a3e-92f9-4b68032aa15e\",\"seats\":1,\"state\":\"reserved\",\"released_at\":null},\"pool\":{\"capacity\":6,\"source\":\"hosted\",\"source_reference\":\"sub_774424209\",\"revision\":11,\"allocated\":6}}",
+  "durationSeconds": 47.8,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

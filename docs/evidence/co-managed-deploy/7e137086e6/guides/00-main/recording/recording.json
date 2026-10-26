@@ -1,0 +1,740 @@
+{
+  "scenario": "recording",
+  "recordedAt": "2026-10-26T04:02:18.896Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "native-entry-offers-full-native-controls",
+      "passed": true,
+      "at": "2026-10-26T04:02:28.636Z",
+      "data": {
+        "ticket-details-delete-ticket-button": true,
+        "ticket-details-duplicate-ticket-button": true,
+        "ticket-details-quick-invoice-button": true,
+        "tag-add-button": true,
+        "user-and-team-picker-trigger": true,
+        "ticket-details-properties-toggle-contact-picker-btn": true,
+        "ticket-details-properties-show-client-picker-btn": true,
+        "ticket-details-properties-add-time-entry-btn": true,
+        "ticket-details-info-save-changes-btn": true
+      }
+    },
+    {
+      "id": "native-entry-has-no-co-managed-section",
+      "passed": true,
+      "at": "2026-10-26T04:02:28.636Z"
+    },
+    {
+      "id": "native-grid-offers-same-native-controls",
+      "passed": true,
+      "at": "2026-10-26T04:02:29.698Z",
+      "data": {
+        "ticket-details-bento-hero-status-select": true,
+        "ticket-details-bento-hero-priority-select": true,
+        "ticket-details-bento-hero-board-select": true,
+        "ticket-details-bento-hero-assignee-picker": true,
+        "tag-manager-input-button": true,
+        "ticket-details-quick-invoice-button": true
+      }
+    },
+    {
+      "id": "customer-admin-creates-board-category-natively",
+      "passed": true,
+      "at": "2026-10-26T04:02:37.534Z",
+      "data": {
+        "categoryId": "ac51f016-87f3-4110-accf-612bd4f47782"
+      }
+    },
+    {
+      "id": "qa-entry-uses-qualified-shared-route",
+      "passed": true,
+      "at": "2026-10-26T04:02:48.704Z"
+    },
+    {
+      "id": "qa-grid-same-ticket-same-values",
+      "passed": true,
+      "at": "2026-10-26T04:02:49.727Z"
+    },
+    {
+      "id": "msp-edits-render-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:02:53.387Z",
+      "data": {
+        "after": {
+          "title": "CM-REVIEW-20261026-00-b shared walkthrough ticket",
+          "status_id": "c71458d9-80e7-4fa3-8326-6c74567630be",
+          "priority_id": "86fbf2bf-cce7-4767-a64b-4945a2f9a2ca",
+          "category_id": "ac51f016-87f3-4110-accf-612bd4f47782",
+          "assigned_to": null,
+          "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958"
+        }
+      }
+    },
+    {
+      "id": "msp-assignment-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:02:55.849Z",
+      "data": {
+        "mspAssign": [
+          {
+            "assigned_to": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "assigned_team_id": null
+          }
+        ],
+        "customerAssignee": null
+      }
+    },
+    {
+      "id": "customer-owned-assignee-board-contact-client-read-only-for-msp",
+      "passed": true,
+      "at": "2026-10-26T04:02:56.847Z",
+      "data": {
+        "assignee": true,
+        "board": true,
+        "contact": true,
+        "client": true
+      }
+    },
+    {
+      "id": "customer-only-actions-and-sections-absent-for-msp",
+      "passed": true,
+      "at": "2026-10-26T04:02:56.852Z",
+      "data": {
+        "checked": [
+          "ticket-details-delete-ticket-button",
+          "ticket-details-duplicate-ticket-button",
+          "ticket-details-quick-invoice-button",
+          "tag-add-button",
+          "tag-manager-input-button",
+          "create-task-from-ticket-button",
+          "ticket-materials-card-toggle",
+          "ticket-details-documents-section-documents-upload-btn",
+          "credentials-screen-new",
+          "ticket-details-properties-watch-list-toggle",
+          "ticket-details-checklist-section-toggle",
+          "co-ticket-revoke"
+        ],
+        "present": []
+      }
+    },
+    {
+      "id": "grid-enforces-same-authority-and-shows-edited-values",
+      "passed": true,
+      "at": "2026-10-26T04:02:57.887Z",
+      "data": {
+        "assignee": true,
+        "board": true,
+        "status": true,
+        "priority": true,
+        "present": []
+      }
+    },
+    {
+      "id": "customer-native-ticket-shows-msp-edits-and-assignment",
+      "passed": true,
+      "at": "2026-10-26T04:03:04.683Z"
+    },
+    {
+      "id": "customer-keeps-native-customer-controls",
+      "passed": true,
+      "at": "2026-10-26T04:03:04.689Z",
+      "data": {
+        "delete": true,
+        "tags": true,
+        "assignee": true,
+        "board": true
+      }
+    },
+    {
+      "id": "customer-assigns-own-technician-natively",
+      "passed": true,
+      "at": "2026-10-26T04:03:05.217Z"
+    },
+    {
+      "id": "msp-sees-customer-assignee-name",
+      "passed": true,
+      "at": "2026-10-26T04:03:14.271Z"
+    },
+    {
+      "id": "msp-cannot-see-customer-private-note",
+      "passed": true,
+      "at": "2026-10-26T04:03:14.271Z"
+    },
+    {
+      "id": "msp-grid-also-hides-private-note",
+      "passed": true,
+      "at": "2026-10-26T04:03:16.225Z"
+    },
+    {
+      "id": "kansas-ticket-fields-read-only",
+      "passed": true,
+      "at": "2026-10-26T04:03:30.698Z",
+      "data": {
+        "status": true,
+        "priority": true,
+        "board": true,
+        "assignee": true,
+        "due": true,
+        "resolve": true
+      }
+    },
+    {
+      "id": "msp-assignment-cleared-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:04:42.244Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:02:18.937Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:18.938Z",
+      "seconds": 0.042,
+      "title": "chapter",
+      "data": "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid"
+    },
+    {
+      "at": "2026-10-26T04:02:20.839Z",
+      "seconds": 1.943,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:27.672Z",
+      "seconds": 8.776,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/14619f1e-dd21-4f7e-902f-32fb983766df"
+    },
+    {
+      "at": "2026-10-26T04:02:28.636Z",
+      "seconds": 9.74,
+      "actor": "qa",
+      "title": "native-entry-offers-full-native-controls",
+      "data": {
+        "ticket-details-delete-ticket-button": true,
+        "ticket-details-duplicate-ticket-button": true,
+        "ticket-details-quick-invoice-button": true,
+        "tag-add-button": true,
+        "user-and-team-picker-trigger": true,
+        "ticket-details-properties-toggle-contact-picker-btn": true,
+        "ticket-details-properties-show-client-picker-btn": true,
+        "ticket-details-properties-add-time-entry-btn": true,
+        "ticket-details-info-save-changes-btn": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:28.636Z",
+      "seconds": 9.74,
+      "actor": "qa",
+      "title": "native-entry-has-no-co-managed-section"
+    },
+    {
+      "at": "2026-10-26T04:02:29.698Z",
+      "seconds": 10.802,
+      "actor": "qa",
+      "title": "native-grid-offers-same-native-controls",
+      "data": {
+        "ticket-details-bento-hero-status-select": true,
+        "ticket-details-bento-hero-priority-select": true,
+        "ticket-details-bento-hero-board-select": true,
+        "ticket-details-bento-hero-assignee-picker": true,
+        "tag-manager-input-button": true,
+        "ticket-details-quick-invoice-button": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:30.753Z",
+      "seconds": 11.857,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board"
+    },
+    {
+      "at": "2026-10-26T04:02:32.543Z",
+      "seconds": 13.647,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:37.034Z",
+      "seconds": 18.138,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing&section=categories"
+    },
+    {
+      "at": "2026-10-26T04:02:37.534Z",
+      "seconds": 18.638,
+      "actor": "alice",
+      "title": "customer-admin-creates-board-category-natively",
+      "data": {
+        "categoryId": "ac51f016-87f3-4110-accf-612bd4f47782"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:39.675Z",
+      "seconds": 20.779,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T04:02:41.966Z",
+      "seconds": 23.07,
+      "actor": "alice",
+      "title": "disposable-shared-ticket",
+      "data": {
+        "ticketId": "b41d4144-16ee-4f59-b970-aeb8a695f80f",
+        "baseline": {
+          "title": "CM-REVIEW-20261026-00-b shared walkthrough ticket",
+          "status_id": "5f0cdbde-231a-4ca7-bdff-1b9e391e6eee",
+          "priority_id": "eb97b64f-1bf2-4677-9320-9b4865692b89",
+          "category_id": null,
+          "assigned_to": null,
+          "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+          "status": "Open",
+          "priority": "Low"
+        },
+        "msp": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b41d4144-16ee-4f59-b970-aeb8a695f80f",
+        "customer": "/msp/tickets/b41d4144-16ee-4f59-b970-aeb8a695f80f"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:42.028Z",
+      "seconds": 23.132,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "MSP opens the same authoritative ticket in Entry and Grid"
+    },
+    {
+      "at": "2026-10-26T04:02:43.815Z",
+      "seconds": 24.919,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:47.763Z",
+      "seconds": 28.867,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b41d4144-16ee-4f59-b970-aeb8a695f80f"
+    },
+    {
+      "at": "2026-10-26T04:02:48.704Z",
+      "seconds": 29.808,
+      "actor": "qa",
+      "title": "qa-entry-uses-qualified-shared-route"
+    },
+    {
+      "at": "2026-10-26T04:02:49.727Z",
+      "seconds": 30.831,
+      "actor": "qa",
+      "title": "qa-grid-same-ticket-same-values"
+    },
+    {
+      "at": "2026-10-26T04:02:49.779Z",
+      "seconds": 30.883,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "MSP edits status, priority and category natively; persisted to the customer ticket"
+    },
+    {
+      "at": "2026-10-26T04:02:53.387Z",
+      "seconds": 34.491,
+      "actor": "qa",
+      "title": "msp-edits-render-after-reload",
+      "data": {
+        "after": {
+          "title": "CM-REVIEW-20261026-00-b shared walkthrough ticket",
+          "status_id": "c71458d9-80e7-4fa3-8326-6c74567630be",
+          "priority_id": "86fbf2bf-cce7-4767-a64b-4945a2f9a2ca",
+          "category_id": "ac51f016-87f3-4110-accf-612bd4f47782",
+          "assigned_to": null,
+          "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:53.444Z",
+      "seconds": 34.548,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "MSP assigns its own technician in the Co-managed section"
+    },
+    {
+      "at": "2026-10-26T04:02:55.849Z",
+      "seconds": 36.953,
+      "actor": "qa",
+      "title": "msp-assignment-persists-after-reload",
+      "data": {
+        "mspAssign": [
+          {
+            "assigned_to": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "assigned_team_id": null
+          }
+        ],
+        "customerAssignee": null
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:55.898Z",
+      "seconds": 37.002,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Field and privacy boundaries for the MSP in Entry and Grid"
+    },
+    {
+      "at": "2026-10-26T04:02:56.847Z",
+      "seconds": 37.951,
+      "actor": "qa",
+      "title": "customer-owned-assignee-board-contact-client-read-only-for-msp",
+      "data": {
+        "assignee": true,
+        "board": true,
+        "contact": true,
+        "client": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:56.852Z",
+      "seconds": 37.956,
+      "actor": "qa",
+      "title": "customer-only-actions-and-sections-absent-for-msp",
+      "data": {
+        "checked": [
+          "ticket-details-delete-ticket-button",
+          "ticket-details-duplicate-ticket-button",
+          "ticket-details-quick-invoice-button",
+          "tag-add-button",
+          "tag-manager-input-button",
+          "create-task-from-ticket-button",
+          "ticket-materials-card-toggle",
+          "ticket-details-documents-section-documents-upload-btn",
+          "credentials-screen-new",
+          "ticket-details-properties-watch-list-toggle",
+          "ticket-details-checklist-section-toggle",
+          "co-ticket-revoke"
+        ],
+        "present": []
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:57.887Z",
+      "seconds": 38.991,
+      "actor": "qa",
+      "title": "grid-enforces-same-authority-and-shows-edited-values",
+      "data": {
+        "assignee": true,
+        "board": true,
+        "status": true,
+        "priority": true,
+        "present": []
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:57.936Z",
+      "seconds": 39.04,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Customer sees MSP edits and assignment, assigns natively and writes privately"
+    },
+    {
+      "at": "2026-10-26T04:02:59.727Z",
+      "seconds": 40.831,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:03.589Z",
+      "seconds": 44.693,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/b41d4144-16ee-4f59-b970-aeb8a695f80f"
+    },
+    {
+      "at": "2026-10-26T04:03:04.683Z",
+      "seconds": 45.787,
+      "actor": "alice",
+      "title": "customer-native-ticket-shows-msp-edits-and-assignment"
+    },
+    {
+      "at": "2026-10-26T04:03:04.689Z",
+      "seconds": 45.793,
+      "actor": "alice",
+      "title": "customer-keeps-native-customer-controls",
+      "data": {
+        "delete": true,
+        "tags": true,
+        "assignee": true,
+        "board": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:05.217Z",
+      "seconds": 46.321,
+      "actor": "alice",
+      "title": "customer-assigns-own-technician-natively"
+    },
+    {
+      "at": "2026-10-26T04:03:05.787Z",
+      "seconds": 46.891,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "MSP sees the customer assignee but not the customer-private note"
+    },
+    {
+      "at": "2026-10-26T04:03:07.593Z",
+      "seconds": 48.697,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:11.762Z",
+      "seconds": 52.866,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b41d4144-16ee-4f59-b970-aeb8a695f80f"
+    },
+    {
+      "at": "2026-10-26T04:03:14.271Z",
+      "seconds": 55.375,
+      "actor": "qa",
+      "title": "msp-sees-customer-assignee-name"
+    },
+    {
+      "at": "2026-10-26T04:03:14.271Z",
+      "seconds": 55.375,
+      "actor": "qa",
+      "title": "msp-cannot-see-customer-private-note"
+    },
+    {
+      "at": "2026-10-26T04:03:16.225Z",
+      "seconds": 57.329,
+      "actor": "qa",
+      "title": "msp-grid-also-hides-private-note"
+    },
+    {
+      "at": "2026-10-26T04:03:17.266Z",
+      "seconds": 58.37,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Ended Kansas Farms workspace: read-only check (no mutation attempted)"
+    },
+    {
+      "at": "2026-10-26T04:03:19.055Z",
+      "seconds": 60.159,
+      "actor": "kansas",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:23.161Z",
+      "seconds": 64.265,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T04:03:25.172Z",
+      "seconds": 66.276,
+      "actor": "kansas",
+      "title": "kansas-co-management-page",
+      "data": {
+        "excerpt": "Upgrade to AlgaPSA\nExport workspace\nEnd co-management\nCo-managed access\n\nCould not load access settings. Reload to try again.\n\nReload current access"
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:27.185Z",
+      "seconds": 68.289,
+      "actor": "kansas",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T04:03:30.698Z",
+      "seconds": 71.802,
+      "actor": "kansas",
+      "title": "kansas-ticket-fields-read-only",
+      "data": {
+        "status": true,
+        "priority": true,
+        "board": true,
+        "assignee": true,
+        "due": true,
+        "resolve": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:03:30.710Z",
+      "seconds": 71.814,
+      "actor": "kansas",
+      "title": "kansas-actions-still-offered-not-exercised",
+      "data": {
+        "ticket-details-duplicate-ticket-button": true,
+        "ticket-details-delete-ticket-button": true,
+        "create-task-from-ticket-button": true,
+        "ticket-details-quick-invoice-button": true,
+        "ticket-details-bento-contact-add": true,
+        "ticket-details-bento-materials-add-btn": true,
+        "ticket-details-bento-documents-section-add-link": true,
+        "ticket-details-bento-external-links-section-add-button": true,
+        "add-asset-button": true,
+        "ticket-details-bento-hero-title-edit": true,
+        "ticket-details-bento-timeline-tile-add-comment-btn": false
+      }
+    },
+    {
+      "at": "2026-10-26T04:04:31.820Z",
+      "seconds": 132.924,
+      "actor": "kansas",
+      "title": "kansas-entry-controls",
+      "data": {
+        "save": false,
+        "addComment": false
+      }
+    },
+    {
+      "at": "2026-10-26T04:04:32.006Z",
+      "seconds": 133.11,
+      "actor": "kansas",
+      "title": "chapter",
+      "data": "Restore: MSP clears its assignment on the disposable ticket"
+    },
+    {
+      "at": "2026-10-26T04:04:33.809Z",
+      "seconds": 134.913,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:04:38.082Z",
+      "seconds": 139.186,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b41d4144-16ee-4f59-b970-aeb8a695f80f"
+    },
+    {
+      "at": "2026-10-26T04:04:42.244Z",
+      "seconds": 143.348,
+      "actor": "qa",
+      "title": "msp-assignment-cleared-after-reload"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.042,
+      "title": "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid",
+      "end": 11.857
+    },
+    {
+      "start": 11.857,
+      "title": "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board",
+      "end": 23.132
+    },
+    {
+      "start": 23.132,
+      "title": "MSP opens the same authoritative ticket in Entry and Grid",
+      "end": 30.883
+    },
+    {
+      "start": 30.883,
+      "title": "MSP edits status, priority and category natively; persisted to the customer ticket",
+      "end": 34.548
+    },
+    {
+      "start": 34.548,
+      "title": "MSP assigns its own technician in the Co-managed section",
+      "end": 37.002
+    },
+    {
+      "start": 37.002,
+      "title": "Field and privacy boundaries for the MSP in Entry and Grid",
+      "end": 39.04
+    },
+    {
+      "start": 39.04,
+      "title": "Customer sees MSP edits and assignment, assigns natively and writes privately",
+      "end": 46.891
+    },
+    {
+      "start": 46.891,
+      "title": "MSP sees the customer assignee but not the customer-private note",
+      "end": 58.37
+    },
+    {
+      "start": 58.37,
+      "title": "Ended Kansas Farms workspace: read-only check (no mutation attempted)",
+      "end": 133.11
+    },
+    {
+      "start": 133.11,
+      "title": "Restore: MSP clears its assignment on the disposable ticket",
+      "end": 144.26999999999998
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Uses a disposable shared ticket on the shared Service Desk board instead of fixture 000001 (concurrent guides).",
+    "No MSP viewer account exists in the reprovisioned data; the read-only comparison uses the ended Kansas Farms workspace."
+  ],
+  "durationSeconds": 144.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "kansas",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

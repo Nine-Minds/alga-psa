@@ -1,0 +1,35 @@
+{
+  "baseline": {
+    "at": "2026-10-26T03:23:30.800Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 5,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+        "can_collaborate": true
+      },
+      {
+        "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+        "can_collaborate": true
+      }
+    ],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=invoicing",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nInvoicing\nGenerate\nDrafts\nFinalized\nProject Billing\nAutomatic Invoices\nAll\n3\nReady\n2\nCombinable\n0\nNeeds attention\n0\nNot yet due\n1\nFilters\nErrors occurred while finalizing invoices:\npreview: White Rabbit has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.\n1 selected\n1 invoice(s) · 0 combined · 1 separate\nCalculated at generation\n1 line item(s)\nPreview Selected\nGenerate Invoices (1)\n\t\nCLIENT / GROUP\n\t\nSTATUS\n\t\nSERVICE PERIOD\n\t\nAMOUNT\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nNot yet due\nOpens Dec 1, 2026\n\t\nNov 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nReady\n\t\nOct 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M\nUnresolved time entry\n\t\nReady\n\t\nOct 2026\n\t\n$15.00\nRecurring Invoice History\n2 columns hidden.\nShow all\nClient\n\t\nAssignment Scope\n\t\nCadence Source\n\t\nService Period\n\t\nActions\nInvoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nWhite Rabbit has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.\n\nClose Preview\nGenerate Invoice",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-0",
+      "text": "Generate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-1",
+      "text": "Drafts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-2",
+      "text": "Finalized",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-3",
+      "text": "Project Billing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_u_",
+      "text": "Automatic Invoices",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-all",
+      "text": "All3",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-ready",
+      "text": "Ready2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-combinable",
+      "text": "Combinable0",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-attention",
+      "text": "Needs attention0",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-view-notYetDue",
+      "text": "Not yet due1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "automatic-invoices-filters-button",
+      "text": "Filters",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "filter-clients-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "preview-selected-button",
+      "text": "Preview Selected",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "generate-invoices-button",
+      "text": "Generate Invoices (1)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-all",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "on",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-12-01:2027-01-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-11-01:2026-12-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "select-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-group-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-10-01:2026-11-01",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "filter-invoiced-clients-input",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "close-preview-dialog-button",
+      "text": "Close Preview",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "generate-invoice-from-preview-button",
+      "text": "Generate Invoice",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

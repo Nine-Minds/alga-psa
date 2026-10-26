@@ -1,0 +1,89 @@
+{
+  "intent": {
+    "operationId": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+    "quantity": 5
+  },
+  "existing": 4,
+  "target": 5,
+  "afterPurchase": {
+    "pool": {
+      "capacity": 5,
+      "source": "hosted",
+      "source_reference": "sub_774424209",
+      "revision": 6,
+      "allocated": 1
+    },
+    "purchases": [
+      {
+        "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+        "quantity": 3,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T00:03:11.801858+00:00"
+      },
+      {
+        "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+        "quantity": 4,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T03:18:24.193788+00:00"
+      },
+      {
+        "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+        "quantity": 5,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T03:19:56.089679+00:00"
+      }
+    ],
+    "subscriptions": [
+      {
+        "id": "sub_2a87b2f33",
+        "quantity": 1
+      },
+      {
+        "id": "sub_774424209",
+        "kind": "co_managed",
+        "quantity": 5
+      }
+    ],
+    "events": []
+  },
+  "afterReplay": {
+    "pool": {
+      "capacity": 5,
+      "source": "hosted",
+      "source_reference": "sub_774424209",
+      "revision": 7,
+      "allocated": 1
+    },
+    "purchases": [
+      {
+        "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+        "quantity": 3,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T00:03:11.801858+00:00"
+      },
+      {
+        "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+        "quantity": 4,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T03:18:24.193788+00:00"
+      },
+      {
+        "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+        "quantity": 5,
+        "state": "completed",
+        "provider_reference": "sub_774424209",
+        "created_at": "2026-10-26T03:19:56.089679+00:00"
+      }
+    ],
+    "subscriptions": [
+      5
+    ],
+    "events": 1
+  },
+  "provider": "configured Stripe simulator (127.0.0.1:9175); not real Stripe"
+}

@@ -1,0 +1,36 @@
+{
+  "profilesBefore": {
+    "customer": [
+      {
+        "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+        "display_name": "CM-REVIEW-20261026-12-a simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": true,
+        "is_archived": false
+      }
+    ],
+    "sponsor": []
+  },
+  "s1-profile": {
+    "customer": [
+      {
+        "profile_id": "d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+        "display_name": "CM-REVIEW-20261026-12-b simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": false
+      },
+      {
+        "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+        "display_name": "CM-REVIEW-20261026-12-a simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": true,
+        "is_archived": false
+      }
+    ],
+    "sponsor": []
+  }
+}

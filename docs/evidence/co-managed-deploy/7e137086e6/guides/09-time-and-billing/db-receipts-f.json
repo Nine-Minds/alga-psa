@@ -1,0 +1,462 @@
+{
+  "contractLine": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+  "customerPeriodBefore": {
+    "period_id": "6cf165e1-7479-4026-b9b8-e26b09319ec6",
+    "start_date": "2026-10-19",
+    "end_date": "2026-11-02"
+  },
+  "projectScopesBefore": [
+    {
+      "project_id": "55496e2a-a76f-4a22-9cb4-292bd624c30e",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "57304524-bee3-41d9-aada-f7c678e097a5",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "80b70b62-243d-4bd6-a272-85b73d053355",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "fe12c8a2-e534-4877-8ce9-39285cf26204",
+      "can_collaborate": true
+    }
+  ],
+  "projectScopesAfterGrant": [
+    {
+      "project_id": "55496e2a-a76f-4a22-9cb4-292bd624c30e",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "57304524-bee3-41d9-aada-f7c678e097a5",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "7f988a76-d51b-4fc8-8967-ab6f560818c9",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "80b70b62-243d-4bd6-a272-85b73d053355",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "fe12c8a2-e534-4877-8ce9-39285cf26204",
+      "can_collaborate": true
+    }
+  ],
+  "s1-msp-effort-before": {
+    "msp_minutes": 0
+  },
+  "s1-entry": {
+    "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+    "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+    "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+    "work_item_type": "co_managed",
+    "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+    "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+    "billing_mode": "commercial",
+    "billable_duration": 15,
+    "minutes": 15,
+    "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+    "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+    "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+    "approval_status": "DRAFT",
+    "invoiced": false,
+    "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+    "source_kind": "ticket",
+    "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+    "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+    "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+  },
+  "s2-stopwatch": {
+    "entry": {
+      "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "work_item_type": "co_managed",
+      "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+      "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+      "billing_mode": "commercial",
+      "billable_duration": 1,
+      "minutes": 1,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+      "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+      "approval_status": "DRAFT",
+      "invoiced": false,
+      "notes": "CM-REVIEW-20261026-09-f stopwatch",
+      "source_kind": "ticket",
+      "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+      "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+      "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    "sessions": [
+      {
+        "session_id": "4c79d57a-ae0f-4b52-b6f0-b6dc348c77f7",
+        "status": "discarded",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "300a55e1-c5e3-4246-8d92-6f095d53bc99",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "79115df0-4746-4932-8564-65524586773f",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "3cc08bc1-9572-4b90-9609-6f8ffc42b23c",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "8f3d19dd-544d-4acf-8786-bef71779c261",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "4897a8c1-dcb2-46dc-93ee-ed9c81bbce78",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      },
+      {
+        "session_id": "838584ed-7e60-4ae8-b9c9-d20d78ac6bfa",
+        "status": "logged",
+        "work_item_type": "co_managed"
+      }
+    ],
+    "ticketEntries": [
+      {
+        "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+        "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+        "billable_duration": 15
+      },
+      {
+        "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+        "notes": "CM-REVIEW-20261026-09-f stopwatch",
+        "billable_duration": 1
+      }
+    ]
+  },
+  "s2-effort": {
+    "efforts": {
+      "alice": [
+        "0.08 hours",
+        "0.1 hours",
+        "0.18 hours"
+      ],
+      "qa": [
+        "0.08 hours",
+        "0.1 hours",
+        "0.18 hours"
+      ]
+    },
+    "customerEntry": {
+      "entry_id": "c28df094-a2d2-4238-ad7c-a9ebf382da6c",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+      "user_id": "a288a520-c353-44d2-91e0-001f75d236de",
+      "work_item_type": "project_task",
+      "work_item_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+      "co_managed_work_reference_id": null,
+      "billing_mode": "operational",
+      "billable_duration": 0,
+      "minutes": 5,
+      "service_id": null,
+      "contract_line_id": null,
+      "time_sheet_id": "1d0631cb-171c-476f-8e7b-8c3011bb5945",
+      "approval_status": "DRAFT",
+      "invoiced": false,
+      "notes": "CM-REVIEW-20261026-09-f customer operational 5m",
+      "source_kind": null,
+      "source_id": null,
+      "client_id": null,
+      "customer_tenant": null
+    },
+    "mspTaskEntry": {
+      "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "work_item_type": "co_managed",
+      "work_item_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+      "co_managed_work_reference_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+      "billing_mode": "commercial",
+      "billable_duration": 6,
+      "minutes": 6,
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+      "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+      "approval_status": "DRAFT",
+      "invoiced": false,
+      "notes": "CM-REVIEW-20261026-09-f commercial task 6m",
+      "source_kind": "project_task",
+      "source_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+      "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+      "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  },
+  "s3-sheet": {
+    "sheet": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+    "approved": [
+      {
+        "entry_id": "2888e49a-4670-416d-8536-0720b483204f",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "705281b3-006a-4c64-8250-ae707f80254a",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "715aaae6-f601-410c-9503-53170b1ca849",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "87568b45-b19d-48ae-bbf6-7762a07394d5",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "c8a7659c-88de-4c61-a6ea-58e440d02175",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "d52924b9-b13e-4432-98c9-749ddef8870d",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+        "approval_status": "APPROVED"
+      },
+      {
+        "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+        "approval_status": "APPROVED"
+      }
+    ]
+  },
+  "s4-billed-quantity": {
+    "qty": 2.100002
+  },
+  "s4-invoice": {
+    "inv": {
+      "invoice_id": "74d3c735-1184-4ec2-999b-49a1d07feb5c",
+      "invoice_number": "INV-000002",
+      "status": "draft",
+      "subtotal": 21002,
+      "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+      "finalized_at": null
+    },
+    "sources": [
+      "2888e49a-4670-416d-8536-0720b483204f",
+      "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "715aaae6-f601-410c-9503-53170b1ca849",
+      "802d1a8a-25e6-49a6-91c6-24052843e843",
+      "87568b45-b19d-48ae-bbf6-7762a07394d5",
+      "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+      "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+      "c8a7659c-88de-4c61-a6ea-58e440d02175",
+      "d52924b9-b13e-4432-98c9-749ddef8870d",
+      "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+    ],
+    "charges": [
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.1,
+        "unit_price": 10000,
+        "net_amount": 1000,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.1,
+        "unit_price": 10000,
+        "net_amount": 1000,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.1,
+        "unit_price": 10000,
+        "net_amount": 1000,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.016667,
+        "unit_price": 10000,
+        "net_amount": 167,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.1,
+        "unit_price": 10000,
+        "net_amount": 1000,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      },
+      {
+        "description": "Basic Support",
+        "quantity": 0.1,
+        "unit_price": 10000,
+        "net_amount": 1000,
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926"
+      }
+    ],
+    "commercialEntries": [
+      "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+      "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+    ],
+    "customerEntry": "c28df094-a2d2-4238-ad7c-a9ebf382da6c"
+  },
+  "projectScopesAfterRestore": []
+}

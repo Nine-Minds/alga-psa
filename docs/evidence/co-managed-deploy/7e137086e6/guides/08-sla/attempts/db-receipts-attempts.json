@@ -1,0 +1,303 @@
+{
+  "before": {
+    "mappings": [],
+    "clientPolicy": "",
+    "policies": [
+      {
+        "sla_policy_id": "3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+        "policy_name": "CM-REVIEW-20261026-08 a1 MSP policy",
+        "is_default": false
+      }
+    ]
+  },
+  "restoreNeeded": {
+    "mapping": "8635149a-31a7-4a04-b541-71d9fe413a3d",
+    "clientPolicy": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+    "before": {
+      "mappings": [],
+      "clientPolicy": "",
+      "policies": [
+        {
+          "sla_policy_id": "3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+          "policy_name": "CM-REVIEW-20261026-08 a1 MSP policy",
+          "is_default": false
+        }
+      ]
+    }
+  },
+  "policy": {
+    "policyId": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+    "targets": [
+      {
+        "priority_id": "8635149a-31a7-4a04-b541-71d9fe413a3d",
+        "response_time_minutes": 4,
+        "resolution_time_minutes": 240,
+        "is_24x7": false
+      },
+      {
+        "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+        "response_time_minutes": 30,
+        "resolution_time_minutes": 60,
+        "is_24x7": false
+      }
+    ],
+    "thresholds": [
+      {
+        "threshold_percent": 50,
+        "notification_type": "warning",
+        "notify_assignee": true,
+        "notify_board_manager": false,
+        "channels": [
+          "in_app"
+        ]
+      },
+      {
+        "threshold_percent": 75,
+        "notification_type": "warning",
+        "notify_assignee": true,
+        "notify_board_manager": true,
+        "channels": [
+          "in_app"
+        ]
+      },
+      {
+        "threshold_percent": 90,
+        "notification_type": "warning",
+        "notify_assignee": true,
+        "notify_board_manager": true,
+        "channels": [
+          "in_app",
+          "email"
+        ]
+      },
+      {
+        "threshold_percent": 100,
+        "notification_type": "breach",
+        "notify_assignee": true,
+        "notify_board_manager": true,
+        "channels": [
+          "in_app",
+          "email"
+        ]
+      }
+    ],
+    "isDefault": "f"
+  },
+  "obligationTicket1AfterEscalation": [
+    {
+      "obligation_id": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+      "ticket_id": "17e22913-387b-4b5b-8886-042ff65c9466",
+      "generation": 1,
+      "sla_policy_id": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+      "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "clock": {
+        "identity": {
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+          "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+          "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        },
+        "response": {
+          "dueAt": "2026-10-26T04:18:44.858Z",
+          "breached": false,
+          "breachedAt": null,
+          "completedAt": null,
+          "targetMinutes": 30,
+          "completedElapsedMilliseconds": null
+        },
+        "schedule": {
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "entries": [],
+          "is_24x7": true,
+          "holidays": [],
+          "timezone": "UTC",
+          "is_default": false,
+          "schedule_id": "24x7-fallback",
+          "schedule_name": "24x7 (Fallback)"
+        },
+        "startedAt": "2026-10-26T03:48:44.858Z",
+        "observedAt": "2026-10-26T03:48:44.858Z",
+        "resolution": {
+          "dueAt": "2026-10-26T04:48:44.858Z",
+          "breached": false,
+          "breachedAt": null,
+          "completedAt": null,
+          "targetMinutes": 60,
+          "completedElapsedMilliseconds": null
+        },
+        "pauseReasons": [],
+        "elapsedMilliseconds": 0
+      },
+      "created_at": "2026-10-26T03:48:44.858+00:00"
+    }
+  ],
+  "obligationsAfterSection3": {
+    "t1": [
+      {
+        "obligation_id": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+        "ticket_id": "17e22913-387b-4b5b-8886-042ff65c9466",
+        "generation": 1,
+        "sla_policy_id": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T04:18:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:48:44.858Z",
+          "resolution": {
+            "dueAt": "2026-10-26T04:48:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        },
+        "created_at": "2026-10-26T03:48:44.858+00:00"
+      }
+    ],
+    "t2": [
+      {
+        "obligation_id": "95ac9d14-ce0b-4849-becb-5662742f75e5",
+        "ticket_id": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+        "generation": 1,
+        "sla_policy_id": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "priority_id": "8635149a-31a7-4a04-b541-71d9fe413a3d",
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+            "obligationId": "95ac9d14-ce0b-4849-becb-5662742f75e5",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T03:53:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 4,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:49:04.959Z",
+          "observedAt": "2026-10-26T03:49:04.959Z",
+          "resolution": {
+            "dueAt": "2026-10-26T07:49:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 240,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        },
+        "created_at": "2026-10-26T03:49:04.959+00:00"
+      }
+    ]
+  },
+  "obligationsAfterSection4": {
+    "t1": [
+      {
+        "obligation_id": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+        "ticket_id": "17e22913-387b-4b5b-8886-042ff65c9466",
+        "generation": 1,
+        "sla_policy_id": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T04:18:51.734Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:49:23.252Z",
+          "resolution": {
+            "dueAt": "2026-10-26T04:48:51.734Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 31518
+        },
+        "created_at": "2026-10-26T03:48:44.858+00:00"
+      }
+    ]
+  },
+  "after": {
+    "mappings": [],
+    "clientPolicy": "",
+    "policies": [
+      {
+        "sla_policy_id": "3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+        "policy_name": "CM-REVIEW-20261026-08 a1 MSP policy",
+        "is_default": false
+      },
+      {
+        "sla_policy_id": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "policy_name": "CM-REVIEW-20261026-08 a2 MSP policy",
+        "is_default": false
+      },
+      {
+        "sla_policy_id": "b30f2db6-acf7-45d4-afbc-a92d710c8a6d",
+        "policy_name": "CM-REVIEW-20261026-10 MSP policy",
+        "is_default": false
+      }
+    ]
+  }
+}

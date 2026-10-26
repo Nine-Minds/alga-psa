@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:00.052 --> 00:00:02.465
+Before you start: requester and disposable shared ticket (customer native screens)
+
+2
+00:00:02.465 --> 00:00:09.833
+1. Shared IT teams message with an attached file (QA)
+
+3
+00:00:09.833 --> 00:00:13.629
+1. Customer reads the shared message and file
+
+4
+00:00:13.629 --> 00:00:36.548
+1. Organization-private messages from each side, then requester audience
+
+5
+00:00:36.548 --> 00:00:40.670
+1. Requester sees only requester-audience content in the portal
+
+6
+00:00:40.670 --> 00:00:52.110
+2. Author removes a disposable attachment; old link stops downloading

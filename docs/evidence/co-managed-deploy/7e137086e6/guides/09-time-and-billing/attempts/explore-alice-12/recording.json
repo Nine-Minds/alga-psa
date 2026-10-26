@@ -1,0 +1,58 @@
+{
+  "scenario": "explore-alice-12",
+  "recordedAt": "2026-10-26T03:07:30.975Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:07:33.003Z",
+      "seconds": 2.028,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:07:35.079Z",
+      "seconds": 4.104,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/email"
+    },
+    {
+      "at": "2026-10-26T03:07:40.125Z",
+      "seconds": 9.15,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/providers"
+    },
+    {
+      "at": "2026-10-26T03:07:45.124Z",
+      "seconds": 14.149,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/integrations"
+    },
+    {
+      "at": "2026-10-26T03:07:50.078Z",
+      "seconds": 19.103,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/security-settings?tab=user-provisioning"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 23.08,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

@@ -1,0 +1,252 @@
+{
+  "baseline": {
+    "at": "2026-10-26T04:30:19.217Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 71,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "after-1-board-view": {
+    "at": "2026-10-26T04:30:36.737Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 72,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "board_name": "CM-REVIEW-20261026-03 Access board",
+        "can_collaborate": false
+      },
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "after-2-staff": {
+    "at": "2026-10-26T04:30:46.797Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 73,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "board_name": "CM-REVIEW-20261026-03 Access board",
+        "can_collaborate": false
+      },
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "relationship_role": "viewer"
+      },
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "escalation-only": {
+    "at": "2026-10-26T04:31:17.909Z",
+    "relationship": {
+      "visibility_mode": "escalation_only",
+      "revision": 75,
+      "state": "active"
+    },
+    "boards": [],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "relationship_role": "viewer"
+      },
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "mode-restored": {
+    "at": "2026-10-26T04:31:34.779Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 76,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "board_name": "CM-REVIEW-20261026-03 Access board",
+        "can_collaborate": false
+      },
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "relationship_role": "viewer"
+      },
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "prereqRestore": {
+    "before": {
+      "mappings": {
+        "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+      },
+      "clientPolicy": ""
+    },
+    "after": {
+      "mappings": {
+        "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+      },
+      "clientPolicy": ""
+    }
+  },
+  "board-collaborate": {
+    "at": "2026-10-26T04:31:55.005Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 78,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "board_name": "CM-REVIEW-20261026-03 Access board",
+        "can_collaborate": true
+      },
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "relationship_role": "viewer"
+      },
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "board-removed": {
+    "at": "2026-10-26T04:32:38.321Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 79,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "relationship_role": "viewer"
+      },
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  },
+  "final": {
+    "at": "2026-10-26T04:32:51.929Z",
+    "relationship": {
+      "visibility_mode": "board_scope",
+      "revision": 80,
+      "state": "active"
+    },
+    "boards": [
+      {
+        "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+        "board_name": "Service Desk",
+        "can_collaborate": true
+      }
+    ],
+    "projects": [],
+    "staff": [
+      {
+        "principal_type": "user",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "principal": "qa@emeraldcity.oz",
+        "relationship_role": "technician"
+      }
+    ]
+  }
+}

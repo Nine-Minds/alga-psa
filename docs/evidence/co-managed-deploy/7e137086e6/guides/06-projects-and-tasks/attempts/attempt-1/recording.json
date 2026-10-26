@@ -1,0 +1,72 @@
+{
+  "scenario": "attempt-1",
+  "recordedAt": "2026-10-26T03:17:37.341Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:17:37.396Z",
+      "seconds": 0.055,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:37.689Z",
+      "seconds": 0.348,
+      "title": "chapter",
+      "data": "Before you start: customer creates a disposable project, phase and two tasks"
+    },
+    {
+      "at": "2026-10-26T03:17:39.640Z",
+      "seconds": 2.299,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:41.699Z",
+      "seconds": 4.358,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:17:44.283Z",
+      "seconds": 6.942,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/875858d7-d6c1-476e-8f40-b3ba94e7cc00"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.348,
+      "title": "Before you start: customer creates a disposable project, phase and two tasks",
+      "end": 33.470000000000006
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "page.reload: Timeout 25000ms exceeded.\nCall log:\n  - waiting for navigation until \"load\"\n    - navigated to \"http://feature-co-managed-it.localhost:23374/msp/projects/875858d7-d6c1-476e-8f40-b3ba94e7cc00?phaseId=33e18d0f-2cad-4a80-8347-726376e89490\"\n",
+  "durationSeconds": 33.52,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

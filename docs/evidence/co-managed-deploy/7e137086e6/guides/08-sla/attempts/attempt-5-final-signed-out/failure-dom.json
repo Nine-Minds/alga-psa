@@ -1,0 +1,139 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/sla?tab=policies",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nSLA\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n2\nQT\nSLA Settings\n\nConfigure service level agreement policies, business hours, and pause rules\n\nDashboard\nPolicies\nBusiness Hours\nPause Rules\nEscalation\nSLA Policies\n\nManage service level agreement policies that define response and resolution time targets\n\nAdd Policy\nName\n\t\nDescription\n\t\nDefault\n\t\nActions\n\n\nCM-REVIEW-20261026-08 a1 MSP policy\n\t\nDisposable review policy; assigned only to the White Rabbit client during guide 08.\n\t\n\t\nOpen menu\n\n\nCM-REVIEW-20261026-08 a2 MSP policy\n\t\nDisposable review policy; assigned only to the White Rabbit client during guide 08.\n\t\n\t\nOpen menu\n\n\nCM-REVIEW-20261026-08 final MSP policy\n\t\nDisposable review policy; assigned only to the White Rabbit client during guide 08.\n\t\n\t\nOpen menu\n\n\nCM-REVIEW-20261026-10 MSP policy\n\t\n-\n\t\n\t\nOpen menu",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-0",
+      "text": "Dashboard",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-1",
+      "text": "Policies",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-2",
+      "text": "Business Hours",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-3",
+      "text": "Pause Rules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-4",
+      "text": "Escalation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-sla-policy-button",
+      "text": "Add Policy",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-actions-menu-3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-actions-menu-ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-actions-menu-42d41fcc-1312-4d9a-833f-769b2581df02",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-actions-menu-b30f2db6-acf7-45d4-afbc-a92d710c8a6d",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "scenario": "explore4",
+  "recordedAt": "2026-10-26T03:10:38.588Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:10:40.524Z",
+      "seconds": 1.936,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:10:42.628Z",
+      "seconds": 4.04,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 9.64,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

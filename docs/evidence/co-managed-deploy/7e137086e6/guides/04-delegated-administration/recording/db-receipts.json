@@ -1,0 +1,94 @@
+{
+  "baselineGrants": [],
+  "seats0": 1,
+  "board0": {
+    "board_name": "CM-REVIEW-20261026-04 Delegation board",
+    "description": "CM-REVIEW-20261026-04 original description",
+    "enable_live_ticket_timer": true
+  },
+  "profile0": {
+    "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+    "first_name": "CMReview04",
+    "last_name": "Profile",
+    "timezone": null
+  },
+  "invitation0": {
+    "invitation_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+    "email": "cm-review-20261026-04-invitee@whiterabbit.test",
+    "first_name": "CMReview04",
+    "last_name": "Invitee",
+    "role_id": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+    "token": "[redacted sha256:41ab1645a62b]",
+    "expires_at": "2026-10-27T03:37:05.777929+00:00",
+    "used_at": null,
+    "metadata": {
+      "created_by": "a288a520-c353-44d2-91e0-001f75d236de",
+      "invited_by_name": "Alice Liddell"
+    }
+  },
+  "invitationBeforeRevoke": {
+    "invitation_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+    "email": "cm-review-20261026-04-invitee@whiterabbit.test",
+    "first_name": "CMReview04",
+    "last_name": "Invitee",
+    "role_id": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+    "token": "[redacted sha256:41ab1645a62b]",
+    "expires_at": "2026-10-27T03:37:05.777929+00:00",
+    "used_at": null,
+    "metadata": {
+      "created_by": "a288a520-c353-44d2-91e0-001f75d236de",
+      "invited_by_name": "Alice Liddell"
+    }
+  },
+  "finalGrants": [
+    {
+      "grant_id": "47a7653c-f39d-4fb3-a467-5f086b1cda2b",
+      "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "operation": "board_settings",
+      "target_id": "21ec7402-9098-4a18-9498-cf4aded8b470",
+      "revoked_at": "2026-10-26T03:36:13.759071+00:00"
+    },
+    {
+      "grant_id": "806452d5-c9f9-4cf5-a05e-84ccc14201d7",
+      "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "operation": "user_profile",
+      "target_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+      "revoked_at": "2026-10-26T03:37:21.980044+00:00"
+    },
+    {
+      "grant_id": "89549222-6261-4a79-b258-24d50f57e2ff",
+      "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "operation": "invitation_resend",
+      "target_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+      "revoked_at": "2026-10-26T03:37:22.596908+00:00"
+    }
+  ],
+  "board": {
+    "board_name": "CM-REVIEW-20261026-04 Delegation board",
+    "description": "CM-REVIEW-20261026-04 original description",
+    "enable_live_ticket_timer": true
+  },
+  "profile": {
+    "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+    "first_name": "CMReview04",
+    "last_name": "Profile",
+    "timezone": null
+  },
+  "invitationAfterRevoke": {
+    "invitation_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+    "email": "cm-review-20261026-04-invitee@whiterabbit.test",
+    "first_name": "CMReview04",
+    "last_name": "Invitee",
+    "role_id": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+    "token": "[redacted sha256:41ab1645a62b]",
+    "expires_at": "2026-10-27T03:37:05.777929+00:00",
+    "used_at": "2026-10-26T03:37:33.233736+00:00",
+    "metadata": {
+      "revoked": true,
+      "created_by": "a288a520-c353-44d2-91e0-001f75d236de",
+      "revoked_at": "2026-10-26T03:37:33.233Z",
+      "invited_by_name": "Alice Liddell"
+    }
+  },
+  "seats": 1
+}

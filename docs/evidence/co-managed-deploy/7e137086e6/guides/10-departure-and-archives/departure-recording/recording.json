@@ -1,0 +1,441 @@
+{
+  "scenario": "departure-recording",
+  "recordedAt": "2026-10-26T03:54:24.709Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "qa-has-technician-access-to-the-disposable-relationship",
+      "passed": true,
+      "at": "2026-10-26T03:54:28.954Z",
+      "data": {
+        "qaId": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "id": "msp-sla-policy-applies-to-the-disposable-client",
+      "passed": true,
+      "at": "2026-10-26T03:54:29.412Z",
+      "data": {
+        "policy": "CM-REVIEW-20261026-10 MSP policy"
+      }
+    },
+    {
+      "id": "msp-maps-customer-priorities-to-its-sla",
+      "passed": true,
+      "at": "2026-10-26T03:54:31.654Z",
+      "data": {
+        "mapCount": 5
+      }
+    },
+    {
+      "id": "customer-native-ticket-escalated-to-msp",
+      "passed": true,
+      "at": "2026-10-26T03:54:38.121Z",
+      "data": {
+        "ticket": "745f1c87-247d-40d6-a033-d1284bd76947",
+        "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+      }
+    },
+    {
+      "id": "msp-commercial-time-recorded-on-shared-ticket",
+      "passed": true,
+      "at": "2026-10-26T03:54:59.159Z",
+      "data": {
+        "entry_id": "87a05c45-a167-4ea7-afec-238268e7bc90",
+        "billable_duration": 15,
+        "billing_mode": "commercial",
+        "work_item_type": "co_managed",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "msp-sees-shared-and-own-private-not-customer-private",
+      "passed": true,
+      "at": "2026-10-26T03:55:01.136Z"
+    },
+    {
+      "id": "msp-downloads-shared-file-before-cutoff",
+      "passed": true,
+      "at": "2026-10-26T03:55:01.465Z",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "a33d6d3bee6dae3606a39cb23db43ac09ad1dc2df84220dca3ec5e6fdb161930"
+      }
+    },
+    {
+      "id": "msp-downloads-msp-private-file-before-cutoff",
+      "passed": true,
+      "at": "2026-10-26T03:55:01.502Z",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "4ec35ed9fe06d78cbd822d8ed2fc396df13b7721285b5709ea5faba86af398f6"
+      }
+    },
+    {
+      "id": "customer-sees-shared-and-own-private-not-msp-private",
+      "passed": true,
+      "at": "2026-10-26T03:55:06.135Z"
+    },
+    {
+      "id": "departure-dialog-names-counterpart-and-effects",
+      "passed": true,
+      "at": "2026-10-26T03:55:18.314Z",
+      "data": {
+        "dlg": "Dialog Content Co-managed IT Details SERVICE Tickets Recurring tickets Interactions Co-managed IT MONEY Billing Billing Dashboard Tax Settings INSTALL BASE Assets Equipment RECORDS Contacts Documents Additional Info Notes MORE Opportunities Passwords Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Active Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-7 IT Administrator cm-review-20261026-01-accept-7@cmreview.test Administrator invitation — Capacity Change seat allocation Co-managed access CM-REVIEW-20261026-01 Accept-7 IT Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply. Delegated administrationCo-managed SLA priorities Customer-approved access Oversight of the initial service desk board Boards Service Desk: Collaborate Projects Staff QA Tester Access for QA Tester Collaborate Remove Search Select an item Select... Add Teams No access configured. Search Select an item Select... Add Save access Reload current access Co-managed SLA priorities Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets. CM-REVIEW-20261026-10 MSP policy Manage SLA policies MSP priority for Low P1 - Critical MSP priority for Critical P1 - Critical MSP priority for Medium P1 - Critical MSP priority for High P1 - Critical MSP priority for Urgent P1 - Critical Save access Reload current access Delegated administration Customer-approved assistance with selected settings and user records. Refresh access Customer workspace: CM-REVIEW-20261026-01 Accept-7 IT · MSP: Oz No administration tasks are currently approved. Shared tickets Filters View 3 tickets · 3 open · 0 closed Ticket Status Priority Responsible organization Updated ↓ 000006 · CM-REVIEW-20261026-10 864549 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 000005 · CM-REVIEW-20261026-10 818294 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 000004 · CM-REVIEW-20261026-10 703235 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 Open in Customer Tickets Work Client projects and shared task queues stay in the MSP shell with their qualified identities. Projects Project task queues End co-management Review what happens when this relationship ends. CM-REVIEW-20261026-01 Accept-7 IT Live access between these organizations ends immediately when you confirm. The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available. The MSP retains its own records and permitted historical evidence of shared work it participated in. Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace. Review departureRefresh status End this relationship? End co-management with CM-REVIEW-20261026-01 Accept-7 IT? Live collaboration stops immediately. Customer data and the MSP’s permitted historical archive are retained. Cancel End relationship"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:54:24.758Z",
+      "seconds": 0.049,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:24.927Z",
+      "seconds": 0.218,
+      "title": "chapter",
+      "data": "Preparation: staff access, shared ticket, audiences, files, time"
+    },
+    {
+      "at": "2026-10-26T03:54:26.849Z",
+      "seconds": 2.14,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:28.809Z",
+      "seconds": 4.1,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:54:28.954Z",
+      "seconds": 4.245,
+      "actor": "qa",
+      "title": "qa-has-technician-access-to-the-disposable-relationship",
+      "data": {
+        "qaId": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:29.412Z",
+      "seconds": 4.703,
+      "actor": "qa",
+      "title": "msp-sla-policy-applies-to-the-disposable-client",
+      "data": {
+        "policy": "CM-REVIEW-20261026-10 MSP policy"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:31.352Z",
+      "seconds": 6.643,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:54:31.654Z",
+      "seconds": 6.945,
+      "actor": "qa",
+      "title": "msp-maps-customer-priorities-to-its-sla",
+      "data": {
+        "mapCount": 5
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:33.144Z",
+      "seconds": 8.436,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:35.242Z",
+      "seconds": 10.533,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:54:38.121Z",
+      "seconds": 13.412,
+      "actor": "accept7-admin",
+      "title": "customer-native-ticket-escalated-to-msp",
+      "data": {
+        "ticket": "745f1c87-247d-40d6-a033-d1284bd76947",
+        "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:39.636Z",
+      "seconds": 14.927,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:41.764Z",
+      "seconds": 17.055,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:54:45.937Z",
+      "seconds": 21.228,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:54:49.722Z",
+      "seconds": 25.013,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:51.860Z",
+      "seconds": 27.151,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:54:54.873Z",
+      "seconds": 30.164,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:56.869Z",
+      "seconds": 32.16,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:54:59.159Z",
+      "seconds": 34.45,
+      "actor": "qa",
+      "title": "msp-commercial-time-recorded-on-shared-ticket",
+      "data": {
+        "entry_id": "87a05c45-a167-4ea7-afec-238268e7bc90",
+        "billable_duration": 15,
+        "billing_mode": "commercial",
+        "work_item_type": "co_managed",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:59.159Z",
+      "seconds": 34.45,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Record the cutoff baseline"
+    },
+    {
+      "at": "2026-10-26T03:55:01.123Z",
+      "seconds": 36.414,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:55:01.136Z",
+      "seconds": 36.427,
+      "actor": "qa",
+      "title": "msp-sees-shared-and-own-private-not-customer-private"
+    },
+    {
+      "at": "2026-10-26T03:55:01.465Z",
+      "seconds": 36.756,
+      "actor": "qa",
+      "title": "msp-downloads-shared-file-before-cutoff",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "a33d6d3bee6dae3606a39cb23db43ac09ad1dc2df84220dca3ec5e6fdb161930"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:01.502Z",
+      "seconds": 36.793,
+      "actor": "qa",
+      "title": "msp-downloads-msp-private-file-before-cutoff",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "4ec35ed9fe06d78cbd822d8ed2fc396df13b7721285b5709ea5faba86af398f6"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:03.038Z",
+      "seconds": 38.329,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:05.250Z",
+      "seconds": 40.541,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:55:06.135Z",
+      "seconds": 41.426,
+      "actor": "accept7-admin",
+      "title": "customer-sees-shared-and-own-private-not-msp-private"
+    },
+    {
+      "at": "2026-10-26T03:55:07.675Z",
+      "seconds": 42.966,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:09.572Z",
+      "seconds": 44.863,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-26T03:55:12.814Z",
+      "seconds": 48.105,
+      "actor": "qa",
+      "title": "baseline",
+      "data": {
+        "pool": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 5
+        },
+        "allocation": {
+          "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+          "seats": 1,
+          "state": "active",
+          "released_at": null
+        },
+        "relationship": "active",
+        "evidenceRows": 10,
+        "manifests": 0
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:12.814Z",
+      "seconds": 48.105,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. End the disposable relationship"
+    },
+    {
+      "at": "2026-10-26T03:55:14.792Z",
+      "seconds": 50.083,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:55:18.223Z",
+      "seconds": 53.514,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/departure?operationId=54fb5726-1a14-45a2-8c72-0c5780e65a88"
+    },
+    {
+      "at": "2026-10-26T03:55:18.314Z",
+      "seconds": 53.605,
+      "actor": "qa",
+      "title": "departure-dialog-names-counterpart-and-effects",
+      "data": {
+        "dlg": "Dialog Content Co-managed IT Details SERVICE Tickets Recurring tickets Interactions Co-managed IT MONEY Billing Billing Dashboard Tax Settings INSTALL BASE Assets Equipment RECORDS Contacts Documents Additional Info Notes MORE Opportunities Passwords Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Active Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-7 IT Administrator cm-review-20261026-01-accept-7@cmreview.test Administrator invitation — Capacity Change seat allocation Co-managed access CM-REVIEW-20261026-01 Accept-7 IT Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply. Delegated administrationCo-managed SLA priorities Customer-approved access Oversight of the initial service desk board Boards Service Desk: Collaborate Projects Staff QA Tester Access for QA Tester Collaborate Remove Search Select an item Select... Add Teams No access configured. Search Select an item Select... Add Save access Reload current access Co-managed SLA priorities Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets. CM-REVIEW-20261026-10 MSP policy Manage SLA policies MSP priority for Low P1 - Critical MSP priority for Critical P1 - Critical MSP priority for Medium P1 - Critical MSP priority for High P1 - Critical MSP priority for Urgent P1 - Critical Save access Reload current access Delegated administration Customer-approved assistance with selected settings and user records. Refresh access Customer workspace: CM-REVIEW-20261026-01 Accept-7 IT · MSP: Oz No administration tasks are currently approved. Shared tickets Filters View 3 tickets · 3 open · 0 closed Ticket Status Priority Responsible organization Updated ↓ 000006 · CM-REVIEW-20261026-10 864549 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 000005 · CM-REVIEW-20261026-10 818294 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 000004 · CM-REVIEW-20261026-10 703235 shared ticket CM-REVIEW-20261026-01 Accept-7 IT Open Low MSP 10/25/2026 Open in Customer Tickets Work Client projects and shared task queues stay in the MSP shell with their qualified identities. Projects Project task queues End co-management Review what happens when this relationship ends. CM-REVIEW-20261026-01 Accept-7 IT Live access between these organizations ends immediately when you confirm. The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available. The MSP retains its own records and permitted historical evidence of shared work it participated in. Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace. Review departureRefresh status End this relationship? End co-management with CM-REVIEW-20261026-01 Accept-7 IT? Live collaboration stops immediately. Customer data and the MSP’s permitted historical archive are retained. Cancel End relationship"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:20.628Z",
+      "seconds": 55.919,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.218,
+      "title": "Preparation: staff access, shared ticket, audiences, files, time",
+      "end": 34.45
+    },
+    {
+      "start": 34.45,
+      "title": "1. Record the cutoff baseline",
+      "end": 48.105
+    },
+    {
+      "start": 48.105,
+      "title": "2. End the disposable relationship",
+      "end": 59.31
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "client-view-shows-relationship-ended {\"clientStatus\":\"Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Co-managed IT not enabled Relationship Select... Refresh workspaces\"}",
+  "durationSeconds": 59.36,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "accept7-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    }
+  ]
+}

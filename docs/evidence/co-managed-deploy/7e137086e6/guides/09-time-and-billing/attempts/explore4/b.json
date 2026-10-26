@@ -1,0 +1,279 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=client-contracts",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nContracts\nUpcoming Renewals (0)\nQuick Add\nCreate Contract\nNo client contracts match your search.\nCreate New Contract\n1\nContract Basics\n2\nFixed Fee Services\n3\nProducts\n4\nHourly Services\n5\nUsage-Based Services\n6\nReview & Create\nContract Basics\n\nChoose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.\n\nStart From Template\nSelect a template (optional)\n\nPrefill services, notes, and billing cadence from an existing template. You can still adjust everything before publishing.\n\nClient *\nSelect a client\n\nChoose the client this contract is for.\n\nContract Name *\n\nGive this contract a descriptive name.\n\nBilling Frequency *\nMonthly\n\nHow often should this contract be billed?\n\nRecurring Cadence Default\n\nSets the default cadence owner applied to recurring lines created in this wizard.\n\nInvoice on client billing schedule\n\nUse the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.\n\nInvoice on contract anniversary\n\nUse contract-anniversary service periods for recurring lines that should follow the contract timeline.\n\nCurrency *\nSelected USD ($)\nUSD ($)\n\nCurrency for this contract. Defaults to the client's preferred currency.\n\nStart Date *\n\nWhen does this contract become active?\n\nEnd Date (Optional)\n\nLeave blank for an ongoing contract.\n\nEvergreen Review Settings\n\nThis contract is ongoing. Configure annual review cadence and notice timing.\n\nUse Tenant Renewal Defaults\n\nApply organization-level renewal settings unless explicitly overridden.\n\nRenewal Mode\nManual Renewal\nNotice Period (Days)\nDescription (Optional)\n\nInternal notes or contract details.\n\nPurchase Order (Optional)\nRequire Purchase Order for invoicing\n\nBlock invoice generation if PO is not provided.\n\nNote: PO enforcement will apply when invoice automation is enabled. Configure now to stay ahead.\nBack\nSave as Draft\nNext",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Contracts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Upcoming Renewals (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contract-button",
+      "text": "Quick Add",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-wizard-button",
+      "text": "Create Contract",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-1",
+      "text": "1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-2",
+      "text": "2",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-3",
+      "text": "3",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-4",
+      "text": "4",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-5",
+      "text": "5",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-6",
+      "text": "6",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contract-template",
+      "text": "Select a template (optional)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contract-basics-client-picker-trigger",
+      "text": "Select a client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "contract_name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "billing-frequency",
+      "text": "Monthly",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "contract-basics-cadence-owner-client",
+      "text": "",
+      "value": "client",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "contract-basics-cadence-owner-contract",
+      "text": "",
+      "value": "contract",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "currency",
+      "text": "USD ($)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "start-date",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "end-date",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "use-tenant-renewal-defaults-evergreen",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "renewal-mode-evergreen",
+      "text": "Manual Renewal",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "notice-period-evergreen",
+      "text": "",
+      "value": "30",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "po_required",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-back",
+      "text": "Back",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-save-draft",
+      "text": "Save as Draft",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-next",
+      "text": "Next",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

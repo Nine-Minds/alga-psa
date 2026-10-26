@@ -1,0 +1,19 @@
+{
+  "fixture": {
+    "clientName": "CM-REVIEW-20261026-01 Accept-7",
+    "clientId": "42b27ac2-5221-446a-ad94-f781c3398493",
+    "workspace": "CM-REVIEW-20261026-01 Accept-7 IT",
+    "adminEmail": "cm-review-20261026-01-accept-7@cmreview.test",
+    "visibility": "Oversight of the initial service desk board",
+    "escalationBoard": "General Support",
+    "operationId": "54fb5726-1a14-45a2-8c72-0c5780e65a88",
+    "customer": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+    "relationship": "e24c064b-1b13-471d-8f24-3441f26d9b0e",
+    "allocationId": "ad0500f1-7d51-431b-93cf-809063ced061",
+    "credentialFile": "cm-review-20261026-01-accept-7-admin.json"
+  },
+  "prefix": "CM-REVIEW-20261026-10 523506",
+  "files": [],
+  "ticket": "cf12e6d4-0441-4e6b-90fa-0acf05b0b81f",
+  "ticketTitle": "CM-REVIEW-20261026-10 523506 shared ticket"
+}

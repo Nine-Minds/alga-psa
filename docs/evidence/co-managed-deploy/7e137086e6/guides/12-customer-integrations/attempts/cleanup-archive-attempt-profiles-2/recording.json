@@ -1,0 +1,50 @@
+{
+  "scenario": "cleanup-archive-attempt-profiles-2",
+  "recordedAt": "2026-10-26T03:52:04.245Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:52:04.409Z",
+      "seconds": 0.164,
+      "title": "before",
+      "data": [
+        {
+          "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+          "display_name": "CM-REVIEW-20261026-12-a simulator app",
+          "is_default": true
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T03:52:06.381Z",
+      "seconds": 2.136,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:52:08.344Z",
+      "seconds": 4.099,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/providers"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out archived 556f8c7b-4d83-4b69-b0f3-1bec93f54c44 false",
+  "durationSeconds": 38.8,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

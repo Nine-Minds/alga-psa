@@ -1,0 +1,248 @@
+{
+  "scenario": "onboarding-recording",
+  "recordedAt": "2026-10-26T03:36:50.338Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "preparation-pool-capacity-added",
+      "passed": true,
+      "at": "2026-10-26T03:36:56.094Z",
+      "data": {
+        "before": {
+          "capacity": 6,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 11,
+          "allocated": 5
+        },
+        "after": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 5
+        }
+      }
+    },
+    {
+      "id": "one-workspace-for-this-client-awaiting-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:37:37.247Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-6 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-6 IT Administrator cm-review-20261026-01-accept-6@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "1bc7b0d2-a97e-4bb6-8c9b-2e79875670dc"
+      }
+    },
+    {
+      "id": "seats-reserved-once",
+      "passed": true,
+      "at": "2026-10-26T03:37:38.106Z",
+      "data": {
+        "allocation": {
+          "allocation_id": "b2604e7b-3e52-4aef-a1d7-a1696878ff4e",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 5
+        }
+      }
+    },
+    {
+      "id": "msp-has-no-live-relationship-before-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:37:38.281Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:36:50.396Z",
+      "seconds": 0.058,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:52.727Z",
+      "seconds": 2.389,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:52.728Z",
+      "seconds": 2.39,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Preparation: add pool capacity (simulator)"
+    },
+    {
+      "at": "2026-10-26T03:36:54.846Z",
+      "seconds": 4.508,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:36:56.094Z",
+      "seconds": 5.756,
+      "actor": "qa",
+      "title": "preparation-pool-capacity-added",
+      "data": {
+        "before": {
+          "capacity": 6,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 11,
+          "allocated": 5
+        },
+        "after": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 5
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:57.616Z",
+      "seconds": 7.278,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:57.617Z",
+      "seconds": 7.279,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Create one workspace for one client"
+    },
+    {
+      "at": "2026-10-26T03:36:59.811Z",
+      "seconds": 9.473,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-26T03:37:00.230Z",
+      "seconds": 9.892,
+      "actor": "qa",
+      "title": "client-created",
+      "data": {
+        "clientName": "CM-REVIEW-20261026-01 Accept-6",
+        "clientId": "27d135b1-b6c3-4338-b81e-e7b70d4413bb"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:02.461Z",
+      "seconds": 12.123,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/27d135b1-b6c3-4338-b81e-e7b70d4413bb?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:37:33.701Z",
+      "seconds": 43.363,
+      "actor": "qa",
+      "title": "observed-status-labels",
+      "data": [
+        "Queued"
+      ]
+    },
+    {
+      "at": "2026-10-26T03:37:37.247Z",
+      "seconds": 46.909,
+      "actor": "qa",
+      "title": "one-workspace-for-this-client-awaiting-acceptance",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-6 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-6 IT Administrator cm-review-20261026-01-accept-6@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "1bc7b0d2-a97e-4bb6-8c9b-2e79875670dc"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:38.106Z",
+      "seconds": 47.768,
+      "actor": "qa",
+      "title": "seats-reserved-once",
+      "data": {
+        "allocation": {
+          "allocation_id": "b2604e7b-3e52-4aef-a1d7-a1696878ff4e",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 5
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:38.281Z",
+      "seconds": 47.943,
+      "actor": "qa",
+      "title": "msp-has-no-live-relationship-before-acceptance"
+    },
+    {
+      "at": "2026-10-26T03:37:38.281Z",
+      "seconds": 47.943,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Recover the existing setup (resend invitation)"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.39,
+      "title": "Preparation: add pool capacity (simulator)",
+      "end": 7.279
+    },
+    {
+      "start": 7.279,
+      "title": "1. Create one workspace for one client",
+      "end": 47.943
+    },
+    {
+      "start": 47.943,
+      "title": "3. Recover the existing setup (resend invitation)",
+      "end": 171.42999999999998
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out resent invitation delivered false",
+  "durationSeconds": 171.48,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

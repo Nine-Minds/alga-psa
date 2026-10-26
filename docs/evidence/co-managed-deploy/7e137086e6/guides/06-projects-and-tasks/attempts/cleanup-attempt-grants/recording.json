@@ -1,0 +1,75 @@
+{
+  "scenario": "cleanup-attempt-grants",
+  "recordedAt": "2026-10-26T03:29:07.465Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "grant-removed-875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+      "passed": true,
+      "at": "2026-10-26T03:29:13.654Z"
+    },
+    {
+      "id": "grant-removed-3af2079b-da1d-40d8-bc10-93d31ad2be36",
+      "passed": true,
+      "at": "2026-10-26T03:29:13.655Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:29:07.508Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:09.449Z",
+      "seconds": 1.984,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:11.352Z",
+      "seconds": 3.887,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:29:13.654Z",
+      "seconds": 6.189,
+      "actor": "alice",
+      "title": "grant-removed-875858d7-d6c1-476e-8f40-b3ba94e7cc00"
+    },
+    {
+      "at": "2026-10-26T03:29:13.655Z",
+      "seconds": 6.19,
+      "actor": "alice",
+      "title": "grant-removed-3af2079b-da1d-40d8-bc10-93d31ad2be36"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "cleanup",
+  "limitations": [],
+  "durationSeconds": 7.12,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

@@ -1,0 +1,314 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings?tab=ticketing&section=boards",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nGeneral\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nAdmin Settings\nTicket Settings\nDisplay\nTicket Numbering\nBoards\nPriorities\nCategories\nChecklist Templates\nExternal systems\nBack to Boards\nAdd Board\n1 Unsaved\nYou have unsaved changes. Click \"Save Changes\" to apply them.\nGeneral\nUnsaved\n\nName, description, visibility and default\n\nSave Changes\nBoard Name*\nDescription\nDisplay Order\n\nControls the order boards appear in the list\n\nMark as inactive\nDefault board for client portal tickets\n\nNew tickets submitted from the client portal land on this board. Only one board can be the default.\n\nAppearance & defaults\n\nTab pinning and the board's default list view\n\nPin to the tickets screen\n\nPinned boards get a permanent tab on the tickets screen. Unpinned boards stay reachable from All tickets and the board filter.\n\nAssignment & SLA\n\nDefault routing, SLA and board manager\n\nNotifications\n\nNotify technicians about new tickets and status changes, and set default watchers\n\nEmail & inbound replies\n\nReopen tickets when clients reply by email\n\nPriorities & statuses*\nRequired\n\nDefault priority and the ticket statuses for this board\n\nDefault Priority\nNone\n\nNew tickets on this board will use this priority by default\n\nTicket status setup*\nCopy from existing board\nCreate statuses inline\n\nChoose whether this board starts from an existing lifecycle or a new inline status list.\n\nInline ticket statuses\n\nAuthor the board's initial ticket lifecycle before saving.\n\nStatus name\nClosed\nDefault\nClient portal users can select this status\nUp\nDown\nRemove\nAdd Status\nDisplay & behaviour\n\nStopwatch and board type\n\nUnsaved changes\n\nCancel\nCreate",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-0",
+      "text": "Display",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-1",
+      "text": "Ticket Numbering",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-2",
+      "text": "Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-3",
+      "text": "Priorities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-4",
+      "text": "Categories",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-5",
+      "text": "Checklist Templates",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_3g_-trigger-6",
+      "text": "External systems",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-back",
+      "text": "Back to Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-general",
+      "text": "GeneralUnsavedName, description, visibility and default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "save-board-section-general",
+      "text": "Save Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "board_name",
+      "text": "",
+      "value": "CM-REVIEW-20261026-03 Access board",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "description",
+      "text": "",
+      "value": "Disposable board for access-policy review",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "display_order",
+      "text": "",
+      "value": "0",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_inactive",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_default",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-appearance",
+      "text": "Appearance & defaultsTab pinning and the board's default list view",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_pinned",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-assignment",
+      "text": "Assignment & SLADefault routing, SLA and board manager",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-notifications",
+      "text": "NotificationsNotify technicians about new tickets and status changes, and set default watchers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-inbound",
+      "text": "Email & inbound repliesReopen tickets when clients reply by email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-statuses",
+      "text": "Priorities & statuses*RequiredDefault priority and the ticket statuses for this board",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "default-priority-select",
+      "text": "None",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-status-seed-mode-copy-existing",
+      "text": "Copy from existing board",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-status-seed-mode-create-inline",
+      "text": "Create statuses inline",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "inline-ticket-status-name-0",
+      "text": "",
+      "value": "New",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "inline-ticket-status-closed-0",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "inline-ticket-status-default-0",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "inline-ticket-status-portal-selectable-0",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "move-inline-ticket-status-up-0",
+      "text": "Up",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "move-inline-ticket-status-down-0",
+      "text": "Down",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-inline-ticket-status-0",
+      "text": "Remove",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-inline-ticket-status-button",
+      "text": "Add Status",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-display",
+      "text": "Display & behaviourStopwatch and board type",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-board-dialog",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "save-board-button",
+      "text": "Create",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

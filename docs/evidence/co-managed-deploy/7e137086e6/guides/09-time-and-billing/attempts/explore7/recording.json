@@ -1,0 +1,37 @@
+{
+  "scenario": "explore7",
+  "recordedAt": "2026-10-26T03:21:11.023Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:21:12.923Z",
+      "seconds": 1.9,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:21:15.096Z",
+      "seconds": 4.073,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 11.08,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

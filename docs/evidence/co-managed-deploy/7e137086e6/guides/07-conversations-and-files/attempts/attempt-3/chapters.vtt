@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:00.046 --> 00:00:02.464
+Before you start: requester and disposable shared ticket (customer native screens)
+
+2
+00:00:02.464 --> 00:00:16.657
+2. Author removes a disposable attachment; old link stops downloading
+
+3
+00:00:16.657 --> 00:00:25.150
+2. Uncertain send: server saved the message but the response was lost

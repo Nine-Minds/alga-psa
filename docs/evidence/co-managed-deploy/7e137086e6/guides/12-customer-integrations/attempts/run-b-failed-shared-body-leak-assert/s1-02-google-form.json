@@ -1,0 +1,377 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nBack to Email settings\nEmail and identity providers\n\nRegister your own Google or Microsoft application for inbound email, staff sign-in and directory setup. These credentials belong to your workspace.\n\nProvider setup\nGoogle or Microsoft setup\n\nMost companies set up one: Google or Microsoft. Set up both only if your company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nReady\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nGoogle\n\nEnter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.\n\nGoogle Cloud Console\nSetup guide\nGoogle OAuth app values\nGoogle Cloud project ID\n\nRequired for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.\n\nOAuth app\n\nGoogle Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.\n\nUse the Google OAuth client for Calendar too\nStaff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.\nGoogle OAuth Client ID for staff sign-in and Gmail\nGoogle OAuth Client Secret for staff sign-in and Gmail\nCalendar OAuth Client ID\nCalendar OAuth Client Secret\nGmail notification service account\n\nRequired for inbound Gmail notifications. Not used for staff sign-in.\n\nGoogle Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-sso-moved-link",
+      "text": "Open Single Sign-On",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "provider-credentials-google-tab",
+      "text": "GoogleNot configuredStaff sign-in with Google, Gmail inbound email, and Google Calendar.",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "provider-credentials-microsoft-tab",
+      "text": "MicrosoftReadyStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-cloud-console-link",
+      "text": "Google Cloud Console",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-cloud-docs-link",
+      "text": "Setup guide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-project-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-same-app",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-gmail-client-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-gmail-client-secret",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-calendar-client-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-calendar-client-secret",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-refresh",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-reset-providers",
+      "text": "Disconnect Google providers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-save",
+      "text": "Save",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-refresh",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-email-setup-button",
+      "text": "Set up Microsoft",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-advanced-app-toggle",
+      "text": "Manual Microsoft apps (advanced)Create and manage Entra app registrations maintained by your organiz",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-entra-console-link",
+      "text": "Microsoft Entra",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-add-profile",
+      "text": "New app registration",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-reset-providers",
+      "text": "Disconnect Microsoft providers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-msp_sso",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-email",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-calendar",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-teams",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-entra",
+      "text": "No enabled app",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-edit-556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-archive-556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+      "text": "Archive",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

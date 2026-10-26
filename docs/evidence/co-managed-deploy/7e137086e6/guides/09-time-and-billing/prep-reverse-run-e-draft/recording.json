@@ -1,0 +1,124 @@
+{
+  "scenario": "prep-reverse-run-e-draft",
+  "recordedAt": "2026-10-26T03:43:01.159Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "attempt-draft-reversed-entries-reopened",
+      "passed": true,
+      "at": "2026-10-26T03:43:06.163Z"
+    },
+    {
+      "id": "sheet-open-for-changes",
+      "passed": true,
+      "at": "2026-10-26T03:43:11.608Z",
+      "data": {
+        "sheet": "CHANGES_REQUESTED"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:43:01.205Z",
+      "seconds": 0.046,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:01.656Z",
+      "seconds": 0.497,
+      "title": "before",
+      "data": {
+        "invoice": "{\"invoice_number\":\"INV-000001\",\"status\":\"draft\",\"subtotal\":17335}",
+        "sheet": "APPROVED"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:03.655Z",
+      "seconds": 2.496,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:03.655Z",
+      "seconds": 2.496,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: reverse the attempt draft"
+    },
+    {
+      "at": "2026-10-26T03:43:05.731Z",
+      "seconds": 4.572,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing&subtab=drafts"
+    },
+    {
+      "at": "2026-10-26T03:43:06.163Z",
+      "seconds": 5.004,
+      "actor": "qa",
+      "title": "attempt-draft-reversed-entries-reopened"
+    },
+    {
+      "at": "2026-10-26T03:43:06.199Z",
+      "seconds": 5.04,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: re-open the sheet"
+    },
+    {
+      "at": "2026-10-26T03:43:08.103Z",
+      "seconds": 6.944,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:43:11.608Z",
+      "seconds": 10.449,
+      "actor": "qa",
+      "title": "sheet-open-for-changes",
+      "data": {
+        "sheet": "CHANGES_REQUESTED"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.496,
+      "title": "Prep: reverse the attempt draft",
+      "end": 5.04
+    },
+    {
+      "start": 5.04,
+      "title": "Prep: re-open the sheet",
+      "end": 10.91
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Preparation only."
+  ],
+  "durationSeconds": 10.96,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

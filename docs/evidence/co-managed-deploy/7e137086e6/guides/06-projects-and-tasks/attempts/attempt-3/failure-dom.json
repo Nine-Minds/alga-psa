@@ -1,0 +1,307 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/af17f6fd-1d75-49f0-8a5a-c075501d4d48",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nProject task\n\nWhite Rabbit IT · CM-REVIEW-20261026-06 Shared rollout · CM-REVIEW-20261026-06 Phase\n\nTask name\nStatus\nTo Do\nSelect...\nTo Do\nIn Progress\nDone\nDue date\nSave access\nReload current access\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nLog time\nMSP assignment\n\nNot assigned to the MSP\n\nAssign to\nTechnician\nAssignee\nSelect...\nAssign\nReload current access\nConversation\nReload current state\nNew message\n\nNo messages are visible yet.\n\nChange history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 11:20 PM\nTask name\nCM-REVIEW-20261026-06 Task A\nQA Tester · Oz\nOct 25, 2026, 11:20 PM\nMSP assignment\nCleared\nQA Tester · Oz\nOct 25, 2026, 11:20 PM\nMSP assignment\nOz · QA Tester\nQA Tester · Oz\nOct 25, 2026, 11:20 PM\nTask name\nCM-REVIEW-20261026-06 Task A\nQA Tester · Oz\nOct 25, 2026, 11:19 PM\nTask name\nCM-REVIEW-20261026-06 Task A MSP edit\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-name",
+      "text": "",
+      "value": "CM-REVIEW-20261026-06 Task A",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-status",
+      "text": "To Do",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select...To DoIn ProgressDone",
+      "value": "2aa0bc48-61ad-4e6d-b34a-7cfa23efcac5",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "co-project-task-due",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-save",
+      "text": "Save access",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-effort-refresh-c64b2666-7dd6-4c61-8ced-4b233f628e61-project_task-af17f6fd-1d75-49f0-8a5a-c075501d4d48",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-shared-log-time",
+      "text": "Log time",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-kind",
+      "text": "Technician",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-person",
+      "text": "Select...",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-save",
+      "text": "Assign",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-assignment-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-refresh",
+      "text": "Reload current state",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-task-conversation-new",
+      "text": "New message",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-reload",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-newer",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-project-task-history-older",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

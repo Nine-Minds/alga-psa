@@ -1,0 +1,355 @@
+{
+  "scenario": "attempts/run-a2",
+  "recordedAt": "2026-10-26T03:49:54.394Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "s1-session-is-customer-workspace-not-sponsor",
+      "passed": true,
+      "at": "2026-10-26T03:49:56.599Z",
+      "data": {
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "product": "co_managed"
+      }
+    },
+    {
+      "id": "s1-outbound-provider-is-nine-minds-managed",
+      "passed": true,
+      "at": "2026-10-26T03:49:58.520Z"
+    },
+    {
+      "id": "s1-open-providers-reaches-customer-provider-workbench",
+      "passed": true,
+      "at": "2026-10-26T03:49:58.907Z",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers"
+      }
+    },
+    {
+      "id": "s1-google-form-offers-provider-specific-fields",
+      "passed": true,
+      "at": "2026-10-26T03:50:00.320Z"
+    },
+    {
+      "id": "s1-binding-persisted-in-customer-tenant-only",
+      "passed": true,
+      "at": "2026-10-26T03:50:02.155Z",
+      "data": {
+        "profile": {
+          "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+          "display_name": "CM-REVIEW-20261026-12-a simulator app",
+          "client_id": "cm-review-rabbit-client",
+          "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+          "is_default": true,
+          "is_archived": false
+        },
+        "sponsorProfiles": 0
+      }
+    },
+    {
+      "id": "s1-secret-redacted-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:50:02.157Z",
+      "data": {
+        "secretSha256Prefix": "16b28dd737ba"
+      }
+    },
+    {
+      "id": "s1-back-link-returns-to-customer-email-settings-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:50:02.697Z"
+    },
+    {
+      "id": "s1-customer-broad-integration-catalog-denied",
+      "passed": true,
+      "at": "2026-10-26T03:50:04.792Z"
+    },
+    {
+      "id": "s1-sponsor-separate-signin-does-not-see-customer-binding",
+      "passed": true,
+      "at": "2026-10-26T03:50:12.116Z",
+      "data": {
+        "sponsorCatalogVisible": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:49:54.434Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:54.710Z",
+      "seconds": 0.316,
+      "title": "chapter",
+      "data": "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)"
+    },
+    {
+      "at": "2026-10-26T03:49:56.592Z",
+      "seconds": 2.198,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:56.599Z",
+      "seconds": 2.205,
+      "actor": "alice",
+      "title": "s1-session-is-customer-workspace-not-sponsor",
+      "data": {
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "product": "co_managed"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:58.510Z",
+      "seconds": 4.116,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/email"
+    },
+    {
+      "at": "2026-10-26T03:49:58.520Z",
+      "seconds": 4.126,
+      "actor": "alice",
+      "title": "s1-outbound-provider-is-nine-minds-managed"
+    },
+    {
+      "at": "2026-10-26T03:49:58.907Z",
+      "seconds": 4.513,
+      "actor": "alice",
+      "title": "s1-open-providers-reaches-customer-provider-workbench",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers"
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:00.320Z",
+      "seconds": 5.926,
+      "actor": "alice",
+      "title": "s1-google-form-offers-provider-specific-fields"
+    },
+    {
+      "at": "2026-10-26T03:50:02.155Z",
+      "seconds": 7.761,
+      "actor": "alice",
+      "title": "s1-binding-persisted-in-customer-tenant-only",
+      "data": {
+        "profile": {
+          "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+          "display_name": "CM-REVIEW-20261026-12-a simulator app",
+          "client_id": "cm-review-rabbit-client",
+          "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+          "is_default": true,
+          "is_archived": false
+        },
+        "sponsorProfiles": 0
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:02.157Z",
+      "seconds": 7.763,
+      "actor": "alice",
+      "title": "s1-secret-redacted-after-reload",
+      "data": {
+        "secretSha256Prefix": "16b28dd737ba"
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:02.697Z",
+      "seconds": 8.303,
+      "actor": "alice",
+      "title": "s1-back-link-returns-to-customer-email-settings-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:50:04.784Z",
+      "seconds": 10.39,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/integrations"
+    },
+    {
+      "at": "2026-10-26T03:50:04.792Z",
+      "seconds": 10.398,
+      "actor": "alice",
+      "title": "s1-customer-broad-integration-catalog-denied"
+    },
+    {
+      "at": "2026-10-26T03:50:06.626Z",
+      "seconds": 12.232,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:08.636Z",
+      "seconds": 14.242,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings/integrations"
+    },
+    {
+      "at": "2026-10-26T03:50:12.116Z",
+      "seconds": 17.722,
+      "actor": "qa",
+      "title": "s1-sponsor-separate-signin-does-not-see-customer-binding",
+      "data": {
+        "sponsorCatalogVisible": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:12.468Z",
+      "seconds": 18.074,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Staff sign-in and callback: entry points only (no approved identity provider)"
+    },
+    {
+      "at": "2026-10-26T03:50:14.314Z",
+      "seconds": 19.92,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/auth/msp/signin"
+    },
+    {
+      "at": "2026-10-26T03:50:14.318Z",
+      "seconds": 19.924,
+      "actor": "qa",
+      "title": "s2-signin-sso-entries",
+      "data": {
+        "ssoButtons": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:16.219Z",
+      "seconds": 21.825,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:18.108Z",
+      "seconds": 23.714,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/security-settings"
+    },
+    {
+      "at": "2026-10-26T03:50:20.164Z",
+      "seconds": 25.77,
+      "actor": "alice",
+      "title": "s2-customer-sso-settings",
+      "data": {
+        "microsoftStatus": "Not configured",
+        "bulkMicrosoftDisabled": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:20.208Z",
+      "seconds": 25.814,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "3. Directory provisioning entry (customer workspace)"
+    },
+    {
+      "at": "2026-10-26T03:50:22.134Z",
+      "seconds": 27.74,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/providers"
+    },
+    {
+      "at": "2026-10-26T03:50:23.691Z",
+      "seconds": 29.297,
+      "actor": "alice",
+      "title": "s3-directory-entry-points",
+      "data": {
+        "securityTabs": [
+          "Roles",
+          "Sessions",
+          "Single Sign-On",
+          "Permissions",
+          "User Roles",
+          "Policies",
+          "API Keys",
+          "Webhooks"
+        ],
+        "hasUserProvisioningTab": false,
+        "entraDirect": "Entra Direct Choose the Microsoft app for Entra GDAP and Lighthouse sync. Microsoft app No enabled app Needs setup No app can handle Entra Direct yet. Edit a Microsoft app and turn on Entra Direct, then choose it"
+      }
+    },
+    {
+      "at": "2026-10-26T03:50:23.736Z",
+      "seconds": 29.342,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "4. Requester-audience message reaches the controlled mailbox (SMTP sink); private bodies excluded"
+    },
+    {
+      "at": "2026-10-26T03:50:25.774Z",
+      "seconds": 31.38,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.316,
+      "title": "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)",
+      "end": 18.074
+    },
+    {
+      "start": 18.074,
+      "title": "2. Staff sign-in and callback: entry points only (no approved identity provider)",
+      "end": 25.814
+    },
+    {
+      "start": 25.814,
+      "title": "3. Directory provisioning entry (customer workspace)",
+      "end": 29.342
+    },
+    {
+      "start": 29.342,
+      "title": "4. Requester-audience message reaches the controlled mailbox (SMTP sink); private bodies excluded",
+      "end": 57.39
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.fill: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#quick-add-contact-email')\n",
+  "durationSeconds": 57.44,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

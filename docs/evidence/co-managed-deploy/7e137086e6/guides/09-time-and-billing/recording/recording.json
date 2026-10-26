@@ -1,0 +1,1560 @@
+{
+  "scenario": "recording",
+  "recordedAt": "2026-10-26T03:43:17.791Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-customer-workspace-has-current-time-period",
+      "passed": true,
+      "at": "2026-10-26T03:43:31.985Z",
+      "data": {
+        "period": {
+          "period_id": "6cf165e1-7479-4026-b9b8-e26b09319ec6",
+          "start_date": "2026-10-19",
+          "end_date": "2026-11-02"
+        }
+      }
+    },
+    {
+      "id": "prep-customer-shares-disposable-project-collaborate",
+      "passed": true,
+      "at": "2026-10-26T03:43:35.941Z"
+    },
+    {
+      "id": "s1-exactly-one-persisted-entry",
+      "passed": true,
+      "at": "2026-10-26T03:43:46.085Z",
+      "data": {
+        "count": 1
+      }
+    },
+    {
+      "id": "s1-entry-owned-by-oz-qualified-co-managed-not-foreign-id",
+      "passed": true,
+      "at": "2026-10-26T03:43:46.086Z",
+      "data": {
+        "entry": {
+          "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "billing_mode": "commercial",
+          "billable_duration": 15,
+          "minutes": 15,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+          "source_kind": "ticket",
+          "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        }
+      }
+    },
+    {
+      "id": "s1-adds-exactly-15-commercial-minutes-on-contract-line",
+      "passed": true,
+      "at": "2026-10-26T03:43:46.086Z",
+      "data": {
+        "line": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db"
+      }
+    },
+    {
+      "id": "s1-msp-effort-delta-is-15-minutes",
+      "passed": true,
+      "at": "2026-10-26T03:43:46.243Z",
+      "data": {
+        "effortBefore": {
+          "msp_minutes": 0
+        },
+        "effortAfter": {
+          "msp_minutes": 15
+        }
+      }
+    },
+    {
+      "id": "s1-entry-listed-on-ticket-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:43:46.244Z",
+      "data": {
+        "excerpt": "Time Entry\n00:00:00\nWork description\nAdd Time Entry\nLogged Time\n0 hrs 15 min\nMy entries\n(1)\n0 hrs 15 min\n10/26/2026, 4:00 AM\nBillable\n0 hrs 15 min\nBasic Support\nDraft\nCM-REVIEW-20261026-09-f commercial 15m\nContact Info\nContact\n\nNo contact selected\n\nCreated By\n\nN/A\n\nCreated\n\n10/25/2026, 11:43 PM\n\nClient\nWR\n\nWhite Rabbit IT\n\nClient Phone\n\nN/A\n\nClient Email\n\nN/A\n\nAgent team\nCo-managed"
+      }
+    },
+    {
+      "id": "s2-stopwatch-stop-creates-exactly-one-commercial-entry",
+      "passed": true,
+      "at": "2026-10-26T03:43:56.870Z",
+      "data": {
+        "stopwatchEntry": {
+          "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "billing_mode": "commercial",
+          "billable_duration": 1,
+          "minutes": 1,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f stopwatch",
+          "source_kind": "ticket",
+          "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        },
+        "ticketEntries": [
+          {
+            "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+            "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+            "billable_duration": 15
+          },
+          {
+            "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+            "notes": "CM-REVIEW-20261026-09-f stopwatch",
+            "billable_duration": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "s2-no-open-timer-remains",
+      "passed": true,
+      "at": "2026-10-26T03:43:56.872Z",
+      "data": {
+        "sessions": [
+          {
+            "session_id": "4c79d57a-ae0f-4b52-b6f0-b6dc348c77f7",
+            "status": "discarded",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "300a55e1-c5e3-4246-8d92-6f095d53bc99",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "79115df0-4746-4932-8564-65524586773f",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "3cc08bc1-9572-4b90-9609-6f8ffc42b23c",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "8f3d19dd-544d-4acf-8786-bef71779c261",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "4897a8c1-dcb2-46dc-93ee-ed9c81bbce78",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "838584ed-7e60-4ae8-b9c9-d20d78ac6bfa",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s2-customer-ticket-shows-effort-summary-without-time-entry-flow",
+      "passed": true,
+      "at": "2026-10-26T03:44:00.815Z",
+      "data": {
+        "summary": "Recorded effort\n\nCustomer\n0 hours\nMSP\n0.27 hours\nCombined\n0.27 hours\nContact Info\nContact\n\nNo contact selected\n\nCreated "
+      }
+    },
+    {
+      "id": "s2-customer-entry-is-operational-without-commercial-attributes",
+      "passed": true,
+      "at": "2026-10-26T03:44:03.421Z",
+      "data": {
+        "entry": {
+          "entry_id": "c28df094-a2d2-4238-ad7c-a9ebf382da6c",
+          "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "user_id": "a288a520-c353-44d2-91e0-001f75d236de",
+          "work_item_type": "project_task",
+          "work_item_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+          "co_managed_work_reference_id": null,
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "minutes": 5,
+          "service_id": null,
+          "contract_line_id": null,
+          "time_sheet_id": "1d0631cb-171c-476f-8e7b-8c3011bb5945",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f customer operational 5m",
+          "source_kind": null,
+          "source_id": null,
+          "client_id": null,
+          "customer_tenant": null
+        }
+      }
+    },
+    {
+      "id": "s2-msp-task-entry-commercial-qualified",
+      "passed": true,
+      "at": "2026-10-26T03:44:09.015Z",
+      "data": {
+        "entry": {
+          "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+          "co_managed_work_reference_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+          "billing_mode": "commercial",
+          "billable_duration": 6,
+          "minutes": 6,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f commercial task 6m",
+          "source_kind": "project_task",
+          "source_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        }
+      }
+    },
+    {
+      "id": "alice-combined-effort-is-sum-of-customer-and-msp",
+      "passed": true,
+      "at": "2026-10-26T03:44:12.528Z",
+      "data": {
+        "displayed": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "expectedMinutes": {
+          "customer": 5,
+          "msp": 6
+        }
+      }
+    },
+    {
+      "id": "alice-does-not-see-other-organization-note",
+      "passed": true,
+      "at": "2026-10-26T03:44:12.532Z"
+    },
+    {
+      "id": "qa-combined-effort-is-sum-of-customer-and-msp",
+      "passed": true,
+      "at": "2026-10-26T03:44:16.390Z",
+      "data": {
+        "displayed": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "expectedMinutes": {
+          "customer": 5,
+          "msp": 6
+        }
+      }
+    },
+    {
+      "id": "qa-does-not-see-other-organization-note",
+      "passed": true,
+      "at": "2026-10-26T03:44:16.393Z"
+    },
+    {
+      "id": "s2-both-views-show-the-same-effort",
+      "passed": true,
+      "at": "2026-10-26T03:44:16.440Z",
+      "data": {
+        "alice": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "qa": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ]
+      }
+    },
+    {
+      "id": "s3-timesheet-lists-commercial-15m",
+      "passed": true,
+      "at": "2026-10-26T03:44:21.331Z",
+      "data": {
+        "entryId": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+        "row": " CM-REVIEW-20261026-09-f printer spooler time ticket Co Managed 04:00 - 04:15 00:15 00:15 "
+      }
+    },
+    {
+      "id": "s3-timesheet-lists-stopwatch",
+      "passed": true,
+      "at": "2026-10-26T03:44:21.334Z",
+      "data": {
+        "entryId": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+        "row": " CM-REVIEW-20261026-09-f printer spooler time ticket Co Managed 23:43 - 23:44 00:01 00:01 "
+      }
+    },
+    {
+      "id": "s3-timesheet-lists-commercial-task-6m",
+      "passed": true,
+      "at": "2026-10-26T03:44:21.338Z",
+      "data": {
+        "entryId": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+        "row": " CM-REVIEW-20261026-09-f toner audit task Co Managed 04:00 - 04:06 00:06 00:06 "
+      }
+    },
+    {
+      "id": "s3-all-three-shared-entries-on-the-current-sheet",
+      "passed": true,
+      "at": "2026-10-26T03:44:21.929Z",
+      "data": {
+        "sheet": {
+          "id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "CHANGES_REQUESTED",
+          "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c"
+        }
+      }
+    },
+    {
+      "id": "s3-sheet-submitted-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:44:26.669Z"
+    },
+    {
+      "id": "s3-approver-sees-shared-entries",
+      "passed": true,
+      "at": "2026-10-26T03:44:31.211Z",
+      "data": {}
+    },
+    {
+      "id": "s3-sheet-and-entries-approved-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:44:35.599Z",
+      "data": {
+        "approved": [
+          {
+            "entry_id": "2888e49a-4670-416d-8536-0720b483204f",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "705281b3-006a-4c64-8250-ae707f80254a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "715aaae6-f601-410c-9503-53170b1ca849",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "87568b45-b19d-48ae-bbf6-7762a07394d5",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "c8a7659c-88de-4c61-a6ea-58e440d02175",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "d52924b9-b13e-4432-98c9-749ddef8870d",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+            "approval_status": "APPROVED"
+          }
+        ],
+        "note": "sheet also carries the two entries of failed attempt run-a (retained time evidence)"
+      }
+    },
+    {
+      "id": "s4-preview-lists-contract-time",
+      "passed": true,
+      "at": "2026-10-26T03:44:46.414Z",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nSubtotal\t$210.02\nTax\t$0.00\nTotal\t$210.02\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "id": "s4-draft-for-white-rabbit-not-finalized",
+      "passed": true,
+      "at": "2026-10-26T03:44:48.051Z",
+      "data": {
+        "inv": {
+          "invoice_id": "74d3c735-1184-4ec2-999b-49a1d07feb5c",
+          "invoice_number": "INV-000002",
+          "status": "draft",
+          "subtotal": 21002,
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "finalized_at": null
+        }
+      }
+    },
+    {
+      "id": "s4-each-commercial-entry-invoiced-exactly-once",
+      "passed": true,
+      "at": "2026-10-26T03:44:48.906Z",
+      "data": {
+        "sources": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ]
+      }
+    },
+    {
+      "id": "s4-draft-sources-equal-the-approved-contract-line-entries-on-the-sheet",
+      "passed": true,
+      "at": "2026-10-26T03:44:49.046Z",
+      "data": {
+        "sources": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ],
+        "approvedOnSheet": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ]
+      }
+    },
+    {
+      "id": "s4-customer-operational-entry-never-invoiced",
+      "passed": true,
+      "at": "2026-10-26T03:44:49.452Z"
+    },
+    {
+      "id": "s4-draft-invoice-opens-with-its-number",
+      "passed": true,
+      "at": "2026-10-26T03:44:54.367Z",
+      "data": {
+        "number": "INV-000002"
+      }
+    },
+    {
+      "id": "restore-guide-09-project-grants-removed-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:45:02.214Z",
+      "data": {
+        "removed": [
+          "55496e2a-a76f-4a22-9cb4-292bd624c30e",
+          "57304524-bee3-41d9-aada-f7c678e097a5",
+          "7f988a76-d51b-4fc8-8967-ab6f560818c9",
+          "80b70b62-243d-4bd6-a272-85b73d053355",
+          "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+          "fe12c8a2-e534-4877-8ce9-39285cf26204"
+        ]
+      }
+    },
+    {
+      "id": "restore-disposable-approval-team-deleted-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:45:07.893Z",
+      "data": {
+        "teamId": "4a03ce39-8f7b-446d-abbe-7c0e70c317b2"
+      }
+    },
+    {
+      "id": "restore-white-rabbit-billing-email-cleared-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:45:10.498Z",
+      "data": {
+        "stored": "<null>"
+      }
+    },
+    {
+      "id": "restore-disposable-contract-terminated-draft-retained",
+      "passed": true,
+      "at": "2026-10-26T03:45:15.449Z",
+      "data": {
+        "contract": {
+          "is_active": false,
+          "status": "pending",
+          "end_date": null,
+          "contract_status": "active"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:43:17.838Z",
+      "seconds": 0.047,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:18.173Z",
+      "seconds": 0.382,
+      "title": "chapter",
+      "data": "Before you start: customer prepares a disposable shared ticket and shared task"
+    },
+    {
+      "at": "2026-10-26T03:43:20.071Z",
+      "seconds": 2.28,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:22.176Z",
+      "seconds": 4.385,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:43:26.198Z",
+      "seconds": 8.407,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:43:28.837Z",
+      "seconds": 11.046,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/7f988a76-d51b-4fc8-8967-ab6f560818c9"
+    },
+    {
+      "at": "2026-10-26T03:43:31.986Z",
+      "seconds": 14.195,
+      "actor": "alice",
+      "title": "prep-customer-workspace-has-current-time-period",
+      "data": {
+        "period": {
+          "period_id": "6cf165e1-7479-4026-b9b8-e26b09319ec6",
+          "start_date": "2026-10-19",
+          "end_date": "2026-11-02"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:34.151Z",
+      "seconds": 16.36,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:43:35.941Z",
+      "seconds": 18.15,
+      "actor": "alice",
+      "title": "prep-customer-shares-disposable-project-collaborate"
+    },
+    {
+      "at": "2026-10-26T03:43:36.085Z",
+      "seconds": 18.294,
+      "actor": "alice",
+      "title": "fixtures",
+      "data": {
+        "suffix": "CM-REVIEW-20261026-09-f",
+        "ticketId": "6ca3357d-4596-45ad-959f-0629501a1d14",
+        "projectId": "7f988a76-d51b-4fc8-8967-ab6f560818c9",
+        "phaseId": "456145e0-f717-46b8-b6a6-74b498a14312",
+        "taskId": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+        "contractLine": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "period": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+        "links": {
+          "mspTicket": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/6ca3357d-4596-45ad-959f-0629501a1d14",
+          "customerTicket": "http://feature-co-managed-it.localhost:23374/msp/tickets/6ca3357d-4596-45ad-959f-0629501a1d14",
+          "mspTask": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+          "customerProject": "http://feature-co-managed-it.localhost:23374/msp/projects/7f988a76-d51b-4fc8-8967-ab6f560818c9"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:36.086Z",
+      "seconds": 18.295,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Persist one commercial entry (QA, native shared ticket, Add Time Entry)"
+    },
+    {
+      "at": "2026-10-26T03:43:37.870Z",
+      "seconds": 20.079,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:42.051Z",
+      "seconds": 24.26,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/6ca3357d-4596-45ad-959f-0629501a1d14"
+    },
+    {
+      "at": "2026-10-26T03:43:46.085Z",
+      "seconds": 28.294,
+      "actor": "qa",
+      "title": "s1-exactly-one-persisted-entry",
+      "data": {
+        "count": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:46.086Z",
+      "seconds": 28.295,
+      "actor": "qa",
+      "title": "s1-entry-owned-by-oz-qualified-co-managed-not-foreign-id",
+      "data": {
+        "entry": {
+          "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "billing_mode": "commercial",
+          "billable_duration": 15,
+          "minutes": 15,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+          "source_kind": "ticket",
+          "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:46.086Z",
+      "seconds": 28.295,
+      "actor": "qa",
+      "title": "s1-adds-exactly-15-commercial-minutes-on-contract-line",
+      "data": {
+        "line": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:46.243Z",
+      "seconds": 28.452,
+      "actor": "qa",
+      "title": "s1-msp-effort-delta-is-15-minutes",
+      "data": {
+        "effortBefore": {
+          "msp_minutes": 0
+        },
+        "effortAfter": {
+          "msp_minutes": 15
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:46.244Z",
+      "seconds": 28.453,
+      "actor": "qa",
+      "title": "s1-entry-listed-on-ticket-after-reload",
+      "data": {
+        "excerpt": "Time Entry\n00:00:00\nWork description\nAdd Time Entry\nLogged Time\n0 hrs 15 min\nMy entries\n(1)\n0 hrs 15 min\n10/26/2026, 4:00 AM\nBillable\n0 hrs 15 min\nBasic Support\nDraft\nCM-REVIEW-20261026-09-f commercial 15m\nContact Info\nContact\n\nNo contact selected\n\nCreated By\n\nN/A\n\nCreated\n\n10/25/2026, 11:43 PM\n\nClient\nWR\n\nWhite Rabbit IT\n\nClient Phone\n\nN/A\n\nClient Email\n\nN/A\n\nAgent team\nCo-managed"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:46.292Z",
+      "seconds": 28.501,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Native stopwatch on the shared ticket: start, stop, one entry"
+    },
+    {
+      "at": "2026-10-26T03:43:52.906Z",
+      "seconds": 35.116,
+      "actor": "qa",
+      "title": "stopwatch-prefill",
+      "data": {
+        "hours": 0,
+        "minutes": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:56.870Z",
+      "seconds": 39.079,
+      "actor": "qa",
+      "title": "s2-stopwatch-stop-creates-exactly-one-commercial-entry",
+      "data": {
+        "stopwatchEntry": {
+          "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "co_managed_work_reference_id": "5b8f5902-b89b-49b4-913f-b5a77ef930db",
+          "billing_mode": "commercial",
+          "billable_duration": 1,
+          "minutes": 1,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f stopwatch",
+          "source_kind": "ticket",
+          "source_id": "6ca3357d-4596-45ad-959f-0629501a1d14",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        },
+        "ticketEntries": [
+          {
+            "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+            "notes": "CM-REVIEW-20261026-09-f commercial 15m",
+            "billable_duration": 15
+          },
+          {
+            "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+            "notes": "CM-REVIEW-20261026-09-f stopwatch",
+            "billable_duration": 1
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:56.872Z",
+      "seconds": 39.081,
+      "actor": "qa",
+      "title": "s2-no-open-timer-remains",
+      "data": {
+        "sessions": [
+          {
+            "session_id": "4c79d57a-ae0f-4b52-b6f0-b6dc348c77f7",
+            "status": "discarded",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "300a55e1-c5e3-4246-8d92-6f095d53bc99",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "79115df0-4746-4932-8564-65524586773f",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "3cc08bc1-9572-4b90-9609-6f8ffc42b23c",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "8f3d19dd-544d-4acf-8786-bef71779c261",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "4897a8c1-dcb2-46dc-93ee-ed9c81bbce78",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          },
+          {
+            "session_id": "838584ed-7e60-4ae8-b9c9-d20d78ac6bfa",
+            "status": "logged",
+            "work_item_type": "co_managed"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:56.922Z",
+      "seconds": 39.131,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Customer effort: native customer ticket offers no time entry; operational entry on the shared task"
+    },
+    {
+      "at": "2026-10-26T03:43:58.772Z",
+      "seconds": 40.981,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:00.799Z",
+      "seconds": 43.008,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/6ca3357d-4596-45ad-959f-0629501a1d14"
+    },
+    {
+      "at": "2026-10-26T03:44:00.815Z",
+      "seconds": 43.024,
+      "actor": "alice",
+      "title": "s2-customer-ticket-shows-effort-summary-without-time-entry-flow",
+      "data": {
+        "summary": "Recorded effort\n\nCustomer\n0 hours\nMSP\n0.27 hours\nCombined\n0.27 hours\nContact Info\nContact\n\nNo contact selected\n\nCreated "
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:02.825Z",
+      "seconds": 45.034,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9"
+    },
+    {
+      "at": "2026-10-26T03:44:03.421Z",
+      "seconds": 45.63,
+      "actor": "alice",
+      "title": "s2-customer-entry-is-operational-without-commercial-attributes",
+      "data": {
+        "entry": {
+          "entry_id": "c28df094-a2d2-4238-ad7c-a9ebf382da6c",
+          "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "user_id": "a288a520-c353-44d2-91e0-001f75d236de",
+          "work_item_type": "project_task",
+          "work_item_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+          "co_managed_work_reference_id": null,
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "minutes": 5,
+          "service_id": null,
+          "contract_line_id": null,
+          "time_sheet_id": "1d0631cb-171c-476f-8e7b-8c3011bb5945",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f customer operational 5m",
+          "source_kind": null,
+          "source_id": null,
+          "client_id": null,
+          "customer_tenant": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:04.888Z",
+      "seconds": 47.097,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:06.898Z",
+      "seconds": 49.107,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9"
+    },
+    {
+      "at": "2026-10-26T03:44:09.015Z",
+      "seconds": 51.224,
+      "actor": "qa",
+      "title": "s2-msp-task-entry-commercial-qualified",
+      "data": {
+        "entry": {
+          "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "work_item_type": "co_managed",
+          "work_item_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+          "co_managed_work_reference_id": "dea67716-c921-4eff-9eed-213d4d25c888",
+          "billing_mode": "commercial",
+          "billable_duration": 6,
+          "minutes": 6,
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "time_sheet_id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "DRAFT",
+          "invoiced": false,
+          "notes": "CM-REVIEW-20261026-09-f commercial task 6m",
+          "source_kind": "project_task",
+          "source_id": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:10.520Z",
+      "seconds": 52.729,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:12.505Z",
+      "seconds": 54.714,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9"
+    },
+    {
+      "at": "2026-10-26T03:44:12.528Z",
+      "seconds": 54.737,
+      "actor": "alice",
+      "title": "alice-combined-effort-is-sum-of-customer-and-msp",
+      "data": {
+        "displayed": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "expectedMinutes": {
+          "customer": 5,
+          "msp": 6
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:12.532Z",
+      "seconds": 54.741,
+      "actor": "alice",
+      "title": "alice-does-not-see-other-organization-note"
+    },
+    {
+      "at": "2026-10-26T03:44:14.157Z",
+      "seconds": 56.366,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:16.373Z",
+      "seconds": 58.582,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9"
+    },
+    {
+      "at": "2026-10-26T03:44:16.390Z",
+      "seconds": 58.6,
+      "actor": "qa",
+      "title": "qa-combined-effort-is-sum-of-customer-and-msp",
+      "data": {
+        "displayed": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "expectedMinutes": {
+          "customer": 5,
+          "msp": 6
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:16.393Z",
+      "seconds": 58.602,
+      "actor": "qa",
+      "title": "qa-does-not-see-other-organization-note"
+    },
+    {
+      "at": "2026-10-26T03:44:16.440Z",
+      "seconds": 58.649,
+      "actor": "qa",
+      "title": "s2-both-views-show-the-same-effort",
+      "data": {
+        "alice": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ],
+        "qa": [
+          "0.08 hours",
+          "0.1 hours",
+          "0.18 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:16.441Z",
+      "seconds": 58.65,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Follow the entries into the native timesheet, submit and approve"
+    },
+    {
+      "at": "2026-10-26T03:44:18.512Z",
+      "seconds": 60.721,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry"
+    },
+    {
+      "at": "2026-10-26T03:44:21.331Z",
+      "seconds": 63.54,
+      "actor": "qa",
+      "title": "s3-timesheet-lists-commercial-15m",
+      "data": {
+        "entryId": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+        "row": " CM-REVIEW-20261026-09-f printer spooler time ticket Co Managed 04:00 - 04:15 00:15 00:15 "
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:21.334Z",
+      "seconds": 63.543,
+      "actor": "qa",
+      "title": "s3-timesheet-lists-stopwatch",
+      "data": {
+        "entryId": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+        "row": " CM-REVIEW-20261026-09-f printer spooler time ticket Co Managed 23:43 - 23:44 00:01 00:01 "
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:21.338Z",
+      "seconds": 63.547,
+      "actor": "qa",
+      "title": "s3-timesheet-lists-commercial-task-6m",
+      "data": {
+        "entryId": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+        "row": " CM-REVIEW-20261026-09-f toner audit task Co Managed 04:00 - 04:06 00:06 00:06 "
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:21.929Z",
+      "seconds": 64.138,
+      "actor": "qa",
+      "title": "s3-all-three-shared-entries-on-the-current-sheet",
+      "data": {
+        "sheet": {
+          "id": "b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+          "approval_status": "CHANGES_REQUESTED",
+          "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:26.669Z",
+      "seconds": 68.878,
+      "actor": "qa",
+      "title": "s3-sheet-submitted-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:44:28.628Z",
+      "seconds": 70.837,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:44:31.211Z",
+      "seconds": 73.42,
+      "actor": "qa",
+      "title": "s3-approver-sees-shared-entries",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T03:44:33.895Z",
+      "seconds": 76.104,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:44:35.599Z",
+      "seconds": 77.808,
+      "actor": "qa",
+      "title": "s3-sheet-and-entries-approved-after-reload",
+      "data": {
+        "approved": [
+          {
+            "entry_id": "2888e49a-4670-416d-8536-0720b483204f",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "705281b3-006a-4c64-8250-ae707f80254a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "715aaae6-f601-410c-9503-53170b1ca849",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "87568b45-b19d-48ae-bbf6-7762a07394d5",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "c8a7659c-88de-4c61-a6ea-58e440d02175",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "d52924b9-b13e-4432-98c9-749ddef8870d",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+            "approval_status": "APPROVED"
+          },
+          {
+            "entry_id": "f83ee0a8-7fbb-47f1-a45d-f6391951b517",
+            "approval_status": "APPROVED"
+          }
+        ],
+        "note": "sheet also carries the two entries of failed attempt run-a (retained time evidence)"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:35.599Z",
+      "seconds": 77.808,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Reconcile commercial billing: Automatic Invoices preview and draft"
+    },
+    {
+      "at": "2026-10-26T03:44:37.514Z",
+      "seconds": 79.723,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T03:44:45.008Z",
+      "seconds": 87.217,
+      "actor": "qa",
+      "title": "selected-group",
+      "data": "select-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-11-01:2026-12-01"
+    },
+    {
+      "at": "2026-10-26T03:44:46.414Z",
+      "seconds": 88.623,
+      "actor": "qa",
+      "title": "s4-preview-lists-contract-time",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nSubtotal\t$210.02\nTax\t$0.00\nTotal\t$210.02\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:48.051Z",
+      "seconds": 90.26,
+      "actor": "qa",
+      "title": "s4-draft-for-white-rabbit-not-finalized",
+      "data": {
+        "inv": {
+          "invoice_id": "74d3c735-1184-4ec2-999b-49a1d07feb5c",
+          "invoice_number": "INV-000002",
+          "status": "draft",
+          "subtotal": 21002,
+          "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+          "finalized_at": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:48.906Z",
+      "seconds": 91.115,
+      "actor": "qa",
+      "title": "s4-each-commercial-entry-invoiced-exactly-once",
+      "data": {
+        "sources": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:49.046Z",
+      "seconds": 91.255,
+      "actor": "qa",
+      "title": "s4-draft-sources-equal-the-approved-contract-line-entries-on-the-sheet",
+      "data": {
+        "sources": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ],
+        "approvedOnSheet": [
+          "2888e49a-4670-416d-8536-0720b483204f",
+          "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+          "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+          "3b2deed8-b692-41d4-a8eb-211a6876189a",
+          "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+          "702f57e7-4040-44c6-af4b-14d7defff6ae",
+          "715aaae6-f601-410c-9503-53170b1ca849",
+          "802d1a8a-25e6-49a6-91c6-24052843e843",
+          "87568b45-b19d-48ae-bbf6-7762a07394d5",
+          "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+          "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+          "c8a7659c-88de-4c61-a6ea-58e440d02175",
+          "d52924b9-b13e-4432-98c9-749ddef8870d",
+          "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+          "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+          "f22d39e6-e5a3-4354-b41d-48d204a55286",
+          "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:49.452Z",
+      "seconds": 91.661,
+      "actor": "qa",
+      "title": "s4-customer-operational-entry-never-invoiced"
+    },
+    {
+      "at": "2026-10-26T03:44:51.356Z",
+      "seconds": 93.565,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/74d3c735-1184-4ec2-999b-49a1d07feb5c"
+    },
+    {
+      "at": "2026-10-26T03:44:54.367Z",
+      "seconds": 96.576,
+      "actor": "qa",
+      "title": "s4-draft-invoice-opens-with-its-number",
+      "data": {
+        "number": "INV-000002"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:54.426Z",
+      "seconds": 96.635,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore: remove project grant, delete approval team, clear billing email, terminate disposable contract; time and draft invoice retained"
+    },
+    {
+      "at": "2026-10-26T03:44:57.301Z",
+      "seconds": 99.51,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:44:59.211Z",
+      "seconds": 101.42,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:45:02.214Z",
+      "seconds": 104.423,
+      "actor": "alice",
+      "title": "restore-guide-09-project-grants-removed-after-reload",
+      "data": {
+        "removed": [
+          "55496e2a-a76f-4a22-9cb4-292bd624c30e",
+          "57304524-bee3-41d9-aada-f7c678e097a5",
+          "7f988a76-d51b-4fc8-8967-ab6f560818c9",
+          "80b70b62-243d-4bd6-a272-85b73d053355",
+          "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+          "fe12c8a2-e534-4877-8ce9-39285cf26204"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:45:03.729Z",
+      "seconds": 105.938,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:45:05.892Z",
+      "seconds": 108.101,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T03:45:07.893Z",
+      "seconds": 110.102,
+      "actor": "qa",
+      "title": "restore-disposable-approval-team-deleted-after-reload",
+      "data": {
+        "teamId": "4a03ce39-8f7b-446d-abbe-7c0e70c317b2"
+      }
+    },
+    {
+      "at": "2026-10-26T03:45:09.811Z",
+      "seconds": 112.02,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T03:45:10.498Z",
+      "seconds": 112.707,
+      "actor": "qa",
+      "title": "restore-white-rabbit-billing-email-cleared-after-reload",
+      "data": {
+        "stored": "<null>"
+      }
+    },
+    {
+      "at": "2026-10-26T03:45:12.545Z",
+      "seconds": 114.754,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T03:45:15.449Z",
+      "seconds": 117.658,
+      "actor": "qa",
+      "title": "restore-disposable-contract-terminated-draft-retained",
+      "data": {
+        "contract": {
+          "is_active": false,
+          "status": "pending",
+          "end_date": null,
+          "contract_status": "active"
+        }
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.381,
+      "title": "Before you start: customer prepares a disposable shared ticket and shared task",
+      "end": 18.295
+    },
+    {
+      "start": 18.295,
+      "title": "1. Persist one commercial entry (QA, native shared ticket, Add Time Entry)",
+      "end": 28.501
+    },
+    {
+      "start": 28.501,
+      "title": "2. Native stopwatch on the shared ticket: start, stop, one entry",
+      "end": 39.131
+    },
+    {
+      "start": 39.131,
+      "title": "2. Customer effort: native customer ticket offers no time entry; operational entry on the shared task",
+      "end": 58.65
+    },
+    {
+      "start": 58.65,
+      "title": "3. Follow the entries into the native timesheet, submit and approve",
+      "end": 77.808
+    },
+    {
+      "start": 77.808,
+      "title": "4. Reconcile commercial billing: Automatic Invoices preview and draft",
+      "end": 96.635
+    },
+    {
+      "start": 96.635,
+      "title": "Restore: remove project grant, delete approval team, clear billing email, terminate disposable contract; time and draft invoice retained",
+      "end": 118.27
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Approver is the same QA user (no separate MSP approver identity was provided; Glinda excluded by the brief).",
+    "Customer native ticket (AlgaDesk workspace) offers no time-entry flow, so the customer operational entry and combined-effort comparison use a disposable shared project task on the same relationship.",
+    "Draft invoice only; nothing finalized or emailed.",
+    "Approving the QA sheet also approves every other QA entry in that period, including one guide-06 entry (705281b3, unresolved, not invoiced here).",
+    "Earlier failed attempts run-a/run-b/run-c left approved commercial entries on the same contract line; the draft carries them too and reconciles against all approved contract-line entries on the sheet."
+  ],
+  "durationSeconds": 118.32,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

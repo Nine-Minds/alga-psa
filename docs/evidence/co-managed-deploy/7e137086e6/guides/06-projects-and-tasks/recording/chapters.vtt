@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:00.348 --> 00:00:25.132
+Before you start: customer creates a disposable project, phase and two tasks
+
+2
+00:00:25.132 --> 00:00:30.172
+1. Share only the prepared project (customer grants Collaborate)
+
+3
+00:00:30.172 --> 00:00:41.731
+1. MSP staff assignment for the customer and project task queues
+
+4
+00:00:41.731 --> 00:00:53.617
+2. Persist a task edit with attribution
+
+5
+00:00:53.617 --> 00:01:07.764
+3. Separate MSP assignment from customer-local ownership
+
+6
+00:01:07.764 --> 00:01:15.826
+4. Detect a stale MSP edit after a newer customer save
+
+7
+00:01:15.826 --> 00:01:33.562
+5. Compare effort on the shared task (customer and MSP time)
+
+8
+00:01:33.562 --> 00:01:40.918
+5. Task conversation and file while the grant is active
+
+9
+00:01:40.918 --> 00:01:57.550
+4. Revoke the project grant: fresh MSP reads close

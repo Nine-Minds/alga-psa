@@ -1,0 +1,594 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\n← Back to\nTickets\n#000006\nAwaiting Client\nCreated Internally\nGrid\nEntry\nCM-REVIEW-20261026-07 conversation ticket\n\nCreated 10/25/2026, 11:29 PM (2 minutes ago)\n\nUpdated 10/25/2026, 11:29 PM (2 minutes ago)\n\nCM-REVIEW-20261026-07 conversation ticket\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nLow\nBOARD\nService Desk\nCATEGORY\nCategory\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nWaiting on client\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\nC0\nCM Review Requester 07\nWR\nClient\nWhite Rabbit IT\nCo-managed\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (6)\nReplies (6)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nTODAY\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 25, 11:29 PM\n\nCM-REVIEW-20261026-07 shared 1792985358283\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 11:29 PM\n\nCM-REVIEW-20261026-07 msp-private 1792985358283\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 25, 11:31 PM\n\nCM-REVIEW-20261026-07 shared 1792985454116\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 25, 11:31 PM\n\nCM-REVIEW-20261026-07 msp-private 1792985454116\n\nQT\n\nQA Tester\n\nRequester and IT teams\nRequester and IT teams\nOct 25, 11:31 PM\n\nCM-REVIEW-20261026-07 requester 1792985454116\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 25, 11:31 PM\n\nCM-REVIEW-20261026-07 removable 1792985454116\n\nTime logged\n\nRecorded effort\n\nLoading customer seat capacity…\n\n00:00:00\nWork description\nAdd time entry\nLoading time entries…",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_1n_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "← Back toTickets ",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-grid",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-entry",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-title-edit",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-resolve-and-close-button",
+      "text": "Resolve and close",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-all-fields-button",
+      "text": "All fields",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-status-select",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-priority-select",
+      "text": "Low",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-board-select",
+      "text": "Service Desk",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Category",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-assignee-picker",
+      "text": "Not assigned",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-bento-hero-due-date-picker",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-response-state-select",
+      "text": "Waiting on client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-hero-description-edit",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-contact-open",
+      "text": "CM Review Requester 07",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-client-open",
+      "text": "White Rabbit IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-client-edit",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-order-toggle",
+      "text": "Oldest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-everything",
+      "text": "Everything (6)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-reply",
+      "text": "Replies (6)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-time",
+      "text": "Time (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-system",
+      "text": "System (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-filter-alert",
+      "text": "Alerts (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timeline-tile-add-comment-btn",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "51f11e36-d1e0-43d2-9210-58627caead1a-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-51f11e36-d1e0-43d2-9210-58627caead1a-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-51f11e36-d1e0-43d2-9210-58627caead1a-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-51f11e36-d1e0-43d2-9210-58627caead1a-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-51f11e36-d1e0-43d2-9210-58627caead1a-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cb2522e5-fcf4-4804-9082-2502a8eeb046-audience-select",
+      "text": "My organization only",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-cb2522e5-fcf4-4804-9082-2502a8eeb046-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-cb2522e5-fcf4-4804-9082-2502a8eeb046-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-cb2522e5-fcf4-4804-9082-2502a8eeb046-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-cb2522e5-fcf4-4804-9082-2502a8eeb046-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cfae9f25-d53e-4b40-8132-fe904c3c6162-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-cfae9f25-d53e-4b40-8132-fe904c3c6162-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-cfae9f25-d53e-4b40-8132-fe904c3c6162-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-cfae9f25-d53e-4b40-8132-fe904c3c6162-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-cfae9f25-d53e-4b40-8132-fe904c3c6162-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "a23f918c-0967-4096-86b5-11866bc0e419-audience-select",
+      "text": "My organization only",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-a23f918c-0967-4096-86b5-11866bc0e419-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-a23f918c-0967-4096-86b5-11866bc0e419-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-a23f918c-0967-4096-86b5-11866bc0e419-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-a23f918c-0967-4096-86b5-11866bc0e419-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "faf8ce82-5927-4255-9e6d-493ca6e58a84-audience-select",
+      "text": "Requester and IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-faf8ce82-5927-4255-9e6d-493ca6e58a84-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-faf8ce82-5927-4255-9e6d-493ca6e58a84-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-faf8ce82-5927-4255-9e6d-493ca6e58a84-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-faf8ce82-5927-4255-9e6d-493ca6e58a84-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "63e032e5-6666-4367-97ef-e4e97e0c215b-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-63e032e5-6666-4367-97ef-e4e97e0c215b-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-63e032e5-6666-4367-97ef-e4e97e0c215b-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-63e032e5-6666-4367-97ef-e4e97e0c215b-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-63e032e5-6666-4367-97ef-e4e97e0c215b-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-timer-stopwatch-start",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-bento-timer-stopwatch-description",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-bento-add-time-entry",
+      "text": "Add time entry",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

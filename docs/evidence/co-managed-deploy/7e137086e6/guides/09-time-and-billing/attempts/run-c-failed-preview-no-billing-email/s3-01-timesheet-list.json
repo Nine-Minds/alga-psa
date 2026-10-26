@@ -1,0 +1,461 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/time-entry/timesheet/b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBack\nTime Sheet\nMon, Oct 19 - Sun, Nov 1\nStatus:\nChanges Requested\nSuggestions\n1\nGrid\nList\nSubmit Time Sheet\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:30 PM\n\nChanges requested for time sheet\n\nRespond to Changes\nAdd Item\n9 entries\nTotal: 01:12\nBillable: 01:12\n\tWork Item\tTime Entry\tDuration\tBillable Duration\tActions\t\n\tMon, Oct 19\tNo entries\t\t\t\nEntry\n\tTue, Oct 20\tNo entries\t\t\t\nEntry\n\tWed, Oct 21\tNo entries\t\t\t\nEntry\n\tThu, Oct 22\tNo entries\t\t\t\nEntry\n\tFri, Oct 23\tNo entries\t\t\t\nEntry\n\tSat, Oct 24\tNo entries\t\t\t\nEntry\n\tSun, Oct 25\tNo entries\t\t\t\nEntry\n\tMon, Oct 26\t9 entries\t01:12\t01:12\t\nEntry\n\t\nCM-REVIEW-20261026-09-b printer spooler time ticket\nCo Managed\n\t\n04:00 - 04:15\n\t00:15\t00:15\t\n\n\t\nCM-REVIEW-20261026-09-b printer spooler time ticket\nCo Managed\n\t\n23:27 - 23:28\n\t00:01\t00:01\t\n\n\t\nCM-REVIEW-20261026-09-c toner audit task\nCo Managed\n\t\n04:00 - 04:06\n\t00:06\t00:06\t\n\n\t\nCM-REVIEW-20261026-09-c printer spooler time ticket\nCo Managed\n\t\n04:00 - 04:15\n\t00:15\t00:15\t\n\n\t\nCM-REVIEW-20261026-09-c printer spooler time ticket\nCo Managed\n\t\n23:31 - 23:32\n\t00:01\t00:01\t\n\n\t\nCM-REVIEW-20261026-09-a printer spooler time ticket\nCo Managed\n\t\n04:00 - 04:15\n\t00:15\t00:15\t\n\n\t\nCM-REVIEW-20261026-09-a printer spooler time ticket\nCo Managed\n\t\n23:23 - 23:24\n\t00:01\t00:01\t\n\n\t\nCM-REVIEW-20261026-06 a6 Task A\nCo Managed\n\t\n04:00 - 04:12\n\t00:12\t00:12\t\n\n\t\nCM-REVIEW-20261026-09-b toner audit task\nCo Managed\n\t\n04:00 - 04:06\n\t00:06\t00:06\t\n\tTue, Oct 27\tNo entries\t\t\t\nEntry\n\tWed, Oct 28\tNo entries\t\t\t\nEntry\n\tThu, Oct 29\tNo entries\t\t\t\nEntry\n\tFri, Oct 30\tNo entries\t\t\t\nEntry\n\tSat, Oct 31\tNo entries\t\t\t\nEntry\n\tSun, Nov 1\tNo entries\t\t\t\nEntry\nBillable Legend\n\nColor indicators for billable time ratios\n\n0%\n25%\n50%\n75%\n100%",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-button",
+      "text": " Back",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "show-suggestions-toggle",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "grid-view-btn",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "list-view-btn",
+      "text": "List",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "submit-timesheet-button",
+      "text": "Submit Time Sheet",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-comment-button",
+      "text": "Respond to Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-work-item-button-list",
+      "text": "Add Item",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-19",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-20",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-21",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-22",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-23",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-24",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-25",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-26",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-705281b3-006a-4c64-8250-ae707f80254a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-705281b3-006a-4c64-8250-ae707f80254a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-entry-802d1a8a-25e6-49a6-91c6-24052843e843",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-work-item-802d1a8a-25e6-49a6-91c6-24052843e843",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-27",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-28",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-29",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-30",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-10-31",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-entry-2026-11-01",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

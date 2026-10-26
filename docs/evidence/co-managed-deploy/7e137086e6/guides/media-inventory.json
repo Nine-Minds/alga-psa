@@ -1,0 +1,128 @@
+[
+  {
+    "guide": "index.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/main.webm",
+    "sha256": "5d2d6ef04f036d3b8969b46a0a8c0aaf4af4b4a6b70b20549add051c1d43ca3a",
+    "source": "00-main/recording/walkthrough.webm",
+    "durationSeconds": 144.32,
+    "chapters": 10
+  },
+  {
+    "guide": "guides/index.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/collection.webm",
+    "sha256": "2cf00ee9f21deb8c571118c6fc1382a6fb19eec634864bbfef66f238c582e486",
+    "source": "collection/collection-recording/walkthrough.webm",
+    "durationSeconds": 29.96,
+    "chapters": 14
+  },
+  {
+    "guide": "guides/01-onboarding.html",
+    "coverage": "partial",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/01-onboarding.webm",
+    "sha256": "be8d87a3a6dc3ae088672ca6107dfdd914a0f54c988c901c2904edfd41cdc12d",
+    "source": "01-onboarding/onboarding-recording/walkthrough.webm",
+    "durationSeconds": 157.72,
+    "chapters": 5
+  },
+  {
+    "guide": "guides/02-licensing-and-seats.html",
+    "coverage": "blocked-external",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/02-licensing-and-seats.webm",
+    "sha256": "41f8c76898cd52edd08e0a59c4999db4694b2db03065ca8e827f2ee413d052ce",
+    "source": "02-licensing-and-seats/licensing-recording/walkthrough.webm",
+    "durationSeconds": 42.48,
+    "chapters": 5
+  },
+  {
+    "guide": "guides/03-access-policies.html",
+    "coverage": "partial",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/03-access-policies.webm",
+    "sha256": "7fd95accaa1ef998af0790284d181be002e84076f2e59d48bf3dd1a280a45b7e",
+    "source": "03-access-policies/recording/walkthrough.webm",
+    "durationSeconds": 154.28,
+    "chapters": 7
+  },
+  {
+    "guide": "guides/04-delegated-administration.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/04-delegated-administration.webm",
+    "sha256": "ea192fb226e0dc69c03ce1eff19a82390da2e5415b8dbfa4f3940f8851ce3db7",
+    "source": "04-delegated-administration/recording/walkthrough.webm",
+    "durationSeconds": 129.6,
+    "chapters": 7
+  },
+  {
+    "guide": "guides/05-ticket-queue.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/05-ticket-queue.webm",
+    "sha256": "1c751496e040f5ce023fe902cb915092d83a441f2e12b379d5051117e86dd1dd",
+    "source": "05-ticket-queue/recording/walkthrough.webm",
+    "durationSeconds": 122.32,
+    "chapters": 5
+  },
+  {
+    "guide": "guides/06-projects-and-tasks.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/06-projects-and-tasks.webm",
+    "sha256": "9f98fc4d1c1f1481c4d97385f74dace9e89855d6bb735f034a8b749f94297d3e",
+    "source": "06-projects-and-tasks/recording/walkthrough.webm",
+    "durationSeconds": 117.6,
+    "chapters": 9
+  },
+  {
+    "guide": "guides/07-conversations-and-files.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/07-conversations-and-files.webm",
+    "sha256": "96da69d29f11af59c89fa90e82bbf030b37c66e14dd55af3b60610bfda76e855",
+    "source": "07-conversations-and-files/recording/walkthrough.webm",
+    "durationSeconds": 176.96,
+    "chapters": 12
+  },
+  {
+    "guide": "guides/08-sla.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/08-sla.webm",
+    "sha256": "b666f07d2bbb9d9b274471a16791e0fb5d11a0cbccba7fbac68abf1feefe58da",
+    "source": "08-sla/recording-combined/walkthrough.webm",
+    "durationSeconds": 398.92,
+    "chapters": 11
+  },
+  {
+    "guide": "guides/09-time-and-billing.html",
+    "coverage": "covered",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/09-time-and-billing.webm",
+    "sha256": "9c1284401f18d4370a4f9ddb21e0c29c950bfeff19ef9109fae297f1294933fc",
+    "source": "09-time-and-billing/recording/walkthrough.webm",
+    "durationSeconds": 118.32,
+    "chapters": 7
+  },
+  {
+    "guide": "guides/10-departure-and-archives.html",
+    "coverage": "partial",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/10-departure-and-archives.webm",
+    "sha256": "7ef8dbdeecede45dd85cd849ff78034d3e3fc3ee318fd2bac933e8fc9cd4f188",
+    "source": "10-departure-and-archives/departure-recording-combined/walkthrough.webm",
+    "durationSeconds": 234.2,
+    "chapters": 7
+  },
+  {
+    "guide": "guides/11-export-restore-and-upgrade.html",
+    "coverage": "blocked-external",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/11-export-restore-and-upgrade.webm",
+    "sha256": "e1ad4b098b88c274ede43ba9cfb8c5177775d2b032212538c1617d154bc7f6c6",
+    "source": "11-export-restore-and-upgrade/export-recording/walkthrough.webm",
+    "durationSeconds": 20.52,
+    "chapters": 3
+  },
+  {
+    "guide": "guides/12-customer-integrations.html",
+    "coverage": "blocked-external",
+    "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/12-customer-integrations.webm",
+    "sha256": "fac9109e85f8017dd52326625871f24be72e24992b3175d92b701caedb6c7086",
+    "source": "12-customer-integrations/recording/walkthrough.webm",
+    "durationSeconds": 52.88,
+    "chapters": 5
+  }
+]

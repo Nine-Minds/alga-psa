@@ -1,0 +1,118 @@
+{
+  "scenario": "explore-1",
+  "recordedAt": "2026-10-26T03:16:40.789Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:16:40.853Z",
+      "seconds": 0.064,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:43.011Z",
+      "seconds": 2.222,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:45.312Z",
+      "seconds": 4.523,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:16:51.406Z",
+      "seconds": 10.617,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=all"
+    },
+    {
+      "at": "2026-10-26T03:16:57.436Z",
+      "seconds": 16.647,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:17:04.904Z",
+      "seconds": 24.115,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:07.173Z",
+      "seconds": 26.384,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:17:13.173Z",
+      "seconds": 32.384,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/ticket-access"
+    },
+    {
+      "at": "2026-10-26T03:17:18.118Z",
+      "seconds": 37.329,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:17:23.191Z",
+      "seconds": 42.402,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing"
+    },
+    {
+      "at": "2026-10-26T03:17:28.289Z",
+      "seconds": 47.5,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "exploration only"
+  ],
+  "durationSeconds": 51.44,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

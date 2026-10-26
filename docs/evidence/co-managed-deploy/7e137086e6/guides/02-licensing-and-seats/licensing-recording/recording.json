@@ -1,0 +1,710 @@
+{
+  "scenario": "licensing-recording",
+  "recordedAt": "2026-10-26T03:19:41.738Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "pool-stats-match-entitlement-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:47.298Z",
+      "data": {
+        "shown": {
+          "capacity": 4,
+          "allocated": 1,
+          "available": 3
+        },
+        "db": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 5,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "customer-allocations-fit-inside-verified-capacity",
+      "passed": true,
+      "at": "2026-10-26T03:19:47.299Z",
+      "data": {
+        "capacity": 4,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 5,
+        "allocated": 1
+      }
+    },
+    {
+      "id": "client-allocation-matches-db-and-pool-hint",
+      "passed": true,
+      "at": "2026-10-26T03:19:52.613Z",
+      "data": {
+        "inputSeats": 1,
+        "dbSeats": 1,
+        "poolHint": "Pool: 4 purchased, 1 allocated, 3 available"
+      }
+    },
+    {
+      "id": "review-shows-quantity-monthly-total-and-amount-due",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.560Z",
+      "data": {
+        "reviewText": "Review customer seat purchase 5 seats · $57.45 per month Estimated amount due now: $11.49 Confirm purchase"
+      }
+    },
+    {
+      "id": "capacity-unchanged-while-only-reviewed",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.841Z",
+      "data": {
+        "capacity": 4
+      }
+    },
+    {
+      "id": "capacity-increases-after-verification-and-reconciles-on-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:57.905Z",
+      "data": {
+        "shown": {
+          "capacity": 5,
+          "allocated": 1,
+          "available": 4
+        },
+        "db": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 6,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "provider-subscription-quantity-matches-pool",
+      "passed": true,
+      "at": "2026-10-26T03:19:57.905Z",
+      "data": {
+        "subscriptions": [
+          {
+            "id": "sub_2a87b2f33",
+            "quantity": 1
+          },
+          {
+            "id": "sub_774424209",
+            "kind": "co_managed",
+            "quantity": 5
+          }
+        ],
+        "operation": {
+          "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:19:56.089679+00:00"
+        }
+      }
+    },
+    {
+      "id": "purchase-recorded-as-one-operation",
+      "passed": true,
+      "at": "2026-10-26T03:19:57.906Z",
+      "data": {
+        "operation": {
+          "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:19:56.089679+00:00"
+        },
+        "count": 3
+      }
+    },
+    {
+      "id": "no-pending-purchase-left-to-resume",
+      "passed": true,
+      "at": "2026-10-26T03:19:57.912Z"
+    },
+    {
+      "id": "probe-same-operation-replay-creates-no-second-charge",
+      "passed": true,
+      "at": "2026-10-26T03:20:01.714Z",
+      "data": {
+        "status": 200,
+        "afterReplay": {
+          "pool": {
+            "capacity": 5,
+            "source": "hosted",
+            "source_reference": "sub_774424209",
+            "revision": 7,
+            "allocated": 1
+          },
+          "purchases": [
+            {
+              "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+              "quantity": 3,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T00:03:11.801858+00:00"
+            },
+            {
+              "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+              "quantity": 4,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:18:24.193788+00:00"
+            },
+            {
+              "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+              "quantity": 5,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:19:56.089679+00:00"
+            }
+          ],
+          "subscriptions": [
+            5
+          ],
+          "events": 1
+        }
+      }
+    },
+    {
+      "id": "allocation-changes-by-requested-amount-availability-by-opposite",
+      "passed": true,
+      "at": "2026-10-26T03:20:07.216Z",
+      "data": {
+        "reloadedHint": "Pool: 5 purchased, 2 allocated, 3 available",
+        "seats": 2
+      }
+    },
+    {
+      "id": "reduction-below-usage-minimum-cannot-be-saved",
+      "passed": true,
+      "at": "2026-10-26T03:20:07.416Z",
+      "data": {
+        "min": "1"
+      }
+    },
+    {
+      "id": "shortfall-reviews-new-pool-total-without-charging",
+      "passed": true,
+      "at": "2026-10-26T03:20:07.848Z",
+      "data": {
+        "shortText": "Add 1 seat to the sponsor pool (new total 6)."
+      }
+    },
+    {
+      "id": "white-rabbit-allocation-restored-and-pool-unchanged",
+      "passed": true,
+      "at": "2026-10-26T03:20:12.805Z",
+      "data": {
+        "seats": 1,
+        "pool": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 7,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "hosted-deployment-offers-purchase-not-manage-license",
+      "passed": true,
+      "at": "2026-10-26T03:20:14.841Z"
+    },
+    {
+      "id": "pool-returned-to-pre-recording-quantity-with-receipts-retained",
+      "passed": true,
+      "at": "2026-10-26T03:20:23.223Z",
+      "data": {
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 1
+        },
+        "purchases": [
+          {
+            "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+            "quantity": 3,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T00:03:11.801858+00:00"
+          },
+          {
+            "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+            "quantity": 4,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:18:24.193788+00:00"
+          },
+          {
+            "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+            "quantity": 5,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:19:56.089679+00:00"
+          },
+          {
+            "operation_id": "93f9e97b-5c8a-47bc-85f2-99e94dd50a9e",
+            "quantity": 4,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:20:22.047217+00:00"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:19:41.781Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.221Z",
+      "seconds": 2.483,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.221Z",
+      "seconds": 2.483,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Reconcile the pool with customer allocations"
+    },
+    {
+      "at": "2026-10-26T03:19:46.225Z",
+      "seconds": 4.487,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:19:47.298Z",
+      "seconds": 5.56,
+      "actor": "qa",
+      "title": "pool-stats-match-entitlement-after-reload",
+      "data": {
+        "shown": {
+          "capacity": 4,
+          "allocated": 1,
+          "available": 3
+        },
+        "db": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 5,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:47.299Z",
+      "seconds": 5.561,
+      "actor": "qa",
+      "title": "customer-allocations-fit-inside-verified-capacity",
+      "data": {
+        "capacity": 4,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 5,
+        "allocated": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:49.401Z",
+      "seconds": 7.663,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:19:52.613Z",
+      "seconds": 10.875,
+      "actor": "qa",
+      "title": "client-allocation-matches-db-and-pool-hint",
+      "data": {
+        "inputSeats": 1,
+        "dbSeats": 1,
+        "poolHint": "Pool: 4 purchased, 1 allocated, 3 available"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:52.705Z",
+      "seconds": 10.967,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Review a hosted pool purchase (configured simulator)"
+    },
+    {
+      "at": "2026-10-26T03:19:54.623Z",
+      "seconds": 12.885,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:19:55.418Z",
+      "seconds": 13.68,
+      "actor": "qa",
+      "title": "purchase-baseline",
+      "data": {
+        "existingQuantity": 4,
+        "proposedTotal": 5
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.560Z",
+      "seconds": 13.822,
+      "actor": "qa",
+      "title": "review-shows-quantity-monthly-total-and-amount-due",
+      "data": {
+        "reviewText": "Review customer seat purchase 5 seats · $57.45 per month Estimated amount due now: $11.49 Confirm purchase"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.841Z",
+      "seconds": 14.103,
+      "actor": "qa",
+      "title": "capacity-unchanged-while-only-reviewed",
+      "data": {
+        "capacity": 4
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:57.905Z",
+      "seconds": 16.167,
+      "actor": "qa",
+      "title": "capacity-increases-after-verification-and-reconciles-on-reload",
+      "data": {
+        "shown": {
+          "capacity": 5,
+          "allocated": 1,
+          "available": 4
+        },
+        "db": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 6,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:57.905Z",
+      "seconds": 16.167,
+      "actor": "qa",
+      "title": "provider-subscription-quantity-matches-pool",
+      "data": {
+        "subscriptions": [
+          {
+            "id": "sub_2a87b2f33",
+            "quantity": 1
+          },
+          {
+            "id": "sub_774424209",
+            "kind": "co_managed",
+            "quantity": 5
+          }
+        ],
+        "operation": {
+          "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:19:56.089679+00:00"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:57.906Z",
+      "seconds": 16.168,
+      "actor": "qa",
+      "title": "purchase-recorded-as-one-operation",
+      "data": {
+        "operation": {
+          "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:19:56.089679+00:00"
+        },
+        "count": 3
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:57.912Z",
+      "seconds": 16.174,
+      "actor": "qa",
+      "title": "no-pending-purchase-left-to-resume"
+    },
+    {
+      "at": "2026-10-26T03:20:01.714Z",
+      "seconds": 19.976,
+      "actor": "qa",
+      "title": "probe-same-operation-replay-creates-no-second-charge",
+      "data": {
+        "status": 200,
+        "afterReplay": {
+          "pool": {
+            "capacity": 5,
+            "source": "hosted",
+            "source_reference": "sub_774424209",
+            "revision": 7,
+            "allocated": 1
+          },
+          "purchases": [
+            {
+              "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+              "quantity": 3,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T00:03:11.801858+00:00"
+            },
+            {
+              "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+              "quantity": 4,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:18:24.193788+00:00"
+            },
+            {
+              "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+              "quantity": 5,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:19:56.089679+00:00"
+            }
+          ],
+          "subscriptions": [
+            5
+          ],
+          "events": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:01.715Z",
+      "seconds": 19.977,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Change a customer allocation (White Rabbit, reversible +1)"
+    },
+    {
+      "at": "2026-10-26T03:20:04.100Z",
+      "seconds": 22.362,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:20:07.216Z",
+      "seconds": 25.478,
+      "actor": "qa",
+      "title": "allocation-changes-by-requested-amount-availability-by-opposite",
+      "data": {
+        "reloadedHint": "Pool: 5 purchased, 2 allocated, 3 available",
+        "seats": 2
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:07.416Z",
+      "seconds": 25.678,
+      "actor": "qa",
+      "title": "reduction-below-usage-minimum-cannot-be-saved",
+      "data": {
+        "min": "1"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:07.848Z",
+      "seconds": 26.11,
+      "actor": "qa",
+      "title": "shortfall-reviews-new-pool-total-without-charging",
+      "data": {
+        "shortText": "Add 1 seat to the sponsor pool (new total 6)."
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:12.805Z",
+      "seconds": 31.067,
+      "actor": "qa",
+      "title": "white-rabbit-allocation-restored-and-pool-unchanged",
+      "data": {
+        "seats": 1,
+        "pool": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 7,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:12.881Z",
+      "seconds": 31.143,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Self-hosted branch (License Management link only)"
+    },
+    {
+      "at": "2026-10-26T03:20:14.830Z",
+      "seconds": 33.092,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:20:14.841Z",
+      "seconds": 33.103,
+      "actor": "qa",
+      "title": "hosted-deployment-offers-purchase-not-manage-license"
+    },
+    {
+      "at": "2026-10-26T03:20:16.797Z",
+      "seconds": 35.059,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/licenses"
+    },
+    {
+      "at": "2026-10-26T03:20:19.879Z",
+      "seconds": 38.141,
+      "actor": "qa",
+      "title": "license-management-direct-visit",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/dashboard",
+        "excerpt": "AlgaPSA Home User Activities Tickets Service Requests Surveys Projects Clients Co-managed IT Opportunities Contacts Interactions Documents Assets Passwords Inventory Reports Time Management Billing Schedule Technician Dispatch Workflows System Monitoring Extensions Settings Support v1.6.12 Home Home fa7f912f-6b62-463e-85cc-ffedab47ac44 Quick Create QT GOOD EVENING, QA Welcome to Your MSP Command Center Track onboarding progress, configure critical services, and keep every client experience consistent. Complete your setup Work through each step to unlock the full MSP dashboard experience. Onboa"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:19.880Z",
+      "seconds": 38.142,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Retained state: return the pool to its pre-recording quantity"
+    },
+    {
+      "at": "2026-10-26T03:20:21.856Z",
+      "seconds": 40.118,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:20:23.223Z",
+      "seconds": 41.485,
+      "actor": "qa",
+      "title": "pool-returned-to-pre-recording-quantity-with-receipts-retained",
+      "data": {
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 1
+        },
+        "purchases": [
+          {
+            "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+            "quantity": 3,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T00:03:11.801858+00:00"
+          },
+          {
+            "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+            "quantity": 4,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:18:24.193788+00:00"
+          },
+          {
+            "operation_id": "93d614ae-4d37-4c9c-84e3-6f8db619bb4f",
+            "quantity": 5,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:19:56.089679+00:00"
+          },
+          {
+            "operation_id": "93f9e97b-5c8a-47bc-85f2-99e94dd50a9e",
+            "quantity": 4,
+            "state": "completed",
+            "provider_reference": "sub_774424209",
+            "created_at": "2026-10-26T03:20:22.047217+00:00"
+          }
+        ]
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.483,
+      "title": "1. Reconcile the pool with customer allocations",
+      "end": 10.967
+    },
+    {
+      "start": 10.967,
+      "title": "2. Review a hosted pool purchase (configured simulator)",
+      "end": 19.977
+    },
+    {
+      "start": 19.977,
+      "title": "3. Change a customer allocation (White Rabbit, reversible +1)",
+      "end": 31.143
+    },
+    {
+      "start": 31.143,
+      "title": "4. Self-hosted branch (License Management link only)",
+      "end": 38.142
+    },
+    {
+      "start": 38.142,
+      "title": "Retained state: return the pool to its pre-recording quantity",
+      "end": 42.43
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "Hosted purchase used the configured Stripe simulator (existing co-managed subscription quantity update, no hosted checkout page). It is not real Stripe and certifies no live SKU or price.",
+    "Allocation change exercised on the active White Rabbit relationship (+1 then restored) because the guide-01 disposable client did not exist yet in the dependency order.",
+    "Shortfall purchase was reviewed but not confirmed; capacity was not purchased through the client shortfall path.",
+    "Self-hosted signed licence install, lapse and renewal not exercised: hosted review deployment, no operator-supplied signed test licence.",
+    "Same-operation replay is a labelled direct server-action probe, not a UI flow."
+  ],
+  "missingResources": [
+    "Real Stripe test account with the co-managed seat price (release-owner acceptance)",
+    "Operator-supplied signed self-host test licence and an isolated self-hosted installation with a lapse/renewal lifecycle fixture"
+  ],
+  "durationSeconds": 42.48,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

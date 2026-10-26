@@ -1,0 +1,164 @@
+{
+  "scenario": "attempts/run-a",
+  "recordedAt": "2026-10-26T03:59:23.838Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "native-entry-offers-full-native-controls",
+      "passed": true,
+      "at": "2026-10-26T03:59:28.879Z",
+      "data": {
+        "ticket-details-delete-ticket-button": true,
+        "ticket-details-duplicate-ticket-button": true,
+        "ticket-details-quick-invoice-button": true,
+        "tag-add-button": true,
+        "user-and-team-picker-trigger": true,
+        "ticket-details-properties-toggle-contact-picker-btn": true,
+        "ticket-details-properties-show-client-picker-btn": true,
+        "ticket-details-properties-add-time-entry-btn": true,
+        "ticket-details-info-save-changes-btn": true
+      }
+    },
+    {
+      "id": "native-entry-has-no-co-managed-section",
+      "passed": true,
+      "at": "2026-10-26T03:59:28.880Z"
+    },
+    {
+      "id": "native-grid-offers-same-native-controls",
+      "passed": true,
+      "at": "2026-10-26T03:59:29.941Z",
+      "data": {
+        "ticket-details-bento-hero-status-select": true,
+        "ticket-details-bento-hero-priority-select": true,
+        "ticket-details-bento-hero-board-select": true,
+        "ticket-details-bento-hero-assignee-picker": true,
+        "tag-manager-input-button": true,
+        "ticket-details-quick-invoice-button": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:59:23.880Z",
+      "seconds": 0.042,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:23.881Z",
+      "seconds": 0.043,
+      "title": "chapter",
+      "data": "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid"
+    },
+    {
+      "at": "2026-10-26T03:59:25.791Z",
+      "seconds": 1.953,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:27.921Z",
+      "seconds": 4.083,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/14619f1e-dd21-4f7e-902f-32fb983766df"
+    },
+    {
+      "at": "2026-10-26T03:59:28.879Z",
+      "seconds": 5.041,
+      "actor": "qa",
+      "title": "native-entry-offers-full-native-controls",
+      "data": {
+        "ticket-details-delete-ticket-button": true,
+        "ticket-details-duplicate-ticket-button": true,
+        "ticket-details-quick-invoice-button": true,
+        "tag-add-button": true,
+        "user-and-team-picker-trigger": true,
+        "ticket-details-properties-toggle-contact-picker-btn": true,
+        "ticket-details-properties-show-client-picker-btn": true,
+        "ticket-details-properties-add-time-entry-btn": true,
+        "ticket-details-info-save-changes-btn": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:28.880Z",
+      "seconds": 5.042,
+      "actor": "qa",
+      "title": "native-entry-has-no-co-managed-section"
+    },
+    {
+      "at": "2026-10-26T03:59:29.941Z",
+      "seconds": 6.103,
+      "actor": "qa",
+      "title": "native-grid-offers-same-native-controls",
+      "data": {
+        "ticket-details-bento-hero-status-select": true,
+        "ticket-details-bento-hero-priority-select": true,
+        "ticket-details-bento-hero-board-select": true,
+        "ticket-details-bento-hero-assignee-picker": true,
+        "tag-manager-input-button": true,
+        "ticket-details-quick-invoice-button": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:30.991Z",
+      "seconds": 7.153,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board"
+    },
+    {
+      "at": "2026-10-26T03:59:32.783Z",
+      "seconds": 8.945,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.043,
+      "title": "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid",
+      "end": 7.153
+    },
+    {
+      "start": 7.153,
+      "title": "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board",
+      "end": 10.549999999999999
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "page.goto: Navigation to \"http://feature-co-managed-it.localhost:23374/msp/settings?tab=ticketing&section=categories\" is interrupted by another navigation to \"http://feature-co-managed-it.localhost:23374/msp/dashboard\"\nCall log:\n  - navigating to \"http://feature-co-managed-it.localhost:23374/msp/settings?tab=ticketing&section=categories\", waiting until \"domcontentloaded\"\n",
+  "durationSeconds": 10.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

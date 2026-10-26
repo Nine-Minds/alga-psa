@@ -1,0 +1,216 @@
+{
+  "scenario": "attempt-3",
+  "recordedAt": "2026-10-26T03:32:20.472Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-requester-exists-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-26T03:32:22.638Z",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "prep-disposable-ticket-with-requester-contact",
+      "passed": true,
+      "at": "2026-10-26T03:32:22.936Z",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "id": "qa-removable-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:32:30.092Z",
+      "data": {
+        "sha256": "b389577654395b1f643eefe728ff917838eb3ba58413ddb51869c6a8d0c0c0c7"
+      }
+    },
+    {
+      "id": "qa-removable-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:32:31.448Z"
+    },
+    {
+      "id": "s2-remove-offered-to-author",
+      "passed": true,
+      "at": "2026-10-26T03:32:32.913Z"
+    },
+    {
+      "id": "s2-removed-file-absent-after-reload-and-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:32:37.060Z",
+      "data": {
+        "status": 404
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:32:20.517Z",
+      "seconds": 0.045,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:20.518Z",
+      "seconds": 0.046,
+      "title": "chapter",
+      "data": "Before you start: requester and disposable shared ticket (customer native screens)"
+    },
+    {
+      "at": "2026-10-26T03:32:22.480Z",
+      "seconds": 2.008,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:22.638Z",
+      "seconds": 2.166,
+      "actor": "alice",
+      "title": "prep-requester-exists-in-customer-tenant",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:22.936Z",
+      "seconds": 2.464,
+      "actor": "alice",
+      "title": "prep-disposable-ticket-with-requester-contact",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:22.936Z",
+      "seconds": 2.464,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "2. Author removes a disposable attachment; old link stops downloading"
+    },
+    {
+      "at": "2026-10-26T03:32:24.457Z",
+      "seconds": 3.985,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:26.724Z",
+      "seconds": 6.252,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:32:30.093Z",
+      "seconds": 9.621,
+      "actor": "qa",
+      "title": "qa-removable-published-file-bytes-match",
+      "data": {
+        "sha256": "b389577654395b1f643eefe728ff917838eb3ba58413ddb51869c6a8d0c0c0c7"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:31.448Z",
+      "seconds": 10.976,
+      "actor": "qa",
+      "title": "qa-removable-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:32:32.913Z",
+      "seconds": 12.441,
+      "actor": "qa",
+      "title": "s2-remove-offered-to-author"
+    },
+    {
+      "at": "2026-10-26T03:32:37.060Z",
+      "seconds": 16.588,
+      "actor": "qa",
+      "title": "s2-removed-file-absent-after-reload-and-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:37.129Z",
+      "seconds": 16.657,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Uncertain send: server saved the message but the response was lost"
+    },
+    {
+      "at": "2026-10-26T03:32:39.353Z",
+      "seconds": 18.881,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:32:44.291Z",
+      "seconds": 23.819,
+      "actor": "qa",
+      "title": "s2-unknown-outcome-observed",
+      "data": {
+        "persistedMessages": 1,
+        "composerOpenAfterUnknown": true,
+        "draftTextRetained": true,
+        "stagedFileRetained": true,
+        "toast": "could not confirm whether the message was saved. Retry to check the same request.",
+        "operationId": "2f9c88fc-a261-4edf-aa08-f62ba141529e"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.046,
+      "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+      "end": 2.464
+    },
+    {
+      "start": 2.464,
+      "title": "2. Author removes a disposable attachment; old link stops downloading",
+      "end": 16.657
+    },
+    {
+      "start": 16.657,
+      "title": "2. Uncertain send: server saved the message but the response was lost",
+      "end": 25.15
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "s2-retry-reuses-operation-no-duplicate {\"ops\":[\"2f9c88fc-a261-4edf-aa08-f62ba141529e\"],\"persisted\":1}",
+  "durationSeconds": 25.2,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

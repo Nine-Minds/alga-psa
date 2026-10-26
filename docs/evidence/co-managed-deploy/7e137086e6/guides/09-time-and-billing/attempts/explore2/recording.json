@@ -1,0 +1,37 @@
+{
+  "scenario": "explore2",
+  "recordedAt": "2026-10-26T03:09:39.313Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:09:41.249Z",
+      "seconds": 1.936,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:09:43.348Z",
+      "seconds": 4.035,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings/time-entry"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 8.64,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

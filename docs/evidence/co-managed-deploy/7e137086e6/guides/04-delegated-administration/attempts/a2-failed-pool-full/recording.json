@@ -1,0 +1,102 @@
+{
+  "scenario": "attempts/a2",
+  "recordedAt": "2026-10-26T03:32:10.057Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-disposable-board",
+      "passed": true,
+      "at": "2026-10-26T03:32:12.653Z",
+      "data": {
+        "board_name": "CM-REVIEW-20261026-04 Delegation board",
+        "description": "CM-REVIEW-20261026-04 original description",
+        "enable_live_ticket_timer": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:32:10.107Z",
+      "seconds": 0.05,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:10.256Z",
+      "seconds": 0.199,
+      "title": "chapter",
+      "data": "Preparation: disposable board, non-administrator user and invitation"
+    },
+    {
+      "at": "2026-10-26T03:32:12.185Z",
+      "seconds": 2.128,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:12.653Z",
+      "seconds": 2.596,
+      "actor": "alice",
+      "title": "prep-disposable-board",
+      "data": {
+        "board_name": "CM-REVIEW-20261026-04 Delegation board",
+        "description": "CM-REVIEW-20261026-04 original description",
+        "enable_live_ticket_timer": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:14.478Z",
+      "seconds": 4.421,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:16.457Z",
+      "seconds": 6.4,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.199,
+      "title": "Preparation: disposable board, non-administrator user and invitation",
+      "end": 68.07000000000001
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out allocation 2 false",
+  "durationSeconds": 68.12,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

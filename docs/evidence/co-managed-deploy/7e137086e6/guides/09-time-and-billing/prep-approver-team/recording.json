@@ -1,0 +1,160 @@
+{
+  "scenario": "prep-approver-team",
+  "recordedAt": "2026-10-26T03:29:38.473Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "approval-team-led-by-qa-persists",
+      "passed": true,
+      "at": "2026-10-26T03:30:13.774Z",
+      "data": {
+        "team": {
+          "team_id": "4a03ce39-8f7b-446d-abbe-7c0e70c317b2",
+          "team_name": "CM-REVIEW-20261026-09 approvers",
+          "manager_id": "86952555-610c-4737-be41-a9236cfa9cdb"
+        }
+      }
+    },
+    {
+      "id": "run-b-sheet-returned-for-changes",
+      "passed": true,
+      "at": "2026-10-26T03:30:18.067Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:29:38.521Z",
+      "seconds": 0.048,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:38.810Z",
+      "seconds": 0.337,
+      "title": "before",
+      "data": {
+        "team": null,
+        "sheet": "SUBMITTED"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:40.746Z",
+      "seconds": 2.273,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:40.746Z",
+      "seconds": 2.273,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: QA cannot approve without a team-lead role"
+    },
+    {
+      "at": "2026-10-26T03:29:42.650Z",
+      "seconds": 4.177,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:29:44.160Z",
+      "seconds": 5.687,
+      "actor": "qa",
+      "title": "approvals-before-team",
+      "data": {
+        "teamLeadRequiredShown": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:44.199Z",
+      "seconds": 5.726,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: Settings > Teams creates a disposable approval team led by QA"
+    },
+    {
+      "at": "2026-10-26T03:29:46.418Z",
+      "seconds": 7.945,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T03:30:13.774Z",
+      "seconds": 35.301,
+      "actor": "qa",
+      "title": "approval-team-led-by-qa-persists",
+      "data": {
+        "team": {
+          "team_id": "4a03ce39-8f7b-446d-abbe-7c0e70c317b2",
+          "team_name": "CM-REVIEW-20261026-09 approvers",
+          "manager_id": "86952555-610c-4737-be41-a9236cfa9cdb"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:13.814Z",
+      "seconds": 35.341,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: return run-b submitted sheet through Request changes"
+    },
+    {
+      "at": "2026-10-26T03:30:15.708Z",
+      "seconds": 37.235,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:30:18.067Z",
+      "seconds": 39.594,
+      "actor": "qa",
+      "title": "run-b-sheet-returned-for-changes"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.273,
+      "title": "Prep: QA cannot approve without a team-lead role",
+      "end": 5.726
+    },
+    {
+      "start": 5.726,
+      "title": "Prep: Settings > Teams creates a disposable approval team led by QA",
+      "end": 35.341
+    },
+    {
+      "start": 35.341,
+      "title": "Prep: return run-b submitted sheet through Request changes",
+      "end": 40.550000000000004
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Preparation only. The disposable team is deleted after the guide 09 recording."
+  ],
+  "durationSeconds": 40.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

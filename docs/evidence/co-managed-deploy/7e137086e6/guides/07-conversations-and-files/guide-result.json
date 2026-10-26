@@ -1,0 +1,89 @@
+{
+  "guide": "guides/07-conversations-and-files.html",
+  "coverage": "covered",
+  "sections": [
+    {
+      "section": "Before you start",
+      "result": "Pass",
+      "evidence": "prep-requester-exists-in-customer-tenant, prep-disposable-ticket-with-requester-contact",
+      "note": "Requester 'CM Review Requester 07' was created by Alice through Settings \u2192 Users \u2192 Client Portal in attempts/attempt-1 (credential stored privately, mode 600); final recording reuses it and creates ticket 'CM-REVIEW-20261026-07 final conversation ticket' with that contact."
+    },
+    {
+      "section": "1. Check all three audiences",
+      "result": "Pass",
+      "evidence": "qa-shared-*, alice-reads-shared-message-and-file-bytes, alice-customer-private-*, qa-msp-private-*, qa-requester-*, s1-qa/alice-cannot-see-other-organization-private-message, s1-requester-sees-only-requester-audience; supplement-grid-parity-readonly (grid-*)",
+      "note": "Entry layout in the main recording; Grid parity checked read-only in supplement-grid-parity-readonly on the same ticket."
+    },
+    {
+      "section": "2. Publish and remove audience-bound files",
+      "result": "Pass",
+      "evidence": "*-published-file-bytes-match, s2-*-downloads-own-private-file, s2-*-copied-other-private-file-link-denied (404), s2-requester-denied-* (401), s2-requester-downloads-requester-file-bytes, s2-remove-offered-to-author, s2-removed-file-absent-after-reload-and-link-denied (404), s2-retry-reuses-operation-no-duplicate, s2-uncertain-publication-complete-once-after-reload",
+      "note": "Re-check of the earlier defect: with the publish response dropped after server execution, this build showed the unknown-outcome message AND kept the composer open with draft text and staged file; Retry reused operationId e70eb605-\u2026 and produced exactly one message with a complete file. The earlier 'composer closes and clears text' defect did not reproduce on 54e75edfab."
+    },
+    {
+      "section": "3. Keep replies and authors after edits or deletion",
+      "result": "Pass",
+      "evidence": "s3-customer-cannot-edit-or-delete-msp-message, s3-customer-reply-persists, s3-msp-sees-reply-with-customer-author, s3-edit-visible-to-customer-reply-retained, s3-root-tombstoned-reply-survives, s3-customer-sees-tombstone-and-own-reply",
+      "note": ""
+    },
+    {
+      "section": "4. Review a whole-thread audience change",
+      "result": "Pass",
+      "evidence": "s4-private-thread-has-reply, s4-preview-counts-root-reply-and-attachment ('2 messages and 1 attachments'), s4-msp-private-original-read-only, s4-customer-receives-thread-reply-and-matching-file, s4-customer-cannot-use-msp-private-original-file-link, s4-requester-receives-disclosed-thread-and-file, s4-restriction-removes-thread-and-copied-file-from-requester, s4-customer-still-reads-thread-at-shared-it-audience",
+      "note": "MSP-private thread disclosed to Requester and IT teams, then restricted to Shared IT teams."
+    },
+    {
+      "section": "5. Requester task conversations and mail",
+      "result": "Pass",
+      "evidence": "s5-prep-requester-visible-shared-task, s5-requester-sees-public-task-message-with-staff-attribution, s5-requester-does-not-see-msp-private-task-message, s5-requester-downloads-task-file-bytes, s5-requester-reply-persists-after-reload, s5-staff-sees-requester-reply-with-author, s5-requester-project-grant-removed",
+      "note": "Disposable requester-visible project 'CM-REVIEW-20261026-07 final requester project' (portal phases/tasks on), shared Collaborate then grant removed. Mail delivery/inbound reply is delegated by the guide to guide 12 and was not tested here."
+    }
+  ],
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "organization": "White Rabbit IT (customer, active)"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "organization": "Oz (MSP)"
+    },
+    {
+      "name": "requester",
+      "email": "cm-review-20261026-07.requester@whiterabbit.test",
+      "organization": "White Rabbit IT (customer, active)"
+    }
+  ],
+  "steps": [
+    "Alice creates the disposable ticket with the requester contact (requester created earlier via Users \u2192 Client Portal)",
+    "QA posts Shared IT teams message + file; Alice reads and downloads",
+    "Alice and QA each post My organization only + file; QA posts Requester and IT teams + file",
+    "Each staff identity reloads: own private visible, other private absent, copied private link refused",
+    "Requester signs in to the client portal: only requester message visible; staff file links refused",
+    "QA posts a disposable file and removes it; old link 404",
+    "QA sends with publish response dropped: unknown-outcome, draft kept, Retry publishes once",
+    "QA root message; Alice replies; QA edits; QA deletes root \u2192 tombstone, reply kept",
+    "QA private thread with reply + file; Change thread audience preview; disclose to Requester and IT teams; Alice/requester read; restrict to Shared IT teams; requester loses it",
+    "Requester-visible shared task: QA posts requester + private task messages and a file; requester reads, downloads, replies; QA reads reply; Alice removes grant"
+  ],
+  "outcomes": [
+    "Audience separation held for all three identities after reload, with byte-exact downloads",
+    "Unknown publish outcome recovered with one message (no duplicate)",
+    "Tombstone retained reply and attribution",
+    "Disclosure transferred thread + file; original private link 404 for customer; restriction revoked requester file (404)",
+    "Requester task reply persisted and visible to staff"
+  ],
+  "limitations": [
+    "Mail/inbound reply proof is guide 12 (not exercised here).",
+    "Grid layout parity is in the read-only supplement recording, not walkthrough.webm.",
+    "Requester account creation is in attempts/attempt-1, not the final walkthrough."
+  ],
+  "missingResources": [],
+  "dbReceipts": [
+    "07-conversations-and-files/db-receipts.json",
+    "07-conversations-and-files/fixtures.json"
+  ],
+  "recordingDir": "07-conversations-and-files/recording"
+}

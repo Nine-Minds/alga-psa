@@ -1,0 +1,14 @@
+{
+  "before": {
+    "team": null,
+    "sheet": "SUBMITTED"
+  },
+  "after": {
+    "team": {
+      "team_id": "4a03ce39-8f7b-446d-abbe-7c0e70c317b2",
+      "team_name": "CM-REVIEW-20261026-09 approvers",
+      "manager_id": "86952555-610c-4737-be41-a9236cfa9cdb"
+    },
+    "sheet": "CHANGES_REQUESTED"
+  }
+}

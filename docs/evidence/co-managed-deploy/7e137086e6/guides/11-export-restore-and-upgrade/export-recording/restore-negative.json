@@ -1,0 +1,12 @@
+[
+  {
+    "case": "wrong-passphrase",
+    "exitCode": 1,
+    "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+  },
+  {
+    "case": "tampered",
+    "exitCode": 1,
+    "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+  }
+]

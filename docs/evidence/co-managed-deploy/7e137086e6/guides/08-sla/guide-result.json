@@ -1,0 +1,105 @@
+{
+  "guide": "guides/08-sla.html",
+  "coverage": "covered",
+  "sections": [
+    {
+      "section": "Before you start",
+      "result": "Pass",
+      "evidence": "prep-policy-persisted-with-targets-and-client-assignment, prep-two-disposable-customer-tickets; prep-policy-form.png, prep-policy-list.png",
+      "note": "Oz had no SLA policies and White Rabbit had no mappings. QA created non-default 'CM-REVIEW-20261026-08 final-b MSP policy' (24/7 fallback schedule; P1 30m/60m, P2 4m/240m; default 50/75/90/100% thresholds) assigned only to the White Rabbit client. Alice created two Medium tickets."
+    },
+    {
+      "section": "1. Configure and persist priority mapping",
+      "result": "Pass",
+      "evidence": "s1-mapping-persists-after-reload; mapping-P1-Critical.png",
+      "note": "White Rabbit 'Medium' \u2192 Oz 'P1 - Critical'. Manage SLA policies link opened SLA settings."
+    },
+    {
+      "section": "2. Start a new MSP obligation on escalation",
+      "result": "Pass",
+      "evidence": "s2-visibility-alone-no-msp-obligation, s2-escalation-captures-policy-and-p1-targets, s2-handoff-history-shows-escalation",
+      "note": "Customer and MSP views show 'White Rabbit IT SLA: No SLA configured' separately from 'Oz SLA' with due times."
+    },
+    {
+      "section": "3. Keep existing targets stable",
+      "result": "Pass",
+      "evidence": "s3-mapping-change-keeps-old-captured-targets, s3-new-escalation-uses-current-p2-targets",
+      "note": "Mapping changed to P2; ticket 1 kept 30/60 and identical dueAt timestamps; ticket 2 captured 4/240."
+    },
+    {
+      "section": "4. Pause MSP responsibility without erasing history",
+      "result": "Pass",
+      "evidence": "s4-handback-pauses-msp-clock-targets-unchanged, s4-customer-history-has-escalation-and-return, s4-re-escalation-keeps-same-captured-targets",
+      "note": "Handback \u2192 pauseReasons [customer_responsible], both views 'Paused'; customer re-escalation resumed the same obligation (generation 1, targets unchanged, elapsed time preserved)."
+    },
+    {
+      "section": "5. Check lifecycle and notifications",
+      "result": "Pass",
+      "evidence": "s5-departed-customer-retains-native-ticket, s5-former-msp-cannot-read-departed-ticket-or-clock, s5-ticket2-msp-assignee-is-qa, s5-notification-events-created-for-obligation, s5-recipients-are-only-the-msp-assignee, s5-breach-email-delivered-to-assignee, s5-in-app-notice-visible-in-qa-bell, s5-no-sla-email-to-customer-or-unrelated-staff; supplement-departed-clock-readonly",
+      "note": "Kansas Farms (terminated) ticket had no MSP obligation, so a read-only supplement used guide 10's terminated Accept-7 relationship whose ticket had one: customer keeps its ticket without an Oz SLA panel; QA cannot open it. Ticket 2 (QA assigned) produced 50/75/90/100% events; recipients only QA; SMTP sink: 'SLA Warning: \u2026 at 90%' and 'SLA BREACH: \u2026 Response SLA Exceeded' to qa@emeraldcity.oz only; Alice received only her ticket-created mail."
+    },
+    {
+      "section": "Recovery",
+      "result": "Pass",
+      "evidence": "restore-mapping-and-client-policy-to-original; db-receipts.json before/after",
+      "note": "Mapping restored to Not mapped and policy unassigned from White Rabbit through the UI (before: no mappings, no client policy; after: same). Disposable non-default policies remain (referenced by obligations)."
+    }
+  ],
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "organization": "Oz (MSP)"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "organization": "White Rabbit IT (customer, active)"
+    },
+    {
+      "name": "kansas-admin",
+      "email": "admin@kansasfarms.test",
+      "organization": "Kansas Farms IT (customer, terminated)"
+    },
+    {
+      "name": "departed-customer-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "organization": "CM-REVIEW-20261026-01 Accept-7 (customer, terminated by guide 10; supplement only, read-only)"
+    }
+  ],
+  "steps": [
+    "QA opens Co-managed SLA priorities, then Manage SLA policies; creates disposable policy assigned to White Rabbit",
+    "Alice creates two Medium tickets",
+    "QA maps Medium \u2192 P1, saves, reloads",
+    "Alice escalates ticket 1; both views show Oz SLA; handoff history",
+    "QA maps Medium \u2192 P2; ticket 1 targets unchanged; Alice escalates ticket 2 (4-minute response)",
+    "QA assigns ticket 2's MSP assignment to QA",
+    "QA returns ticket 1 to customer; both views paused; Alice re-escalates",
+    "Kansas Farms admin and QA departed-relationship read checks",
+    "Wait for ticket 2 response breach; inspect notifications, QA bell and SMTP sink",
+    "Restore mapping and unassign policy"
+  ],
+  "outcomes": [
+    "Captured targets: ticket 1 30/60 (P1), ticket 2 4/240 (P2)",
+    "Mapping change did not rewrite ticket 1 dueAt",
+    "Handback paused with history; re-escalation resumed same obligation",
+    "Breach notices delivered to the MSP assignee only (in-app + email)",
+    "Mapping and client policy back to original"
+  ],
+  "limitations": [
+    "Departure-with-live-clock evidence is the read-only supplement on another agent's terminated relationship (Kansas Farms ticket had no prior MSP obligation).",
+    "Business-hours (non-24/7) arithmetic not exercised: policy used the 24/7 fallback schedule.",
+    "Escalated disposable attempt/final tickets remain open with obligations; their breach notices also reached QA."
+  ],
+  "missingResources": [],
+  "dbReceipts": [
+    "08-sla/db-receipts.json",
+    "08-sla/fixtures.json",
+    "08-sla/attempts/db-receipts-attempts.json",
+    "08-sla/attempts/attempt-5-db-receipts.json"
+  ],
+  "recordingDir": "recording-combined",
+  "notes": [
+    "Published recording recording-combined is a lossless concat of recording (sections prep-5b) and supplement-departed-clock-readonly (section 5a departed clock), composed by the lead so every claimed flow is in the published WebM."
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "fixture": {
+    "clientName": "CM-REVIEW-20261026-01 Accept-7",
+    "clientId": "42b27ac2-5221-446a-ad94-f781c3398493",
+    "workspace": "CM-REVIEW-20261026-01 Accept-7 IT",
+    "adminEmail": "cm-review-20261026-01-accept-7@cmreview.test",
+    "visibility": "Oversight of the initial service desk board",
+    "escalationBoard": "General Support",
+    "operationId": "54fb5726-1a14-45a2-8c72-0c5780e65a88",
+    "customer": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+    "relationship": "e24c064b-1b13-471d-8f24-3441f26d9b0e",
+    "allocationId": "ad0500f1-7d51-431b-93cf-809063ced061",
+    "credentialFile": "cm-review-20261026-01-accept-7-admin.json"
+  },
+  "prefix": "CM-REVIEW-20261026-10 971265",
+  "files": [],
+  "part1": {
+    "ticket": "745f1c87-247d-40d6-a033-d1284bd76947",
+    "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947",
+    "files": [
+      {
+        "label": "shared",
+        "text": "CM-REVIEW-20261026-10 864549 shared",
+        "fileName": "cm-review-10-shared-864549.txt",
+        "href": "/api/co-management/attachments/133a5a74-db08-43c8-8bc3-367802ca05e8?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=745f1c87-247d-40d6-a033-d1284bd76947&storeTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&threadId=2dcc0074-5f63-4f28-aadf-e592932359df&commentId=2dcc0074-5f63-4f28-aadf-e592932359df",
+        "sha256": "a33d6d3bee6dae3606a39cb23db43ac09ad1dc2df84220dca3ec5e6fdb161930"
+      },
+      {
+        "label": "msp-private",
+        "text": "CM-REVIEW-20261026-10 864549 msp-private",
+        "fileName": "cm-review-10-msp-private-864549.txt",
+        "href": "/api/co-management/attachments/93481d70-230d-497e-9fc3-29ac33e00513?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=745f1c87-247d-40d6-a033-d1284bd76947&storeTenant=fa7f912f-6b62-463e-85cc-ffedab47ac44&threadId=da808b2a-085c-4312-a4a1-56d2a15c826d&commentId=da808b2a-085c-4312-a4a1-56d2a15c826d",
+        "sha256": "4ec35ed9fe06d78cbd822d8ed2fc396df13b7721285b5709ea5faba86af398f6"
+      },
+      {
+        "label": "customer-private",
+        "text": "CM-REVIEW-20261026-10 864549 customer-private",
+        "fileName": "cm-review-10-customer-private-864549.txt",
+        "href": "/api/co-management/attachments/7cd1c452-c741-46ca-b009-3b0c5995aca8?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=745f1c87-247d-40d6-a033-d1284bd76947&storeTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&threadId=9787d3f1-71fe-4f95-a55e-8ad245a79667&commentId=9787d3f1-71fe-4f95-a55e-8ad245a79667",
+        "sha256": "0c958c3ea9aa64df6f59b9babc23081531c39a257c92fea1a90955aa3fffa524"
+      }
+    ],
+    "timeEntry": {
+      "entry_id": "87a05c45-a167-4ea7-afec-238268e7bc90",
+      "billable_duration": 15,
+      "billing_mode": "commercial",
+      "work_item_type": "co_managed",
+      "approval_status": "DRAFT",
+      "invoiced": false
+    },
+    "baseline": {
+      "pool": {
+        "capacity": 7,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 12,
+        "allocated": 5
+      },
+      "allocation": {
+        "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+        "seats": 1,
+        "state": "active",
+        "released_at": null
+      },
+      "relationship": "active",
+      "evidenceRows": 10,
+      "manifests": 0
+    }
+  }
+}

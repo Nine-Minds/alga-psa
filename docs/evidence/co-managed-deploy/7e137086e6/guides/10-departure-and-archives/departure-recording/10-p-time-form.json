@@ -1,0 +1,622 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n1\nQT\n← Back to\nTickets\n#000006\nCreated Internally\nGrid\nEntry\nCM-REVIEW-20261026-10 864549 shared ticket\n\nCreated 10/25/2026, 11:54 PM (less than a minute ago)\n\nUpdated 10/25/2026, 11:54 PM (less than a minute ago)\n\nCM-REVIEW-20261026-10 864549 shared ticket\nStatus\nOpen\nAssigned To\nNot assigned\nBoard\nService Desk\nCategory\nSelect category\nPriority\nLow\nResponse State\nSet Response State\nDue Date\nDescription\n\n\n\n\nResolve and close\nCancel\nSave Changes\nComments\nAdd Comment\nAll Comments (2)\nClient (0)\nInternal (2)\nResolution (0)\nNewest first\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:54 PM\n\nCM-REVIEW-20261026-10 864549 msp-private\n\nAttachments\ncm-review-10-msp-private-864549.txt\nRemove\nAttach file\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\n\nqa@emeraldcity.oz\n\nOct 25, 2026, 11:54 PM\n\nCM-REVIEW-20261026-10 864549 shared\n\nAttachments\ncm-review-10-shared-864549.txt\nRemove\nAttach file\nTime Entry\n00:00:00\nWork description\nAdd Time Entry\nLogged Time\n0 hrs\n\nNo time has been logged on this ticket yet.\n\nContact Info\nContact\n\nNo contact selected\n\nCreated By\n\nN/A\n\nCreated\n\n10/25/2026, 11:54 PM\n\nClient\nCA\n\nCM-REVIEW-20261026-01 Accept-7 IT\n\nClient Phone\n\nN/A\n\nClient Email\n\nN/A\n\nAgent team\nCo-managed\nResponsible\nOz\n\nCM-REVIEW-20261026-01 ACCEPT-7 IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nResponse\nCompleted\n\nCompleted · Oct 25, 2026, 11:54 PM\n\nResolution\nIn progress\n\nDue · Oct 26, 2026, 3:54 AM\n\nMSP assignment\nNot assigned to the MSP\nChange\nReturn to customer\nDialog Content\nAdd New Time Entry for CM-REVIEW-20261026-10 864549 shared ticket\nToday’s time sheet is Approved, so the entry starts on Oct 18, 2026, the nearest day that can take time.\nService *\nSelect a service\nDate *\n\nTime sheet: Oct 12, 2026 – Oct 18, 2026 · Draft\n\nStart Time\nEnd Time\nDuration\nh\nm\nBillable\nNotes\nCancel\nSave",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_1n_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "← Back toTickets ",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-grid",
+      "text": "Grid",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-layout-toggle-entry",
+      "text": "Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7e_",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-and-team-picker-trigger",
+      "text": "Not assigned",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7j_",
+      "text": "Service Desk",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Select category",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7o_",
+      "text": "Low",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_7r_",
+      "text": "Set Response State",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-info-due-date-picker",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-resolve-and-close-button",
+      "text": "Resolve and close",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-cancel-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-info-save-changes-btn",
+      "text": "Save Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-show-comment-editor-btn",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_8f_-trigger-0",
+      "text": "All Comments (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_8f_-trigger-1",
+      "text": "Client (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_8f_-trigger-2",
+      "text": "Internal (2)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_8f_-trigger-3",
+      "text": "Resolution (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-conversation-toggle-order-btn",
+      "text": "Newest first",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "da808b2a-085c-4312-a4a1-56d2a15c826d-audience-select",
+      "text": "My organization only",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-da808b2a-085c-4312-a4a1-56d2a15c826d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-da808b2a-085c-4312-a4a1-56d2a15c826d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-da808b2a-085c-4312-a4a1-56d2a15c826d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-da808b2a-085c-4312-a4a1-56d2a15c826d-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-fa7f912f-6b62-463e-85cc-ffedab47ac44-da808b2a-085c-4312-a4a1-56d2a15c826d-93481d70-230d-497e-9fc3-29ac33e00513-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-fa7f912f-6b62-463e-85cc-ffedab47ac44-da808b2a-085c-4312-a4a1-56d2a15c826d-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "2dcc0074-5f63-4f28-aadf-e592932359df-audience-select",
+      "text": "Shared IT teams",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "copy-comment-2dcc0074-5f63-4f28-aadf-e592932359df-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reply-comment-2dcc0074-5f63-4f28-aadf-e592932359df-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-comment-2dcc0074-5f63-4f28-aadf-e592932359df-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-comment-2dcc0074-5f63-4f28-aadf-e592932359df-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-0a3c039e-c4c7-4108-8301-bfe5232a829a-2dcc0074-5f63-4f28-aadf-e592932359df-133a5a74-db08-43c8-8bc3-367802ca05e8-remove",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-attachments-0a3c039e-c4c7-4108-8301-bfe5232a829a-2dcc0074-5f63-4f28-aadf-e592932359df-add",
+      "text": "Attach file",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-time-entry-toggle",
+      "text": "Time Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-timer-stopwatch-start",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "ticket-details-properties-timer-stopwatch-description",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-add-time-entry-btn",
+      "text": "Add Time Entry",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-contact-info-toggle",
+      "text": "Contact Info",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-toggle-contact-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-show-client-picker-btn",
+      "text": "",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "ticket-details-properties-agent-team-toggle",
+      "text": "Agent team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-history-open",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-assignment-change",
+      "text": "Change",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-ticket-handback",
+      "text": "Return to customer",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "drawer-close-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_bk_",
+      "text": "Select a service",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "datePicker-_r_bn_",
+      "text": "",
+      "value": "10/18/2026",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-start-time-0",
+      "text": "",
+      "value": "8:00 AM",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-end-time-0",
+      "text": "",
+      "value": "9:00 AM",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-duration-hours-0",
+      "text": "",
+      "value": "1",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "time-entry-dialog-duration-minutes-0",
+      "text": "",
+      "value": "0",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-billable-duration-0",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-cancel-dialog-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-entry-dialog-save-dialog-btn",
+      "text": "Save",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "guide": "guides/02-licensing-and-seats.html",
+  "coverage": "blocked-external",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "1. Reconcile the pool with customer allocations", "result": "Pass", "evidence": "pool-stats-match-entitlement-after-reload, customer-allocations-fit-inside-verified-capacity, client-allocation-matches-db-and-pool-hint; 02-1-overview-pool.png, 02-1-white-rabbit-seat-dialog.png", "note": "Overview showed 4 purchased / 1 allocated / 3 available after reload, matching co_managed_entitlements and live allocations. The client used was White Rabbit, not a disposable client: guide 01, which creates the disposable client, runs after this guide." },
+    { "section": "2. Review a hosted pool purchase", "result": "Pass", "evidence": "review-shows-quantity-monthly-total-and-amount-due, capacity-unchanged-while-only-reviewed, capacity-increases-after-verification-and-reconciles-on-reload, provider-subscription-quantity-matches-pool, purchase-recorded-as-one-operation, no-pending-purchase-left-to-resume, probe-same-operation-replay-creates-no-second-charge; 02-2-review-purchase.png, 02-2-pool-after-purchase.png, purchase-receipt.json", "note": "Simulator only. The pool went from 4 to 5. The review showed '5 seats · $57.45 per month, Estimated amount due now: $11.49'. Capacity stayed at 4 while the purchase was only under review and became 5 after the simulator verified it. The simulator subscription sub_774424209 quantity became 5, recorded as operation 93d614ae-4d37-4c9c-84e3-6f8db619bb4f. The existing subscription was updated, so no hosted checkout session was opened and Resume purchase was never offered. A labelled direct server-action probe resent the same operation id. It returned 200 and created no new operation, no quantity change and no new simulator event. It did bump co_managed_entitlements.revision (6 to 7), which looks like re-verification. Not real Stripe." },
+    { "section": "3. Change a customer's allocation", "result": "Pass", "evidence": "allocation-changes-by-requested-amount-availability-by-opposite, reduction-below-usage-minimum-cannot-be-saved, shortfall-reviews-new-pool-total-without-charging, white-rabbit-allocation-restored-and-pool-unchanged; 02-3-*.png", "note": "White Rabbit went from 1 to 2 seats. After reload the pool read 5 purchased / 2 allocated / 3 available. With a value of 0, Save allocation was disabled (min 1, White Rabbit has 1 active technician). Asking for more than was available opened a shortfall review: 'Add 1 seat to the sponsor pool (new total 6).' It was not confirmed, and capacity did not change. The allocation was restored to 1 through the same dialog. No pending invitations existed, so the invitation part of the floor was not exercised." },
+    { "section": "4. Check the self-hosted branch separately", "result": "Blocked", "evidence": "hosted-deployment-offers-purchase-not-manage-license; 02-4-license-management.png/.json", "note": "This is a hosted deployment. The pool editor offers Review purchase, not Manage license. Visiting /msp/licenses directly redirected to /msp/dashboard. Installing a signed licence, lapse and renewal could not be run: there is no operator-supplied signed test licence and no self-hosted installation." }
+  ],
+  "actors": [ { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (Emerald City) MSP" } ],
+  "steps": [
+    "Signed in as qa@emeraldcity.oz through the real form",
+    "Opened Co-managed IT overview, read Purchased/Allocated/Available, reloaded",
+    "Opened White Rabbit client > Co-managed IT > Change seat allocation and compared the pool line; cancelled",
+    "Set Total seats in your pool from 4 to 5, Review purchase, read monthly total and amount due, Confirm purchase",
+    "Reloaded the overview until 5 purchased was shown; compared with the simulator subscription quantity",
+    "Labelled probe: resent the same purchase operation id directly to the server action; compared operations, quantity and events",
+    "White Rabbit > Change seat allocation 1 -> 2, Save allocation, reloaded and reopened",
+    "Entered 0 (Save disabled); entered a value one seat over availability, Save allocation, read shortfall review (new total 6), dismissed without confirming",
+    "Restored White Rabbit allocation to 1 and reloaded",
+    "Confirmed the hosted pool editor shows no Manage license link; visited /msp/licenses (redirected to dashboard)",
+    "Retained state: set pool back to 4, Review purchase, Confirm purchase, reloaded"
+  ],
+  "outcomes": [
+    "Pool 4 -> 5 after simulator verification, then 5 -> 4 (net retained 4). Before this recording a failed attempt left the pool at 4 (3 -> 4, operation da1cdd56). That seat is kept as headroom for guide 01.",
+    "4 purchase operations exist (3, 4, 5, 4), all completed against simulator subscription sub_774424209. Receipts are retained.",
+    "White Rabbit allocation is back to 1 (active). Allocated total is 1."
+  ],
+  "limitations": [
+    "Configured Stripe simulator (127.0.0.1:9175), not real Stripe. It certifies no live SKU or price.",
+    "The purchase updated an existing simulator subscription, so the embedded checkout and Resume purchase path was not exercised.",
+    "Allocation checks used the active White Rabbit relationship (+1, restored) instead of a disposable client, because of the requested guide order.",
+    "The shortfall purchase from the client allocation dialog was reviewed but not paid.",
+    "The same-operation replay is a direct server-action probe, not a UI flow.",
+    "Self-host signed licence, lapse and renewal were not exercised.",
+    "The header on every MSP page shows the raw tenant UUID (fa7f912f-...) as a pill. This is an observation, not a guide check."
+  ],
+  "missingResources": [
+    "Real Stripe test account with the co-managed seat price (release-owner acceptance)",
+    "Operator-supplied tenant-bound signed self-host test licence on an isolated self-hosted installation, plus a lapse/renewal lifecycle fixture"
+  ],
+  "dbReceipts": [
+    "licensing-recording/db-before.json",
+    "licensing-recording/purchase-receipt.json",
+    "licensing-recording/db-after.json"
+  ],
+  "recordingDir": "licensing-recording",
+  "attempts": [
+    "attempts/licensing-attempt1-dialog-selector (failed on a selector before any mutation)",
+    "attempts/licensing-attempt2-manage-license-hosted (purchased 3 -> 4 and did the White Rabbit +1/restore; failed at section 4 because the Manage license link is absent on hosted)"
+  ]
+}

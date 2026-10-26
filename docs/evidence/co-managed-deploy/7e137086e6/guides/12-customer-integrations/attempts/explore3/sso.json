@@ -1,0 +1,412 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/security-settings?tab=single-sign-on",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nSecurity\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nSecurity Settings\nRoles\nSessions\nSingle Sign-On\nPermissions\nUser Roles\nPolicies\nAPI Keys\nWebhooks\nSign-in providers\n\nThese providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.\n\nGoogle Workspace\nNot configured\nMicrosoft 365 (Azure AD)\nNot configured\nAutomatically set up SSO for new internal users\n\nTurn this on to provision every new staff account with your corporate SSO provider right away, so they never need a password-based sign-in.\n\nAuto-link internal users\n\nWhen enabled, matching MSP/internal users are automatically linked to their SSO identities on login.\n\nMSP workspace default client portal role\n\nUsed for newly provisioned client portal users in built-in mode when a client mapping does not override the role.\n\nAuto-link client portal users\n\nWhen enabled, matching client portal users are automatically linked to their SSO identities on login.\n\nEnable this toggle to let new and existing staff skip the “Connect SSO” flow when their email already matches a configured provider. We’ll still log every automatic link.\n\nClient portal Entra provisioning mode\n\nChoose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.\n\nDisabled\nBuilt-in\nWorkflow-managed\n\nDeactivate Entra-managed users on entitlement removal\n\nWhen enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.\n\nBulk Single Sign-On Assignment\n\nSelect internal users from the list below and link them to a configured Google or Microsoft provider. Use preview to double-check the impact before executing.\n\nChoose provider & select users\n\nPick the configured SSO provider for your staff, then search and select the users who should be linked.\n\nProvider\nGoogle Workspace\nNot configured\nMicrosoft 365 (Azure AD)\nNot configured\nProvide OAuth credentials for this provider before linking accounts.\nAction\nLink selected users\nUnlink selected users\n\nLinking adds the provider to each selected user. Unlinking removes the provider so the user returns to password/TOTP sign-in until they link again.\n\nFind internal users\nNo users selected yet.\nPreview assignment\nLink accounts\n1 column hidden.\nShow all\n\t\nEmail\n\t\nName\n\t\nStatus\n\t\nLinked providers\n\n\n\t\nalice@whiterabbit.test\nID: a288a520-c353-44d2-91e0-001f75d236de\n\t\nAlice Liddell\n\t\nActive\n\t\nUnlinked\nClient portal bulk assignments are coming soon. For now, this tool applies only to internal MSP users.\nPreview assignment\nLink accounts\nKeycloak / OpenID Connect\nNot configured\n\nLet staff sign in through your own Keycloak realm. Users are matched by email to existing AlgaPSA accounts; Keycloak never creates users here.\n\nRefresh\n\nCreate a confidential OpenID Connect client in your realm and allow this redirect URI:\n\nhttp://feature-co-managed-it.localhost:23374/api/auth/callback/keycloak\n\nThen claim and verify your staff login domain under Advanced below so sign-in routes emails from that domain to this realm.\n\nKeycloak server URL\nRealm\nClient ID\nClient secret\nVerify and save\nAdvanced: custom identity provider routing\nRoute MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-0",
+      "text": "Roles",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-1",
+      "text": "Sessions",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-2",
+      "text": "Single Sign-On",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-3",
+      "text": "Permissions",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-4",
+      "text": "User Roles",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-5",
+      "text": "Policies",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-6",
+      "text": "API Keys",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-7",
+      "text": "Webhooks",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "auto-id",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "User",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "auto-id",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "DisabledBuilt-inWorkflow-managed",
+      "value": "disabled",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "auto-id",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "bulk-sso-provider-google-button",
+      "text": "Google WorkspaceNot configured",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "bulk-sso-provider-microsoft-button",
+      "text": "Microsoft 365 (Azure AD)Not configured",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "link-view-btn",
+      "text": "Link selected users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "unlink-view-btn",
+      "text": "Unlink selected users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sso-search",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sso-bulk-top-preview-link-button",
+      "text": "Preview assignment",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sso-bulk-top-execute-link-button",
+      "text": "Link accounts",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "auto-id",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "auto-id",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sso-bulk-bottom-preview-link-button",
+      "text": "Preview assignment",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sso-bulk-bottom-execute-link-button",
+      "text": "Link accounts",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "keycloak-sso-refresh",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "keycloak-sso-url",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "keycloak-sso-realm",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "keycloak-sso-client-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "keycloak-sso-client-secret",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "keycloak-sso-save",
+      "text": "Verify and save",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-sso-advanced-toggle",
+      "text": "Advanced: custom identity provider routingRoute MSP login SSO to your own identity provider using ve",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

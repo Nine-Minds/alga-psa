@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:02.273 --> 00:00:05.726
+Prep: QA cannot approve without a team-lead role
+
+2
+00:00:05.726 --> 00:00:35.341
+Prep: Settings > Teams creates a disposable approval team led by QA
+
+3
+00:00:35.341 --> 00:00:40.550
+Prep: return run-b submitted sheet through Request changes

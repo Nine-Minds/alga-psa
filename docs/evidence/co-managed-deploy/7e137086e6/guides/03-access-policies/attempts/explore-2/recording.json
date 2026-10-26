@@ -1,0 +1,104 @@
+{
+  "scenario": "explore-2",
+  "recordedAt": "2026-10-26T03:18:15.918Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:18:15.997Z",
+      "seconds": 0.079,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:18.216Z",
+      "seconds": 2.298,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:20.353Z",
+      "seconds": 4.435,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing"
+    },
+    {
+      "at": "2026-10-26T03:18:25.169Z",
+      "seconds": 9.251,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:18:30.244Z",
+      "seconds": 14.326,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:18:35.599Z",
+      "seconds": 19.681,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T03:18:41.481Z",
+      "seconds": 25.563,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:43.700Z",
+      "seconds": 27.782,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:18:50.830Z",
+      "seconds": 34.912,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "exploration only"
+  ],
+  "durationSeconds": 37.32,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

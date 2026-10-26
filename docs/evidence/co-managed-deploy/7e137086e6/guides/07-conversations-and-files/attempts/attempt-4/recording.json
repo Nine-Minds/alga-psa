@@ -1,0 +1,277 @@
+{
+  "scenario": "attempt-4",
+  "recordedAt": "2026-10-26T03:32:53.169Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-requester-exists-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-26T03:32:56.821Z",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "prep-disposable-ticket-with-requester-contact",
+      "passed": true,
+      "at": "2026-10-26T03:32:57.106Z",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "id": "qa-removable-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:33:05.812Z",
+      "data": {
+        "sha256": "cfcad05abde298cadb1a7155f7cb28ca167d478364339e19f988fa871b577a1f"
+      }
+    },
+    {
+      "id": "qa-removable-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:33:07.187Z"
+    },
+    {
+      "id": "s2-remove-offered-to-author",
+      "passed": true,
+      "at": "2026-10-26T03:33:09.199Z"
+    },
+    {
+      "id": "s2-removed-file-absent-after-reload-and-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:33:13.932Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s2-retry-reuses-operation-no-duplicate",
+      "passed": true,
+      "at": "2026-10-26T03:33:22.821Z",
+      "data": {
+        "ops": [
+          "fc4a2aa5-2b70-4828-be77-2b1e42499027",
+          "fc4a2aa5-2b70-4828-be77-2b1e42499027"
+        ],
+        "persisted": 1
+      }
+    },
+    {
+      "id": "s2-uncertain-publication-complete-once-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:33:24.739Z",
+      "data": {
+        "persisted": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:32:53.209Z",
+      "seconds": 0.04,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:53.210Z",
+      "seconds": 0.041,
+      "title": "chapter",
+      "data": "Before you start: requester and disposable shared ticket (customer native screens)"
+    },
+    {
+      "at": "2026-10-26T03:32:56.680Z",
+      "seconds": 3.511,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:56.822Z",
+      "seconds": 3.653,
+      "actor": "alice",
+      "title": "prep-requester-exists-in-customer-tenant",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:57.106Z",
+      "seconds": 3.937,
+      "actor": "alice",
+      "title": "prep-disposable-ticket-with-requester-contact",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:57.106Z",
+      "seconds": 3.937,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "2. Author removes a disposable attachment; old link stops downloading"
+    },
+    {
+      "at": "2026-10-26T03:32:58.622Z",
+      "seconds": 5.453,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:00.969Z",
+      "seconds": 7.8,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:33:05.812Z",
+      "seconds": 12.643,
+      "actor": "qa",
+      "title": "qa-removable-published-file-bytes-match",
+      "data": {
+        "sha256": "cfcad05abde298cadb1a7155f7cb28ca167d478364339e19f988fa871b577a1f"
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:07.187Z",
+      "seconds": 14.018,
+      "actor": "qa",
+      "title": "qa-removable-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:33:09.199Z",
+      "seconds": 16.03,
+      "actor": "qa",
+      "title": "s2-remove-offered-to-author"
+    },
+    {
+      "at": "2026-10-26T03:33:13.932Z",
+      "seconds": 20.763,
+      "actor": "qa",
+      "title": "s2-removed-file-absent-after-reload-and-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:14.021Z",
+      "seconds": 20.852,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Uncertain send: server saved the message but the response was lost"
+    },
+    {
+      "at": "2026-10-26T03:33:16.556Z",
+      "seconds": 23.387,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:33:21.720Z",
+      "seconds": 28.551,
+      "actor": "qa",
+      "title": "s2-unknown-outcome-observed",
+      "data": {
+        "persistedMessages": 1,
+        "composerOpenAfterUnknown": true,
+        "draftTextRetained": true,
+        "stagedFileRetained": true,
+        "toast": "could not confirm whether the message was saved. Retry to check the same request.",
+        "operationId": "fc4a2aa5-2b70-4828-be77-2b1e42499027"
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:22.821Z",
+      "seconds": 29.652,
+      "actor": "qa",
+      "title": "s2-retry-reuses-operation-no-duplicate",
+      "data": {
+        "ops": [
+          "fc4a2aa5-2b70-4828-be77-2b1e42499027",
+          "fc4a2aa5-2b70-4828-be77-2b1e42499027"
+        ],
+        "persisted": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:24.739Z",
+      "seconds": 31.57,
+      "actor": "qa",
+      "title": "s2-uncertain-publication-complete-once-after-reload",
+      "data": {
+        "persisted": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:24.740Z",
+      "seconds": 31.571,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Reply from the other organization, edit, and delete the root"
+    },
+    {
+      "at": "2026-10-26T03:33:26.794Z",
+      "seconds": 33.625,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.041,
+      "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+      "end": 3.937
+    },
+    {
+      "start": 3.937,
+      "title": "2. Author removes a disposable attachment; old link stops downloading",
+      "end": 20.852
+    },
+    {
+      "start": 20.852,
+      "title": "2. Uncertain send: server saved the message but the response was lost",
+      "end": 31.571
+    },
+    {
+      "start": 31.571,
+      "title": "3. Reply from the other organization, edit, and delete the root",
+      "end": 95.71000000000001
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for getByText('CM-REVIEW-20261026-07 root 1792985573210', { exact: true }).filter({ visible: true }).first() to be visible\n",
+  "durationSeconds": 95.76,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

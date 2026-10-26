@@ -1,0 +1,174 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/users",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nUsers\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nUsers\nUser Management\n\nManage MSP users and permissions\n\nMSP\nClient Portal\nActive Users\nCreate New User\nList\nStructure\n\nManage individual users, roles, and permissions.\n\nFirst Name\n\t\nLast Name\n\t\nEmail\n\t\nRole\n\t\nLast Login\n\t\nActions\n\n\nCC\nCheshire\n\t\nCat\n\t\ncheshire@wonderland.com\n\t\nDispatcher\n\t\nNever\n\t\nOpen menu\n\n\nDG\nDorothy\n\t\nGale\n\t\ndorothy@kansas.oz\n\t\nManager\n\t\nNever\n\t\nOpen menu\n\n\nGG\nGlinda\n\t\nGood\n\t\nglinda@emeraldcity.oz\n\t\nAdmin\n\t\nOct 25, 2026\nvia credentials\n\t\nOpen menu\n\n\nMH\nMad\n\t\nHatter\n\t\nhatter@wonderland.com\n\t\nProject Manager\n\t\nNever\n\t\nOpen menu\n\n\nQT\nQA\n\t\nTester\n\t\nqa@emeraldcity.oz\n\t\nAdmin\n\t\nOct 25, 2026\nvia credentials\n\t\nOpen menu\n\n\nQH\nQueen\n\t\nHearts\n\t\nqueen@wonderland.com\n\t\nFinance\n\t\nNever\n\t\nOpen menu\n\n\nSB\nScarecrow\n\t\nBrainless\n\t\nscarecrow@cornfield.oz\n\t\nTechnician\n\t\nNever\n\t\nOpen menu\n\n\nTW\nTin\n\t\nWoodman\n\t\ntinman@emeraldcity.oz\n\t\nTechnician\n\t\nNever\n\t\nOpen menu",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-view-btn",
+      "text": "MSP",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-view-btn",
+      "text": "Client Portal",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_q_",
+      "text": "Active Users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-new-msp-user-btn",
+      "text": "Create New User",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "List",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Structure",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-83476dff-7d11-494f-8d80-8593bafae39f",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-caa1fb54-5500-403a-b152-9159a7e825bc",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-5e32d7f7-67f4-4628-a5ee-132ebb5bfa59",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-ddb23542-acf7-4c3f-a1ce-dea81fcd4311",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-86952555-610c-4737-be41-a9236cfa9cdb",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-e92eeaef-e93c-4708-96bf-a7386e9bddbe",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-a4b3a2c6-2ea3-4c06-866b-99d2f608c9e2",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-acb1ca1a-ebdf-48b4-8037-b783c2ad24a1",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

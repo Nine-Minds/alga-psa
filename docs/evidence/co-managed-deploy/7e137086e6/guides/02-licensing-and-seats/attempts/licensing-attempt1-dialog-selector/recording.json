@@ -1,0 +1,138 @@
+{
+  "scenario": "licensing-recording",
+  "recordedAt": "2026-10-26T03:16:14.777Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "pool-stats-match-entitlement-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:16:21.474Z",
+      "data": {
+        "shown": {
+          "capacity": 3,
+          "allocated": 1,
+          "available": 2
+        },
+        "db": {
+          "capacity": 3,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 3,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "customer-allocations-fit-inside-verified-capacity",
+      "passed": true,
+      "at": "2026-10-26T03:16:21.474Z",
+      "data": {
+        "capacity": 3,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 3,
+        "allocated": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:16:14.832Z",
+      "seconds": 0.055,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:17.436Z",
+      "seconds": 2.659,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:17.436Z",
+      "seconds": 2.659,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Reconcile the pool with customer allocations"
+    },
+    {
+      "at": "2026-10-26T03:16:20.085Z",
+      "seconds": 5.308,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:16:21.474Z",
+      "seconds": 6.697,
+      "actor": "qa",
+      "title": "pool-stats-match-entitlement-after-reload",
+      "data": {
+        "shown": {
+          "capacity": 3,
+          "allocated": 1,
+          "available": 2
+        },
+        "db": {
+          "capacity": 3,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 3,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:21.474Z",
+      "seconds": 6.697,
+      "actor": "qa",
+      "title": "customer-allocations-fit-inside-verified-capacity",
+      "data": {
+        "capacity": 3,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 3,
+        "allocated": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:23.512Z",
+      "seconds": 8.735,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.659,
+      "title": "1. Reconcile the pool with customer allocations",
+      "end": 61.830000000000005
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out pool hint \"locator.innerText: Timeout 25000ms exceeded.\\nCall log:\\n  - waiting for locator('[id$=\\\"-seats-dialog\\\"]').first()\\n\"",
+  "durationSeconds": 61.88,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

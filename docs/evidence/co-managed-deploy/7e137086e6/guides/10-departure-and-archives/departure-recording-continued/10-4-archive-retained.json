@@ -1,0 +1,412 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-managed/archive",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n1\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM-REVIEW-20261026-10 864549 shared ticket\nCM-REVIEW-20261026-01 Accept-7\nCM-REVIEW-20261026-10 703235 shared ticket\nCM-REVIEW-20261026-01 Accept-7\nCM-REVIEW-20261026-10 818294 shared ticket\nCM-REVIEW-20261026-01 Accept-7\nCM-REVIEW-20261026-09-c toner audit task\nWhite Rabbit\nCM-REVIEW-20261026-09-d toner audit task\nWhite Rabbit\nCM-REVIEW-20261026-09-e toner audit task\nWhite Rabbit\nCM-REVIEW-20261026-09-f toner audit task\nWhite Rabbit\nCM-REVIEW-20261026-06 a4 Task A\nWhite Rabbit\nCM-REVIEW-20261026-07 final requester task\nWhite Rabbit\nCM-REVIEW-20261026-07 requester task\nWhite Rabbit\nCM-REVIEW-20261026-06 Task A\nWhite Rabbit\nCM-REVIEW-20261026-09-b toner audit task\nWhite Rabbit\nCM-REVIEW-20261026-06 final Task A\nWhite Rabbit\nCM-REVIEW-20261026-06 a6 Task A\nWhite Rabbit\nCM-REVIEW-20261026-08 a2 ticket 2\nWhite Rabbit\nCM-REVIEW-20261026-09-a printer spooler time ticket\nWhite Rabbit\nCM-REVIEW-20261026-08 a1 ticket 1\nWhite Rabbit\nCM-REVIEW-20261026-09-c printer spooler time ticket\nWhite Rabbit\nCM-REVIEW-20261026-08 a2 ticket 1\nWhite Rabbit\nCM-REVIEW-20261026-07 conversation ticket\nWhite Rabbit\nCM-REVIEW-20261026-09-f printer spooler time ticket\nWhite Rabbit\nCM-REVIEW-20261026-09-e printer spooler time ticket\nWhite Rabbit\nCM-REVIEW-20261026-08 final ticket 1\nWhite Rabbit\nCM-REVIEW-20261026-07 final conversation ticket\nWhite Rabbit\nCM-REVIEW-20261026-08 a1 ticket 2\nWhite Rabbit\nPrevious\nNext\nCM-REVIEW-20261026-10 864549 shared ticket\n\nCM-REVIEW-20261026-01 Accept-7\n\nSaved work details\nOct 25, 2026, 11:55 PM\n\nCM-REVIEW-20261026-10 864549 shared ticket\n\nStatus\nOpen\nPriority\nLow\nMSP-private note\nOct 25, 2026, 11:55 PM\n\nQA Tester · Oz\n\nCM-REVIEW-20261026-10 864549 msp-private\n\nConversation\nOct 25, 2026, 11:55 PM\n\nQA Tester · Oz\n\nCM-REVIEW-20261026-10 864549 shared\n\nTime recorded\nOct 25, 2026, 11:54 PM\n\nQA Tester · Oz\n\nMSP-private note\nOct 25, 2026, 11:54 PM\n\nQA Tester · Oz\n\nCM-REVIEW-20261026-10 864549 msp-private\n\nConversation\nOct 25, 2026, 11:54 PM\n\nQA Tester · Oz\n\nCM-REVIEW-20261026-10 864549 shared\n\nEscalated to MSP\nOct 25, 2026, 11:54 PM\n\nReview Accept Admin · CM-REVIEW-20261026-01 Accept-7 IT\n\nCM-REVIEW-20261026-10 864549 please take this departure test ticket\n\nPrevious\nNext\nRetained files\ncm-review-10-shared-864549.txt36 bytes\ncm-review-10-msp-private-864549.txt41 bytesMSP-private file\nPrevious\nNext",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "1",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-refresh",
+      "text": "Reload current access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-0a3c039e-c4c7-4108-8301-bfe5232a829a-e24c064b-1b13-471d-8f24-3441f26d9b0e-ticket-745f1c87-247d-40d6-a033-d1284bd76947",
+      "text": "CM-REVIEW-20261026-10 864549 shared ticketCM-REVIEW-20261026-01 Accept-7",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-0a3c039e-c4c7-4108-8301-bfe5232a829a-e24c064b-1b13-471d-8f24-3441f26d9b0e-ticket-8120f19f-dc24-4c9d-9585-1e510ca5a245",
+      "text": "CM-REVIEW-20261026-10 703235 shared ticketCM-REVIEW-20261026-01 Accept-7",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-0a3c039e-c4c7-4108-8301-bfe5232a829a-e24c064b-1b13-471d-8f24-3441f26d9b0e-ticket-aa3ff00e-dc65-4f87-b970-da3efe2128b4",
+      "text": "CM-REVIEW-20261026-10 818294 shared ticketCM-REVIEW-20261026-01 Accept-7",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-354bdfd4-39ec-42c5-8727-058c6fc1d89f",
+      "text": "CM-REVIEW-20261026-09-c toner audit taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-4b18b07f-4aee-49dc-8d65-243b69688e83",
+      "text": "CM-REVIEW-20261026-09-d toner audit taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-56014fca-5253-4e9f-b031-262f5118bba3",
+      "text": "CM-REVIEW-20261026-09-e toner audit taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+      "text": "CM-REVIEW-20261026-09-f toner audit taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-76855e1b-80c4-491d-8027-f027be6d3f5f",
+      "text": "CM-REVIEW-20261026-06 a4 Task AWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-7965ad44-0715-4bb4-88f8-6e6557b1f2da",
+      "text": "CM-REVIEW-20261026-07 final requester taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-82c8ac68-9c76-4ba9-86e4-41702d0d4af7",
+      "text": "CM-REVIEW-20261026-07 requester taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-af17f6fd-1d75-49f0-8a5a-c075501d4d48",
+      "text": "CM-REVIEW-20261026-06 Task AWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-bfb087a5-1a88-4826-894d-97bab57f1743",
+      "text": "CM-REVIEW-20261026-09-b toner audit taskWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-ccbcc459-1986-4226-bf92-f0499093b006",
+      "text": "CM-REVIEW-20261026-06 final Task AWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-project_task-e3949673-5ba2-4cb1-8f41-2eada23d89a9",
+      "text": "CM-REVIEW-20261026-06 a6 Task AWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-0220c421-80cb-4331-8ba2-faffb0e95b1f",
+      "text": "CM-REVIEW-20261026-08 a2 ticket 2White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-062f01cc-3cb7-408c-8e14-1777cd557efd",
+      "text": "CM-REVIEW-20261026-09-a printer spooler time ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-0ea8bb25-46c4-4742-97e3-6354f6e1d747",
+      "text": "CM-REVIEW-20261026-08 a1 ticket 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-0fc192d0-d1dd-4d60-ba4c-c98eacee7f87",
+      "text": "CM-REVIEW-20261026-09-c printer spooler time ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-17e22913-387b-4b5b-8886-042ff65c9466",
+      "text": "CM-REVIEW-20261026-08 a2 ticket 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-5420c7b3-70f5-4352-bd32-280c1ed2e5fd",
+      "text": "CM-REVIEW-20261026-07 conversation ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-6ca3357d-4596-45ad-959f-0629501a1d14",
+      "text": "CM-REVIEW-20261026-09-f printer spooler time ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-8a7b6ee3-5727-4347-8bd0-aa4ece2c0ef1",
+      "text": "CM-REVIEW-20261026-09-e printer spooler time ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-8f515d02-a2fa-4e20-95a4-cab017c6931a",
+      "text": "CM-REVIEW-20261026-08 final ticket 1White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-99a62c02-6235-408f-9755-959424089b76",
+      "text": "CM-REVIEW-20261026-07 final conversation ticketWhite Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-c64b2666-7dd6-4c61-8ced-4b233f628e61-2be5cb32-91e8-491a-9ec4-16ab019c7d40-ticket-d2faa91d-fd59-4808-9168-a951d781b304",
+      "text": "CM-REVIEW-20261026-08 a1 ticket 2White Rabbit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-work-next",
+      "text": "Next",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-history-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-previous",
+      "text": "Previous",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "co-archive-files-next",
+      "text": "Next",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

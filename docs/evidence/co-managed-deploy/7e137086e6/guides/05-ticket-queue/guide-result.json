@@ -1,0 +1,46 @@
+{
+  "guide": "guides/05-ticket-queue.html",
+  "coverage": "covered",
+  "build": { "dist": ".next-review-final-54e75edf", "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994" },
+  "sections": [
+    { "section": "Before you start (preparation)", "result": "Pass", "evidence": "prep-msp-escalation-prerequisites-applied, prep-five-msp-responsible-tickets, prep-escalation-prerequisites-restored-to-baseline; sla-*.png, quick-add-*.png", "note": "Alice created five disposable tickets: A-D on Service Desk and E on a new 'CM-REVIEW-20261026-05 Explicit board' outside the MSP board scope. She escalated all five from the native ticket screen. Escalation is blocked until the MSP has an SLA policy that applies to the client and a mapping for the ticket's priority. So QA temporarily assigned guide 08's existing 'CM-REVIEW-20261026-08 final-b MSP policy' to the White Rabbit client and mapped customer Critical and Low to 'P1 - Critical'. Both were restored to the baseline (unassigned, Not mapped) right after the escalations." },
+    { "section": "1. Keep queue scope stable", "result": "Pass", "evidence": "1-native-all-tickets-lists-native-ticket, 1-native-desk-excludes-shared-work, 1-working-queue-lists-msp-responsible-work, 1-oversight-follows-customer-scope, 1-reload-retains-applied-scope, 1-result-opens-qualified-shared-ticket, 1-return-navigation-restores-scope, 1-displayed-organization-is-customer-workspace; 1-native-desk.png, 1-working.png, 1-oversight.png, 1-reloaded.png, 1-opened.png", "note": "All Tickets listed the native 'Oz native switch closet audit' and none of the shared CM-REVIEW tickets. Workspace, status, search, view and sort were kept across reload, opening a result and Back. Guide fixture 000002 does not exist in the rebuilt environment, so the search used the CM-REVIEW-20261026-05 set." },
+    { "section": "2. Export the full filtered set", "result": "Pass", "evidence": "2-export-includes-every-filtered-row-once, 2-export-only-this-customer-and-filter; 2-paged.png, filtered-working-export.csv", "note": "With pageSize=2 (three pages), the export had all 5 filtered rows once each, only White Rabbit IT, and no other tickets. Observation: the CSV includes raw workspace_tenant, relationship_id and ticket_id UUID columns." },
+    { "section": "3. Return selected tickets once", "result": "Pass", "evidence": "3-selected-count-and-labels-shown, 3-only-selected-tickets-changed, 3-one-handoff-note-per-returned-ticket, 3-msp-reload-shows-customer-responsibility-and-note-a/b, 3-customer-sees-same-note-a/b; 3-composer.png, 3-outcomes.png, 3-msp-history-*.png, 3-customer-history-*.png", "note": "The composer said '2 selected ticket(s) will be returned.' A and B became customer-responsible with exactly one handoff note each; C, D and E stayed MSP. After reload, the MSP shared view and Alice's native history showed the same note once." },
+    { "section": "4. Recover interrupted or mixed results", "result": "Pass", "evidence": "4-customer-changed-selected-tickets, 4-reload-offers-interrupted-return-resume, 4-outcomes-distinguish-returned-changed-denied, 4-resume-creates-one-note-for-successful-item, 4-conflicted-and-denied-items-not-counted-returned, 4-reread-oversight-excludes-revoked-and-keeps-returned; 4-composer-three.png, 4-customer-changed.png, 4-lost-response.png, 4-resume-offered.png, 4-mixed-outcomes.png, 4-reread.png, customer-session/*.webm", "note": "QA selected C, D and E. In a second session Alice took C back and revoked E's explicit grant. QA submitted, and the browser dropped the server's response after the server committed (labelled fault injection). After a same-tab reload the resume control appeared. Resuming showed D 'Returned to customer IT', C 'Ticket changed. Refresh before trying again.' and E 'Access denied'. D has exactly one bulk note; C and E have none. Oversight no longer lists E." }
+  ],
+  "actors": [
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP)" },
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer)" }
+  ],
+  "steps": [
+    "QA temporarily assigned the existing guide-08 SLA policy to the White Rabbit client and mapped customer Critical/Low priorities",
+    "Alice created an out-of-scope board and five disposable tickets, then escalated each from the native ticket screen",
+    "QA restored the SLA mapping and client policy assignment to their baseline",
+    "QA checked All Tickets (native ticket present, shared work absent), then opened Customer Tickets",
+    "QA switched Working queue / Customer oversight, applied workspace, status, search and sort, reloaded, opened a result and used Back",
+    "QA exported CSV with the result split over pages",
+    "QA selected A and B, entered a handoff note and returned them; reopened each after reload; Alice checked her native handoff history",
+    "QA selected C, D, E and entered a note; Alice (second session) took C back and revoked E; QA submitted with the response dropped",
+    "QA reloaded, resumed the interrupted return, read the per-item outcomes and re-read oversight"
+  ],
+  "outcomes": [
+    "Queue URL scope (queueView, workspace, queueState, searchQuery, queueSort) survived reload and detail/back navigation",
+    "filtered-working-export.csv: 5 rows, each disposable ticket exactly once, White Rabbit IT only",
+    "A and B: customer responsibility, one handoff note each, visible to both sides after reload",
+    "Mixed recovery: D returned once (one note), C reported Ticket changed, E reported Access denied; neither C nor E received the bulk note",
+    "Escalation prerequisites back to baseline: no White Rabbit priority mappings, White Rabbit client has no SLA policy"
+  ],
+  "limitations": [
+    "The lost-response case was produced by dropping one bulk-return server-action response in the browser after the server committed it.",
+    "Guide fixture ticket 000002 does not exist in the rebuilt environment; the disposable CM-REVIEW-20261026-05 set was used.",
+    "Escalation needed guide 08's disposable SLA policy, temporarily assigned to White Rabbit (about 50 s, 04:16-04:17Z) and then restored."
+  ],
+  "missingResources": [],
+  "dataLeftBehind": [
+    "White Rabbit board 'CM-REVIEW-20261026-05 Explicit board' and tickets 000024-000028 (CM-REVIEW-20261026-05 bulk A/B, mixed C/D/E), all now customer-responsible; E's explicit grant revoked",
+    "Handoff history notes on those tickets"
+  ],
+  "dbReceipts": ["recording/db-receipts.json", "recording/fixture-tickets.json", "recording/filtered-working-export.csv"],
+  "recordingDir": "05-ticket-queue/recording"
+}

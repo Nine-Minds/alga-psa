@@ -1,0 +1,125 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings?tab=teams",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nGeneral\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nAdmin Settings\nTeam Management\n\nCreate and manage teams, assign team leads, and organize members across your organization\n\nSelect a manager\nCreate Team\nCancel\nTeams\nWT\nWonderland Team\nDelete\nOT\nOz Team\nDelete\n\nPlease select a team to manage members",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "CM-REVIEW-20261026-09 approvers",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "account-manager-picker-trigger",
+      "text": "Select a manager",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-team-btn",
+      "text": "Create Team",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-create-team-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "WTWonderland Team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-team-27b8897d-573d-4077-b71d-69cd76347d10-btn",
+      "text": "Delete",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "OTOz Team",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "delete-team-4b01fdb0-d48c-4a4d-8b0e-641e181a1158-btn",
+      "text": "Delete",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

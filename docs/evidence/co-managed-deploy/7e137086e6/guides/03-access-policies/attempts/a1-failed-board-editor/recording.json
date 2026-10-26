@@ -1,0 +1,96 @@
+{
+  "scenario": "attempts/a1",
+  "recordedAt": "2026-10-26T03:23:30.728Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:23:30.798Z",
+      "seconds": 0.07,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:23:31.556Z",
+      "seconds": 0.828,
+      "title": "baseline policy",
+      "data": {
+        "at": "2026-10-26T03:23:30.800Z",
+        "relationship": {
+          "visibility_mode": "board_scope",
+          "revision": 5,
+          "state": "active"
+        },
+        "boards": [
+          {
+            "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+            "board_name": "Service Desk",
+            "can_collaborate": true
+          }
+        ],
+        "projects": [
+          {
+            "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+            "can_collaborate": true
+          },
+          {
+            "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+            "can_collaborate": true
+          }
+        ],
+        "staff": [
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "principal": "qa@emeraldcity.oz",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:23:31.557Z",
+      "seconds": 0.829,
+      "title": "chapter",
+      "data": "Preparation: disposable board, tickets and viewer principal"
+    },
+    {
+      "at": "2026-10-26T03:23:33.565Z",
+      "seconds": 2.837,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.829,
+      "title": "Preparation: disposable board, tickets and viewer principal",
+      "end": 29.95
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#copy-ticket-statuses-select')\n",
+  "durationSeconds": 30,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

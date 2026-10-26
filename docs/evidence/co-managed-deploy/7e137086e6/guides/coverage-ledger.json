@@ -1,0 +1,114 @@
+[
+  {
+    "guide": "index.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 144.32,
+    "chapters": 10,
+    "verified": true
+  },
+  {
+    "guide": "guides/index.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 29.96,
+    "chapters": 14,
+    "verified": true
+  },
+  {
+    "guide": "guides/01-onboarding.html",
+    "coverage": "partial",
+    "sections": "Pass/Pass/Pass/Pass",
+    "durationSeconds": 157.72,
+    "chapters": 5,
+    "verified": true
+  },
+  {
+    "guide": "guides/02-licensing-and-seats.html",
+    "coverage": "blocked-external",
+    "sections": "Pass/Pass/Pass/Blocked",
+    "durationSeconds": 42.48,
+    "chapters": 5,
+    "verified": true
+  },
+  {
+    "guide": "guides/03-access-policies.html",
+    "coverage": "partial",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Not run/Pass",
+    "durationSeconds": 154.28,
+    "chapters": 7,
+    "verified": true
+  },
+  {
+    "guide": "guides/04-delegated-administration.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 129.6,
+    "chapters": 7,
+    "verified": true
+  },
+  {
+    "guide": "guides/05-ticket-queue.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 122.32,
+    "chapters": 5,
+    "verified": true
+  },
+  {
+    "guide": "guides/06-projects-and-tasks.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 117.6,
+    "chapters": 9,
+    "verified": true
+  },
+  {
+    "guide": "guides/07-conversations-and-files.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 176.96,
+    "chapters": 12,
+    "verified": true
+  },
+  {
+    "guide": "guides/08-sla.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 398.92,
+    "chapters": 11,
+    "verified": true
+  },
+  {
+    "guide": "guides/09-time-and-billing.html",
+    "coverage": "covered",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 118.32,
+    "chapters": 7,
+    "verified": true
+  },
+  {
+    "guide": "guides/10-departure-and-archives.html",
+    "coverage": "partial",
+    "sections": "Pass/Pass/Pass/Pass/Pass/Pass",
+    "durationSeconds": 234.2,
+    "chapters": 7,
+    "verified": true
+  },
+  {
+    "guide": "guides/11-export-restore-and-upgrade.html",
+    "coverage": "blocked-external",
+    "sections": "Pass/Blocked/Blocked/Not run",
+    "durationSeconds": 20.52,
+    "chapters": 3,
+    "verified": true
+  },
+  {
+    "guide": "guides/12-customer-integrations.html",
+    "coverage": "blocked-external",
+    "sections": "Pass/Blocked/Blocked/Fail/Blocked",
+    "durationSeconds": 52.88,
+    "chapters": 5,
+    "verified": true
+  }
+]

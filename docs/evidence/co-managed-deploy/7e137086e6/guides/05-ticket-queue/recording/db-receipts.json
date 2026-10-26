@@ -1,0 +1,106 @@
+{
+  "prereqBefore": {
+    "mappings": {
+      "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+      "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+    },
+    "clientPolicy": ""
+  },
+  "prepared": {
+    "a": {
+      "ticket": "899670b9-7ad5-43a4-9f99-950e03a4f8f1",
+      "responsibility": "msp",
+      "grant_revoked_at": null,
+      "revision": 1
+    },
+    "b": {
+      "ticket": "463f082b-e225-4198-a3eb-3b3fa84d6a12",
+      "responsibility": "msp",
+      "grant_revoked_at": null,
+      "revision": 1
+    },
+    "c": {
+      "ticket": "5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf",
+      "responsibility": "msp",
+      "grant_revoked_at": null,
+      "revision": 1
+    },
+    "d": {
+      "ticket": "ac2d0e9a-588f-48fd-83bf-b60ddf249e33",
+      "responsibility": "msp",
+      "grant_revoked_at": null,
+      "revision": 1
+    },
+    "e": {
+      "ticket": "6e72984f-9d4e-4d78-b38c-d11edc3a3c51",
+      "responsibility": "msp",
+      "grant_revoked_at": null,
+      "revision": 1
+    }
+  },
+  "prereqRestore": {
+    "before": {
+      "mappings": {
+        "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+        "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+      },
+      "clientPolicy": ""
+    },
+    "after": {
+      "mappings": {
+        "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+        "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+      },
+      "clientPolicy": ""
+    }
+  },
+  "final": {
+    "a": {
+      "ticket": "899670b9-7ad5-43a4-9f99-950e03a4f8f1",
+      "responsibility": "customer",
+      "grant_revoked_at": null,
+      "revision": 2,
+      "handoffs3": 1,
+      "handoffs4": 0
+    },
+    "b": {
+      "ticket": "463f082b-e225-4198-a3eb-3b3fa84d6a12",
+      "responsibility": "customer",
+      "grant_revoked_at": null,
+      "revision": 2,
+      "handoffs3": 1,
+      "handoffs4": 0
+    },
+    "c": {
+      "ticket": "5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf",
+      "responsibility": "customer",
+      "grant_revoked_at": null,
+      "revision": 2,
+      "handoffs3": 0,
+      "handoffs4": 0
+    },
+    "d": {
+      "ticket": "ac2d0e9a-588f-48fd-83bf-b60ddf249e33",
+      "responsibility": "customer",
+      "grant_revoked_at": null,
+      "revision": 2,
+      "handoffs3": 0,
+      "handoffs4": 1
+    },
+    "e": {
+      "ticket": "6e72984f-9d4e-4d78-b38c-d11edc3a3c51",
+      "responsibility": "customer",
+      "grant_revoked_at": "2026-10-26T04:22:24.75+00:00",
+      "revision": 2,
+      "handoffs3": 0,
+      "handoffs4": 0
+    }
+  },
+  "prereqFinal": {
+    "mappings": [
+      "",
+      ""
+    ],
+    "clientPolicy": ""
+  }
+}

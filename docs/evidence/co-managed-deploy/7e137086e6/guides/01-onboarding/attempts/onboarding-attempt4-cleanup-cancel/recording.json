@@ -1,0 +1,109 @@
+{
+  "scenario": "onboarding-attempt4-cleanup-cancel",
+  "recordedAt": "2026-10-26T03:34:56.835Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "attempt1-cancel-fixture-released",
+      "passed": true,
+      "at": "2026-10-26T03:35:08.207Z",
+      "data": {
+        "before": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 5
+        },
+        "after": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 4
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:34:56.887Z",
+      "seconds": 0.052,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:59.010Z",
+      "seconds": 2.175,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:59.010Z",
+      "seconds": 2.175,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Cancel unclaimed setup left by a failed attempt"
+    },
+    {
+      "at": "2026-10-26T03:35:01.019Z",
+      "seconds": 4.184,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f0e5b463-2f8a-49b3-855d-9da1c52b9646?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:35:08.207Z",
+      "seconds": 11.372,
+      "actor": "qa",
+      "title": "attempt1-cancel-fixture-released",
+      "data": {
+        "before": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 5
+        },
+        "after": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 4
+        }
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.175,
+      "title": "Cancel unclaimed setup left by a failed attempt",
+      "end": 11.95
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 12,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

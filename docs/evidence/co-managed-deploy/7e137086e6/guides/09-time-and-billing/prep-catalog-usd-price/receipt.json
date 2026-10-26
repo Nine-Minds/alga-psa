@@ -1,0 +1,15 @@
+{
+  "before": {
+    "prices": [],
+    "sheet": "APPROVED"
+  },
+  "after": {
+    "prices": [
+      {
+        "currency_code": "USD",
+        "rate": 10000
+      }
+    ],
+    "sheet": "CHANGES_REQUESTED"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "scenario": "explore-readonly",
+  "recordedAt": "2026-10-26T03:16:17.748Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:16:17.872Z",
+      "seconds": 0.124,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:20.087Z",
+      "seconds": 2.339,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:22.360Z",
+      "seconds": 4.612,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:16:26.944Z",
+      "seconds": 9.196,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:16:31.462Z",
+      "seconds": 13.714,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:16:36.158Z",
+      "seconds": 18.41,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T03:16:41.286Z",
+      "seconds": 23.538,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:16:43.531Z",
+      "seconds": 25.783,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:16:48.126Z",
+      "seconds": 30.378,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-26T03:16:52.598Z",
+      "seconds": 34.85,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:16:57.109Z",
+      "seconds": 39.361,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings/sla"
+    },
+    {
+      "at": "2026-10-26T03:17:01.619Z",
+      "seconds": 43.871,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T03:17:06.566Z",
+      "seconds": 48.818,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [
+    "read-only navigation"
+  ],
+  "durationSeconds": 52.28,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

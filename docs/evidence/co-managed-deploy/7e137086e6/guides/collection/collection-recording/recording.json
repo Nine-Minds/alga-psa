@@ -1,0 +1,889 @@
+{
+  "scenario": "collection-recording",
+  "recordedAt": "2026-10-26T04:36:02.788Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "collection-names-recorded-runtime",
+      "passed": true,
+      "at": "2026-10-26T04:36:02.886Z",
+      "data": {}
+    },
+    {
+      "id": "collection-links-all-twelve-sections",
+      "passed": true,
+      "at": "2026-10-26T04:36:03.077Z",
+      "data": {
+        "links": [
+          "01-onboarding.html",
+          "02-licensing-and-seats.html",
+          "03-access-policies.html",
+          "04-delegated-administration.html",
+          "05-ticket-queue.html",
+          "06-projects-and-tasks.html",
+          "07-conversations-and-files.html",
+          "08-sla.html",
+          "09-time-and-billing.html",
+          "10-departure-and-archives.html",
+          "11-export-restore-and-upgrade.html",
+          "12-customer-integrations.html"
+        ]
+      }
+    },
+    {
+      "id": "section-01-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:05.473Z",
+      "data": {}
+    },
+    {
+      "id": "section-01-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:05.473Z",
+      "data": {
+        "label": "Scenario result: partial: 1. Create one workspace for one client — Pass; 2. Require customer approval — Pass; 3. Recover the existing setup — Pass; 4. Cancel on",
+        "ledger": "partial"
+      }
+    },
+    {
+      "id": "section-01-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:05.473Z",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 141.844,
+        "currentTime": 142.644472,
+        "duration": 157.72
+      }
+    },
+    {
+      "id": "section-02-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:07.845Z",
+      "data": {}
+    },
+    {
+      "id": "section-02-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:07.846Z",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Reconcile the pool with customer allocations — Pass; 2. Review a hosted pool purchase — Pass; 3. Change a customer's alloc",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "id": "section-02-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:07.846Z",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 38.142,
+        "currentTime": 38.942407,
+        "duration": 42.48
+      }
+    },
+    {
+      "id": "section-03-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:10.196Z",
+      "data": {}
+    },
+    {
+      "id": "section-03-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:10.196Z",
+      "data": {
+        "label": "Scenario result: partial: Before you start (preparation) — Pass; 1. Customer controls board and project scope — Pass; 2. MSP assigns its own people — Pass; 3. C",
+        "ledger": "partial"
+      }
+    },
+    {
+      "id": "section-03-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:10.197Z",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 147.381,
+        "currentTime": 148.181519,
+        "duration": 154.28
+      }
+    },
+    {
+      "id": "section-04-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:12.570Z",
+      "data": {}
+    },
+    {
+      "id": "section-04-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:12.570Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start (preparation) — Pass; 1. Approve one board operation — Pass; 2. Perform only the approved change — Pass; 3. Prove rev",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-04-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:12.571Z",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 110.699,
+        "currentTime": 111.499524,
+        "duration": 129.6
+      }
+    },
+    {
+      "id": "section-05-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:14.902Z",
+      "data": {}
+    },
+    {
+      "id": "section-05-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:14.902Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start (preparation) — Pass; 1. Keep queue scope stable — Pass; 2. Export the full filtered set — Pass; 3. Return selected t",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-05-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:14.903Z",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 94.502,
+        "currentTime": 95.302482,
+        "duration": 122.32
+      }
+    },
+    {
+      "id": "section-06-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:17.267Z",
+      "data": {}
+    },
+    {
+      "id": "section-06-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:17.267Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Share only the prepared project — Pass; 2. Persist a task edit with attribution — Pass; 3. Separate MSP as",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-06-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:17.267Z",
+      "data": {
+        "played": true,
+        "chapters": 9,
+        "seekTarget": 100.918,
+        "currentTime": 101.71845,
+        "duration": 117.6
+      }
+    },
+    {
+      "id": "section-07-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:19.632Z",
+      "data": {}
+    },
+    {
+      "id": "section-07-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:19.632Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Check all three audiences — Pass; 2. Publish and remove audience-bound files — Pass; 3. Keep replies and a",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-07-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:19.632Z",
+      "data": {
+        "played": true,
+        "chapters": 12,
+        "seekTarget": 172.578,
+        "currentTime": 173.378487,
+        "duration": 176.96
+      }
+    },
+    {
+      "id": "section-08-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:21.929Z",
+      "data": {}
+    },
+    {
+      "id": "section-08-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:21.930Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Configure and persist priority mapping — Pass; 2. Start a new MSP obligation on escalation — Pass; 3. Keep",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-08-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:21.930Z",
+      "data": {
+        "played": true,
+        "chapters": 11,
+        "seekTarget": 390.969,
+        "currentTime": 391.769482,
+        "duration": 398.92
+      }
+    },
+    {
+      "id": "section-09-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:24.299Z",
+      "data": {}
+    },
+    {
+      "id": "section-09-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:24.300Z",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Persist one commercial entry — Pass; 2. Check stopwatch and customer effort separately — Pass; 3. Follow t",
+        "ledger": "covered"
+      }
+    },
+    {
+      "id": "section-09-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:24.300Z",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 96.635,
+        "currentTime": 97.435562,
+        "duration": 118.32
+      }
+    },
+    {
+      "id": "section-10-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:26.687Z",
+      "data": {}
+    },
+    {
+      "id": "section-10-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:26.688Z",
+      "data": {
+        "label": "Scenario result: partial: Preparation (disposable relationship CM-REVIEW-20261026-01 Accept-7 from guide 01) — Pass; 1. Record the cutoff baseline — Pass; 2. En",
+        "ledger": "partial"
+      }
+    },
+    {
+      "id": "section-10-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:26.688Z",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 227.182,
+        "currentTime": 227.982444,
+        "duration": 234.2
+      }
+    },
+    {
+      "id": "section-11-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:29.034Z",
+      "data": {}
+    },
+    {
+      "id": "section-11-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:29.034Z",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Download an encrypted customer workspace — Pass; 2. Inspect and restore on an isolated destination — Blocked; 3. Activate ",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "id": "section-11-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:29.034Z",
+      "data": {
+        "played": true,
+        "chapters": 3,
+        "seekTarget": 13.673,
+        "currentTime": 14.473565,
+        "duration": 20.52
+      }
+    },
+    {
+      "id": "section-12-names-this-build-and-complete-recording",
+      "passed": true,
+      "at": "2026-10-26T04:36:31.362Z",
+      "data": {}
+    },
+    {
+      "id": "section-12-result-label-matches-ledger",
+      "passed": true,
+      "at": "2026-10-26T04:36:31.362Z",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Save customer-owned provider configuration — Pass; 2. Exercise staff sign-in and callback — Blocked; 3. Provision or sync ",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "id": "section-12-player-plays-and-seeks",
+      "passed": true,
+      "at": "2026-10-26T04:36:31.363Z",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 46.735,
+        "currentTime": 47.535414,
+        "duration": 52.88
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:36:02.830Z",
+      "seconds": 0.042,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:02.831Z",
+      "seconds": 0.043,
+      "title": "chapter",
+      "data": "Open the guide collection"
+    },
+    {
+      "at": "2026-10-26T04:36:02.886Z",
+      "seconds": 0.098,
+      "title": "collection-names-recorded-runtime",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:03.077Z",
+      "seconds": 0.289,
+      "title": "collection-links-all-twelve-sections",
+      "data": {
+        "links": [
+          "01-onboarding.html",
+          "02-licensing-and-seats.html",
+          "03-access-policies.html",
+          "04-delegated-administration.html",
+          "05-ticket-queue.html",
+          "06-projects-and-tasks.html",
+          "07-conversations-and-files.html",
+          "08-sla.html",
+          "09-time-and-billing.html",
+          "10-departure-and-archives.html",
+          "11-export-restore-and-upgrade.html",
+          "12-customer-integrations.html"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:03.077Z",
+      "seconds": 0.289,
+      "title": "chapter",
+      "data": "Section 01: partial"
+    },
+    {
+      "at": "2026-10-26T04:36:05.473Z",
+      "seconds": 2.685,
+      "title": "section-01-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:05.473Z",
+      "seconds": 2.685,
+      "title": "section-01-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: partial: 1. Create one workspace for one client — Pass; 2. Require customer approval — Pass; 3. Recover the existing setup — Pass; 4. Cancel on",
+        "ledger": "partial"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:05.473Z",
+      "seconds": 2.685,
+      "title": "section-01-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 141.844,
+        "currentTime": 142.644472,
+        "duration": 157.72
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:05.474Z",
+      "seconds": 2.686,
+      "title": "chapter",
+      "data": "Section 02: blocked-external"
+    },
+    {
+      "at": "2026-10-26T04:36:07.845Z",
+      "seconds": 5.057,
+      "title": "section-02-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:07.846Z",
+      "seconds": 5.058,
+      "title": "section-02-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Reconcile the pool with customer allocations — Pass; 2. Review a hosted pool purchase — Pass; 3. Change a customer's alloc",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:07.846Z",
+      "seconds": 5.058,
+      "title": "section-02-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 38.142,
+        "currentTime": 38.942407,
+        "duration": 42.48
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:07.846Z",
+      "seconds": 5.058,
+      "title": "chapter",
+      "data": "Section 03: partial"
+    },
+    {
+      "at": "2026-10-26T04:36:10.196Z",
+      "seconds": 7.408,
+      "title": "section-03-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:10.196Z",
+      "seconds": 7.408,
+      "title": "section-03-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: partial: Before you start (preparation) — Pass; 1. Customer controls board and project scope — Pass; 2. MSP assigns its own people — Pass; 3. C",
+        "ledger": "partial"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:10.197Z",
+      "seconds": 7.409,
+      "title": "section-03-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 147.381,
+        "currentTime": 148.181519,
+        "duration": 154.28
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:10.197Z",
+      "seconds": 7.409,
+      "title": "chapter",
+      "data": "Section 04: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:12.570Z",
+      "seconds": 9.782,
+      "title": "section-04-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:12.570Z",
+      "seconds": 9.782,
+      "title": "section-04-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start (preparation) — Pass; 1. Approve one board operation — Pass; 2. Perform only the approved change — Pass; 3. Prove rev",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:12.571Z",
+      "seconds": 9.783,
+      "title": "section-04-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 110.699,
+        "currentTime": 111.499524,
+        "duration": 129.6
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:12.571Z",
+      "seconds": 9.783,
+      "title": "chapter",
+      "data": "Section 05: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:14.902Z",
+      "seconds": 12.114,
+      "title": "section-05-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:14.902Z",
+      "seconds": 12.114,
+      "title": "section-05-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start (preparation) — Pass; 1. Keep queue scope stable — Pass; 2. Export the full filtered set — Pass; 3. Return selected t",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:14.903Z",
+      "seconds": 12.115,
+      "title": "section-05-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 94.502,
+        "currentTime": 95.302482,
+        "duration": 122.32
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:14.903Z",
+      "seconds": 12.115,
+      "title": "chapter",
+      "data": "Section 06: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:17.267Z",
+      "seconds": 14.479,
+      "title": "section-06-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:17.267Z",
+      "seconds": 14.479,
+      "title": "section-06-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Share only the prepared project — Pass; 2. Persist a task edit with attribution — Pass; 3. Separate MSP as",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:17.267Z",
+      "seconds": 14.479,
+      "title": "section-06-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 9,
+        "seekTarget": 100.918,
+        "currentTime": 101.71845,
+        "duration": 117.6
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:17.267Z",
+      "seconds": 14.479,
+      "title": "chapter",
+      "data": "Section 07: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:19.632Z",
+      "seconds": 16.844,
+      "title": "section-07-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:19.632Z",
+      "seconds": 16.844,
+      "title": "section-07-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Check all three audiences — Pass; 2. Publish and remove audience-bound files — Pass; 3. Keep replies and a",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:19.632Z",
+      "seconds": 16.844,
+      "title": "section-07-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 12,
+        "seekTarget": 172.578,
+        "currentTime": 173.378487,
+        "duration": 176.96
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:19.632Z",
+      "seconds": 16.844,
+      "title": "chapter",
+      "data": "Section 08: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:21.929Z",
+      "seconds": 19.141,
+      "title": "section-08-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:21.930Z",
+      "seconds": 19.142,
+      "title": "section-08-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Configure and persist priority mapping — Pass; 2. Start a new MSP obligation on escalation — Pass; 3. Keep",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:21.930Z",
+      "seconds": 19.142,
+      "title": "section-08-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 11,
+        "seekTarget": 390.969,
+        "currentTime": 391.769482,
+        "duration": 398.92
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:21.930Z",
+      "seconds": 19.142,
+      "title": "chapter",
+      "data": "Section 09: covered"
+    },
+    {
+      "at": "2026-10-26T04:36:24.299Z",
+      "seconds": 21.511,
+      "title": "section-09-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:24.300Z",
+      "seconds": 21.512,
+      "title": "section-09-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: covered: Before you start — Pass; 1. Persist one commercial entry — Pass; 2. Check stopwatch and customer effort separately — Pass; 3. Follow t",
+        "ledger": "covered"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:24.300Z",
+      "seconds": 21.512,
+      "title": "section-09-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 96.635,
+        "currentTime": 97.435562,
+        "duration": 118.32
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:24.300Z",
+      "seconds": 21.512,
+      "title": "chapter",
+      "data": "Section 10: partial"
+    },
+    {
+      "at": "2026-10-26T04:36:26.687Z",
+      "seconds": 23.899,
+      "title": "section-10-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:26.688Z",
+      "seconds": 23.9,
+      "title": "section-10-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: partial: Preparation (disposable relationship CM-REVIEW-20261026-01 Accept-7 from guide 01) — Pass; 1. Record the cutoff baseline — Pass; 2. En",
+        "ledger": "partial"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:26.688Z",
+      "seconds": 23.9,
+      "title": "section-10-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 7,
+        "seekTarget": 227.182,
+        "currentTime": 227.982444,
+        "duration": 234.2
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:26.688Z",
+      "seconds": 23.9,
+      "title": "chapter",
+      "data": "Section 11: blocked-external"
+    },
+    {
+      "at": "2026-10-26T04:36:29.034Z",
+      "seconds": 26.246,
+      "title": "section-11-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:29.034Z",
+      "seconds": 26.246,
+      "title": "section-11-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Download an encrypted customer workspace — Pass; 2. Inspect and restore on an isolated destination — Blocked; 3. Activate ",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:29.034Z",
+      "seconds": 26.246,
+      "title": "section-11-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 3,
+        "seekTarget": 13.673,
+        "currentTime": 14.473565,
+        "duration": 20.52
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:29.034Z",
+      "seconds": 26.246,
+      "title": "chapter",
+      "data": "Section 12: blocked-external"
+    },
+    {
+      "at": "2026-10-26T04:36:31.362Z",
+      "seconds": 28.574,
+      "title": "section-12-names-this-build-and-complete-recording",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T04:36:31.362Z",
+      "seconds": 28.574,
+      "title": "section-12-result-label-matches-ledger",
+      "data": {
+        "label": "Scenario result: blocked-external: 1. Save customer-owned provider configuration — Pass; 2. Exercise staff sign-in and callback — Blocked; 3. Provision or sync ",
+        "ledger": "blocked-external"
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:31.363Z",
+      "seconds": 28.575,
+      "title": "section-12-player-plays-and-seeks",
+      "data": {
+        "played": true,
+        "chapters": 5,
+        "seekTarget": 46.735,
+        "currentTime": 47.535414,
+        "duration": 52.88
+      }
+    },
+    {
+      "at": "2026-10-26T04:36:31.363Z",
+      "seconds": 28.575,
+      "title": "chapter",
+      "data": "Return to the collection"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.043,
+      "title": "Open the guide collection",
+      "end": 0.289
+    },
+    {
+      "start": 0.289,
+      "title": "Section 01: partial",
+      "end": 2.686
+    },
+    {
+      "start": 2.686,
+      "title": "Section 02: blocked-external",
+      "end": 5.058
+    },
+    {
+      "start": 5.058,
+      "title": "Section 03: partial",
+      "end": 7.409
+    },
+    {
+      "start": 7.409,
+      "title": "Section 04: covered",
+      "end": 9.783
+    },
+    {
+      "start": 9.783,
+      "title": "Section 05: covered",
+      "end": 12.115
+    },
+    {
+      "start": 12.115,
+      "title": "Section 06: covered",
+      "end": 14.479
+    },
+    {
+      "start": 14.479,
+      "title": "Section 07: covered",
+      "end": 16.844
+    },
+    {
+      "start": 16.844,
+      "title": "Section 08: covered",
+      "end": 19.142
+    },
+    {
+      "start": 19.142,
+      "title": "Section 09: covered",
+      "end": 21.512
+    },
+    {
+      "start": 21.512,
+      "title": "Section 10: partial",
+      "end": 23.9
+    },
+    {
+      "start": 23.9,
+      "title": "Section 11: blocked-external",
+      "end": 26.246
+    },
+    {
+      "start": 26.246,
+      "title": "Section 12: blocked-external",
+      "end": 28.575
+    },
+    {
+      "start": 28.575,
+      "title": "Return to the collection",
+      "end": 29.91
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Composition only: verifies that each of the twelve section pages is linked, names this build, carries the ledger coverage label and plays its recording. It does not promote any section guide."
+  ],
+  "durationSeconds": 29.96,
+  "actors": []
+}

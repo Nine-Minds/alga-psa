@@ -1,0 +1,84 @@
+{
+  "guide": "guides/06-projects-and-tasks.html",
+  "coverage": "covered",
+  "sections": [
+    {
+      "section": "Before you start",
+      "result": "Pass",
+      "evidence": "prep-task-a-has-customer-local-assignee, prep-native-project-phase-two-tasks-after-reload, prep-second-unshared-project-exists; prep-native-two-tasks.png",
+      "note": "Alice created 'CM-REVIEW-20261026-06 final Shared rollout' (phase + Task A/Task B) and 'CM-REVIEW-20261026-06 final Unshared private' on native Projects; Task A given customer-local assignee Alice."
+    },
+    {
+      "section": "1. Share only the prepared project",
+      "result": "Pass",
+      "evidence": "s1-customer-project-collaborate-survives-reload, s1-unshared-project-not-granted, s1-qa-technician-assignment-present-after-reload, s1-unshared-project-unavailable-to-msp, s1-working-queue-excludes-unassigned-shared-tasks, s1-oversight-view-lists-both-shared-tasks, s1-queue-link-is-customer-and-relationship-qualified, s1-followed-queue-link-opens-shared-task",
+      "note": "QA's technician staff assignment for White Rabbit already existed (added by another review agent at 03:16Z); this run did not change staff assignments. Working queue lists nothing until MSP assignment (by design: sharing alone creates no working row); Customer oversight lists both tasks."
+    },
+    {
+      "section": "2. Persist a task edit with attribution",
+      "result": "Pass",
+      "evidence": "s2-msp-edit-survives-reload, s2-history-records-qualified-author, s2-customer-native-task-shows-msp-edit, s2-restored-by-ordinary-save-history-retained; s2-history.png",
+      "note": "History shows 'QA Tester \u00b7 Oz'. Co-managed history lists co-managed edits/assignments only (audit operations co_managed_project_task_update/assignment); the customer's native-screen save in section 4 is not listed there (by source design)."
+    },
+    {
+      "section": "3. Separate MSP assignment from local ownership",
+      "result": "Pass",
+      "evidence": "s3-only-eligible-assigned-principals-offered, s3-msp-assignment-persists-and-keeps-local-owner, s3-working-queue-lists-msp-assigned-task-only, s3-assigned-to-me-shows-assigned-task-only, s3-removed-msp-assignment-keeps-local-owner, s3-assigned-to-me-empty-after-removal",
+      "note": "Only 'QA Tester \u00b7 Oz' offered (no unassigned Oz staff). Technician path exercised; Team path not offered because no team holds a White Rabbit assignment. 'Assigned to my teams' compared and empty (QA belongs to no team)."
+    },
+    {
+      "section": "4. Detect stale work and revoked access",
+      "result": "Pass",
+      "evidence": "s4-stale-msp-save-refused-customer-value-kept, s4-discard-and-reload-shows-current-values, s4-customer-project-grant-removed-after-reload, s4-revoked-task-closes-editor-conversation, s4-copied-task-file-link-denied-after-revocation (404), s4-revoked-tasks-absent-from-fresh-queue, s4-customer-keeps-native-task-and-history",
+      "note": "Customer change saved from a second (unrecorded-video, screenshot only) Alice context on the native task screen; revocation recorded last, after section 5."
+    },
+    {
+      "section": "5. Compare effort and conversations",
+      "result": "Pass",
+      "evidence": "s5-alice-time-persisted-on-same-task, s5-qa-time-persisted-on-same-task, s5-task-effort-shows-customer-msp-combined, s5-customer-sees-same-effort-totals, s5-customer-does-not-see-msp-private-time-note, s5-project-total-equals-task-total-counted-once, s5-msp-task-file-bytes-match, s5-customer-reads-task-message-and-file-bytes",
+      "note": "Customer 6 min (operational, billable 0, project_task) + MSP 12 min (Oz commercial co_managed) = 0.1/0.2/0.3 hours on task, same on project totals (counted once)."
+    }
+  ],
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "organization": "White Rabbit IT (customer, active)"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "organization": "Oz (MSP)"
+    }
+  ],
+  "steps": [
+    "Alice creates shared + unshared disposable projects, phase, two tasks; sets Task A local assignee",
+    "Alice grants the shared project Collaborate on Co-managed access, saves, reloads",
+    "QA confirms technician staff assignment on the White Rabbit client co-managed tab",
+    "QA opens the unshared project URL (denied), compares working vs oversight queues, follows queue link",
+    "QA edits Task A name, reloads, checks history; Alice sees it on the native task; QA restores the name",
+    "QA assigns Task A to QA (Technician), checks working/Assigned to me/Assigned to my teams, removes assignment",
+    "QA starts a stale edit; Alice saves a newer name on the native task; QA save refused; Discard and reload; name restored",
+    "Alice logs 6 min and QA logs 12 min on Task A; both views and project totals compared",
+    "QA posts a task message with a text file; Alice reads it and downloads bytes",
+    "Alice removes the project grant; QA's task URL, queue and copied file link are refused; Alice keeps the native task"
+  ],
+  "outcomes": [
+    "Grant persisted after reload, unshared project unavailable",
+    "MSP edit visible natively after reload with 'QA Tester \u00b7 Oz' history",
+    "MSP assignment did not change project_tasks.assigned_to (Alice)",
+    "Stale MSP save refused; DB kept customer value",
+    "Effort 0.1/0.2/0.3 h on task and project",
+    "After revocation: task page alert, file link 404, oversight queue empty; customer task intact"
+  ],
+  "limitations": [
+    "Team assignment / 'Assigned to my teams' positive case not exercised: QA is not a member of any team and no team holds a White Rabbit assignment; creating one was outside the guide's disposable scope.",
+    "The concurrent customer save ran in a second, separately signed-in Alice browser context; it is not in walkthrough.webm (its raw video was removed during duplicate-video cleanup). Evidence: screenshot recording/s4-customer-native-save.png, step s4-customer-saved-newer-value-on-native-task and the DB-confirmed task name."
+  ],
+  "missingResources": [],
+  "dbReceipts": [
+    "06-projects-and-tasks/db-receipts.json",
+    "06-projects-and-tasks/fixtures.json"
+  ],
+  "recordingDir": "06-projects-and-tasks/recording"
+}

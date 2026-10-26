@@ -1,0 +1,56 @@
+{
+  "guide": "guides/04-delegated-administration.html",
+  "coverage": "covered",
+  "build": { "dist": ".next-review-final-54e75edf", "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994" },
+  "sections": [
+    { "section": "Before you start (preparation)", "result": "Pass", "evidence": "prep-disposable-board, prep-msp-allocates-one-more-seat, prep-nonadmin-user; seats-2.png, prep-user-profile.png", "note": "The disposable board 'CM-REVIEW-20261026-04 Delegation board' was created through Settings > Ticketing > Boards in failed attempt attempts/a1-failed-seat-limit and reused here. White Rabbit's only seat is used by Alice, so QA raised the allocation 1 -> 2 through Change seat allocation before Alice created the non-administrator user." },
+    { "section": "1. Approve one board operation", "result": "Pass", "evidence": "1-unassigned-staff-not-offered, 1-approval-summary-names-principal-operation-target, 1-grant-binds-principal-operation-and-board, 1-refreshed-approval-listed; 1-approval-form.png, 1-approved-refreshed.png", "note": "Unassigned Oz staff (Tin Woodman) is not offered as a principal. Grant row binds QA, board_settings and the disposable board only." },
+    { "section": "2. Perform only the approved change", "result": "Pass", "evidence": "2-only-board-display-fields-offered, 2-delegated-change-persists-after-refresh, 2-customer-board-settings-show-persisted-description, 2-original-description-restored-through-approved-editor; 2-editor-filled.png, 2-customer-board-settings.png", "note": "The editor offers exactly board name, description and live-ticket-timer. Alice saw the delegated description in her own board settings; QA restored the original description through the approved editor and it persisted after reload." },
+    { "section": "3. Prove revocation closes an open editor", "result": "Pass", "evidence": "3-customer-revoked-approval, 3-stale-editor-cannot-save, 3-retry-does-not-revive-revoked-approval, 3-refreshed-editor-no-longer-offers-record; 3-msp-editor-open.png, 3-customer-revoked.png, 3-stale-editor-save-attempt.png, 3-refreshed-after-revocation.png, customer-session/*.webm", "note": "Alice revoked the approval in a second session while QA's editor stayed open. QA's stale save was refused and the board kept its original description. Retry same request did not bring the approval back. After Refresh access the record is no longer offered. Observation: the stale save shows the generic 'request could not be confirmed' text with a Retry button. It does not say the approval was revoked." },
+    { "section": "4. Review the other bounded operations: non-administrator profile", "result": "Pass", "evidence": "4-administrator-profile-not-eligible, 4-profile-grant-binds-one-user, 4-profile-fields-limited-to-name-and-timezone, 4-customer-users-shows-delegated-profile-after-reload, 4-profile-restored; 4-admin-not-eligible.png, 4-profile-saved.png, 4-customer-users.png", "note": "Alice (administrator) is not an eligible target. QA changed the first name, and Alice saw it in Settings > Users after reload. QA then restored the original name. The time-zone field was offered but not changed." },
+    { "section": "4. Review the other bounded operations: resend customer-created invitation", "result": "Pass", "evidence": "4-customer-created-invitation-delivered, 4-invitation-grant-binds-one-invitation, 4-msp-sees-recipient-role-expiry, 4-resend-preserves-invitation-record, 4-delivered-resend-keeps-setup-link; 4-invitation-terms.png, 4-invitation-resent.png, invitation-delivery.json", "note": "QA saw the recipient, Technician role and expiry. A second message reached the controlled SMTP sink. The invitation row (email, role, token, expiry 2026-10-27T03:37:05Z, metadata) was byte-identical before and after the resend, and the delivered setup link matched the original (sha256 recorded)." },
+    { "section": "Pass criteria and retained state", "result": "Pass", "evidence": "final-no-review-approval-offered, final-review-approvals-revoked, final-seat-allocation-restored; db-receipts.json", "note": "All three review approvals were revoked. To return the allocation to 1, the profile user was deactivated and the review invitation was revoked through Settings > Users, then QA restored White Rabbit's allocation from 2 to 1." }
+  ],
+  "actors": [
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer)" },
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP)" }
+  ],
+  "steps": [
+    "QA raised White Rabbit's seat allocation from 1 to 2 (Client > Co-managed IT > Change seat allocation)",
+    "Alice created the non-administrator user CMReview04 Profile (Technician role) in Settings > Users",
+    "Alice opened Delegated administration and confirmed unassigned MSP staff are not offered as principals",
+    "Alice approved QA for 'Edit board display settings' on the disposable board and refreshed access",
+    "QA opened the approved editor, changed the board description and saved; refresh showed the new value",
+    "Alice opened the board in her Settings > Boards and saw the delegated description",
+    "QA restored the original description through the approved editor and reloaded",
+    "With QA's editor open, Alice revoked the approval in a second session",
+    "QA attempted a stale save, then Retry same request, then Refresh access",
+    "Alice confirmed her own administrator profile is not an eligible target, then approved QA to edit CMReview04 Profile",
+    "QA changed the first name and saved; Alice saw it in Settings > Users; QA restored it",
+    "Alice deactivated CMReview04 Profile to free the seat, then created invitation cm-review-20261026-04-invitee@whiterabbit.test",
+    "Alice approved QA to resend that invitation; QA inspected recipient/role/expiry and selected Resend approved invitation",
+    "Compared the delivered SMTP-sink messages and invitation record",
+    "Alice revoked the remaining approvals and the review invitation; QA restored the allocation to 1"
+  ],
+  "outcomes": [
+    "Grant 47a7653c... (board_settings) bound to QA and board 21ec7402...; delegated description persisted and was visible in the customer's native board settings, then restored to 'CM-REVIEW-20261026-04 original description'",
+    "After revocation, the stale editor save was refused; board description unchanged; retry did not revive the approval; refreshed editor no longer lists the record",
+    "Profile first name changed to CMReview04Delegated, shown in customer Users after reload, then restored",
+    "Invitation 15217acd... resend delivered a second message with the identical setup link; invitation record unchanged (expiry 2026-10-27T03:37:05Z)",
+    "All three approvals revoked; White Rabbit allocation back to 1 seat"
+  ],
+  "limitations": [
+    "Invitation delivery is proven through the controlled SMTP sink only.",
+    "The disposable board was created through the UI in failed attempt a1 (kept under attempts/), not inside this recording.",
+    "The profile time-zone field was offered but not exercised."
+  ],
+  "missingResources": [],
+  "dataLeftBehind": [
+    "Board 'CM-REVIEW-20261026-04 Delegation board' (White Rabbit; original description restored)",
+    "Inactive White Rabbit user cm-review-20261026-04-profile@whiterabbit.test (credential in the private card dir: cm-review-20261026-04-profile.json)",
+    "Revoked invitation 15217acd... for cm-review-20261026-04-invitee@whiterabbit.test (used_at set by revocation; both delivered messages remain in the SMTP sink)",
+    "Three revoked delegated grants (audit rows)"
+  ],
+  "dbReceipts": ["recording/db-receipts.json", "recording/invitation-delivery.json"],
+  "recordingDir": "04-delegated-administration/recording"
+}

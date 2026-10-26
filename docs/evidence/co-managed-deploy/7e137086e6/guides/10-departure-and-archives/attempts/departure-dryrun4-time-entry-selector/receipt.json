@@ -1,0 +1,42 @@
+{
+  "fixture": {
+    "clientName": "CM-REVIEW-20261026-01 Accept-7",
+    "clientId": "42b27ac2-5221-446a-ad94-f781c3398493",
+    "workspace": "CM-REVIEW-20261026-01 Accept-7 IT",
+    "adminEmail": "cm-review-20261026-01-accept-7@cmreview.test",
+    "visibility": "Oversight of the initial service desk board",
+    "escalationBoard": "General Support",
+    "operationId": "54fb5726-1a14-45a2-8c72-0c5780e65a88",
+    "customer": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+    "relationship": "e24c064b-1b13-471d-8f24-3441f26d9b0e",
+    "allocationId": "ad0500f1-7d51-431b-93cf-809063ced061",
+    "credentialFile": "cm-review-20261026-01-accept-7-admin.json"
+  },
+  "prefix": "CM-REVIEW-20261026-10 703235",
+  "files": [
+    {
+      "label": "shared",
+      "text": "CM-REVIEW-20261026-10 703235 shared",
+      "fileName": "cm-review-10-shared-703235.txt",
+      "href": "/api/co-management/attachments/bf474f0b-47dc-49ff-ab87-0000a5fb61aa?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=8120f19f-dc24-4c9d-9585-1e510ca5a245&storeTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&threadId=a5189566-e507-4cf3-b9c2-83b9176853a4&commentId=a5189566-e507-4cf3-b9c2-83b9176853a4",
+      "sha256": "daaf4a1d1eacba5165bf757dd59f8736491fca1632d1a8b9e3cdd9462cef5ead"
+    },
+    {
+      "label": "msp-private",
+      "text": "CM-REVIEW-20261026-10 703235 msp-private",
+      "fileName": "cm-review-10-msp-private-703235.txt",
+      "href": "/api/co-management/attachments/d1ec4837-3141-4c8a-a38e-7db928303fc6?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=8120f19f-dc24-4c9d-9585-1e510ca5a245&storeTenant=fa7f912f-6b62-463e-85cc-ffedab47ac44&threadId=1659f71d-ae4f-413b-a878-259eae99ea9a&commentId=1659f71d-ae4f-413b-a878-259eae99ea9a",
+      "sha256": "7ec915f55a21453e846d9bd6b9056ffb6889691f17e77790113699d52bc7edeb"
+    },
+    {
+      "label": "customer-private",
+      "text": "CM-REVIEW-20261026-10 703235 customer-private",
+      "fileName": "cm-review-10-customer-private-703235.txt",
+      "href": "/api/co-management/attachments/54fd856d-58a9-4f65-a31c-79c3c2f4cec3?customerTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&ticketId=8120f19f-dc24-4c9d-9585-1e510ca5a245&storeTenant=0a3c039e-c4c7-4108-8301-bfe5232a829a&threadId=04e3550d-0004-4f3f-89ba-7c5d4b90a339&commentId=04e3550d-0004-4f3f-89ba-7c5d4b90a339",
+      "sha256": "287ee42af1ff369e8f3f35aff0e70a82ddd76053e1adeea85de353a92639ea97"
+    }
+  ],
+  "ticket": "8120f19f-dc24-4c9d-9585-1e510ca5a245",
+  "ticketTitle": "CM-REVIEW-20261026-10 703235 shared ticket",
+  "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/8120f19f-dc24-4c9d-9585-1e510ca5a245"
+}

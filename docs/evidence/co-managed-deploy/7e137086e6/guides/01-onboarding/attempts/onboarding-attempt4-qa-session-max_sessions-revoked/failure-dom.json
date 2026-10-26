@@ -1,0 +1,41 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/auth/msp/signin",
+  "text": "Nine Minds\nProfessional Services Automation\n\nOpen source PSA platform for Managed Service Providers\n\nComprehensive Ticketing\nInbound Emails\nTechnician Dispatch and Scheduling\nTime Entry/Tracking\nProject Management Tools\nClient and Contact Management\nCentralized Document Uploads and Storage\nMSP Dashboard Login\n\nAccess your managed services platform\n\nEmail\nPassword\nPublic workstation - do not remember my email\nForgot your password?\nDon't have an account? Sign up\nSign in\nLooking for the Client Portal? Click here →",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "msp-email-field",
+      "text": "",
+      "value": "qa@emeraldcity.oz",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "msp-password-field",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-toggle-password-visibility",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "msp-public-workstation-checkbox",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-sign-in-button",
+      "text": "Sign in",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

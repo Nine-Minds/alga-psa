@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.334 --> 00:00:16.847
+1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)
+
+2
+00:00:16.847 --> 00:00:24.575
+2. Staff sign-in and callback: entry points only (no approved identity provider)
+
+3
+00:00:24.575 --> 00:00:28.154
+3. Directory provisioning entry (customer workspace)
+
+4
+00:00:28.154 --> 00:00:46.735
+4. Requester-audience message reaches the controlled mailbox (SMTP sink); private bodies excluded
+
+5
+00:00:46.735 --> 00:00:52.830
+5. Revoke the test binding through the provider control (archive) and reload

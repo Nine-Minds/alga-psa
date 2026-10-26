@@ -1,0 +1,20 @@
+{
+  "suffix": "CM-REVIEW-20261026-05",
+  "tickets": {
+    "a": "899670b9-7ad5-43a4-9f99-950e03a4f8f1",
+    "b": "463f082b-e225-4198-a3eb-3b3fa84d6a12",
+    "c": "5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf",
+    "d": "ac2d0e9a-588f-48fd-83bf-b60ddf249e33",
+    "e": "6e72984f-9d4e-4d78-b38c-d11edc3a3c51"
+  },
+  "titles": {
+    "a": "CM-REVIEW-20261026-05 bulk A",
+    "b": "CM-REVIEW-20261026-05 bulk B",
+    "c": "CM-REVIEW-20261026-05 mixed C",
+    "d": "CM-REVIEW-20261026-05 mixed D",
+    "e": "CM-REVIEW-20261026-05 mixed E explicit"
+  },
+  "note3": "CM-REVIEW-20261026-05 bulk return 1792988507282",
+  "note4": "CM-REVIEW-20261026-05 mixed return 1792988537417",
+  "method": "Tickets and boards created and escalated through the customer UI; no direct DB writes."
+}

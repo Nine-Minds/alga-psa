@@ -1,0 +1,17 @@
+{
+  "exitCode": 0,
+  "manifest": {
+    "sourceTenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+    "packageId": "e3163e33-d554-4c9a-b615-20af84be890f",
+    "sha256": "83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb",
+    "administrators": [
+      {
+        "userId": "27bb8a22-bfc7-4a2c-8f76-4cd1e229bb0a",
+        "name": "Review Accept Admin",
+        "email": "cm-review-20261026-01-accept-7@cmreview.test"
+      }
+    ]
+  },
+  "stderr": "",
+  "archiveSha256": "83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb"
+}

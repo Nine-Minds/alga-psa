@@ -1,0 +1,51 @@
+{
+  "scenario": "explore-qa-shared",
+  "recordedAt": "2026-10-26T03:05:23.268Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:05:25.226Z",
+      "seconds": 1.958,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:05:27.190Z",
+      "seconds": 3.922,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T03:05:32.173Z",
+      "seconds": 8.905,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry"
+    },
+    {
+      "at": "2026-10-26T03:05:37.191Z",
+      "seconds": 13.923,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=time-entry"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 17.88,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

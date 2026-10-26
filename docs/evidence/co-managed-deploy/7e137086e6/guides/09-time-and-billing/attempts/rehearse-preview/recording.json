@@ -1,0 +1,44 @@
+{
+  "scenario": "rehearse-preview",
+  "recordedAt": "2026-10-26T03:33:53.055Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:33:55.279Z",
+      "seconds": 2.224,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:33:57.333Z",
+      "seconds": 4.278,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T03:34:03.276Z",
+      "seconds": 10.221,
+      "actor": "qa",
+      "title": "box",
+      "data": "select-parent-group:e1d953b4-4f14-41fe-8f2c-828dd85a15b8:2026-11-01:2026-12-01"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "rehearsal-no-generation",
+  "limitations": [],
+  "durationSeconds": 13.08,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "profilesBefore": {
+    "customer": [
+      {
+        "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+        "display_name": "CM-REVIEW-20261026-12-a simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": true,
+        "is_archived": false
+      },
+      {
+        "profile_id": "d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+        "display_name": "CM-REVIEW-20261026-12-b simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": true
+      }
+    ],
+    "sponsor": []
+  },
+  "s1-profile": {
+    "customer": [
+      {
+        "profile_id": "99b8d1c7-bfab-4674-9dcb-fe337a868cb5",
+        "display_name": "CM-REVIEW-20261026-12-c simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": false
+      },
+      {
+        "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+        "display_name": "CM-REVIEW-20261026-12-a simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": true,
+        "is_archived": false
+      },
+      {
+        "profile_id": "d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+        "display_name": "CM-REVIEW-20261026-12-b simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": true
+      }
+    ],
+    "sponsor": []
+  },
+  "s4-audience-finding": {
+    "leaked": [
+      {
+        "subject": "New comment on a ticket",
+        "messageId": "<co-managed-requester-a0d67313eaa1f25d745fdb9d2a6392c3d0ddce8029023a863082be3b39f2ff10@notifications.alga.invalid>",
+        "containsShared": true,
+        "containsPrivate": false
+      }
+    ],
+    "audienceRows": [
+      {
+        "comment_id": "820c3cfc-8f6d-4ca0-a911-2d33aaf67afa",
+        "is_internal": false,
+        "message": "shared"
+      },
+      {
+        "comment_id": "84528ad2-e701-4ae4-b00f-3e9cef9da0a9",
+        "is_internal": true,
+        "message": "private"
+      },
+      {
+        "comment_id": "5e7a1b2d-5e66-43c1-b341-0272220469e8",
+        "is_internal": false,
+        "message": "requester"
+      }
+    ]
+  },
+  "s4-mail": {
+    "ticketId": "c6720692-bfe4-4a96-bb77-3e923042bf2d",
+    "contactId": "bd7225ce-9414-4783-aff4-7562d86a3f8c",
+    "recipient": "cm-review-20261026-12-c.requester@whiterabbit.test",
+    "deliveries": [
+      {
+        "subject": "[Ticket #000017] Your Ticket Has Been Created • CM-REVIEW-20261026-12-c requester mail ticket",
+        "messageId": "<8910279c-adab-4237-962a-a9bd501dcfd9@alga.test>",
+        "inReplyTo": "<ticket-c6720692-bfe4-4a96-bb77-3e923042bf2d@alga.test>",
+        "bodySha256": "a921f56b7b34a721076f1f8bb31a5bd9900463323a26a991ed93c701369fdceb"
+      },
+      {
+        "subject": "New comment on a ticket",
+        "messageId": "<co-managed-requester-a0d67313eaa1f25d745fdb9d2a6392c3d0ddce8029023a863082be3b39f2ff10@notifications.alga.invalid>",
+        "inReplyTo": null,
+        "bodySha256": "8aa23d2719f4245001e83701767ea8e82d9c6cb59910fd8bde5a0b493adabb5c"
+      },
+      {
+        "subject": "New comment on a ticket",
+        "messageId": "<co-managed-requester-e70938daf2f3d3b95745d5a746f0ce1596ccf44b4ef2a9f112e81a40e91c54cf@notifications.alga.invalid>",
+        "inReplyTo": null,
+        "bodySha256": "7a0daf01fc2490c79a77f405c7874dbb5d2b3c7ee7da7f6ce699794f425e26c1"
+      }
+    ]
+  },
+  "profilesAfter": {
+    "customer": [
+      {
+        "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+        "display_name": "CM-REVIEW-20261026-12-a simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": true,
+        "is_archived": false
+      },
+      {
+        "profile_id": "d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+        "display_name": "CM-REVIEW-20261026-12-b simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": true
+      },
+      {
+        "profile_id": "99b8d1c7-bfab-4674-9dcb-fe337a868cb5",
+        "display_name": "CM-REVIEW-20261026-12-c simulator app",
+        "client_id": "cm-review-rabbit-client",
+        "tenant_id": "9ed9be60-9d72-4e1f-ae9d-a0e51be840cb",
+        "is_default": false,
+        "is_archived": true
+      }
+    ],
+    "sponsor": []
+  }
+}

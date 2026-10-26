@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:02.390 --> 00:00:07.279
+Preparation: add pool capacity (simulator)
+
+2
+00:00:07.279 --> 00:00:47.943
+1. Create one workspace for one client
+
+3
+00:00:47.943 --> 00:02:51.430
+3. Recover the existing setup (resend invitation)

@@ -1,0 +1,145 @@
+{
+  "scenario": "supplement-grid-parity-readonly",
+  "recordedAt": "2026-10-26T04:13:54.125Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "grid-qa-shows-shared-own-private-and-requester",
+      "passed": true,
+      "at": "2026-10-26T04:13:59.508Z"
+    },
+    {
+      "id": "grid-qa-hides-other-organization-private",
+      "passed": true,
+      "at": "2026-10-26T04:13:59.508Z"
+    },
+    {
+      "id": "grid-alice-shows-shared-own-private-and-requester",
+      "passed": true,
+      "at": "2026-10-26T04:14:04.378Z"
+    },
+    {
+      "id": "grid-alice-hides-other-organization-private",
+      "passed": true,
+      "at": "2026-10-26T04:14:04.379Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:13:54.163Z",
+      "seconds": 0.038,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:54.164Z",
+      "seconds": 0.039,
+      "title": "chapter",
+      "data": "1. Grid layout audience parity (qa)"
+    },
+    {
+      "at": "2026-10-26T04:13:56.060Z",
+      "seconds": 1.935,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:58.268Z",
+      "seconds": 4.143,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T04:13:59.508Z",
+      "seconds": 5.383,
+      "actor": "qa",
+      "title": "grid-qa-shows-shared-own-private-and-requester"
+    },
+    {
+      "at": "2026-10-26T04:13:59.508Z",
+      "seconds": 5.383,
+      "actor": "qa",
+      "title": "grid-qa-hides-other-organization-private"
+    },
+    {
+      "at": "2026-10-26T04:13:59.571Z",
+      "seconds": 5.446,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Grid layout audience parity (alice)"
+    },
+    {
+      "at": "2026-10-26T04:14:01.053Z",
+      "seconds": 6.928,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:14:03.121Z",
+      "seconds": 8.996,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T04:14:04.378Z",
+      "seconds": 10.253,
+      "actor": "alice",
+      "title": "grid-alice-shows-shared-own-private-and-requester"
+    },
+    {
+      "at": "2026-10-26T04:14:04.379Z",
+      "seconds": 10.254,
+      "actor": "alice",
+      "title": "grid-alice-hides-other-organization-private"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.039,
+      "title": "1. Grid layout audience parity (qa)",
+      "end": 5.446
+    },
+    {
+      "start": 5.446,
+      "title": "1. Grid layout audience parity (alice)",
+      "end": 11.19
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Read-only supplement; no data changed."
+  ],
+  "durationSeconds": 11.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

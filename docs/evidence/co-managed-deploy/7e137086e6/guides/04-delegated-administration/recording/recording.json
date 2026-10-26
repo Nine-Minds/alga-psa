@@ -1,0 +1,973 @@
+{
+  "scenario": "attempts/a3",
+  "recordedAt": "2026-10-26T03:35:28.844Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-disposable-board",
+      "passed": true,
+      "at": "2026-10-26T03:35:31.401Z",
+      "data": {
+        "board_name": "CM-REVIEW-20261026-04 Delegation board",
+        "description": "CM-REVIEW-20261026-04 original description",
+        "enable_live_ticket_timer": true
+      }
+    },
+    {
+      "id": "prep-msp-allocates-one-more-seat",
+      "passed": true,
+      "at": "2026-10-26T03:35:35.764Z",
+      "data": {
+        "before": 1,
+        "after": 2
+      }
+    },
+    {
+      "id": "prep-nonadmin-user",
+      "passed": true,
+      "at": "2026-10-26T03:35:40.038Z",
+      "data": {
+        "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "first_name": "CMReview04",
+        "last_name": "Profile",
+        "timezone": null
+      }
+    },
+    {
+      "id": "1-unassigned-staff-not-offered",
+      "passed": true,
+      "at": "2026-10-26T03:35:45.193Z"
+    },
+    {
+      "id": "1-approval-summary-names-principal-operation-target",
+      "passed": true,
+      "at": "2026-10-26T03:35:50.423Z"
+    },
+    {
+      "id": "1-grant-binds-principal-operation-and-board",
+      "passed": true,
+      "at": "2026-10-26T03:35:50.424Z",
+      "data": {
+        "grant_id": "47a7653c-f39d-4fb3-a467-5f086b1cda2b",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "board_settings",
+        "target_id": "21ec7402-9098-4a18-9498-cf4aded8b470",
+        "revoked_at": null
+      }
+    },
+    {
+      "id": "1-refreshed-approval-listed",
+      "passed": true,
+      "at": "2026-10-26T03:35:50.426Z"
+    },
+    {
+      "id": "2-only-board-display-fields-offered",
+      "passed": true,
+      "at": "2026-10-26T03:35:55.809Z",
+      "data": {
+        "fieldIds": [
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-board_name",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-description",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-enable_live_ticket_timer",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-apply"
+        ]
+      }
+    },
+    {
+      "id": "2-delegated-change-persists-after-refresh",
+      "passed": true,
+      "at": "2026-10-26T03:35:57.213Z"
+    },
+    {
+      "id": "2-customer-board-settings-show-persisted-description",
+      "passed": true,
+      "at": "2026-10-26T03:36:01.060Z"
+    },
+    {
+      "id": "2-original-description-restored-through-approved-editor",
+      "passed": true,
+      "at": "2026-10-26T03:36:10.459Z"
+    },
+    {
+      "id": "3-customer-revoked-approval",
+      "passed": true,
+      "at": "2026-10-26T03:36:16.284Z"
+    },
+    {
+      "id": "3-stale-editor-cannot-save",
+      "passed": true,
+      "at": "2026-10-26T03:36:20.822Z",
+      "data": {
+        "shownError": true
+      }
+    },
+    {
+      "id": "3-retry-does-not-revive-revoked-approval",
+      "passed": true,
+      "at": "2026-10-26T03:36:24.178Z",
+      "data": {
+        "retried": true
+      }
+    },
+    {
+      "id": "3-refreshed-editor-no-longer-offers-record",
+      "passed": true,
+      "at": "2026-10-26T03:36:26.198Z"
+    },
+    {
+      "id": "4-administrator-profile-not-eligible",
+      "passed": true,
+      "at": "2026-10-26T03:36:32.266Z"
+    },
+    {
+      "id": "4-profile-grant-binds-one-user",
+      "passed": true,
+      "at": "2026-10-26T03:36:37.307Z",
+      "data": {
+        "grant_id": "806452d5-c9f9-4cf5-a05e-84ccc14201d7",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "user_profile",
+        "target_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "revoked_at": null
+      }
+    },
+    {
+      "id": "4-profile-fields-limited-to-name-and-timezone",
+      "passed": true,
+      "at": "2026-10-26T03:36:42.615Z",
+      "data": {
+        "pf": [
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-first_name",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-last_name",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-timezone",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-apply"
+        ]
+      }
+    },
+    {
+      "id": "4-customer-users-shows-delegated-profile-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:36:50.485Z",
+      "data": {
+        "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "first_name": "CMReview04Delegated",
+        "last_name": "Profile",
+        "timezone": null
+      }
+    },
+    {
+      "id": "4-profile-restored",
+      "passed": true,
+      "at": "2026-10-26T03:36:56.688Z"
+    },
+    {
+      "id": "4-profile-user-deactivated-to-free-seat",
+      "passed": true,
+      "at": "2026-10-26T03:37:03.106Z"
+    },
+    {
+      "id": "4-customer-created-invitation-delivered",
+      "passed": true,
+      "at": "2026-10-26T03:37:06.605Z",
+      "data": {
+        "invitationId": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+        "expiresAt": "2026-10-27T03:37:05.777929+00:00",
+        "deliveredCount": 1
+      }
+    },
+    {
+      "id": "4-invitation-grant-binds-one-invitation",
+      "passed": true,
+      "at": "2026-10-26T03:37:11.772Z",
+      "data": {
+        "grant_id": "89549222-6261-4a79-b258-24d50f57e2ff",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "invitation_resend",
+        "target_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+        "revoked_at": null
+      }
+    },
+    {
+      "id": "4-msp-sees-recipient-role-expiry",
+      "passed": true,
+      "at": "2026-10-26T03:37:16.972Z"
+    },
+    {
+      "id": "4-resend-preserves-invitation-record",
+      "passed": true,
+      "at": "2026-10-26T03:37:17.899Z",
+      "data": {
+        "expiresAt": "2026-10-27T03:37:05.777929+00:00",
+        "roleId": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+        "email": "cm-review-20261026-04-invitee@whiterabbit.test"
+      }
+    },
+    {
+      "id": "4-delivered-resend-keeps-setup-link",
+      "passed": true,
+      "at": "2026-10-26T03:37:17.900Z",
+      "data": {
+        "setupLinkSha256": "3f53a5cb026a9338e720f358c3e2faaa19471142152b6043aebe2f3e74bab6d3",
+        "deliveredCount": 2,
+        "subject": "You're invited to join White Rabbit IT on AlgaPSA"
+      }
+    },
+    {
+      "id": "final-no-review-approval-offered",
+      "passed": true,
+      "at": "2026-10-26T03:37:29.363Z"
+    },
+    {
+      "id": "final-review-approvals-revoked",
+      "passed": true,
+      "at": "2026-10-26T03:37:29.474Z",
+      "data": [
+        {
+          "grant_id": "47a7653c-f39d-4fb3-a467-5f086b1cda2b",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "board_settings",
+          "target_id": "21ec7402-9098-4a18-9498-cf4aded8b470",
+          "revoked_at": "2026-10-26T03:36:13.759071+00:00"
+        },
+        {
+          "grant_id": "806452d5-c9f9-4cf5-a05e-84ccc14201d7",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "user_profile",
+          "target_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+          "revoked_at": "2026-10-26T03:37:21.980044+00:00"
+        },
+        {
+          "grant_id": "89549222-6261-4a79-b258-24d50f57e2ff",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "invitation_resend",
+          "target_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+          "revoked_at": "2026-10-26T03:37:22.596908+00:00"
+        }
+      ]
+    },
+    {
+      "id": "final-seat-allocation-restored",
+      "passed": true,
+      "at": "2026-10-26T03:37:37.681Z",
+      "data": {
+        "seats0": 1,
+        "now": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:35:28.891Z",
+      "seconds": 0.047,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:29.035Z",
+      "seconds": 0.191,
+      "title": "chapter",
+      "data": "Preparation: disposable board, non-administrator user and invitation"
+    },
+    {
+      "at": "2026-10-26T03:35:30.952Z",
+      "seconds": 2.108,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:31.401Z",
+      "seconds": 2.557,
+      "actor": "alice",
+      "title": "prep-disposable-board",
+      "data": {
+        "board_name": "CM-REVIEW-20261026-04 Delegation board",
+        "description": "CM-REVIEW-20261026-04 original description",
+        "enable_live_ticket_timer": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:33.201Z",
+      "seconds": 4.357,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:35.188Z",
+      "seconds": 6.344,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:35:35.764Z",
+      "seconds": 6.92,
+      "actor": "qa",
+      "title": "prep-msp-allocates-one-more-seat",
+      "data": {
+        "before": 1,
+        "after": 2
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:37.301Z",
+      "seconds": 8.457,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:39.417Z",
+      "seconds": 10.573,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:35:40.039Z",
+      "seconds": 11.195,
+      "actor": "alice",
+      "title": "prep-nonadmin-user",
+      "data": {
+        "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "first_name": "CMReview04",
+        "last_name": "Profile",
+        "timezone": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:41.695Z",
+      "seconds": 12.851,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:41.696Z",
+      "seconds": 12.852,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Approve one board operation"
+    },
+    {
+      "at": "2026-10-26T03:35:43.676Z",
+      "seconds": 14.832,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:35:45.193Z",
+      "seconds": 16.349,
+      "actor": "alice",
+      "title": "1-unassigned-staff-not-offered"
+    },
+    {
+      "at": "2026-10-26T03:35:47.135Z",
+      "seconds": 18.291,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:35:50.423Z",
+      "seconds": 21.579,
+      "actor": "alice",
+      "title": "1-approval-summary-names-principal-operation-target"
+    },
+    {
+      "at": "2026-10-26T03:35:50.424Z",
+      "seconds": 21.58,
+      "actor": "alice",
+      "title": "1-grant-binds-principal-operation-and-board",
+      "data": {
+        "grant_id": "47a7653c-f39d-4fb3-a467-5f086b1cda2b",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "board_settings",
+        "target_id": "21ec7402-9098-4a18-9498-cf4aded8b470",
+        "revoked_at": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:50.426Z",
+      "seconds": 21.582,
+      "actor": "alice",
+      "title": "1-refreshed-approval-listed"
+    },
+    {
+      "at": "2026-10-26T03:35:50.470Z",
+      "seconds": 21.626,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "2. Perform only the approved change"
+    },
+    {
+      "at": "2026-10-26T03:35:52.284Z",
+      "seconds": 23.44,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:54.284Z",
+      "seconds": 25.44,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:35:55.809Z",
+      "seconds": 26.965,
+      "actor": "qa",
+      "title": "2-only-board-display-fields-offered",
+      "data": {
+        "fieldIds": [
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-board_name",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-description",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-enable_live_ticket_timer",
+          "co-delegation-47a7653c-f39d-4fb3-a467-5f086b1cda2b-apply"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:35:57.213Z",
+      "seconds": 28.369,
+      "actor": "qa",
+      "title": "2-delegated-change-persists-after-refresh"
+    },
+    {
+      "at": "2026-10-26T03:35:58.770Z",
+      "seconds": 29.926,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:00.934Z",
+      "seconds": 32.09,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing&section=boards"
+    },
+    {
+      "at": "2026-10-26T03:36:01.060Z",
+      "seconds": 32.216,
+      "actor": "alice",
+      "title": "2-customer-board-settings-show-persisted-description"
+    },
+    {
+      "at": "2026-10-26T03:36:02.714Z",
+      "seconds": 33.87,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:04.859Z",
+      "seconds": 36.015,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:36:10.459Z",
+      "seconds": 41.615,
+      "actor": "qa",
+      "title": "2-original-description-restored-through-approved-editor"
+    },
+    {
+      "at": "2026-10-26T03:36:10.460Z",
+      "seconds": 41.616,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Prove revocation closes an open editor"
+    },
+    {
+      "at": "2026-10-26T03:36:12.563Z",
+      "seconds": 43.719,
+      "actor": "qa",
+      "title": "customer second session signed in (customer-session video)"
+    },
+    {
+      "at": "2026-10-26T03:36:16.284Z",
+      "seconds": 47.44,
+      "actor": "qa",
+      "title": "3-customer-revoked-approval"
+    },
+    {
+      "at": "2026-10-26T03:36:20.822Z",
+      "seconds": 51.978,
+      "actor": "qa",
+      "title": "3-stale-editor-cannot-save",
+      "data": {
+        "shownError": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:23.849Z",
+      "seconds": 55.005,
+      "actor": "qa",
+      "title": "retried same request after revocation"
+    },
+    {
+      "at": "2026-10-26T03:36:24.178Z",
+      "seconds": 55.334,
+      "actor": "qa",
+      "title": "3-retry-does-not-revive-revoked-approval",
+      "data": {
+        "retried": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:26.198Z",
+      "seconds": 57.354,
+      "actor": "qa",
+      "title": "3-refreshed-editor-no-longer-offers-record"
+    },
+    {
+      "at": "2026-10-26T03:36:26.242Z",
+      "seconds": 57.398,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Edit a non-administrator profile"
+    },
+    {
+      "at": "2026-10-26T03:36:28.052Z",
+      "seconds": 59.208,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:30.010Z",
+      "seconds": 61.166,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:36:32.266Z",
+      "seconds": 63.422,
+      "actor": "alice",
+      "title": "4-administrator-profile-not-eligible"
+    },
+    {
+      "at": "2026-10-26T03:36:34.255Z",
+      "seconds": 65.411,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:36:37.307Z",
+      "seconds": 68.463,
+      "actor": "alice",
+      "title": "4-profile-grant-binds-one-user",
+      "data": {
+        "grant_id": "806452d5-c9f9-4cf5-a05e-84ccc14201d7",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "user_profile",
+        "target_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "revoked_at": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:39.112Z",
+      "seconds": 70.268,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:41.095Z",
+      "seconds": 72.251,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:36:42.615Z",
+      "seconds": 73.771,
+      "actor": "qa",
+      "title": "4-profile-fields-limited-to-name-and-timezone",
+      "data": {
+        "pf": [
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-first_name",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-last_name",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-timezone",
+          "co-delegation-806452d5-c9f9-4cf5-a05e-84ccc14201d7-apply"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:48.189Z",
+      "seconds": 79.345,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:50.294Z",
+      "seconds": 81.45,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:36:50.485Z",
+      "seconds": 81.641,
+      "actor": "alice",
+      "title": "4-customer-users-shows-delegated-profile-after-reload",
+      "data": {
+        "user_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+        "first_name": "CMReview04Delegated",
+        "last_name": "Profile",
+        "timezone": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:52.115Z",
+      "seconds": 83.271,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:54.177Z",
+      "seconds": 85.333,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:36:56.689Z",
+      "seconds": 87.845,
+      "actor": "qa",
+      "title": "4-profile-restored"
+    },
+    {
+      "at": "2026-10-26T03:36:56.689Z",
+      "seconds": 87.845,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Resend a customer-created invitation"
+    },
+    {
+      "at": "2026-10-26T03:36:58.255Z",
+      "seconds": 89.411,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:00.672Z",
+      "seconds": 91.828,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:37:03.106Z",
+      "seconds": 94.262,
+      "actor": "alice",
+      "title": "4-profile-user-deactivated-to-free-seat"
+    },
+    {
+      "at": "2026-10-26T03:37:05.346Z",
+      "seconds": 96.502,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:37:06.605Z",
+      "seconds": 97.761,
+      "actor": "alice",
+      "title": "4-customer-created-invitation-delivered",
+      "data": {
+        "invitationId": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+        "expiresAt": "2026-10-27T03:37:05.777929+00:00",
+        "deliveredCount": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:08.566Z",
+      "seconds": 99.723,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/administration"
+    },
+    {
+      "at": "2026-10-26T03:37:11.772Z",
+      "seconds": 102.928,
+      "actor": "alice",
+      "title": "4-invitation-grant-binds-one-invitation",
+      "data": {
+        "grant_id": "89549222-6261-4a79-b258-24d50f57e2ff",
+        "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "operation": "invitation_resend",
+        "target_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+        "revoked_at": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:13.562Z",
+      "seconds": 104.718,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:15.461Z",
+      "seconds": 106.617,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:37:16.972Z",
+      "seconds": 108.128,
+      "actor": "qa",
+      "title": "4-msp-sees-recipient-role-expiry"
+    },
+    {
+      "at": "2026-10-26T03:37:17.899Z",
+      "seconds": 109.055,
+      "actor": "qa",
+      "title": "4-resend-preserves-invitation-record",
+      "data": {
+        "expiresAt": "2026-10-27T03:37:05.777929+00:00",
+        "roleId": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+        "email": "cm-review-20261026-04-invitee@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:17.900Z",
+      "seconds": 109.056,
+      "actor": "qa",
+      "title": "4-delivered-resend-keeps-setup-link",
+      "data": {
+        "setupLinkSha256": "3f53a5cb026a9338e720f358c3e2faaa19471142152b6043aebe2f3e74bab6d3",
+        "deliveredCount": 2,
+        "subject": "You're invited to join White Rabbit IT on AlgaPSA"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:19.543Z",
+      "seconds": 110.699,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Revoke review approvals and confirm retained state"
+    },
+    {
+      "at": "2026-10-26T03:37:21.354Z",
+      "seconds": 112.51,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:25.857Z",
+      "seconds": 117.013,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:27.852Z",
+      "seconds": 119.008,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/administration?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:37:29.363Z",
+      "seconds": 120.519,
+      "actor": "qa",
+      "title": "final-no-review-approval-offered"
+    },
+    {
+      "at": "2026-10-26T03:37:29.474Z",
+      "seconds": 120.63,
+      "actor": "qa",
+      "title": "final-review-approvals-revoked",
+      "data": [
+        {
+          "grant_id": "47a7653c-f39d-4fb3-a467-5f086b1cda2b",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "board_settings",
+          "target_id": "21ec7402-9098-4a18-9498-cf4aded8b470",
+          "revoked_at": "2026-10-26T03:36:13.759071+00:00"
+        },
+        {
+          "grant_id": "806452d5-c9f9-4cf5-a05e-84ccc14201d7",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "user_profile",
+          "target_id": "7cab7e2f-4fce-4af7-a795-b46c82b79bcb",
+          "revoked_at": "2026-10-26T03:37:21.980044+00:00"
+        },
+        {
+          "grant_id": "89549222-6261-4a79-b258-24d50f57e2ff",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "operation": "invitation_resend",
+          "target_id": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+          "revoked_at": "2026-10-26T03:37:22.596908+00:00"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T03:37:31.118Z",
+      "seconds": 122.274,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:33.105Z",
+      "seconds": 124.261,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:37:35.073Z",
+      "seconds": 126.229,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:37.139Z",
+      "seconds": 128.295,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:37:37.681Z",
+      "seconds": 128.837,
+      "actor": "qa",
+      "title": "final-seat-allocation-restored",
+      "data": {
+        "seats0": 1,
+        "now": 1
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.191,
+      "title": "Preparation: disposable board, non-administrator user and invitation",
+      "end": 12.852
+    },
+    {
+      "start": 12.852,
+      "title": "1. Approve one board operation",
+      "end": 21.626
+    },
+    {
+      "start": 21.626,
+      "title": "2. Perform only the approved change",
+      "end": 41.616
+    },
+    {
+      "start": 41.616,
+      "title": "3. Prove revocation closes an open editor",
+      "end": 57.398
+    },
+    {
+      "start": 57.398,
+      "title": "4. Edit a non-administrator profile",
+      "end": 87.845
+    },
+    {
+      "start": 87.845,
+      "title": "4. Resend a customer-created invitation",
+      "end": 110.699
+    },
+    {
+      "start": 110.699,
+      "title": "Revoke review approvals and confirm retained state",
+      "end": 129.54999999999998
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Delivery is proven through the controlled SMTP sink, not a public mail provider."
+  ],
+  "durationSeconds": 129.6,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

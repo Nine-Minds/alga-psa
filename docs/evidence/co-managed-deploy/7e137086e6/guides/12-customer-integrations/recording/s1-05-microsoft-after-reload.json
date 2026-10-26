@@ -1,0 +1,405 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nBack to Email settings\nEmail and identity providers\n\nRegister your own Google or Microsoft application for inbound email, staff sign-in and directory setup. These credentials belong to your workspace.\n\nProvider setup\nGoogle or Microsoft setup\n\nMost companies set up one: Google or Microsoft. Set up both only if your company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nReady\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nMicrosoft\n\nManage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams.\n\nRefresh\nSet up Microsoft\nManual Microsoft apps (advanced)\nCreate and manage Entra app registrations maintained by your organization.\nMicrosoft Entra\nNew app registration\nReconnect Microsoft services\nUse after rotating Microsoft credentials or moving Outlook email/calendar to another Microsoft app.\nDisconnect Microsoft providers\nWhich Microsoft app each service uses\nChanging Outlook email will not change staff sign-in, Calendar, or Teams.\nStaff sign-in\nChoose the Microsoft app for staff sign-in and login-domain discovery.\nMicrosoft app\nSelect an app\nNeeds setup\nChoose a Microsoft app for Staff sign-in.\nOutlook email\nChoose the Microsoft app for Outlook inbound and outbound email.\nMicrosoft app\nSelect an app\nNeeds setup\nChoose a Microsoft app for Outlook email.\n\nExisting mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections.\n\nOutlook Calendar\nChoose the Microsoft app for Outlook calendar sync.\nMicrosoft app\nSelect an app\nNeeds setup\nChoose a Microsoft app for Outlook Calendar.\nTeams\nChoose the Microsoft app for Teams installation and auth flows.\nMicrosoft app\nSelect an app\nNeeds setup\nChoose a Microsoft app for Teams.\nEntra Direct\nChoose the Microsoft app for Entra GDAP and Lighthouse sync.\nMicrosoft app\nNo enabled app\nNeeds setup\nNo app can handle Entra Direct yet. Edit a Microsoft app and turn on Entra Direct, then choose it here.\nMicrosoft app registrations\nCreate or edit the Microsoft apps used by sign-in, Outlook, Calendar, and Teams.\nCM-REVIEW-20261026-12-a simulator app\nDefault\nReady\nMicrosoft tenant ID: 9ed9be60-9d72-4e1f-ae9d-a0e51be840cb\nEdit\nArchive\nCLIENT ID\ncm-review-rabbit-client\nSTORED SECRET\n••••••••••••••••••cret\nUSED BY\nNot used yet\nTEAMS APPLICATION ID URI\napi://feature-co-managed-it.localhost:23374/teams/cm-review-rabbit-client\nThis app is ready for Staff sign-in, Outlook email, Outlook Calendar, and Teams.\nSERVICES THIS APP CAN HANDLE\nStaff sign-in\nOutlook email\nOutlook Calendar\nTeams\nValues to copy into Microsoft Entra\nCM-REVIEW-20261026-12-c simulator app\nReady\nMicrosoft tenant ID: 9ed9be60-9d72-4e1f-ae9d-a0e51be840cb\nEdit\nSet default\nArchive\nCLIENT ID\ncm-review-rabbit-client\nSTORED SECRET\n••••••••••••••••••cret\nUSED BY\nNot used yet\nTEAMS APPLICATION ID URI\napi://feature-co-managed-it.localhost:23374/teams/cm-review-rabbit-client\nThis app is ready for Staff sign-in, Outlook email, Outlook Calendar, and Teams.\nSERVICES THIS APP CAN HANDLE\nStaff sign-in\nOutlook email\nOutlook Calendar\nTeams\nValues to copy into Microsoft Entra\nCM-REVIEW-20261026-12-b simulator app\nArchived\nMicrosoft tenant ID: 9ed9be60-9d72-4e1f-ae9d-a0e51be840cb\nEdit\nCLIENT ID\ncm-review-rabbit-client\nSTORED SECRET\n••••••••••••••••••cret\nUSED BY\nNot used yet\nTEAMS APPLICATION ID URI\napi://feature-co-managed-it.localhost:23374/teams/cm-review-rabbit-client\nSetup needed\nArchived apps cannot be selected for Microsoft services.\nSERVICES THIS APP CAN HANDLE\nStaff sign-in\nOutlook email\nOutlook Calendar\nTeams\nValues to copy into Microsoft Entra",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-sso-moved-link",
+      "text": "Open Single Sign-On",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "provider-credentials-google-tab",
+      "text": "GoogleNot configuredStaff sign-in with Google, Gmail inbound email, and Google Calendar.",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "provider-credentials-microsoft-tab",
+      "text": "MicrosoftReadyStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-cloud-console-link",
+      "text": "Google Cloud Console",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-cloud-docs-link",
+      "text": "Setup guide",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-project-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-same-app",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-gmail-client-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-gmail-client-secret",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-calendar-client-id",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "google-calendar-client-secret",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-refresh",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-reset-providers",
+      "text": "Disconnect Google providers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "google-settings-save",
+      "text": "Save",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-refresh",
+      "text": "Refresh",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-email-setup-button",
+      "text": "Set up Microsoft",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-advanced-app-toggle",
+      "text": "Manual Microsoft apps (advanced)Create and manage Entra app registrations maintained by your organiz",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-entra-console-link",
+      "text": "Microsoft Entra",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-add-profile",
+      "text": "New app registration",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-settings-reset-providers",
+      "text": "Disconnect Microsoft providers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-msp_sso",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-email",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-calendar",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-teams",
+      "text": "Select an app",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-binding-select-entra",
+      "text": "No enabled app",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-edit-556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-archive-556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+      "text": "Archive",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-edit-99b8d1c7-bfab-4674-9dcb-fe337a868cb5",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-default-99b8d1c7-bfab-4674-9dcb-fe337a868cb5",
+      "text": "Set default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-archive-99b8d1c7-bfab-4674-9dcb-fe337a868cb5",
+      "text": "Archive",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "microsoft-profile-edit-d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

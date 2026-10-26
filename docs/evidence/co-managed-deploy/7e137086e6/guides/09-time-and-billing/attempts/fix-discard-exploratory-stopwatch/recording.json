@@ -1,0 +1,38 @@
+{
+  "scenario": "fix-discard-exploratory-stopwatch",
+  "recordedAt": "2026-10-26T03:21:29.386Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:21:31.319Z",
+      "seconds": 1.933,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:21:33.485Z",
+      "seconds": 4.099,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Command failed: docker exec co-managed-it-postgres psql -X -t -A -U postgres -d server_co_managed -v ON_ERROR_STOP=1 -c select coalesce(json_agg(s),'[]') from (select status,created_at from native_time_tracking_sessions where tenant='fa7f912f-6b62-463e-85cc-ffedab47ac44' and user_id='86952555-610c-4737-be41-a9236cfa9cdb') s\nERROR:  column \"status\" does not exist\nLINE 1: select coalesce(json_agg(s),'[]') from (select status,create...\n                                                       ^\n",
+  "durationSeconds": 8.92,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

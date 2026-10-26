@@ -1,0 +1,914 @@
+{
+  "scenario": "attempts/a3",
+  "recordedAt": "2026-10-26T04:23:35.326Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-disposable-board",
+      "passed": true,
+      "at": "2026-10-26T04:23:38.235Z",
+      "data": {
+        "boardId": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "name": "CM-REVIEW-20261026-03 Access board"
+      }
+    },
+    {
+      "id": "prep-disposable-tickets",
+      "passed": true,
+      "at": "2026-10-26T04:23:38.518Z",
+      "data": {
+        "CM-REVIEW-20261026-03 escalated board ticket": "3a848fd8-6e35-4329-80b9-9fadaa18aa6b",
+        "CM-REVIEW-20261026-03 board-only ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "id": "prep-viewer-principal",
+      "passed": true,
+      "at": "2026-10-26T04:23:39.232Z",
+      "data": {
+        "viewerId": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "role": "Technician"
+      }
+    },
+    {
+      "id": "1-proposed-ticket-access-modes",
+      "passed": true,
+      "at": "2026-10-26T04:23:43.503Z",
+      "data": {
+        "modes": [
+          "Select...",
+          "Oversight of the initial service desk board",
+          "Escalated tickets only"
+        ]
+      }
+    },
+    {
+      "id": "1-projects-configured-separately",
+      "passed": true,
+      "at": "2026-10-26T04:23:43.507Z"
+    },
+    {
+      "id": "1-board-view-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:23:45.709Z"
+    },
+    {
+      "id": "2-unassigned-principal-denied-by-url",
+      "passed": true,
+      "at": "2026-10-26T04:23:48.522Z"
+    },
+    {
+      "id": "2-staff-assignments-persist-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:23:55.828Z",
+      "data": [
+        {
+          "principal_type": "user",
+          "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+          "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+          "relationship_role": "viewer"
+        },
+        {
+          "principal_type": "user",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "principal": "qa@emeraldcity.oz",
+          "relationship_role": "technician"
+        }
+      ]
+    },
+    {
+      "id": "2-assigned-technician-reads-approved-board",
+      "passed": true,
+      "at": "2026-10-26T04:23:58.774Z"
+    },
+    {
+      "id": "2-customer-view-scope-limits-technician-to-read-only",
+      "passed": true,
+      "at": "2026-10-26T04:23:58.778Z",
+      "data": {
+        "readOnlyBanner": 0
+      }
+    },
+    {
+      "id": "2-customer-private-note-saved",
+      "passed": true,
+      "at": "2026-10-26T04:24:04.669Z",
+      "data": {
+        "privateText": "CM-REVIEW-20261026-03 customer-private note 1792988643848"
+      }
+    },
+    {
+      "id": "2-customer-private-note-hidden-from-assigned-technician",
+      "passed": true,
+      "at": "2026-10-26T04:24:10.154Z"
+    },
+    {
+      "id": "1-escalation-only-persists",
+      "passed": true,
+      "at": "2026-10-26T04:24:27.978Z",
+      "data": {
+        "narrowedAt": "2026-10-26T04:24:26.968Z"
+      }
+    },
+    {
+      "id": "1-escalation-only-hides-unescalated-board-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:24:30.265Z"
+    },
+    {
+      "id": "1-technician-assignment-cannot-expand-customer-scope",
+      "passed": true,
+      "at": "2026-10-26T04:24:30.575Z"
+    },
+    {
+      "id": "1-customer-escalates-through-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:24:34.305Z",
+      "data": {
+        "responsibility": "msp",
+        "grant_revoked_at": null,
+        "can_collaborate": true
+      }
+    },
+    {
+      "id": "1-escalated-ticket-now-available",
+      "passed": true,
+      "at": "2026-10-26T04:24:38.222Z"
+    },
+    {
+      "id": "1-unescalated-sibling-still-unavailable",
+      "passed": true,
+      "at": "2026-10-26T04:24:38.508Z"
+    },
+    {
+      "id": "1-board-oversight-and-boards-restored",
+      "passed": true,
+      "at": "2026-10-26T04:24:47.001Z",
+      "data": {
+        "originalMode": "board_scope",
+        "narrowedAt": "2026-10-26T04:24:26.968Z",
+        "restoredAt": "2026-10-26T04:24:45.493Z",
+        "boards": [
+          {
+            "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+            "board_name": "CM-REVIEW-20261026-03 Access board",
+            "can_collaborate": false
+          },
+          {
+            "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+            "board_name": "Service Desk",
+            "can_collaborate": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "1-escalation-prerequisites-restored",
+      "passed": true,
+      "at": "2026-10-26T04:24:59.610Z",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "id": "1-board-oversight-reopens-unescalated-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:25:03.701Z"
+    },
+    {
+      "id": "3-board-collaborate-saved",
+      "passed": true,
+      "at": "2026-10-26T04:25:07.603Z"
+    },
+    {
+      "id": "3-technician-entry-category-enabled",
+      "passed": true,
+      "at": "2026-10-26T04:25:12.039Z"
+    },
+    {
+      "id": "3-shared-ticket-has-no-tags",
+      "passed": true,
+      "at": "2026-10-26T04:25:12.041Z"
+    },
+    {
+      "id": "3-technician-edit-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:25:14.692Z",
+      "data": {
+        "statusBefore": "Open"
+      }
+    },
+    {
+      "id": "3-shared-category-creation-absent",
+      "passed": true,
+      "at": "2026-10-26T04:25:15.677Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:23:35.380Z",
+      "seconds": 0.054,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:35.945Z",
+      "seconds": 0.619,
+      "title": "baseline policy",
+      "data": {
+        "at": "2026-10-26T04:23:35.381Z",
+        "relationship": {
+          "visibility_mode": "board_scope",
+          "revision": 53,
+          "state": "active"
+        },
+        "boards": [
+          {
+            "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+            "board_name": "Service Desk",
+            "can_collaborate": true
+          }
+        ],
+        "projects": [],
+        "staff": [
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "principal": "qa@emeraldcity.oz",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:35.945Z",
+      "seconds": 0.619,
+      "title": "chapter",
+      "data": "Preparation: disposable board, tickets and viewer principal"
+    },
+    {
+      "at": "2026-10-26T04:23:38.091Z",
+      "seconds": 2.765,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:38.235Z",
+      "seconds": 2.909,
+      "actor": "alice",
+      "title": "prep-disposable-board",
+      "data": {
+        "boardId": "6c967438-a8fe-4f94-8998-d61a7793511a",
+        "name": "CM-REVIEW-20261026-03 Access board"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:38.518Z",
+      "seconds": 3.192,
+      "actor": "alice",
+      "title": "prep-disposable-tickets",
+      "data": {
+        "CM-REVIEW-20261026-03 escalated board ticket": "3a848fd8-6e35-4329-80b9-9fadaa18aa6b",
+        "CM-REVIEW-20261026-03 board-only ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:39.232Z",
+      "seconds": 3.906,
+      "actor": "alice",
+      "title": "prep-viewer-principal",
+      "data": {
+        "viewerId": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+        "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "role": "Technician"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:39.232Z",
+      "seconds": 3.906,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Customer controls board and project scope"
+    },
+    {
+      "at": "2026-10-26T04:23:40.784Z",
+      "seconds": 5.458,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:42.877Z",
+      "seconds": 7.551,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T04:23:43.503Z",
+      "seconds": 8.177,
+      "actor": "alice",
+      "title": "1-proposed-ticket-access-modes",
+      "data": {
+        "modes": [
+          "Select...",
+          "Oversight of the initial service desk board",
+          "Escalated tickets only"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:43.507Z",
+      "seconds": 8.181,
+      "actor": "alice",
+      "title": "1-projects-configured-separately"
+    },
+    {
+      "at": "2026-10-26T04:23:45.709Z",
+      "seconds": 10.383,
+      "actor": "alice",
+      "title": "1-board-view-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T04:23:46.310Z",
+      "seconds": 10.984,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "2. MSP assigns its own people"
+    },
+    {
+      "at": "2026-10-26T04:23:48.119Z",
+      "seconds": 12.793,
+      "actor": "viewer",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:48.521Z",
+      "seconds": 13.195,
+      "actor": "viewer",
+      "title": "shared ticket denied",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:48.522Z",
+      "seconds": 13.196,
+      "actor": "viewer",
+      "title": "2-unassigned-principal-denied-by-url"
+    },
+    {
+      "at": "2026-10-26T04:23:50.054Z",
+      "seconds": 14.728,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:52.024Z",
+      "seconds": 16.698,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T04:23:55.828Z",
+      "seconds": 20.502,
+      "actor": "qa",
+      "title": "2-staff-assignments-persist-after-reload",
+      "data": [
+        {
+          "principal_type": "user",
+          "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+          "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+          "relationship_role": "viewer"
+        },
+        {
+          "principal_type": "user",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "principal": "qa@emeraldcity.oz",
+          "relationship_role": "technician"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T04:23:58.773Z",
+      "seconds": 23.447,
+      "actor": "qa",
+      "title": "shared ticket readable",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:23:58.774Z",
+      "seconds": 23.448,
+      "actor": "qa",
+      "title": "2-assigned-technician-reads-approved-board"
+    },
+    {
+      "at": "2026-10-26T04:23:58.778Z",
+      "seconds": 23.452,
+      "actor": "qa",
+      "title": "2-customer-view-scope-limits-technician-to-read-only",
+      "data": {
+        "readOnlyBanner": 0
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:00.603Z",
+      "seconds": 25.277,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:02.611Z",
+      "seconds": 27.285,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/b3949b0f-0dcb-44ad-9195-4aceb3866954"
+    },
+    {
+      "at": "2026-10-26T04:24:04.669Z",
+      "seconds": 29.343,
+      "actor": "alice",
+      "title": "2-customer-private-note-saved",
+      "data": {
+        "privateText": "CM-REVIEW-20261026-03 customer-private note 1792988643848"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:06.226Z",
+      "seconds": 30.9,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:08.649Z",
+      "seconds": 33.323,
+      "actor": "qa",
+      "title": "shared ticket readable",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:10.154Z",
+      "seconds": 34.828,
+      "actor": "qa",
+      "title": "2-customer-private-note-hidden-from-assigned-technician"
+    },
+    {
+      "at": "2026-10-26T04:24:10.210Z",
+      "seconds": 34.884,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Escalated tickets only versus board oversight"
+    },
+    {
+      "at": "2026-10-26T04:24:11.685Z",
+      "seconds": 36.359,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:12.097Z",
+      "seconds": 36.771,
+      "actor": "qa",
+      "title": "escalation prerequisites before",
+      "data": {
+        "mappings": {
+          "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+        },
+        "clientPolicy": "",
+        "policyId": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:22.147Z",
+      "seconds": 46.821,
+      "actor": "qa",
+      "title": "escalation prerequisites applied",
+      "data": {
+        "mappings": [
+          "bfc90e45-843b-4797-b7bf-6b1a048652fb"
+        ],
+        "clientPolicy": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:24.581Z",
+      "seconds": 49.255,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:26.564Z",
+      "seconds": 51.238,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T04:24:27.978Z",
+      "seconds": 52.652,
+      "actor": "alice",
+      "title": "1-escalation-only-persists",
+      "data": {
+        "narrowedAt": "2026-10-26T04:24:26.968Z"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:30.011Z",
+      "seconds": 54.685,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:30.265Z",
+      "seconds": 54.939,
+      "actor": "qa",
+      "title": "shared ticket denied",
+      "data": {
+        "ticket": "3a848fd8-6e35-4329-80b9-9fadaa18aa6b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:30.265Z",
+      "seconds": 54.939,
+      "actor": "qa",
+      "title": "1-escalation-only-hides-unescalated-board-ticket"
+    },
+    {
+      "at": "2026-10-26T04:24:30.574Z",
+      "seconds": 55.248,
+      "actor": "qa",
+      "title": "shared ticket denied",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:30.575Z",
+      "seconds": 55.249,
+      "actor": "qa",
+      "title": "1-technician-assignment-cannot-expand-customer-scope"
+    },
+    {
+      "at": "2026-10-26T04:24:32.109Z",
+      "seconds": 56.783,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:34.305Z",
+      "seconds": 58.979,
+      "actor": "alice",
+      "title": "1-customer-escalates-through-native-ticket",
+      "data": {
+        "responsibility": "msp",
+        "grant_revoked_at": null,
+        "can_collaborate": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:35.793Z",
+      "seconds": 60.467,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:38.221Z",
+      "seconds": 62.895,
+      "actor": "qa",
+      "title": "shared ticket readable",
+      "data": {
+        "ticket": "3a848fd8-6e35-4329-80b9-9fadaa18aa6b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:38.222Z",
+      "seconds": 62.896,
+      "actor": "qa",
+      "title": "1-escalated-ticket-now-available"
+    },
+    {
+      "at": "2026-10-26T04:24:38.507Z",
+      "seconds": 63.181,
+      "actor": "qa",
+      "title": "shared ticket denied",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:38.508Z",
+      "seconds": 63.182,
+      "actor": "qa",
+      "title": "1-unescalated-sibling-still-unavailable"
+    },
+    {
+      "at": "2026-10-26T04:24:40.490Z",
+      "seconds": 65.164,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:42.480Z",
+      "seconds": 67.154,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T04:24:47.001Z",
+      "seconds": 71.675,
+      "actor": "alice",
+      "title": "1-board-oversight-and-boards-restored",
+      "data": {
+        "originalMode": "board_scope",
+        "narrowedAt": "2026-10-26T04:24:26.968Z",
+        "restoredAt": "2026-10-26T04:24:45.493Z",
+        "boards": [
+          {
+            "board_id": "6c967438-a8fe-4f94-8998-d61a7793511a",
+            "board_name": "CM-REVIEW-20261026-03 Access board",
+            "can_collaborate": false
+          },
+          {
+            "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+            "board_name": "Service Desk",
+            "can_collaborate": true
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:49.377Z",
+      "seconds": 74.051,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:59.609Z",
+      "seconds": 84.283,
+      "actor": "qa",
+      "title": "escalation prerequisites restored",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:24:59.610Z",
+      "seconds": 84.284,
+      "actor": "qa",
+      "title": "1-escalation-prerequisites-restored",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:01.394Z",
+      "seconds": 86.068,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:03.700Z",
+      "seconds": 88.374,
+      "actor": "qa",
+      "title": "shared ticket readable",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:03.701Z",
+      "seconds": 88.375,
+      "actor": "qa",
+      "title": "1-board-oversight-reopens-unescalated-ticket"
+    },
+    {
+      "at": "2026-10-26T04:25:03.768Z",
+      "seconds": 88.442,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Compare a viewer with a technician"
+    },
+    {
+      "at": "2026-10-26T04:25:05.270Z",
+      "seconds": 89.944,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:07.244Z",
+      "seconds": 91.918,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T04:25:07.603Z",
+      "seconds": 92.277,
+      "actor": "alice",
+      "title": "3-board-collaborate-saved"
+    },
+    {
+      "at": "2026-10-26T04:25:09.679Z",
+      "seconds": 94.353,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:12.034Z",
+      "seconds": 96.708,
+      "actor": "qa",
+      "title": "shared ticket readable",
+      "data": {
+        "ticket": "b3949b0f-0dcb-44ad-9195-4aceb3866954"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:12.039Z",
+      "seconds": 96.713,
+      "actor": "qa",
+      "title": "3-technician-entry-category-enabled"
+    },
+    {
+      "at": "2026-10-26T04:25:12.041Z",
+      "seconds": 96.715,
+      "actor": "qa",
+      "title": "3-shared-ticket-has-no-tags"
+    },
+    {
+      "at": "2026-10-26T04:25:14.692Z",
+      "seconds": 99.366,
+      "actor": "qa",
+      "title": "3-technician-edit-persists-after-reload",
+      "data": {
+        "statusBefore": "Open"
+      }
+    },
+    {
+      "at": "2026-10-26T04:25:15.677Z",
+      "seconds": 100.351,
+      "actor": "qa",
+      "title": "3-shared-category-creation-absent"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.619,
+      "title": "Preparation: disposable board, tickets and viewer principal",
+      "end": 3.906
+    },
+    {
+      "start": 3.906,
+      "title": "1. Customer controls board and project scope",
+      "end": 10.984
+    },
+    {
+      "start": 10.984,
+      "title": "2. MSP assigns its own people",
+      "end": 34.884
+    },
+    {
+      "start": 34.884,
+      "title": "1. Escalated tickets only versus board oversight",
+      "end": 88.442
+    },
+    {
+      "start": 88.442,
+      "title": "3. Compare a viewer with a technician",
+      "end": 126.83
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.isDisabled: Timeout 25000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: 'Category', exact: true }).locator('..').getByRole('combobox').first()\n",
+  "durationSeconds": 126.88,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "viewer",
+      "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

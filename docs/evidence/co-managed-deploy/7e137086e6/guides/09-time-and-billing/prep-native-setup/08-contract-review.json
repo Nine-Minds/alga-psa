@@ -1,0 +1,251 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=client-contracts",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nContracts\nUpcoming Renewals (0)\nQuick Add\nCreate Contract\nNo client contracts match your search.\nCreate New Contract\nContract Basics\n2\nFixed Fee Services\n3\nProducts\nHourly Services\n5\nUsage-Based Services\n6\nReview & Create\nReview Contract\n\nReview all contract details before creating. You can still edit after creation if needed.\n\nContract Basics\n\nClient\n\nWhite Rabbit\n\nContract Name\n\nCM-REVIEW-20261026-09 hourly contract\n\nBilling Frequency\n\nMonthly\n\nCurrency\n\nUSD ($)\n\nStart Date\n\n10/01/2026\n\nEnd Date\n\nOngoing\n\nRenewal Mode\n\nManual Renewal\n\nNotice Period\n\n30 days\n\nHourly Services\n1 service\n\nServices and Rates\n\nBasic Support - $100.00/hour\nEstimated Monthly Total\n\nFixed charges only. Hourly and usage services bill separately based on actual usage.\n\n$0.00\n\nper month\n\nBefore you finish:\n\nDouble-check all rates, quantities, and buckets\nConfirm PO requirements (if any)\nVerify the start and end dates\nRemember: you can edit the contract later if needed\nSimulate before creating\n\nTest this unsaved draft with assumed activity. Simulation does not save or issue anything.\n\nAssumed activity\nUse average from last 3 billing periods\n\nEnter expected work or usage by service period. For arrears, each invoice uses the previous service period.\n\nBasic Support — assumed hrs per service period\nHourly services · Each invoice bills the previous service period.\nhrs\n\nThis service contributes nothing until assumed activity is greater than zero.\n\nSet activity for each invoice\nCompare with past invoices\nSimulate\n6 client billing periods\nNot simulated yet\nSimulate to see upcoming billing periods and inspect each charge.\nCharge breakdown\nNo breakdown available\nBack\nSave as Draft\nFinish Setup",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Contracts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Upcoming Renewals (0)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contract-button",
+      "text": "Quick Add",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-wizard-button",
+      "text": "Create Contract",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-1",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-2",
+      "text": "2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-3",
+      "text": "3",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-4",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-5",
+      "text": "5",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-progress-revisit-6",
+      "text": "6",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "use-recent-averages-button",
+      "text": "Use average from last 3 billing periods",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "assumption-flat-draft-hourly-3105a420-8aab-434e-a872-abd01ad26926",
+      "text": "",
+      "value": "0",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "vary-by-period-draft-hourly-3105a420-8aab-434e-a872-abd01ad26926",
+      "text": "Set activity for each invoice",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "simulation-replay-start",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "simulation-replay-end",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "load-historical-replay-button",
+      "text": "Load activity and invoices",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "simulate-scenario-button",
+      "text": "Simulate",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "simulation-horizon-select",
+      "text": "6 client billing periods",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "close-explanation-panel-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-back",
+      "text": "Back",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-save-draft",
+      "text": "Save as Draft",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "wizard-finish",
+      "text": "Finish Setup",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

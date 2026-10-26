@@ -1,0 +1,16 @@
+{
+  "before": {
+    "client": {
+      "billing_email": null,
+      "billing_contact_id": null
+    },
+    "sheet": "APPROVED"
+  },
+  "after": {
+    "client": {
+      "billing_email": "cm-review-20261026-09.billing@whiterabbit.test",
+      "billing_contact_id": null
+    },
+    "sheet": "CHANGES_REQUESTED"
+  }
+}

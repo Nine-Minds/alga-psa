@@ -1,0 +1,123 @@
+{
+  "scenario": "onboarding-capacity-prep-add-seat",
+  "recordedAt": "2026-10-26T03:29:46.823Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "pool-increased-by-one",
+      "passed": true,
+      "at": "2026-10-26T03:29:53.769Z",
+      "data": {
+        "before": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 3
+        },
+        "after": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 3
+        },
+        "lastPurchase": {
+          "operation_id": "8af4fa98-103e-4aaf-b27c-3e7b633684ac",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:29:51.210799+00:00"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:29:46.867Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:48.989Z",
+      "seconds": 2.167,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:48.990Z",
+      "seconds": 2.167,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Add one pool seat (simulator) for the onboarding re-run"
+    },
+    {
+      "at": "2026-10-26T03:29:50.919Z",
+      "seconds": 4.097,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:29:53.769Z",
+      "seconds": 6.946,
+      "actor": "qa",
+      "title": "pool-increased-by-one",
+      "data": {
+        "before": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 9,
+          "allocated": 3
+        },
+        "after": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 3
+        },
+        "lastPurchase": {
+          "operation_id": "8af4fa98-103e-4aaf-b27c-3e7b633684ac",
+          "quantity": 5,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:29:51.210799+00:00"
+        }
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.167,
+      "title": "Add one pool seat (simulator) for the onboarding re-run",
+      "end": 7.3100000000000005
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 7.36,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

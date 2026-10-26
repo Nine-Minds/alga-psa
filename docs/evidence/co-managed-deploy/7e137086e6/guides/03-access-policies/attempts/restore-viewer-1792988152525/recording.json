@@ -1,0 +1,80 @@
+{
+  "scenario": "attempts/restore-viewer-1792988152525",
+  "recordedAt": "2026-10-26T04:15:52.680Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "viewer-assignment-removed",
+      "passed": true,
+      "at": "2026-10-26T04:15:58.070Z",
+      "data": [
+        {
+          "principal_type": "user",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "principal": "qa@emeraldcity.oz",
+          "relationship_role": "technician"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:15:52.724Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:15:54.785Z",
+      "seconds": 2.105,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:15:56.743Z",
+      "seconds": 4.063,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T04:15:58.071Z",
+      "seconds": 5.391,
+      "actor": "qa",
+      "title": "viewer-assignment-removed",
+      "data": [
+        {
+          "principal_type": "user",
+          "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "principal": "qa@emeraldcity.oz",
+          "relationship_role": "technician"
+        }
+      ]
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 5.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

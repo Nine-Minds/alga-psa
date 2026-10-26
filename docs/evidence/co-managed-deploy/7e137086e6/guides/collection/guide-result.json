@@ -1,0 +1,106 @@
+{
+  "guide": "guides/index.html",
+  "coverage": "covered",
+  "sections": [
+    {
+      "section": "Open the collection",
+      "result": "Pass",
+      "evidence": "collection-names-recorded-runtime, collection-links-all-twelve-sections; 00-collection.png"
+    },
+    {
+      "section": "Section 01 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-01-names-this-build-and-complete-recording, section-01-result-label-matches-ledger, section-01-player-plays-and-seeks",
+      "note": "label partial"
+    },
+    {
+      "section": "Section 02 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-02-names-this-build-and-complete-recording, section-02-result-label-matches-ledger, section-02-player-plays-and-seeks",
+      "note": "label blocked-external"
+    },
+    {
+      "section": "Section 03 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-03-names-this-build-and-complete-recording, section-03-result-label-matches-ledger, section-03-player-plays-and-seeks",
+      "note": "label partial"
+    },
+    {
+      "section": "Section 04 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-04-names-this-build-and-complete-recording, section-04-result-label-matches-ledger, section-04-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 05 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-05-names-this-build-and-complete-recording, section-05-result-label-matches-ledger, section-05-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 06 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-06-names-this-build-and-complete-recording, section-06-result-label-matches-ledger, section-06-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 07 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-07-names-this-build-and-complete-recording, section-07-result-label-matches-ledger, section-07-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 08 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-08-names-this-build-and-complete-recording, section-08-result-label-matches-ledger, section-08-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 09 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-09-names-this-build-and-complete-recording, section-09-result-label-matches-ledger, section-09-player-plays-and-seeks",
+      "note": "label covered"
+    },
+    {
+      "section": "Section 10 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-10-names-this-build-and-complete-recording, section-10-result-label-matches-ledger, section-10-player-plays-and-seeks",
+      "note": "label partial"
+    },
+    {
+      "section": "Section 11 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-11-names-this-build-and-complete-recording, section-11-result-label-matches-ledger, section-11-player-plays-and-seeks",
+      "note": "label blocked-external"
+    },
+    {
+      "section": "Section 12 link, provenance, label and player",
+      "result": "Pass",
+      "evidence": "section-12-names-this-build-and-complete-recording, section-12-result-label-matches-ledger, section-12-player-plays-and-seeks",
+      "note": "label blocked-external"
+    }
+  ],
+  "actors": [
+    {
+      "name": "Reviewer (no sign-in)",
+      "email": "n/a",
+      "organization": "Published review packet at http://100.82.172.57:8874"
+    }
+  ],
+  "steps": [
+    "Open the published guide collection at /guides/index.html and confirm it names runtime 54e75edfab",
+    "Follow each of the twelve section links from the collection",
+    "On each section page confirm the recorded runtime and complete recording status, compare the scenario result label with the coverage ledger, play the recording and seek to its last chapter",
+    "Return to the collection"
+  ],
+  "outcomes": [
+    "All twelve section links resolve to pages rendered for runtime 54e75edfab with a complete recording",
+    "Each section page shows its ledger label: 6 covered (04, 05, 06, 07, 08, 09), 3 partial (01, 03, 10) and 3 blocked-external (02, 11, 12). The main ticket-screen walkthrough on the packet root is labelled separately (covered).",
+    "Every section player played and seeked to its last chapter in Chrome"
+  ],
+  "limitations": [
+    "Composition only: this walkthrough verifies the collection and its links, provenance, labels and players. It does not accept or promote any section guide; consult each section recording."
+  ],
+  "missingResources": [],
+  "recordingDir": "collection-recording"
+}

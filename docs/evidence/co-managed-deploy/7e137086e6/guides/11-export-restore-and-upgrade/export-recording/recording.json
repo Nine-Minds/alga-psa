@@ -1,0 +1,307 @@
+{
+  "scenario": "export-recording",
+  "recordedAt": "2026-10-26T04:01:52.489Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "export-screen-names-the-departed-workspace",
+      "passed": true,
+      "at": "2026-10-26T04:01:56.464Z",
+      "data": {
+        "excerpt": "Export workspace Download an encrypted backup of your customer workspace. CM-REVIEW-20261026-01 Accept-7 IT Keep the recovery passphrase somewhere safe. Without it, the backup cannot be opened. Restoring requires reconnecting external accounts and activating imported users. Recovery passphrase* Confirm recovery passphrase* Prepare and download backup"
+      }
+    },
+    {
+      "id": "short-passphrase-refused-by-form",
+      "passed": true,
+      "at": "2026-10-26T04:01:56.554Z",
+      "data": {
+        "alert": "Use a passphrase between 16 and 1024 UTF-8 bytes."
+      }
+    },
+    {
+      "id": "mismatched-confirmation-refused-by-form",
+      "passed": true,
+      "at": "2026-10-26T04:01:57.144Z",
+      "data": {
+        "alert": "The recovery passphrases must match."
+      }
+    },
+    {
+      "id": "encrypted-archive-downloaded",
+      "passed": true,
+      "at": "2026-10-26T04:01:58.072Z",
+      "data": {
+        "bytes": 158789,
+        "sha256": "83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb",
+        "suggestedFilename": "alga-workspace-e3163e33-d554-4c9a-b615-20af84be890f.alga-backup",
+        "plaintextWorkspaceNameInBytes": false
+      }
+    },
+    {
+      "id": "export-page-still-available-after-reload",
+      "passed": true,
+      "at": "2026-10-26T04:01:58.624Z"
+    },
+    {
+      "id": "operator-inspect-authenticates-and-lists-contents",
+      "passed": true,
+      "at": "2026-10-26T04:02:01.237Z",
+      "data": {
+        "exitCode": 0,
+        "keys": [
+          "sourceTenant",
+          "packageId",
+          "sha256",
+          "administrators"
+        ]
+      }
+    },
+    {
+      "id": "wrong-passphrase-refused",
+      "passed": true,
+      "at": "2026-10-26T04:02:03.720Z",
+      "data": {
+        "exitCode": 1,
+        "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+      }
+    },
+    {
+      "id": "tampered-archive-refused",
+      "passed": true,
+      "at": "2026-10-26T04:02:06.162Z",
+      "data": {
+        "exitCode": 1,
+        "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+      }
+    },
+    {
+      "id": "upgrade-screen-reachable-for-departed-customer",
+      "passed": true,
+      "at": "2026-10-26T04:02:12.104Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:01:52.534Z",
+      "seconds": 0.045,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:54.566Z",
+      "seconds": 2.077,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:54.566Z",
+      "seconds": 2.077,
+      "actor": "accept7-admin",
+      "title": "chapter",
+      "data": "1. Download an encrypted customer workspace (after departure)"
+    },
+    {
+      "at": "2026-10-26T04:01:56.452Z",
+      "seconds": 3.963,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/co-management/export"
+    },
+    {
+      "at": "2026-10-26T04:01:56.464Z",
+      "seconds": 3.975,
+      "actor": "accept7-admin",
+      "title": "export-screen-names-the-departed-workspace",
+      "data": {
+        "excerpt": "Export workspace Download an encrypted backup of your customer workspace. CM-REVIEW-20261026-01 Accept-7 IT Keep the recovery passphrase somewhere safe. Without it, the backup cannot be opened. Restoring requires reconnecting external accounts and activating imported users. Recovery passphrase* Confirm recovery passphrase* Prepare and download backup"
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:56.554Z",
+      "seconds": 4.065,
+      "actor": "accept7-admin",
+      "title": "short-passphrase-refused-by-form",
+      "data": {
+        "alert": "Use a passphrase between 16 and 1024 UTF-8 bytes."
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:57.144Z",
+      "seconds": 4.655,
+      "actor": "accept7-admin",
+      "title": "mismatched-confirmation-refused-by-form",
+      "data": {
+        "alert": "The recovery passphrases must match."
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:58.072Z",
+      "seconds": 5.583,
+      "actor": "accept7-admin",
+      "title": "encrypted-archive-downloaded",
+      "data": {
+        "bytes": 158789,
+        "sha256": "83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb",
+        "suggestedFilename": "alga-workspace-e3163e33-d554-4c9a-b615-20af84be890f.alga-backup",
+        "plaintextWorkspaceNameInBytes": false
+      }
+    },
+    {
+      "at": "2026-10-26T04:01:58.624Z",
+      "seconds": 6.135,
+      "actor": "accept7-admin",
+      "title": "export-page-still-available-after-reload"
+    },
+    {
+      "at": "2026-10-26T04:01:58.624Z",
+      "seconds": 6.135,
+      "actor": "accept7-admin",
+      "title": "chapter",
+      "data": "2. Inspect the archive (operator CLI); restore needs an isolated destination"
+    },
+    {
+      "at": "2026-10-26T04:01:58.624Z",
+      "seconds": 6.135,
+      "actor": "accept7-admin",
+      "title": "operator-inspect",
+      "data": {
+        "command": "server/: npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts --inspect --archive <private> --passphrase-stdin",
+        "passphrase": "piped from private file, never an argument"
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:01.237Z",
+      "seconds": 8.748,
+      "actor": "accept7-admin",
+      "title": "operator-inspect-authenticates-and-lists-contents",
+      "data": {
+        "exitCode": 0,
+        "keys": [
+          "sourceTenant",
+          "packageId",
+          "sha256",
+          "administrators"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:03.720Z",
+      "seconds": 11.231,
+      "actor": "accept7-admin",
+      "title": "wrong-passphrase-refused",
+      "data": {
+        "exitCode": 1,
+        "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:06.162Z",
+      "seconds": 13.673,
+      "actor": "accept7-admin",
+      "title": "tampered-archive-refused",
+      "data": {
+        "exitCode": 1,
+        "stderr": "Portable workspace operation failed during archive inspection. Check options, archive passphrase, destination identity, storage, and database authority."
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:06.162Z",
+      "seconds": 13.673,
+      "actor": "accept7-admin",
+      "title": "chapter",
+      "data": "4. Upgrade a current workspace independently (screen boundary only)"
+    },
+    {
+      "at": "2026-10-26T04:02:08.054Z",
+      "seconds": 15.565,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/co-management/upgrade"
+    },
+    {
+      "at": "2026-10-26T04:02:12.104Z",
+      "seconds": 19.615,
+      "actor": "accept7-admin",
+      "title": "upgrade-screen",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/upgrade",
+        "excerpt": "AlgaPSA Home User Activities Tickets Projects Clients Co-managed IT Contacts Interactions Documents Assets Passwords Reports Time Management Schedule Technician Dispatch Workflows System Monitoring Settings Support v1.6.12 Home Co-managed access 0a3c039e-c4c7-4108-8301-bfe5232a829a Quick Create RA Upgrade to AlgaPSA Run this workspace independently with your own paid AlgaPSA license. Your tickets, projects, documents and history stay in this workspace. Your MSP relationship has already ended. Its existing archive stays unchanged. Paid technician seats required: 1 An active, paid AlgaPSA subscription belonging to this workspace is required before upgrading. This purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment. Total seats in your pool Billing frequency Monthly Review purchase Upgrade workspaceRefresh status",
+        "controls": [
+          {
+            "id": "co-upgrade-purchase-quantity",
+            "text": "",
+            "disabled": false
+          },
+          {
+            "id": "co-upgrade-purchase-interval",
+            "text": "Monthly",
+            "disabled": false
+          },
+          {
+            "id": "co-upgrade-purchase",
+            "text": "Review purchase",
+            "disabled": false
+          },
+          {
+            "id": "co-upgrade-start",
+            "text": "Upgrade workspace",
+            "disabled": true
+          },
+          {
+            "id": "co-upgrade-refresh",
+            "text": "Refresh status",
+            "disabled": false
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T04:02:12.104Z",
+      "seconds": 19.615,
+      "actor": "accept7-admin",
+      "title": "upgrade-screen-reachable-for-departed-customer"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.077,
+      "title": "1. Download an encrypted customer workspace (after departure)",
+      "end": 6.135
+    },
+    {
+      "start": 6.135,
+      "title": "2. Inspect the archive (operator CLI); restore needs an isolated destination",
+      "end": 13.673
+    },
+    {
+      "start": 13.673,
+      "title": "4. Upgrade a current workspace independently (screen boundary only)",
+      "end": 20.47
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [],
+  "durationSeconds": 20.52,
+  "actors": [
+    {
+      "name": "accept7-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    }
+  ]
+}

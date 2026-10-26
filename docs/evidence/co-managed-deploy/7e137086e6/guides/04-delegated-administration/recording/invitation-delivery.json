@@ -1,0 +1,21 @@
+{
+  "invitationId": "15217acd-094d-4a56-8e74-104ebbcf4a10",
+  "recipient": "cm-review-20261026-04-invitee@whiterabbit.test",
+  "roleId": "70db1fe0-79e9-42bf-9e7e-d2457cdf7243",
+  "expiresAt": "2026-10-27T03:37:05.777929+00:00",
+  "tokenSha256": "45e66b27afb53c9ba2c92adef6870403d24a382474fcb95dbc4cd885e39ba0bf",
+  "messages": [
+    {
+      "id": 228,
+      "receivedAt": "2026-10-26T03:37:05.950Z",
+      "subject": "You're invited to join White Rabbit IT on AlgaPSA",
+      "setupLinkSha256": "3f53a5cb026a9338e720f358c3e2faaa19471142152b6043aebe2f3e74bab6d3"
+    },
+    {
+      "id": 229,
+      "receivedAt": "2026-10-26T03:37:17.450Z",
+      "subject": "You're invited to join White Rabbit IT on AlgaPSA",
+      "setupLinkSha256": "3f53a5cb026a9338e720f358c3e2faaa19471142152b6043aebe2f3e74bab6d3"
+    }
+  ]
+}

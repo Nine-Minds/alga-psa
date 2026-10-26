@@ -1,0 +1,76 @@
+{
+  "scenario": "probe-shared-audience-mail",
+  "recordedAt": "2026-10-26T03:54:47.936Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:54:47.986Z",
+      "seconds": 0.05,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:49.990Z",
+      "seconds": 2.054,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:52.236Z",
+      "seconds": 4.3,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T03:54:54.262Z",
+      "seconds": 6.326,
+      "actor": "alice",
+      "title": "audience-shown-before-post",
+      "data": {
+        "shown": "Shared IT teams"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:14.777Z",
+      "seconds": 26.841,
+      "actor": "alice",
+      "title": "result",
+      "data": {
+        "shown": "Shared IT teams",
+        "comment": {
+          "comment_id": "7574b17c-e2bb-46a6-a886-f9de24180415",
+          "is_internal": false
+        },
+        "requesterMailsWithText": 1,
+        "deliveryRows": "1"
+      }
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "defect-reproduced",
+  "limitations": [],
+  "durationSeconds": 28.48,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

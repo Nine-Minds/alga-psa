@@ -1,0 +1,194 @@
+{
+  "scenario": "prep-catalog-usd-price",
+  "recordedAt": "2026-10-26T03:39:55.672Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "editor-displays-usd-price-although-none-stored",
+      "passed": true,
+      "at": "2026-10-26T03:40:02.687Z",
+      "data": {
+        "stored": []
+      }
+    },
+    {
+      "id": "usd-price-persisted",
+      "passed": true,
+      "at": "2026-10-26T03:40:05.244Z",
+      "data": {
+        "prices": [
+          {
+            "currency_code": "USD",
+            "rate": 10000
+          }
+        ]
+      }
+    },
+    {
+      "id": "preview-renders-without-error",
+      "passed": true,
+      "at": "2026-10-26T03:40:15.446Z"
+    },
+    {
+      "id": "sheet-open-for-changes",
+      "passed": true,
+      "at": "2026-10-26T03:40:20.922Z",
+      "data": {
+        "sheet": "CHANGES_REQUESTED"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:39:55.712Z",
+      "seconds": 0.04,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:39:55.998Z",
+      "seconds": 0.326,
+      "title": "before",
+      "data": {
+        "prices": [],
+        "sheet": "APPROVED"
+      }
+    },
+    {
+      "at": "2026-10-26T03:39:57.954Z",
+      "seconds": 2.282,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:39:57.954Z",
+      "seconds": 2.282,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: service editor shows USD $100.00 for Basic Support; saving persists it"
+    },
+    {
+      "at": "2026-10-26T03:40:00.019Z",
+      "seconds": 4.347,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=service-catalog"
+    },
+    {
+      "at": "2026-10-26T03:40:02.687Z",
+      "seconds": 7.015,
+      "actor": "qa",
+      "title": "editor-displays-usd-price-although-none-stored",
+      "data": {
+        "stored": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:05.244Z",
+      "seconds": 9.572,
+      "actor": "qa",
+      "title": "usd-price-persisted",
+      "data": {
+        "prices": [
+          {
+            "currency_code": "USD",
+            "rate": 10000
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:05.293Z",
+      "seconds": 9.621,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Rehearsal: Automatic Invoices preview now prices the approved contract time (closed, nothing generated)"
+    },
+    {
+      "at": "2026-10-26T03:40:07.288Z",
+      "seconds": 11.616,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T03:40:15.445Z",
+      "seconds": 19.773,
+      "actor": "qa",
+      "title": "preview",
+      "data": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/25/2026\n\nDue Date\n\n11/24/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.1\t$100.00\t$10.00\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.016666666666666666\t$100.00\t$1.67\nBasic Support\t0.25\t$100.00\t$25.00\nSubtotal\t$136.68\nTax\t$0.00\nTotal\t$136.68\nClose Preview\nGenerate Invoice"
+    },
+    {
+      "at": "2026-10-26T03:40:15.446Z",
+      "seconds": 19.774,
+      "actor": "qa",
+      "title": "preview-renders-without-error"
+    },
+    {
+      "at": "2026-10-26T03:40:15.516Z",
+      "seconds": 19.844,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: re-open the sheet approved in run-d"
+    },
+    {
+      "at": "2026-10-26T03:40:17.415Z",
+      "seconds": 21.743,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:40:20.922Z",
+      "seconds": 25.25,
+      "actor": "qa",
+      "title": "sheet-open-for-changes",
+      "data": {
+        "sheet": "CHANGES_REQUESTED"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.282,
+      "title": "Prep: service editor shows USD $100.00 for Basic Support; saving persists it",
+      "end": 9.621
+    },
+    {
+      "start": 9.621,
+      "title": "Rehearsal: Automatic Invoices preview now prices the approved contract time (closed, nothing generated)",
+      "end": 19.844
+    },
+    {
+      "start": 19.844,
+      "title": "Prep: re-open the sheet approved in run-d",
+      "end": 25.23
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Preparation only. The stored USD price is the value the editor already displayed; removal is attempted after the guide run."
+  ],
+  "durationSeconds": 25.28,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

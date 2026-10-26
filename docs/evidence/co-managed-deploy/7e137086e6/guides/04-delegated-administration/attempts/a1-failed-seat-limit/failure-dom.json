@@ -1,0 +1,188 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/users",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nUsers\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nUsers\nUser Management\n\nManage MSP users and permissions\n\nMSP\nClient Portal\nActive Users\nCreate New MSP User\nThis workspace has used every co-managed technician seat allocated to it. Ask the sponsoring MSP to allocate more seats.\nFirst Name *\nLast Name *\nEmail *\n\nwhiterabbit.test is reserved for documentation and testing.\n\nDismiss\nPrimary Role\nTechnician\nReports To (optional)\nSelect manager\nPassword (Leave blank to send invitation)\nSetting a password will create the user immediately. They can log in right away.\nCreate User\nCancel\nList\nStructure\n\nManage individual users, roles, and permissions.\n\nFirst Name\n\t\nLast Name\n\t\nEmail\n\t\nRole\n\t\nLast Login\n\t\nActions\n\n\nAL\nAlice\n\t\nLiddell\n\t\nalice@whiterabbit.test\n\t\nAdmin\n\t\nOct 25, 2026\nvia credentials\n\t\nOpen menu",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "msp-view-btn",
+      "text": "MSP",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-view-btn",
+      "text": "Client Portal",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_r_",
+      "text": "Active Users",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "first-name",
+      "text": "",
+      "value": "CMReview04",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "last-name",
+      "text": "",
+      "value": "Profile",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "email",
+      "text": "",
+      "value": "cm-review-20261026-04-profile@whiterabbit.test",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "field-warning-r24-dismiss",
+      "text": "Dismiss",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "_r_25_",
+      "text": "Technician",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "account-manager-picker-trigger",
+      "text": "Select manager",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "password",
+      "text": "",
+      "value": "[redacted]",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "show-password-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "submit-new-msp-user-btn",
+      "text": "Create User",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-new-msp-user-btn",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "List",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Structure",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-actions-menu-a288a520-c353-44d2-91e0-001f75d236de",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:00.909 --> 00:00:21.876
+Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)
+
+2
+00:00:21.876 --> 00:00:28.537
+1. Configure and persist the customer-to-MSP priority mapping
+
+3
+00:00:28.537 --> 00:00:39.314
+2. Escalation starts the MSP obligation (not initial visibility)
+
+4
+00:00:39.314 --> 00:00:53.333
+3. Change the mapping: existing targets stay, new escalation uses current config
+
+5
+00:00:53.333 --> 00:00:59.338
+5 (prep). MSP assigns ticket 2 to QA so threshold notices have an assignee
+
+6
+00:00:59.338 --> 00:01:11.133
+4. MSP returns ticket 1 to the customer; history preserved
+
+7
+00:01:11.133 --> 00:01:23.662
+5. Departed relationship: Kansas Farms keeps its own outcome; MSP live read unavailable
+
+8
+00:01:23.662 --> 00:07:39.519
+5. Breach/routing notification on ticket 2 (4-minute response target)
+
+9
+00:07:39.519 --> 00:07:55.950
+Restore: mapping back to original, policy unassigned from White Rabbit

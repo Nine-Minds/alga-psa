@@ -1,0 +1,1399 @@
+{
+  "scenario": "recording",
+  "recordedAt": "2026-10-26T03:40:16.410Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-requester-exists-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-26T03:40:18.547Z",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "prep-disposable-ticket-with-requester-contact",
+      "passed": true,
+      "at": "2026-10-26T03:40:23.825Z",
+      "data": {
+        "ticketId": "99a62c02-6235-408f-9755-959424089b76"
+      }
+    },
+    {
+      "id": "qa-shared-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:40:29.729Z",
+      "data": {
+        "sha256": "673ef046dc900d05f187b445370ff36dafe23fc1b3fc27970d2075c0110787b5"
+      }
+    },
+    {
+      "id": "qa-shared-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:40:30.965Z"
+    },
+    {
+      "id": "alice-reads-shared-message-and-file-bytes",
+      "passed": true,
+      "at": "2026-10-26T03:40:34.624Z"
+    },
+    {
+      "id": "alice-sees-organization-qualified-msp-author",
+      "passed": true,
+      "at": "2026-10-26T03:40:34.629Z",
+      "data": {}
+    },
+    {
+      "id": "alice-customer-private-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:40:39.229Z",
+      "data": {
+        "sha256": "8fce113bb367abbf352b375e37418311b9170086788cedf1debc0f9edfa61f29"
+      }
+    },
+    {
+      "id": "alice-customer-private-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:40:39.991Z"
+    },
+    {
+      "id": "qa-msp-private-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:40:45.781Z",
+      "data": {
+        "sha256": "8d5e7418cb70c10ed1069e30269990730e9e8483dc3c95ed0d84d062b2162e7e"
+      }
+    },
+    {
+      "id": "qa-msp-private-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:40:47.228Z"
+    },
+    {
+      "id": "qa-requester-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:40:51.526Z",
+      "data": {
+        "sha256": "db929fc704e681d4670da2361b7659cd111c3908b96fc20f3824e8308218ca53"
+      }
+    },
+    {
+      "id": "qa-requester-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:40:52.764Z"
+    },
+    {
+      "id": "s1-qa-cannot-see-other-organization-private-message",
+      "passed": true,
+      "at": "2026-10-26T03:40:54.994Z"
+    },
+    {
+      "id": "s2-qa-downloads-own-private-file",
+      "passed": true,
+      "at": "2026-10-26T03:40:55.029Z"
+    },
+    {
+      "id": "s2-qa-copied-other-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:40:55.062Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s1-alice-cannot-see-other-organization-private-message",
+      "passed": true,
+      "at": "2026-10-26T03:40:58.833Z"
+    },
+    {
+      "id": "s2-alice-downloads-own-private-file",
+      "passed": true,
+      "at": "2026-10-26T03:40:58.858Z"
+    },
+    {
+      "id": "s2-alice-copied-other-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:40:58.868Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s1-requester-sees-only-requester-audience",
+      "passed": true,
+      "at": "2026-10-26T03:41:02.458Z"
+    },
+    {
+      "id": "s2-requester-downloads-requester-file-bytes",
+      "passed": true,
+      "at": "2026-10-26T03:41:02.507Z",
+      "data": {
+        "viaPortalLink": true,
+        "staffHrefStatus": 401
+      }
+    },
+    {
+      "id": "s2-requester-denied-shared-file-link",
+      "passed": true,
+      "at": "2026-10-26T03:41:02.517Z",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "id": "s2-requester-denied-msp-private-file-link",
+      "passed": true,
+      "at": "2026-10-26T03:41:02.538Z",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "id": "s2-requester-denied-customer-private-file-link",
+      "passed": true,
+      "at": "2026-10-26T03:41:02.551Z",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "id": "qa-removable-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:41:12.710Z",
+      "data": {
+        "sha256": "8956760644df1b96cc905f28c40b101ebb8b4dfeb3257cb06a8b004a25c2c154"
+      }
+    },
+    {
+      "id": "qa-removable-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:41:14.095Z"
+    },
+    {
+      "id": "s2-remove-offered-to-author",
+      "passed": true,
+      "at": "2026-10-26T03:41:14.607Z"
+    },
+    {
+      "id": "s2-removed-file-absent-after-reload-and-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:41:17.210Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s2-retry-reuses-operation-no-duplicate",
+      "passed": true,
+      "at": "2026-10-26T03:41:26.978Z",
+      "data": {
+        "ops": [
+          "e70eb605-3934-4317-8259-a66fa0bc7ea0",
+          "e70eb605-3934-4317-8259-a66fa0bc7ea0",
+          "a1733af9-75f0-423e-bac0-a0c7aa2d263d"
+        ],
+        "persisted": 1
+      }
+    },
+    {
+      "id": "s2-uncertain-publication-complete-once-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:41:29.809Z",
+      "data": {
+        "persisted": 1
+      }
+    },
+    {
+      "id": "qa-root-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:41:35.544Z"
+    },
+    {
+      "id": "s3-customer-cannot-edit-or-delete-msp-message",
+      "passed": true,
+      "at": "2026-10-26T03:41:39.682Z"
+    },
+    {
+      "id": "s3-customer-reply-persists",
+      "passed": true,
+      "at": "2026-10-26T03:41:42.366Z"
+    },
+    {
+      "id": "s3-msp-sees-reply-with-customer-author",
+      "passed": true,
+      "at": "2026-10-26T03:41:46.063Z"
+    },
+    {
+      "id": "s3-edit-visible-to-customer-reply-retained",
+      "passed": true,
+      "at": "2026-10-26T03:41:52.679Z"
+    },
+    {
+      "id": "s3-root-tombstoned-reply-survives",
+      "passed": true,
+      "at": "2026-10-26T03:41:59.262Z"
+    },
+    {
+      "id": "s3-customer-sees-tombstone-and-own-reply",
+      "passed": true,
+      "at": "2026-10-26T03:42:04.271Z"
+    },
+    {
+      "id": "qa-thread-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:42:10.195Z",
+      "data": {
+        "sha256": "9421c09df25a10c40aa4c150bfe169c617c9120f6ff8d6d11c92beddb435e820"
+      }
+    },
+    {
+      "id": "qa-thread-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:42:11.377Z"
+    },
+    {
+      "id": "s4-private-thread-has-reply",
+      "passed": true,
+      "at": "2026-10-26T03:42:16.370Z",
+      "data": {
+        "tRoot": "a1733af9-75f0-423e-bac0-a0c7aa2d263d",
+        "tThread": "a1733af9-75f0-423e-bac0-a0c7aa2d263d"
+      }
+    },
+    {
+      "id": "s4-preview-counts-root-reply-and-attachment",
+      "passed": true,
+      "at": "2026-10-26T03:42:17.710Z",
+      "data": {
+        "preview": "Change thread audience\n\nThis changes the audience of the entire thread: 2 messages and 1 attachments.\n\nCurrent audience: My organization only\n\nVisible to\nSelect...\n\nReplies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.\n\nSharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history.\n\nCancel\nConfirm audience change"
+      }
+    },
+    {
+      "id": "s4-msp-private-original-read-only",
+      "passed": true,
+      "at": "2026-10-26T03:42:19.490Z"
+    },
+    {
+      "id": "s4-customer-receives-thread-reply-and-matching-file",
+      "passed": true,
+      "at": "2026-10-26T03:42:23.524Z",
+      "data": {
+        "newHref": true
+      }
+    },
+    {
+      "id": "s4-customer-cannot-use-msp-private-original-file-link",
+      "passed": true,
+      "at": "2026-10-26T03:42:23.532Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s4-requester-receives-disclosed-thread-and-file",
+      "passed": true,
+      "at": "2026-10-26T03:42:27.121Z"
+    },
+    {
+      "id": "s4-restriction-removes-thread-and-copied-file-from-requester",
+      "passed": true,
+      "at": "2026-10-26T03:42:37.871Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s4-customer-still-reads-thread-at-shared-it-audience",
+      "passed": true,
+      "at": "2026-10-26T03:42:41.453Z"
+    },
+    {
+      "id": "s5-prep-requester-visible-shared-task",
+      "passed": true,
+      "at": "2026-10-26T03:42:55.945Z",
+      "data": {
+        "pid": "eefd8378-f6ff-4212-94bb-57a7a96b393b",
+        "tid": "7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+      }
+    },
+    {
+      "id": "s5-requester-sees-public-task-message-with-staff-attribution",
+      "passed": true,
+      "at": "2026-10-26T03:43:04.949Z",
+      "data": {}
+    },
+    {
+      "id": "s5-requester-does-not-see-msp-private-task-message",
+      "passed": true,
+      "at": "2026-10-26T03:43:04.949Z"
+    },
+    {
+      "id": "s5-requester-downloads-task-file-bytes",
+      "passed": true,
+      "at": "2026-10-26T03:43:04.967Z"
+    },
+    {
+      "id": "s5-requester-reply-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:43:05.468Z"
+    },
+    {
+      "id": "s5-staff-sees-requester-reply-with-author",
+      "passed": true,
+      "at": "2026-10-26T03:43:08.947Z"
+    },
+    {
+      "id": "s5-requester-project-grant-removed",
+      "passed": true,
+      "at": "2026-10-26T03:43:12.765Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:40:16.456Z",
+      "seconds": 0.046,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:16.458Z",
+      "seconds": 0.048,
+      "title": "chapter",
+      "data": "Before you start: requester and disposable shared ticket (customer native screens)"
+    },
+    {
+      "at": "2026-10-26T03:40:18.406Z",
+      "seconds": 1.996,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:18.547Z",
+      "seconds": 2.137,
+      "actor": "alice",
+      "title": "prep-requester-exists-in-customer-tenant",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:20.705Z",
+      "seconds": 4.295,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:40:23.825Z",
+      "seconds": 7.415,
+      "actor": "alice",
+      "title": "prep-disposable-ticket-with-requester-contact",
+      "data": {
+        "ticketId": "99a62c02-6235-408f-9755-959424089b76"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:23.826Z",
+      "seconds": 7.416,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Shared IT teams message with an attached file (QA)"
+    },
+    {
+      "at": "2026-10-26T03:40:25.647Z",
+      "seconds": 9.237,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:27.680Z",
+      "seconds": 11.27,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:29.729Z",
+      "seconds": 13.319,
+      "actor": "qa",
+      "title": "qa-shared-published-file-bytes-match",
+      "data": {
+        "sha256": "673ef046dc900d05f187b445370ff36dafe23fc1b3fc27970d2075c0110787b5"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:30.965Z",
+      "seconds": 14.555,
+      "actor": "qa",
+      "title": "qa-shared-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:40:30.966Z",
+      "seconds": 14.556,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Customer reads the shared message and file"
+    },
+    {
+      "at": "2026-10-26T03:40:32.463Z",
+      "seconds": 16.053,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:34.491Z",
+      "seconds": 18.081,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:34.624Z",
+      "seconds": 18.214,
+      "actor": "alice",
+      "title": "alice-reads-shared-message-and-file-bytes"
+    },
+    {
+      "at": "2026-10-26T03:40:34.629Z",
+      "seconds": 18.219,
+      "actor": "alice",
+      "title": "alice-sees-organization-qualified-msp-author",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T03:40:34.699Z",
+      "seconds": 18.289,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Organization-private messages from each side, then requester audience"
+    },
+    {
+      "at": "2026-10-26T03:40:36.835Z",
+      "seconds": 20.425,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:39.229Z",
+      "seconds": 22.819,
+      "actor": "alice",
+      "title": "alice-customer-private-published-file-bytes-match",
+      "data": {
+        "sha256": "8fce113bb367abbf352b375e37418311b9170086788cedf1debc0f9edfa61f29"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:39.991Z",
+      "seconds": 23.581,
+      "actor": "alice",
+      "title": "alice-customer-private-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:40:41.547Z",
+      "seconds": 25.137,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:43.671Z",
+      "seconds": 27.261,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:45.781Z",
+      "seconds": 29.371,
+      "actor": "qa",
+      "title": "qa-msp-private-published-file-bytes-match",
+      "data": {
+        "sha256": "8d5e7418cb70c10ed1069e30269990730e9e8483dc3c95ed0d84d062b2162e7e"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:47.228Z",
+      "seconds": 30.818,
+      "actor": "qa",
+      "title": "qa-msp-private-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:40:49.336Z",
+      "seconds": 32.926,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:51.526Z",
+      "seconds": 35.116,
+      "actor": "qa",
+      "title": "qa-requester-published-file-bytes-match",
+      "data": {
+        "sha256": "db929fc704e681d4670da2361b7659cd111c3908b96fc20f3824e8308218ca53"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:52.764Z",
+      "seconds": 36.354,
+      "actor": "qa",
+      "title": "qa-requester-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:40:54.933Z",
+      "seconds": 38.523,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:54.994Z",
+      "seconds": 38.584,
+      "actor": "qa",
+      "title": "s1-qa-cannot-see-other-organization-private-message"
+    },
+    {
+      "at": "2026-10-26T03:40:55.030Z",
+      "seconds": 38.62,
+      "actor": "qa",
+      "title": "s2-qa-downloads-own-private-file"
+    },
+    {
+      "at": "2026-10-26T03:40:55.062Z",
+      "seconds": 38.652,
+      "actor": "qa",
+      "title": "s2-qa-copied-other-private-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:56.670Z",
+      "seconds": 40.26,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:58.782Z",
+      "seconds": 42.372,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:40:58.833Z",
+      "seconds": 42.423,
+      "actor": "alice",
+      "title": "s1-alice-cannot-see-other-organization-private-message"
+    },
+    {
+      "at": "2026-10-26T03:40:58.858Z",
+      "seconds": 42.448,
+      "actor": "alice",
+      "title": "s2-alice-downloads-own-private-file"
+    },
+    {
+      "at": "2026-10-26T03:40:58.868Z",
+      "seconds": 42.458,
+      "actor": "alice",
+      "title": "s2-alice-copied-other-private-file-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:40:58.916Z",
+      "seconds": 42.506,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Requester sees only requester-audience content in the portal"
+    },
+    {
+      "at": "2026-10-26T03:41:00.493Z",
+      "seconds": 44.083,
+      "actor": "alice",
+      "title": "Fresh client-portal form login",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:02.447Z",
+      "seconds": 46.037,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/client-portal/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:02.458Z",
+      "seconds": 46.048,
+      "actor": "alice",
+      "title": "s1-requester-sees-only-requester-audience"
+    },
+    {
+      "at": "2026-10-26T03:41:02.507Z",
+      "seconds": 46.097,
+      "actor": "alice",
+      "title": "s2-requester-downloads-requester-file-bytes",
+      "data": {
+        "viaPortalLink": true,
+        "staffHrefStatus": 401
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:02.517Z",
+      "seconds": 46.107,
+      "actor": "alice",
+      "title": "s2-requester-denied-shared-file-link",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:02.538Z",
+      "seconds": 46.128,
+      "actor": "alice",
+      "title": "s2-requester-denied-msp-private-file-link",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:02.551Z",
+      "seconds": 46.141,
+      "actor": "alice",
+      "title": "s2-requester-denied-customer-private-file-link",
+      "data": {
+        "status": 401
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:02.768Z",
+      "seconds": 46.358,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "2. Author removes a disposable attachment; old link stops downloading"
+    },
+    {
+      "at": "2026-10-26T03:41:04.388Z",
+      "seconds": 47.978,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:06.663Z",
+      "seconds": 50.253,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:12.710Z",
+      "seconds": 56.3,
+      "actor": "qa",
+      "title": "qa-removable-published-file-bytes-match",
+      "data": {
+        "sha256": "8956760644df1b96cc905f28c40b101ebb8b4dfeb3257cb06a8b004a25c2c154"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:14.095Z",
+      "seconds": 57.685,
+      "actor": "qa",
+      "title": "qa-removable-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:41:14.607Z",
+      "seconds": 58.197,
+      "actor": "qa",
+      "title": "s2-remove-offered-to-author"
+    },
+    {
+      "at": "2026-10-26T03:41:17.210Z",
+      "seconds": 60.8,
+      "actor": "qa",
+      "title": "s2-removed-file-absent-after-reload-and-link-denied",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:17.406Z",
+      "seconds": 60.996,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Uncertain send: server saved the message but the response was lost"
+    },
+    {
+      "at": "2026-10-26T03:41:19.930Z",
+      "seconds": 63.52,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:25.911Z",
+      "seconds": 69.501,
+      "actor": "qa",
+      "title": "s2-unknown-outcome-observed",
+      "data": {
+        "persistedMessages": 1,
+        "composerOpenAfterUnknown": true,
+        "draftTextRetained": true,
+        "stagedFileRetained": true,
+        "toast": "could not confirm whether the message was saved. Retry to check the same request.",
+        "operationId": "e70eb605-3934-4317-8259-a66fa0bc7ea0"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:26.978Z",
+      "seconds": 70.568,
+      "actor": "qa",
+      "title": "s2-retry-reuses-operation-no-duplicate",
+      "data": {
+        "ops": [
+          "e70eb605-3934-4317-8259-a66fa0bc7ea0",
+          "e70eb605-3934-4317-8259-a66fa0bc7ea0",
+          "a1733af9-75f0-423e-bac0-a0c7aa2d263d"
+        ],
+        "persisted": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:29.809Z",
+      "seconds": 73.399,
+      "actor": "qa",
+      "title": "s2-uncertain-publication-complete-once-after-reload",
+      "data": {
+        "persisted": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:29.810Z",
+      "seconds": 73.4,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Reply from the other organization, edit, and delete the root"
+    },
+    {
+      "at": "2026-10-26T03:41:31.845Z",
+      "seconds": 75.435,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:35.544Z",
+      "seconds": 79.134,
+      "actor": "qa",
+      "title": "qa-root-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:41:37.471Z",
+      "seconds": 81.061,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:39.589Z",
+      "seconds": 83.179,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:39.682Z",
+      "seconds": 83.272,
+      "actor": "alice",
+      "title": "s3-customer-cannot-edit-or-delete-msp-message"
+    },
+    {
+      "at": "2026-10-26T03:41:42.366Z",
+      "seconds": 85.956,
+      "actor": "alice",
+      "title": "s3-customer-reply-persists"
+    },
+    {
+      "at": "2026-10-26T03:41:43.964Z",
+      "seconds": 87.554,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:45.994Z",
+      "seconds": 89.584,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:46.063Z",
+      "seconds": 89.653,
+      "actor": "qa",
+      "title": "s3-msp-sees-reply-with-customer-author"
+    },
+    {
+      "at": "2026-10-26T03:41:50.479Z",
+      "seconds": 94.069,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:52.622Z",
+      "seconds": 96.212,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:52.679Z",
+      "seconds": 96.269,
+      "actor": "alice",
+      "title": "s3-edit-visible-to-customer-reply-retained"
+    },
+    {
+      "at": "2026-10-26T03:41:54.240Z",
+      "seconds": 97.83,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:41:56.301Z",
+      "seconds": 99.891,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:41:59.262Z",
+      "seconds": 102.852,
+      "actor": "qa",
+      "title": "s3-root-tombstoned-reply-survives"
+    },
+    {
+      "at": "2026-10-26T03:42:01.086Z",
+      "seconds": 104.677,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:04.228Z",
+      "seconds": 107.818,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:04.271Z",
+      "seconds": 107.861,
+      "actor": "alice",
+      "title": "s3-customer-sees-tombstone-and-own-reply"
+    },
+    {
+      "at": "2026-10-26T03:42:04.316Z",
+      "seconds": 107.906,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "4. Whole-thread audience change: MSP-private thread with reply and file"
+    },
+    {
+      "at": "2026-10-26T03:42:05.803Z",
+      "seconds": 109.393,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:07.889Z",
+      "seconds": 111.479,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:10.195Z",
+      "seconds": 113.785,
+      "actor": "qa",
+      "title": "qa-thread-published-file-bytes-match",
+      "data": {
+        "sha256": "9421c09df25a10c40aa4c150bfe169c617c9120f6ff8d6d11c92beddb435e820"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:11.377Z",
+      "seconds": 114.967,
+      "actor": "qa",
+      "title": "qa-thread-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:42:13.674Z",
+      "seconds": 117.264,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:16.370Z",
+      "seconds": 119.96,
+      "actor": "qa",
+      "title": "s4-private-thread-has-reply",
+      "data": {
+        "tRoot": "a1733af9-75f0-423e-bac0-a0c7aa2d263d",
+        "tThread": "a1733af9-75f0-423e-bac0-a0c7aa2d263d"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:17.711Z",
+      "seconds": 121.301,
+      "actor": "qa",
+      "title": "s4-preview-counts-root-reply-and-attachment",
+      "data": {
+        "preview": "Change thread audience\n\nThis changes the audience of the entire thread: 2 messages and 1 attachments.\n\nCurrent audience: My organization only\n\nVisible to\nSelect...\n\nReplies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.\n\nSharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history.\n\nCancel\nConfirm audience change"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:19.490Z",
+      "seconds": 123.08,
+      "actor": "qa",
+      "title": "s4-msp-private-original-read-only"
+    },
+    {
+      "at": "2026-10-26T03:42:21.371Z",
+      "seconds": 124.961,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:23.432Z",
+      "seconds": 127.022,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:23.524Z",
+      "seconds": 127.114,
+      "actor": "alice",
+      "title": "s4-customer-receives-thread-reply-and-matching-file",
+      "data": {
+        "newHref": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:23.532Z",
+      "seconds": 127.122,
+      "actor": "alice",
+      "title": "s4-customer-cannot-use-msp-private-original-file-link",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:25.111Z",
+      "seconds": 128.701,
+      "actor": "alice",
+      "title": "Fresh client-portal form login",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:27.078Z",
+      "seconds": 130.668,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/client-portal/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:27.121Z",
+      "seconds": 130.711,
+      "actor": "alice",
+      "title": "s4-requester-receives-disclosed-thread-and-file"
+    },
+    {
+      "at": "2026-10-26T03:42:27.205Z",
+      "seconds": 130.795,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "4. Restrict the disclosed thread back to Shared IT teams"
+    },
+    {
+      "at": "2026-10-26T03:42:28.819Z",
+      "seconds": 132.409,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:30.849Z",
+      "seconds": 134.439,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:33.462Z",
+      "seconds": 137.052,
+      "actor": "qa",
+      "title": "Fresh client-portal form login",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:35.341Z",
+      "seconds": 138.931,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/client-portal/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:37.871Z",
+      "seconds": 141.461,
+      "actor": "qa",
+      "title": "s4-restriction-removes-thread-and-copied-file-from-requester",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:39.413Z",
+      "seconds": 143.003,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:41.400Z",
+      "seconds": 144.99,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T03:42:41.453Z",
+      "seconds": 145.043,
+      "actor": "alice",
+      "title": "s4-customer-still-reads-thread-at-shared-it-audience"
+    },
+    {
+      "at": "2026-10-26T03:42:41.454Z",
+      "seconds": 145.044,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "5. Requester task conversation (portal) on a requester-visible shared task"
+    },
+    {
+      "at": "2026-10-26T03:42:42.958Z",
+      "seconds": 146.548,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:45.032Z",
+      "seconds": 148.622,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:42:47.626Z",
+      "seconds": 151.216,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/eefd8378-f6ff-4212-94bb-57a7a96b393b"
+    },
+    {
+      "at": "2026-10-26T03:42:51.721Z",
+      "seconds": 155.311,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/eefd8378-f6ff-4212-94bb-57a7a96b393b"
+    },
+    {
+      "at": "2026-10-26T03:42:54.334Z",
+      "seconds": 157.924,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:42:55.945Z",
+      "seconds": 159.535,
+      "actor": "alice",
+      "title": "s5-prep-requester-visible-shared-task",
+      "data": {
+        "pid": "eefd8378-f6ff-4212-94bb-57a7a96b393b",
+        "tid": "7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:57.758Z",
+      "seconds": 161.348,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:42:59.657Z",
+      "seconds": 163.248,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T03:43:02.979Z",
+      "seconds": 166.569,
+      "actor": "qa",
+      "title": "Fresh client-portal form login",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:04.936Z",
+      "seconds": 168.526,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/client-portal/projects/eefd8378-f6ff-4212-94bb-57a7a96b393b?taskId=7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T03:43:04.949Z",
+      "seconds": 168.539,
+      "actor": "qa",
+      "title": "s5-requester-sees-public-task-message-with-staff-attribution",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T03:43:04.949Z",
+      "seconds": 168.539,
+      "actor": "qa",
+      "title": "s5-requester-does-not-see-msp-private-task-message"
+    },
+    {
+      "at": "2026-10-26T03:43:04.967Z",
+      "seconds": 168.557,
+      "actor": "qa",
+      "title": "s5-requester-downloads-task-file-bytes"
+    },
+    {
+      "at": "2026-10-26T03:43:05.468Z",
+      "seconds": 169.058,
+      "actor": "qa",
+      "title": "s5-requester-reply-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:43:06.997Z",
+      "seconds": 170.587,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:08.936Z",
+      "seconds": 172.526,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T03:43:08.947Z",
+      "seconds": 172.537,
+      "actor": "qa",
+      "title": "s5-staff-sees-requester-reply-with-author"
+    },
+    {
+      "at": "2026-10-26T03:43:08.988Z",
+      "seconds": 172.578,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "5. Cleanup: customer removes the requester project grant"
+    },
+    {
+      "at": "2026-10-26T03:43:10.491Z",
+      "seconds": 174.081,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:43:12.452Z",
+      "seconds": 176.043,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:43:12.765Z",
+      "seconds": 176.355,
+      "actor": "alice",
+      "title": "s5-requester-project-grant-removed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.048,
+      "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+      "end": 7.415
+    },
+    {
+      "start": 7.415,
+      "title": "1. Shared IT teams message with an attached file (QA)",
+      "end": 14.556
+    },
+    {
+      "start": 14.556,
+      "title": "1. Customer reads the shared message and file",
+      "end": 18.289
+    },
+    {
+      "start": 18.289,
+      "title": "1. Organization-private messages from each side, then requester audience",
+      "end": 42.506
+    },
+    {
+      "start": 42.506,
+      "title": "1. Requester sees only requester-audience content in the portal",
+      "end": 46.358
+    },
+    {
+      "start": 46.358,
+      "title": "2. Author removes a disposable attachment; old link stops downloading",
+      "end": 60.996
+    },
+    {
+      "start": 60.996,
+      "title": "2. Uncertain send: server saved the message but the response was lost",
+      "end": 73.4
+    },
+    {
+      "start": 73.4,
+      "title": "3. Reply from the other organization, edit, and delete the root",
+      "end": 107.906
+    },
+    {
+      "start": 107.906,
+      "title": "4. Whole-thread audience change: MSP-private thread with reply and file",
+      "end": 130.795
+    },
+    {
+      "start": 130.795,
+      "title": "4. Restrict the disclosed thread back to Shared IT teams",
+      "end": 145.044
+    },
+    {
+      "start": 145.044,
+      "title": "5. Requester task conversation (portal) on a requester-visible shared task",
+      "end": 172.578
+    },
+    {
+      "start": 172.578,
+      "title": "5. Cleanup: customer removes the requester project grant",
+      "end": 176.91
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 176.96,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "requester",
+      "email": "cm-review-20261026-07.requester@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

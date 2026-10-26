@@ -1,0 +1,17 @@
+{
+  "policyId": "42d41fcc-1312-4d9a-833f-769b2581df02",
+  "tickets": [
+    "8f515d02-a2fa-4e20-95a4-cab017c6931a",
+    "e21d074f-27cd-4504-8176-e9bb253832e4"
+  ],
+  "links": [
+    {
+      "customer": "http://feature-co-managed-it.localhost:23374/msp/tickets/8f515d02-a2fa-4e20-95a4-cab017c6931a",
+      "msp": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/8f515d02-a2fa-4e20-95a4-cab017c6931a"
+    },
+    {
+      "customer": "http://feature-co-managed-it.localhost:23374/msp/tickets/e21d074f-27cd-4504-8176-e9bb253832e4",
+      "msp": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/e21d074f-27cd-4504-8176-e9bb253832e4"
+    }
+  ]
+}

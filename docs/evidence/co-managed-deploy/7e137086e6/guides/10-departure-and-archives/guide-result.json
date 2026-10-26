@@ -1,0 +1,122 @@
+{
+  "guide": "guides/10-departure-and-archives.html",
+  "coverage": "partial",
+  "build": {
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+    "buildId": "build-1792983401994",
+    "dist": ".next-review-final-54e75edf"
+  },
+  "sections": [
+    {
+      "section": "Preparation (disposable relationship CM-REVIEW-20261026-01 Accept-7 from guide 01)",
+      "result": "Pass",
+      "evidence": "departure-recording: qa-has-technician-access-to-the-disposable-relationship, msp-sla-policy-applies-to-the-disposable-client, msp-maps-customer-priorities-to-its-sla, customer-native-ticket-escalated-to-msp, msp-commercial-time-recorded-on-shared-ticket; 10-p-*.png",
+      "note": "All through the UI. QA got Collaborate (technician) staff access. A new MSP SLA policy 'CM-REVIEW-20261026-10 MSP policy' was created (P1 - Critical, response 1 hour) and applied to the disposable client. The 5 customer priorities were mapped to P1 - Critical; escalation is refused without both, and Oz has no default SLA policy. The customer created native ticket '... 864549 shared ticket' and escalated it to the MSP. QA posted a Shared IT teams comment with a file and a My organization only comment with a file. The customer posted a Private to <org> comment with a file. QA logged 15 commercial minutes (billing_mode commercial, work_item_type co_managed, DRAFT)."
+    },
+    {
+      "section": "1. Record the cutoff baseline",
+      "result": "Pass",
+      "evidence": "departure-recording: msp-sees-shared-and-own-private-not-customer-private, msp-downloads-shared-file-before-cutoff, msp-downloads-msp-private-file-before-cutoff, customer-sees-shared-and-own-private-not-msp-private; 10-1-*.png, receipt.json (baseline)",
+      "note": "Private content was separated in both directions before cutoff, and file SHA-256s were recorded. The archive was opened for a baseline (10 evidence rows, 0 manifests). No invoice association was prepared."
+    },
+    {
+      "section": "2. End the disposable relationship",
+      "result": "Pass",
+      "evidence": "departure-recording: 10-2-review-departure.png, 10-2-ended.png (relationship terminated 2026-10-26T03:55:18Z); departure-recording-continued: departure-link-after-reload-reports-ended-without-offering-departure, client-view-shows-relationship-ended-and-seats-released, customer-tenant-still-exists",
+      "note": "Review departure > End this relationship? > End relationship > Refresh status showed 'This co-management relationship has ended'. Part 1 then failed its own assertion: after reload, the client's Co-managed IT tab defaults to 'Co-managed IT not enabled' with a Relationship picker and the setup form. The ended relationship ('Relationship ended', 'Seats released') shows only after picking it, or when coming from the departure link (which now redirects to ...&section=history). The departure itself completed once, so part 2 ('departure-recording-continued') resumed from part 1's receipt instead of ending a second relationship."
+    },
+    {
+      "section": "3. Test the old access paths",
+      "result": "Pass",
+      "evidence": "departure-recording-continued: old-live-shared/msp-private/customer-private-file-link-denied (404), fresh-navigation-to-old-shared-route-shows-no-live-ticket, msp-customer-ticket-queue-no-longer-lists-the-ticket, customer-keeps-native-ticket-shared-and-private-content, former-msp-live-sla-field-absent-for-customer, customer-export-still-offered-after-departure; 10-3-*.png",
+      "note": "Partial within the section. The already-open browser tab check was prepared (10-2-stale-tab-before.png) but never executed: part 1 stopped before it, and the tab cannot be reopened from before the cutoff. Queued notification/mail suppression after cutoff was not run, because it needs an SMTP fault on the shared sink other agents use. The customer can still download its own private file (200)."
+    },
+    {
+      "section": "4. Read only retained evidence",
+      "result": "Pass",
+      "evidence": "departure-recording-continued: retained-shared-file-bytes-match, retained-msp-private-file-bytes-match, archive-excludes-customer-private-content, archive-shows-author-organizations-and-history, unrelated-principal-denied-retained-file-link, archive-does-not-track-customer-post-departure-state; 10-4-archive-retained.png/.json",
+      "note": "Retained shared and MSP-private files download with matching SHA-256. Customer-private body and file are absent. Entries show 'QA Tester \u00b7 Oz', plus the time-recorded entry and the saved work details. A retained-file link fetched by alice@whiterabbit.test (another organization) returned 404. That stands in for 'an unrelated MSP principal': no credentials exist for a second Oz user without assignment. The customer could not make a post-departure local change: the native ticket is read-only (no Add Comment, fields disabled), so 'archive does not track customer change' was only checked against a change that never happened. Observation: each message appears twice in Retained history (live capture plus the at-cutoff archived copy, e.g. private_comment_create and private_comment_archived) with identical labels."
+    },
+    {
+      "section": "5. Reconcile seats and commercial continuity",
+      "result": "Pass",
+      "evidence": "departure-recording-continued: allocation-released-once-and-sponsor-subscription-kept, msp-commercial-time-survives-departure, neither-organization-deleted; 10-5-overview-after.png, db-after.json",
+      "note": "Allocation ad0500f1 was released once with exactly 1 closure row. The sponsor entitlement (simulator subscription sub_774424209, capacity 7) is unchanged and was not cancelled. The commercial time entry 87a05c45 (15 min) survives. Both tenants exist. Invoice/draft continuity was not exercised."
+    }
+  ],
+  "actors": [
+    {
+      "name": "QA Tester",
+      "email": "qa@emeraldcity.oz",
+      "organization": "Oz (Emerald City) MSP"
+    },
+    {
+      "name": "Review Accept Admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "organization": "CM-REVIEW-20261026-01 Accept-7 IT"
+    },
+    {
+      "name": "Alice Liddell (cross-organization link probe only)",
+      "email": "alice@whiterabbit.test",
+      "organization": "White Rabbit IT"
+    }
+  ],
+  "steps": [
+    "Part 1 (departure-recording): QA gave itself Collaborate access on the disposable client, created and applied an MSP SLA policy, mapped customer priorities",
+    "Customer created a native ticket and escalated it to the MSP with a handoff note",
+    "QA posted shared + MSP-private comments with files; the customer posted a private comment with a file; QA logged 15 commercial minutes",
+    "Baseline: each side's visibility and file bytes; archive baseline",
+    "Opened a second MSP tab on the shared ticket; Review departure > End relationship > Refresh status (ended)",
+    "Part 2 (departure-recording-continued): reloaded departure link and client tab; picked the ended relationship",
+    "Old file links, old shared route, MSP customer queue (all denied or empty); customer native ticket, own file and export page",
+    "Archive: retained files compared byte-for-byte; private exclusion; cross-org link probe as Alice; customer local-change attempt (not offered)",
+    "Overview, allocation, closure count, time entry and tenants reconciled"
+  ],
+  "outcomes": [
+    "Relationship e24c064b terminated at 2026-10-26T03:55:18Z (Accept-7 only; White Rabbit and Kansas Farms untouched).",
+    "Allocation ad0500f1 released once; pool capacity 7 kept.",
+    "Retained archive: shared and MSP-private files intact; customer-private excluded.",
+    "The customer workspace keeps its ticket, shared and private content and its own file, but becomes read-only for ticket edits/comments."
+  ],
+  "limitations": [
+    "The recording is split in two: part 1 ended the relationship and then failed on the client-view assertion. Part 2 resumes from part 1's receipt. Neither alone covers the whole guide.",
+    "Stale already-open tab write check: not run.",
+    "Queued notification/mail suppression after cutoff: not run (needs a fault on the shared SMTP sink).",
+    "No unrelated Oz MSP principal credentials. A different-organization user (Alice) was used for the retained-link probe.",
+    "Customer post-departure local change was not possible: the ticket UI is read-only after departure. Duplicate, Create Task, Link to Task, Quick invoice and Delete still look enabled on that read-only ticket; not clicked.",
+    "Time entry stayed DRAFT. Approval and invoice/draft continuity across departure were not exercised.",
+    "QA sessions were refreshed through the form repeatedly (5-session limit under concurrent agents).",
+    "Dry runs left 3 more escalated test tickets ('... 703235', '... 818294', '... 429540'/'523506' partial) in the now-ended relationship; they appear in the archive list."
+  ],
+  "missingResources": [],
+  "dbReceipts": [
+    "departure-recording/receipt.json",
+    "departure-recording-continued/receipt.json",
+    "departure-recording-continued/db-after.json"
+  ],
+  "recordingDir": "departure-recording-combined",
+  "recordingDirs": [
+    "departure-recording",
+    "departure-recording-continued"
+  ],
+  "attempts": [
+    "attempts/departure-dryrun1-handoff-selector",
+    "attempts/departure-dryrun2-sla-mapping-required",
+    "attempts/departure-dryrun3-sla-policy-required",
+    "attempts/departure-dryrun4-time-entry-selector",
+    "attempts/departure-dryrun5 (dry run that reached the time form)",
+    "attempts/departure-continued-attempt1-departure-redirect"
+  ],
+  "possibleDefects": [
+    "After departure, /msp/clients/<id>?tab=co-managed defaults to 'Co-managed IT not enabled' plus a setup form. The ended relationship shows only after picking it in the Relationship picker. The guide expects the reloaded client to show the ended relationship. Repro: end a relationship, then open the client's Co-managed IT tab without relationshipId.",
+    "Retained history lists each captured message twice with the same label (the capture event and the *_archived event at cutoff). Repro: /msp/co-managed/archive > '... 864549 shared ticket'."
+  ],
+  "dataLeftBehind": [
+    "Ended relationship Accept-7 with its tickets/comments/files (kept as departure fixture)",
+    "SLA policy 'CM-REVIEW-20261026-10 MSP policy' applied to client CM-REVIEW-20261026-01 Accept-7; 5 priority mappings on the ended relationship",
+    "Time entry 87a05c45 (QA, 15 min DRAFT)"
+  ],
+  "notes": [
+    "Published recording departure-recording-combined is a lossless concat of departure-recording (part 1) and departure-recording-continued (part 2), composed by the lead for publication."
+  ]
+}

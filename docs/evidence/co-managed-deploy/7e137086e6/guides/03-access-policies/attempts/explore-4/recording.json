@@ -1,0 +1,52 @@
+{
+  "scenario": "explore-4",
+  "recordedAt": "2026-10-26T03:20:50.044Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:20:50.092Z",
+      "seconds": 0.048,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:52.014Z",
+      "seconds": 1.97,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:53.943Z",
+      "seconds": 3.899,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=ticketing&section=boards"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "partial",
+  "limitations": [],
+  "durationSeconds": 6.36,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

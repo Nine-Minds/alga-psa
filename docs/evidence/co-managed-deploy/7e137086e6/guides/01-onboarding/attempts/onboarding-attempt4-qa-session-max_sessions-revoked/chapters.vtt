@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:02.290 --> 00:00:47.842
+1. Create one workspace for one client
+
+2
+00:00:47.842 --> 00:00:52.882
+3. Recover the existing setup (resend invitation)
+
+3
+00:00:52.882 --> 00:01:08.473
+2. Require customer approval
+
+4
+00:01:08.473 --> 00:03:50.190
+3. Recover the existing setup (lost response, Retry same details)

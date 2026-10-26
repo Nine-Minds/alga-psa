@@ -1,0 +1,303 @@
+{
+  "scenario": "attempt-1",
+  "recordedAt": "2026-10-26T03:29:18.238Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-requester-exists-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-26T03:29:26.323Z",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "prep-disposable-ticket-with-requester-contact",
+      "passed": true,
+      "at": "2026-10-26T03:29:31.396Z",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "id": "qa-shared-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:29:36.675Z",
+      "data": {
+        "sha256": "60aeea1a37f5349dfafdfe26b7060d4b17df6a16ae5f9546c9f0d342200fa969"
+      }
+    },
+    {
+      "id": "qa-shared-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:29:37.963Z"
+    },
+    {
+      "id": "alice-reads-shared-message-and-file-bytes",
+      "passed": true,
+      "at": "2026-10-26T03:29:44.018Z"
+    },
+    {
+      "id": "alice-sees-organization-qualified-msp-author",
+      "passed": true,
+      "at": "2026-10-26T03:29:44.020Z",
+      "data": {}
+    },
+    {
+      "id": "alice-customer-private-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:29:47.527Z",
+      "data": {
+        "sha256": "bcdfc242ee27e2f6ce3b5201e6120f9904937811aa0d621821ef4b512c78da4f"
+      }
+    },
+    {
+      "id": "alice-customer-private-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:29:48.277Z"
+    },
+    {
+      "id": "qa-msp-private-published-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:29:54.680Z",
+      "data": {
+        "sha256": "e140b05c6f7ab7e843578b538ff880f5f14670e49d5419192c7a891888602e9e"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:29:18.282Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:18.283Z",
+      "seconds": 0.045,
+      "title": "chapter",
+      "data": "Before you start: requester and disposable shared ticket (customer native screens)"
+    },
+    {
+      "at": "2026-10-26T03:29:20.197Z",
+      "seconds": 1.959,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:22.152Z",
+      "seconds": 3.914,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/users"
+    },
+    {
+      "at": "2026-10-26T03:29:26.323Z",
+      "seconds": 8.085,
+      "actor": "alice",
+      "title": "prep-requester-exists-in-customer-tenant",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:28.413Z",
+      "seconds": 10.175,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:29:31.396Z",
+      "seconds": 13.158,
+      "actor": "alice",
+      "title": "prep-disposable-ticket-with-requester-contact",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:31.396Z",
+      "seconds": 13.158,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Shared IT teams message with an attached file (QA)"
+    },
+    {
+      "at": "2026-10-26T03:29:33.179Z",
+      "seconds": 14.941,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:35.181Z",
+      "seconds": 16.943,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:29:36.675Z",
+      "seconds": 18.437,
+      "actor": "qa",
+      "title": "qa-shared-published-file-bytes-match",
+      "data": {
+        "sha256": "60aeea1a37f5349dfafdfe26b7060d4b17df6a16ae5f9546c9f0d342200fa969"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:37.963Z",
+      "seconds": 19.725,
+      "actor": "qa",
+      "title": "qa-shared-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:29:37.964Z",
+      "seconds": 19.726,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Customer reads the shared message and file"
+    },
+    {
+      "at": "2026-10-26T03:29:39.452Z",
+      "seconds": 21.214,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:43.943Z",
+      "seconds": 25.705,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:29:44.018Z",
+      "seconds": 25.78,
+      "actor": "alice",
+      "title": "alice-reads-shared-message-and-file-bytes"
+    },
+    {
+      "at": "2026-10-26T03:29:44.020Z",
+      "seconds": 25.782,
+      "actor": "alice",
+      "title": "alice-sees-organization-qualified-msp-author",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T03:29:44.077Z",
+      "seconds": 25.839,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Organization-private messages from each side, then requester audience"
+    },
+    {
+      "at": "2026-10-26T03:29:46.043Z",
+      "seconds": 27.805,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:29:47.527Z",
+      "seconds": 29.289,
+      "actor": "alice",
+      "title": "alice-customer-private-published-file-bytes-match",
+      "data": {
+        "sha256": "bcdfc242ee27e2f6ce3b5201e6120f9904937811aa0d621821ef4b512c78da4f"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:48.277Z",
+      "seconds": 30.039,
+      "actor": "alice",
+      "title": "alice-customer-private-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:29:49.840Z",
+      "seconds": 31.602,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:52.187Z",
+      "seconds": 33.949,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:29:54.680Z",
+      "seconds": 36.442,
+      "actor": "qa",
+      "title": "qa-msp-private-published-file-bytes-match",
+      "data": {
+        "sha256": "e140b05c6f7ab7e843578b538ff880f5f14670e49d5419192c7a891888602e9e"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.045,
+      "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+      "end": 13.158
+    },
+    {
+      "start": 13.158,
+      "title": "1. Shared IT teams message with an attached file (QA)",
+      "end": 19.726
+    },
+    {
+      "start": 19.726,
+      "title": "1. Customer reads the shared message and file",
+      "end": 25.839
+    },
+    {
+      "start": 25.839,
+      "title": "1. Organization-private messages from each side, then requester audience",
+      "end": 38.31
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "qa-msp-private-message-persists-after-reload \"\"",
+  "durationSeconds": 38.36,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

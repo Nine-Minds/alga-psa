@@ -1,0 +1,1915 @@
+{
+  "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+  "metadataUpdatedAt": "2026-10-26T04:37:47.699Z",
+  "runtimeSummary": "Production review build build-1792983401994 (source 54e75edfab, the evidence-only commit after fix 7e137086e6) served at http://feature-co-managed-it.localhost:23374. Each guide's coverage label is in its recording metadata: covered only where every section was exercised; otherwise partial or blocked-external.",
+  "runtime": {
+    "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+    "mode": "production",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "buildId": "build-1792983401994",
+    "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "dist": ".next-review-final-54e75edf"
+  },
+  "build": {
+    "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+    "buildId": "build-1792983401994",
+    "dist": ".next-review-final-54e75edf"
+  },
+  "guides": [
+    {
+      "guide": "index.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/main.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/main.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/main.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:02:18.896Z",
+      "durationSeconds": 144.32,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP, fa7f912f-6b62-463e-85cc-ffedab47ac44)"
+        },
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, active, c64b2666-7dd6-4c61-8ced-4b233f628e61)"
+        },
+        {
+          "name": "Dorothy Gale",
+          "email": "admin@kansasfarms.test",
+          "organization": "Kansas Farms IT (customer, relationship terminated 2026-10-26T00:13Z, 3261f313-8e04-45df-94bc-0343e92ba454)"
+        }
+      ],
+      "steps": [
+        "QA opened native Oz ticket TIC001011 in Entry and Grid and inspected its controls.",
+        "Alice created a Service Desk category and a disposable ticket.",
+        "QA opened the shared ticket in Entry and in Grid.",
+        "QA changed status, priority and category, saved, and reloaded.",
+        "QA assigned QA Tester in the Co-managed section and reloaded.",
+        "QA checked read-only and absent customer-only controls in Entry and Grid.",
+        "Alice opened the native ticket, assigned herself and saved, and posted a private comment.",
+        "QA reopened the shared ticket and checked the assignee name and that the private note is hidden (Entry and Grid).",
+        "The Kansas admin opened Co-managed access and their ticket in Grid and Entry (read-only).",
+        "QA cleared the MSP assignment and reloaded."
+      ],
+      "outcomes": [
+        "Shared ticket b41d4144 persisted In Progress / Medium / customer category after the MSP save and reload.",
+        "MSP assignment was persisted in the sponsor reference and later cleared. The customer assignee (Alice) was persisted on the customer ticket.",
+        "The customer-private comment is not visible to the MSP in either layout.",
+        "Kansas ticket fields are read-only and unchanged (updated_at 2026-10-26T00:11:55Z)."
+      ],
+      "chapters": [
+        "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid",
+        "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board",
+        "MSP opens the same authoritative ticket in Entry and Grid",
+        "MSP edits status, priority and category natively; persisted to the customer ticket",
+        "MSP assigns its own technician in the Co-managed section",
+        "Field and privacy boundaries for the MSP in Entry and Grid",
+        "Customer sees MSP edits and assignment, assigns natively and writes privately",
+        "MSP sees the customer assignee but not the customer-private note",
+        "Ended Kansas Farms workspace: read-only check (no mutation attempted)",
+        "Restore: MSP clears its assignment on the disposable ticket"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "00-main/recording/walkthrough.webm",
+        "chapterVtt": "00-main/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "index.html",
+        "coverage": "covered",
+        "status": "covered: Native Oz ticket control (TIC001011) — Pass; Customer prepares category and disposable shared ticket — Pass; Shared ticket layouts (QA) — Pass; Native edit: status, priority, category (QA) — Pass; MSP assignment — Pass; Field and privacy controls (QA, Entry and Grid) — Pass; Customer (Alice) view, native assignment and private note — Pass; MSP sees customer assignee, not the private note — Pass; Read-only Kansas workspace (ended relationship) — Pass; Restore — Pass",
+        "sections": [
+          {
+            "section": "Native Oz ticket control (TIC001011)",
+            "result": "Pass",
+            "evidence": "native-entry-offers-full-native-controls, native-entry-has-no-co-managed-section, native-grid-offers-same-native-controls; 01-native-entry.png, 02-native-grid.png",
+            "note": "In Entry, QA has enabled Delete, Duplicate, Quick invoice, Tags, assignee, contact and client pickers, Add Time Entry and Save on the ordinary Oz ticket, and there is no Co-managed section. Grid offers enabled status, priority, board and assignee, plus tags and Quick invoice. The control ticket was not modified."
+          },
+          {
+            "section": "Customer prepares category and disposable shared ticket",
+            "result": "Pass",
+            "evidence": "customer-admin-creates-board-category-natively; 03-customer-category.png, 04-customer-ticket-created.png",
+            "note": "Alice created category 'CM-REVIEW-20261026-00-b printers' on the shared Service Desk board, and ticket #000021 'CM-REVIEW-20261026-00-b shared walkthrough ticket' (Open/Low). Both use native settings and quick add."
+          },
+          {
+            "section": "Shared ticket layouts (QA)",
+            "result": "Pass",
+            "evidence": "qa-entry-uses-qualified-shared-route, qa-grid-same-ticket-same-values; 05-qa-shared-entry.png, 06-qa-shared-grid.png",
+            "note": "QA opens the same authoritative customer ticket on the qualified /msp/co-management/tickets/<customer>/<relationship>/<ticket> route. Entry and Grid show the same values without changing the route."
+          },
+          {
+            "section": "Native edit: status, priority, category (QA)",
+            "result": "Pass",
+            "evidence": "msp-edits-render-after-reload; 07-qa-edits-before-save.png, 08-qa-edits-after-reload.png",
+            "note": "Changed Open→In Progress, Low→Medium, and category→customer category, then Save Changes. The customer ticket row persisted these values (DB receipt) and they render after reload."
+          },
+          {
+            "section": "MSP assignment",
+            "result": "Pass",
+            "evidence": "msp-assignment-persists-after-reload; 09-qa-assignment.png",
+            "note": "The Co-managed section Change control assigned QA Tester. After reload, co_managed_ticket_references.assigned_to is QA, and the customer's native assignee was left unchanged."
+          },
+          {
+            "section": "Field and privacy controls (QA, Entry and Grid)",
+            "result": "Pass",
+            "evidence": "customer-owned-assignee-board-contact-client-read-only-for-msp, customer-only-actions-and-sections-absent-for-msp, grid-enforces-same-authority-and-shows-edited-values; 10-qa-entry-boundaries.png, 11-qa-grid-boundaries.png",
+            "note": "In both layouts the customer-owned assignee, board, contact and client are read-only. Delete, Duplicate, Quick invoice, Tags, Create Task, Materials, Documents upload, Passwords, Watch list, Checklist and Revoke are absent. In Grid, status and priority stay editable and the edited values are shown."
+          },
+          {
+            "section": "Customer (Alice) view, native assignment and private note",
+            "result": "Pass",
+            "evidence": "customer-native-ticket-shows-msp-edits-and-assignment, customer-keeps-native-customer-controls, customer-assigns-own-technician-natively; 12-customer-sees-msp-edits.png, 13-customer-assigns-and-writes-privately.png",
+            "note": "Alice's native ticket shows In Progress, Medium, the category, and MSP assignment QA Tester. She keeps native Delete, Tags, assignee and board controls. She assigned herself through the native picker and saved (tickets.assigned_to = Alice), then posted a 'Private to White Rabbit IT' comment."
+          },
+          {
+            "section": "MSP sees customer assignee, not the private note",
+            "result": "Pass",
+            "evidence": "msp-sees-customer-assignee-name, msp-cannot-see-customer-private-note, msp-grid-also-hides-private-note; 14-msp-after-customer-changes.png",
+            "note": "QA sees the assignee name 'Alice' on a read-only picker. The private note is absent in both Entry and Grid."
+          },
+          {
+            "section": "Read-only Kansas workspace (ended relationship)",
+            "result": "Pass",
+            "evidence": "kansas-ticket-fields-read-only; steps kansas-co-management-page, kansas-actions-still-offered-not-exercised, kansas-entry-controls; 15-kansas-co-management.png, 16-kansas-grid.png, 17-kansas-entry.png",
+            "note": "Read-only checks only; no mutation attempted. On ticket 0a767ca1, status, priority, board, assignee, due and Resolve are disabled, and Entry offers no Save Changes and no Add Comment. Findings (not exercised): Grid still offers enabled Duplicate, Delete, Create Task, Quick invoice, Add contact, Add Material, Add a document, Add link, Add Asset and title edit. The Co-managed access page shows 'Could not load access settings. Reload to try again.' rather than an ended-relationship notice."
+          },
+          {
+            "section": "Restore",
+            "result": "Pass",
+            "evidence": "msp-assignment-cleared-after-reload; 18-restored.png",
+            "note": "The MSP assignment on the disposable ticket was cleared. The ticket keeps the customer's own edits (disposable record). Fixture ticket 000001 and TIC001011 were not modified."
+          }
+        ],
+        "resultFile": "00-main/guide-result.json",
+        "recordingJson": "00-main/recording/recording.json"
+      },
+      "limitations": [
+        "A disposable shared ticket on the shared Service Desk board was used instead of fixture 000001, to avoid disturbing concurrent guides 05/07/08.",
+        "There is no MSP viewer account (noassign@emeraldcity.oz) in the reprovisioned data. The read-only comparison uses the ended Kansas workspace, as the brief specifies.",
+        "QA's co-managed technician assignment on White Rabbit was missing from the reprovisioned data. It was added through the sponsor's Co-managed IT view (guide 09 prep-native-setup) and left in place."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.286072,
+        "chapters": 10,
+        "lateSeek": 143.32
+      }
+    },
+    {
+      "guide": "guides/index.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/collection.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/collection.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/collection.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:36:02.788Z",
+      "durationSeconds": 29.96,
+      "actors": [
+        {
+          "name": "Reviewer (no sign-in)",
+          "email": "n/a",
+          "organization": "Published review packet at http://100.82.172.57:8874"
+        }
+      ],
+      "steps": [
+        "Open the published guide collection at /guides/index.html and confirm it names runtime 54e75edfab",
+        "Follow each of the twelve section links from the collection",
+        "On each section page confirm the recorded runtime and complete recording status, compare the scenario result label with the coverage ledger, play the recording and seek to its last chapter",
+        "Return to the collection"
+      ],
+      "outcomes": [
+        "All twelve section links resolve to pages rendered for runtime 54e75edfab with a complete recording",
+        "Each section page shows its ledger label: 6 covered (04, 05, 06, 07, 08, 09), 3 partial (01, 03, 10) and 3 blocked-external (02, 11, 12). The main ticket-screen walkthrough on the packet root is labelled separately (covered).",
+        "Every section player played and seeked to its last chapter in Chrome"
+      ],
+      "chapters": [
+        "Open the guide collection",
+        "Section 01: partial",
+        "Section 02: blocked-external",
+        "Section 03: partial",
+        "Section 04: covered",
+        "Section 05: covered",
+        "Section 06: covered",
+        "Section 07: covered",
+        "Section 08: covered",
+        "Section 09: covered",
+        "Section 10: partial",
+        "Section 11: blocked-external",
+        "Section 12: blocked-external",
+        "Return to the collection"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "collection/collection-recording/walkthrough.webm",
+        "chapterVtt": "collection/collection-recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/index.html",
+        "coverage": "covered",
+        "status": "covered: Open the collection — Pass; Section 01 link, provenance, label and player — Pass; Section 02 link, provenance, label and player — Pass; Section 03 link, provenance, label and player — Pass; Section 04 link, provenance, label and player — Pass; Section 05 link, provenance, label and player — Pass; Section 06 link, provenance, label and player — Pass; Section 07 link, provenance, label and player — Pass; Section 08 link, provenance, label and player — Pass; Section 09 link, provenance, label and player — Pass; Section 10 link, provenance, label and player — Pass; Section 11 link, provenance, label and player — Pass; Section 12 link, provenance, label and player — Pass",
+        "sections": [
+          {
+            "section": "Open the collection",
+            "result": "Pass",
+            "evidence": "collection-names-recorded-runtime, collection-links-all-twelve-sections; 00-collection.png"
+          },
+          {
+            "section": "Section 01 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-01-names-this-build-and-complete-recording, section-01-result-label-matches-ledger, section-01-player-plays-and-seeks",
+            "note": "label partial"
+          },
+          {
+            "section": "Section 02 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-02-names-this-build-and-complete-recording, section-02-result-label-matches-ledger, section-02-player-plays-and-seeks",
+            "note": "label blocked-external"
+          },
+          {
+            "section": "Section 03 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-03-names-this-build-and-complete-recording, section-03-result-label-matches-ledger, section-03-player-plays-and-seeks",
+            "note": "label partial"
+          },
+          {
+            "section": "Section 04 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-04-names-this-build-and-complete-recording, section-04-result-label-matches-ledger, section-04-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 05 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-05-names-this-build-and-complete-recording, section-05-result-label-matches-ledger, section-05-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 06 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-06-names-this-build-and-complete-recording, section-06-result-label-matches-ledger, section-06-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 07 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-07-names-this-build-and-complete-recording, section-07-result-label-matches-ledger, section-07-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 08 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-08-names-this-build-and-complete-recording, section-08-result-label-matches-ledger, section-08-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 09 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-09-names-this-build-and-complete-recording, section-09-result-label-matches-ledger, section-09-player-plays-and-seeks",
+            "note": "label covered"
+          },
+          {
+            "section": "Section 10 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-10-names-this-build-and-complete-recording, section-10-result-label-matches-ledger, section-10-player-plays-and-seeks",
+            "note": "label partial"
+          },
+          {
+            "section": "Section 11 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-11-names-this-build-and-complete-recording, section-11-result-label-matches-ledger, section-11-player-plays-and-seeks",
+            "note": "label blocked-external"
+          },
+          {
+            "section": "Section 12 link, provenance, label and player",
+            "result": "Pass",
+            "evidence": "section-12-names-this-build-and-complete-recording, section-12-result-label-matches-ledger, section-12-player-plays-and-seeks",
+            "note": "label blocked-external"
+          }
+        ],
+        "resultFile": "collection/guide-result.json",
+        "recordingJson": "collection/collection-recording/recording.json"
+      },
+      "limitations": [
+        "Composition only: this walkthrough verifies the collection and its links, provenance, labels and players. It does not accept or promote any section guide; consult each section recording."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.482812,
+        "chapters": 14,
+        "lateSeek": 28.96
+      }
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/01-onboarding.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/01-onboarding.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/01-onboarding.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:41:15.131Z",
+      "durationSeconds": 157.72,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (Emerald City) MSP"
+        },
+        {
+          "name": "Review Accept Admin",
+          "email": "cm-review-20261026-01-accept-7@cmreview.test",
+          "organization": "CM-REVIEW-20261026-01 Accept-7 IT (new customer workspace)"
+        }
+      ],
+      "steps": [
+        "Preparation: the pool was short (other agents changed allocations concurrently), so 6 -> 7 seats were added through the pool editor (simulator)",
+        "QA created client CM-REVIEW-20261026-01 Accept-7 and opened its Co-managed IT tab",
+        "Filled Enable co-managed IT and selected Create workspace and invite administrator; waited for Awaiting customer acceptance; reloaded",
+        "Used Resend administrator invitation; confirmed a second invitation mail in the SMTP sink",
+        "Opened the latest invitation link as the new administrator, set a password, read Review your co-management relationship",
+        "Tried /msp/tickets before acceptance (review screen still shown), then Accept and activate workspace, completed first-run setup, reloaded the Ticketing Dashboard",
+        "QA reopened the Accept-7 client: Active, no Cancel setup",
+        "QA created client CM-REVIEW-20261026-01 Cancel-7, filled setup (Escalated tickets only); the provision response was dropped in the browser; resubmitted the same details",
+        "Cancel setup > Delete workspace and cancel; waited for cleanup; reloaded; rechecked Accept-7 and the overview"
+      ],
+      "outcomes": [
+        "Accepted fixture retained for guide 10: client 42b27ac2-5221-446a-ad94-f781c3398493, customer tenant 0a3c039e-c4c7-4108-8301-bfe5232a829a, relationship e24c064b-1b13-471d-8f24-3441f26d9b0e, operation 54fb5726-1a14-45a2-8c72-0c5780e65a88, allocation ad0500f1 (1 seat, active). Credentials are in cm-review-20261026-01-accept-7-admin.json (mode 600).",
+        "Cancel-7: operation e7127cab cancelled, allocation dbd520b8 released, customer tenant 455cd911 deleted.",
+        "Pool after the run: 7 purchased (simulator)."
+      ],
+      "chapters": [
+        "1. Create one workspace for one client",
+        "3. Recover the existing setup (resend invitation)",
+        "2. Require customer approval",
+        "3. Recover the existing setup (lost response, Retry same details)",
+        "4. Cancel only an unclaimed workspace"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "01-onboarding/onboarding-recording/walkthrough.webm",
+        "chapterVtt": "01-onboarding/onboarding-recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/01-onboarding.html",
+        "coverage": "partial",
+        "status": "partial: 1. Create one workspace for one client — Pass; 2. Require customer approval — Pass; 3. Recover the existing setup — Pass; 4. Cancel only an unclaimed workspace — Pass",
+        "sections": [
+          {
+            "section": "1. Create one workspace for one client",
+            "result": "Pass",
+            "evidence": "one-workspace-for-this-client-awaiting-acceptance, seats-reserved-once, msp-has-no-live-relationship-before-acceptance; 01-accept-setup-form.png, 01-1-awaiting-acceptance.png",
+            "note": "Client 'CM-REVIEW-20261026-01 Accept-7' was created through Clients > New. Enable co-managed IT was filled in on the client's Co-managed IT tab: workspace 'CM-REVIEW-20261026-01 Accept-7 IT', 1 seat, Oversight of the initial service desk board, General Support queue. The UI briefly showed 'Queued', then 'Awaiting customer acceptance' after reload. Exactly one operation and one allocation exist for this customer; the allocation was reserved and the relationship not active until acceptance. The intermediate 'Preparing workspace' label was not caught in the UI."
+          },
+          {
+            "section": "2. Require customer approval",
+            "result": "Pass",
+            "evidence": "invited-admin-signed-into-the-exact-customer-workspace, review-shows-sponsor-scope-and-destination-queue, deep-link-to-native-work-still-shows-acceptance-before-approval, customer-reaches-own-workspace-after-acceptance-with-no-projects-or-delegation, msp-client-view-shows-active-and-no-cancel-setup; 01-2-*.png, invitation-mail.json",
+            "note": "The invitation was opened from the SMTP sink. The administrator set a password on /auth/team/setup and was signed into the new customer tenant. The review screen showed the sponsor (Oz), 'Service Desk — View and collaborate', the General Support escalation queue, and 'no shared projects or delegated workspace administration'. A deep link to /msp/tickets still showed the review screen before acceptance. After 'Accept and activate workspace' and the first-run setup, the Ticketing Dashboard survived a reload. The relationship became active with 1 board scope, 0 project scopes and 0 delegated grants. The MSP client view showed Active, offered no Cancel setup, and the allocation became active."
+          },
+          {
+            "section": "3. Recover the existing setup",
+            "result": "Pass",
+            "evidence": "resend-keeps-one-workspace-and-one-allocation, lost-response-reports-unconfirmed-result-and-keeps-form, retry-recovers-the-same-operation-one-workspace-one-allocation; 01-3-after-resend.png, 01-3-lost-response-retry.png",
+            "note": "Resend administrator invitation on the pending setup delivered a second mail to the sink with the same operation, tenant and single allocation. For the second setup the provision response was dropped in the browser after the server executed it. The form showed 'The request result could not be confirmed. Retry these same details to recover it.' and kept the details. Resubmitting recovered the same operation (one operation, one allocation). Doc/UI mismatch: the guide says to use 'Retry', but after a lost response the button still reads 'Create workspace and invite administrator'. Worker-failure recovery, expired invitation and invitation delivery failure were not induced."
+          },
+          {
+            "section": "4. Cancel only an unclaimed workspace",
+            "result": "Pass",
+            "evidence": "cancel-fixture-holds-one-reserved-seat, cancel-dialog-explains-deletion, cancel-deletes-unclaimed-workspace-and-releases-seat-once, accepted-workspace-unaffected-by-cancellation; 01-4-*.png",
+            "note": "On 'CM-REVIEW-20261026-01 Cancel-7' (Escalated tickets only, never accepted): Cancel setup opened 'Cancel workspace setup?', then Delete workspace and cancel. DB states observed: cleanup_requested with the seat still reserved, then cancelled with the seat released. The customer tenant row is gone and the allocation was released once. The accepted Accept-7 workspace stayed Active. Refusal for a claimed workspace was checked only as the absence of Cancel setup on the accepted client."
+          }
+        ],
+        "resultFile": "01-onboarding/guide-result.json",
+        "recordingJson": "01-onboarding/onboarding-recording/recording.json"
+      },
+      "limitations": [
+        "QA is limited to 5 concurrent sessions (MAX_SESSIONS=5, oldest revoked first) and other agents sign in as QA 4-9 times a minute. A QA session lived about 35-70 s, so the recording signs QA in again through the form when needed (qa-session-refresh steps). Four earlier attempts failed on this or on concurrent allocation changes.",
+        "The SMTP sink is the configured simulator, not a real mailbox.",
+        "The lost response was induced with Playwright route interception (the server executed the request and the browser response was aborted).",
+        "Worker failure, expired-invitation resend and invitation delivery failure were not induced.",
+        "Refusal to cancel a claimed workspace was not probed directly.",
+        "co_managed_provisioning_operations.state stays 'pending_acceptance' after acceptance (also true for White Rabbit), while the relationship and UI show Active. Recorded as an observation."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.490652,
+        "chapters": 5,
+        "lateSeek": 156.72
+      }
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/02-licensing-and-seats.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/02-licensing-and-seats.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/02-licensing-and-seats.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:19:41.738Z",
+      "durationSeconds": 42.48,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (Emerald City) MSP"
+        }
+      ],
+      "steps": [
+        "Signed in as qa@emeraldcity.oz through the real form",
+        "Opened Co-managed IT overview, read Purchased/Allocated/Available, reloaded",
+        "Opened White Rabbit client > Co-managed IT > Change seat allocation and compared the pool line; cancelled",
+        "Set Total seats in your pool from 4 to 5, Review purchase, read monthly total and amount due, Confirm purchase",
+        "Reloaded the overview until 5 purchased was shown; compared with the simulator subscription quantity",
+        "Labelled probe: resent the same purchase operation id directly to the server action; compared operations, quantity and events",
+        "White Rabbit > Change seat allocation 1 -> 2, Save allocation, reloaded and reopened",
+        "Entered 0 (Save disabled); entered a value one seat over availability, Save allocation, read shortfall review (new total 6), dismissed without confirming",
+        "Restored White Rabbit allocation to 1 and reloaded",
+        "Confirmed the hosted pool editor shows no Manage license link; visited /msp/licenses (redirected to dashboard)",
+        "Retained state: set pool back to 4, Review purchase, Confirm purchase, reloaded"
+      ],
+      "outcomes": [
+        "Pool 4 -> 5 after simulator verification, then 5 -> 4 (net retained 4). Before this recording a failed attempt left the pool at 4 (3 -> 4, operation da1cdd56). That seat is kept as headroom for guide 01.",
+        "4 purchase operations exist (3, 4, 5, 4), all completed against simulator subscription sub_774424209. Receipts are retained.",
+        "White Rabbit allocation is back to 1 (active). Allocated total is 1."
+      ],
+      "chapters": [
+        "1. Reconcile the pool with customer allocations",
+        "2. Review a hosted pool purchase (configured simulator)",
+        "3. Change a customer allocation (White Rabbit, reversible +1)",
+        "4. Self-hosted branch (License Management link only)",
+        "Retained state: return the pool to its pre-recording quantity"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "02-licensing-and-seats/licensing-recording/walkthrough.webm",
+        "chapterVtt": "02-licensing-and-seats/licensing-recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/02-licensing-and-seats.html",
+        "coverage": "blocked-external",
+        "status": "blocked-external: 1. Reconcile the pool with customer allocations — Pass; 2. Review a hosted pool purchase — Pass; 3. Change a customer's allocation — Pass; 4. Check the self-hosted branch separately — Blocked",
+        "sections": [
+          {
+            "section": "1. Reconcile the pool with customer allocations",
+            "result": "Pass",
+            "evidence": "pool-stats-match-entitlement-after-reload, customer-allocations-fit-inside-verified-capacity, client-allocation-matches-db-and-pool-hint; 02-1-overview-pool.png, 02-1-white-rabbit-seat-dialog.png",
+            "note": "Overview showed 4 purchased / 1 allocated / 3 available after reload, matching co_managed_entitlements and live allocations. The client used was White Rabbit, not a disposable client: guide 01, which creates the disposable client, runs after this guide."
+          },
+          {
+            "section": "2. Review a hosted pool purchase",
+            "result": "Pass",
+            "evidence": "review-shows-quantity-monthly-total-and-amount-due, capacity-unchanged-while-only-reviewed, capacity-increases-after-verification-and-reconciles-on-reload, provider-subscription-quantity-matches-pool, purchase-recorded-as-one-operation, no-pending-purchase-left-to-resume, probe-same-operation-replay-creates-no-second-charge; 02-2-review-purchase.png, 02-2-pool-after-purchase.png, purchase-receipt.json",
+            "note": "Simulator only. The pool went from 4 to 5. The review showed '5 seats · $57.45 per month, Estimated amount due now: $11.49'. Capacity stayed at 4 while the purchase was only under review and became 5 after the simulator verified it. The simulator subscription sub_774424209 quantity became 5, recorded as operation 93d614ae-4d37-4c9c-84e3-6f8db619bb4f. The existing subscription was updated, so no hosted checkout session was opened and Resume purchase was never offered. A labelled direct server-action probe resent the same operation id. It returned 200 and created no new operation, no quantity change and no new simulator event. It did bump co_managed_entitlements.revision (6 to 7), which looks like re-verification. Not real Stripe."
+          },
+          {
+            "section": "3. Change a customer's allocation",
+            "result": "Pass",
+            "evidence": "allocation-changes-by-requested-amount-availability-by-opposite, reduction-below-usage-minimum-cannot-be-saved, shortfall-reviews-new-pool-total-without-charging, white-rabbit-allocation-restored-and-pool-unchanged; 02-3-*.png",
+            "note": "White Rabbit went from 1 to 2 seats. After reload the pool read 5 purchased / 2 allocated / 3 available. With a value of 0, Save allocation was disabled (min 1, White Rabbit has 1 active technician). Asking for more than was available opened a shortfall review: 'Add 1 seat to the sponsor pool (new total 6).' It was not confirmed, and capacity did not change. The allocation was restored to 1 through the same dialog. No pending invitations existed, so the invitation part of the floor was not exercised."
+          },
+          {
+            "section": "4. Check the self-hosted branch separately",
+            "result": "Blocked",
+            "evidence": "hosted-deployment-offers-purchase-not-manage-license; 02-4-license-management.png/.json",
+            "note": "This is a hosted deployment. The pool editor offers Review purchase, not Manage license. Visiting /msp/licenses directly redirected to /msp/dashboard. Installing a signed licence, lapse and renewal could not be run: there is no operator-supplied signed test licence and no self-hosted installation."
+          }
+        ],
+        "resultFile": "02-licensing-and-seats/guide-result.json",
+        "recordingJson": "02-licensing-and-seats/licensing-recording/recording.json"
+      },
+      "limitations": [
+        "Configured Stripe simulator (127.0.0.1:9175), not real Stripe. It certifies no live SKU or price.",
+        "The purchase updated an existing simulator subscription, so the embedded checkout and Resume purchase path was not exercised.",
+        "Allocation checks used the active White Rabbit relationship (+1, restored) instead of a disposable client, because of the requested guide order.",
+        "The shortfall purchase from the client allocation dialog was reviewed but not paid.",
+        "The same-operation replay is a direct server-action probe, not a UI flow.",
+        "Self-host signed licence, lapse and renewal were not exercised.",
+        "The header on every MSP page shows the raw tenant UUID (fa7f912f-...) as a pill. This is an observation, not a guide check.",
+        "Missing resource: Real Stripe test account with the co-managed seat price (release-owner acceptance)",
+        "Missing resource: Operator-supplied tenant-bound signed self-host test licence on an isolated self-hosted installation, plus a lapse/renewal lifecycle fixture"
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.485889,
+        "chapters": 5,
+        "lateSeek": 41.48
+      }
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/03-access-policies.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/03-access-policies.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/03-access-policies.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:30:19.172Z",
+      "durationSeconds": 154.28,
+      "actors": [
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer)"
+        },
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        },
+        {
+          "name": "CMReview03 Viewer",
+          "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+          "organization": "Oz (MSP), Technician role, viewer assignment during the run"
+        }
+      ],
+      "steps": [
+        "Alice created two disposable tickets on the disposable board",
+        "Alice inspected Ticket access modes, Boards and Projects; added the disposable board with View; saved and reloaded",
+        "Viewer (unassigned) opened the shared ticket URL and was denied",
+        "QA assigned QA Tester (Collaborate) and the viewer (View) in the client's Co-managed IT view; saved and reloaded",
+        "QA opened the board-only ticket read-only (customer View scope)",
+        "Alice added a 'Private to' note; QA confirmed it is not shown",
+        "QA temporarily assigned the guide-08 SLA policy to White Rabbit and mapped Critical",
+        "Alice switched to Escalated tickets only; QA denied on both tickets; Alice escalated one; QA could open only that one",
+        "Alice restored board oversight and re-added Service Desk and the disposable board; QA restored SLA prerequisites; QA could read the board-only ticket again",
+        "Alice set the disposable board to Collaborate; QA edited status in Entry, reloaded, checked Grid",
+        "Viewer checked Entry and Grid read-only state",
+        "QA posted a shared comment with an attachment on the escalated ticket and downloaded it",
+        "QA listed both tickets in Customer oversight",
+        "Alice revoked the individual ticket grant with a handoff note and reopened the page",
+        "QA still read the ticket via the board grant; Alice removed the disposable board; QA refreshed old URLs, the attachment link, oversight list and CSV export",
+        "QA removed the viewer assignment"
+      ],
+      "outcomes": [
+        "Board scope View persisted after reload (can_collaborate=false)",
+        "Escalation-only: un-escalated tickets denied even to an assigned technician; escalated #000031 available; sibling denied",
+        "Staff assignments technician/viewer persisted after reload; customer View scope made the technician read-only",
+        "Customer-private note absent from the technician's shared view",
+        "Technician status edit (In Progress) persisted after reload; viewer read-only in Entry and Grid",
+        "Explicit grant revoked (grant_revoked_at set, responsibility returned to customer); independent board grant still allowed reads until the board was removed",
+        "After removal: old URLs denied, captured attachment link 404, fresh oversight list and CSV excluded both tickets",
+        "Scope, mode, staff and SLA prerequisites match the run's baseline"
+      ],
+      "chapters": [
+        "Preparation: disposable board, tickets and viewer principal",
+        "1. Customer controls board and project scope",
+        "2. MSP assigns its own people",
+        "1. Escalated tickets only versus board oversight",
+        "3. Compare a viewer with a technician",
+        "4. Revoke the right grant",
+        "Restore reviewed access"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "03-access-policies/recording/walkthrough.webm",
+        "chapterVtt": "03-access-policies/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/03-access-policies.html",
+        "coverage": "partial",
+        "status": "partial: Before you start (preparation) — Pass; 1. Customer controls board and project scope — Pass; 2. MSP assigns its own people — Pass; 3. Compare a viewer with a technician — Pass; 4. Revoke the right grant — Pass; Field visibility limits — Not run; Pass criteria and recovery — Pass",
+        "sections": [
+          {
+            "section": "Before you start (preparation)",
+            "result": "Pass",
+            "evidence": "prep-disposable-board, prep-disposable-tickets, prep-viewer-principal; quick-add-*.png",
+            "note": "Alice created two disposable tickets on the disposable board inside this recording (#000031 'CM-REVIEW-20261026-03 r5 escalated board ticket', #000032 'r5 board-only ticket'). The board 'CM-REVIEW-20261026-03 Access board' and the viewer principal were created through the UI in failed attempt a2 (kept under attempts/) and reused here. The documented viewer noassign@emeraldcity.oz does not exist in the rebuilt Oz tenant, so QA created cm-review-20261026-03-viewer@emeraldcity.oz (Technician role) in Settings > Users."
+          },
+          {
+            "section": "1. Customer controls board and project scope",
+            "result": "Pass",
+            "evidence": "1-proposed-ticket-access-modes, 1-projects-configured-separately, 1-board-view-persists-after-reload, 1-escalation-only-persists, 1-escalation-only-hides-unescalated-board-ticket, 1-technician-assignment-cannot-expand-customer-scope, 1-customer-escalates-through-native-ticket, 1-escalated-ticket-now-available, 1-unescalated-sibling-still-unavailable, 1-board-oversight-and-boards-restored, 1-escalation-prerequisites-restored, 1-board-oversight-reopens-unescalated-ticket; 1-*.png",
+            "note": "Alice searched for the disposable board, added it with View, saved and reloaded; the View level persisted. She then switched to 'Escalated tickets only'. Both disposable tickets were denied to QA even though QA has a technician assignment. Alice escalated #000031 from its native ticket, after which QA could open it while #000032 stayed denied. Back in board oversight, #000032 opened again. Saving escalation-only clears every board grant (the editor empties the board list in that mode). Restoring oversight re-adds them, so the White Rabbit relationship had no board grants for 17 s (04:31:16.9Z to 04:31:33.8Z); Service Desk/Collaborate and the disposable board/View were re-added and verified. Escalation is blocked until the MSP has a client SLA policy and a mapping for the ticket's priority. QA temporarily assigned guide 08's 'CM-REVIEW-20261026-08 final-b MSP policy' to White Rabbit and mapped Critical to P1 (04:31:02Z to 04:31:47Z), then restored both to baseline."
+          },
+          {
+            "section": "2. MSP assigns its own people",
+            "result": "Pass",
+            "evidence": "2-unassigned-principal-denied-by-url, 2-staff-assignments-persist-after-reload, 2-assigned-technician-reads-approved-board, 2-customer-view-scope-limits-technician-to-read-only, 2-customer-private-note-saved, 2-customer-private-note-hidden-from-assigned-technician; 2-*.png",
+            "note": "The unassigned viewer opening the shared ticket URL was denied. In the White Rabbit client's Co-managed IT view, QA saved QA Tester as Collaborate (already present in the baseline) and the viewer as View; both persisted after reload. The board was approved only for View, so the technician could read but got no save bar. Alice's 'Private to' note on #000032 was not visible to the assigned technician."
+          },
+          {
+            "section": "3. Compare a viewer with a technician",
+            "result": "Pass",
+            "evidence": "3-board-collaborate-saved, 3-technician-entry-category-enabled, 3-shared-ticket-has-no-tags, 3-technician-edit-persists-after-reload, 3-shared-category-creation-absent, 3-technician-grid-offers-edit-and-shows-persisted-status, 3-viewer-entry-category-disabled, 3-viewer-entry-status-readable, 3-viewer-entry-no-save-bar, 3-viewer-grid-status-readable-and-locked, 3-viewer-grid-no-save-bar; 3-*.png",
+            "note": "Alice raised the disposable board to Collaborate. In Entry, QA changed status Open to In Progress and saved; the value persisted after reload. No Tags control or category creation was offered. The viewer saw 'In Progress' read-only in both layouts: Category and Status disabled, no save bar. Uncertain observation: in Grid, the first button inside QA's category control reported disabled while Entry offered the picker. The screenshot (3-technician-grid.png) looks enabled and White Rabbit has no categories, so this is not claimed as a defect."
+          },
+          {
+            "section": "4. Revoke the right grant",
+            "result": "Pass",
+            "evidence": "4-oversight-lists-both-before-revocation, 4-board-only-ticket-has-no-explicit-grant, 4-revoked-grant-gone-on-reopen, 4-independent-board-grant-still-allows-read, 4-disposable-board-scope-removed, 4-old-url-denied-after-last-grant-removed, 4-board-only-ticket-denied, 4-captured-attachment-link-denied, 4-fresh-list-excludes-revoked-work, 4-fresh-export-excludes-revoked-work; 4-*.png, 3-attachment-posted.png, oversight-after-revocation.csv",
+            "note": "Before revocation, QA posted a Shared IT teams comment with a file on #000031 and downloaded it (200). Alice revoked #000031 in Individual ticket access with a handoff note; on reopening the page it was gone. QA could still read #000031 through the independent board grant. After Alice removed the disposable board from scope, both old URLs were denied and the captured attachment link returned 404. Fresh Customer oversight showed 0 rows and the fresh CSV export contained neither title. The export used the same search filter, so the CSV was header-only."
+          },
+          {
+            "section": "Field visibility limits",
+            "result": "Not run",
+            "evidence": "-",
+            "note": "No operator-prepared restricted field policy exists in this environment. The guide says to verify such a policy through the shared screen and has no UI for creating one, so shared field redaction was not exercised."
+          },
+          {
+            "section": "Pass criteria and recovery",
+            "result": "Pass",
+            "evidence": "restore-customer-scope-matches-baseline, restore-qa-assignment-unchanged-from-baseline, restore-viewer-assignment-removed; db-receipts.json, restore-final-staff.png",
+            "note": "Final scope: board_scope with Service Desk/Collaborate only, as in the baseline. QA technician is unchanged; the viewer assignment was removed through the MSP UI. Escalation prerequisites (White Rabbit client SLA policy, Critical mapping) are back to none/Not mapped."
+          }
+        ],
+        "resultFile": "03-access-policies/guide-result.json",
+        "recordingJson": "03-access-policies/recording/recording.json"
+      },
+      "limitations": [
+        "Field visibility limits were not exercised: no operator-prepared restricted field policy exists.",
+        "noassign@emeraldcity.oz does not exist in the rebuilt Oz tenant; a disposable viewer principal was created through Settings > Users instead.",
+        "Board and viewer were created through the UI in failed attempt a2, not inside this recording.",
+        "Escalation-only clears all board grants, so the White Rabbit relationship had no board grants for 17 s (04:31:16.9Z to 04:31:33.8Z), which affected concurrent reviewers. An earlier failed attempt (a2) caused a ~2 min gap (03:25:13Z to 03:27Z), and Service Desk was re-added through the customer UI (attempts/restore-service-desk-*).",
+        "Customer escalation needed guide 08's disposable SLA policy temporarily assigned to White Rabbit plus a Critical mapping (45 s); both were restored.",
+        "Missing resource: Operator-prepared restricted shared-field policy (for 'Field visibility limits')"
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.488123,
+        "chapters": 7,
+        "lateSeek": 153.28
+      }
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/04-delegated-administration.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/04-delegated-administration.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/04-delegated-administration.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:35:28.844Z",
+      "durationSeconds": 129.6,
+      "actors": [
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer)"
+        },
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        }
+      ],
+      "steps": [
+        "QA raised White Rabbit's seat allocation from 1 to 2 (Client > Co-managed IT > Change seat allocation)",
+        "Alice created the non-administrator user CMReview04 Profile (Technician role) in Settings > Users",
+        "Alice opened Delegated administration and confirmed unassigned MSP staff are not offered as principals",
+        "Alice approved QA for 'Edit board display settings' on the disposable board and refreshed access",
+        "QA opened the approved editor, changed the board description and saved; refresh showed the new value",
+        "Alice opened the board in her Settings > Boards and saw the delegated description",
+        "QA restored the original description through the approved editor and reloaded",
+        "With QA's editor open, Alice revoked the approval in a second session",
+        "QA attempted a stale save, then Retry same request, then Refresh access",
+        "Alice confirmed her own administrator profile is not an eligible target, then approved QA to edit CMReview04 Profile",
+        "QA changed the first name and saved; Alice saw it in Settings > Users; QA restored it",
+        "Alice deactivated CMReview04 Profile to free the seat, then created invitation cm-review-20261026-04-invitee@whiterabbit.test",
+        "Alice approved QA to resend that invitation; QA inspected recipient/role/expiry and selected Resend approved invitation",
+        "Compared the delivered SMTP-sink messages and invitation record",
+        "Alice revoked the remaining approvals and the review invitation; QA restored the allocation to 1"
+      ],
+      "outcomes": [
+        "Grant 47a7653c... (board_settings) bound to QA and board 21ec7402...; delegated description persisted and was visible in the customer's native board settings, then restored to 'CM-REVIEW-20261026-04 original description'",
+        "After revocation, the stale editor save was refused; board description unchanged; retry did not revive the approval; refreshed editor no longer lists the record",
+        "Profile first name changed to CMReview04Delegated, shown in customer Users after reload, then restored",
+        "Invitation 15217acd... resend delivered a second message with the identical setup link; invitation record unchanged (expiry 2026-10-27T03:37:05Z)",
+        "All three approvals revoked; White Rabbit allocation back to 1 seat"
+      ],
+      "chapters": [
+        "Preparation: disposable board, non-administrator user and invitation",
+        "1. Approve one board operation",
+        "2. Perform only the approved change",
+        "3. Prove revocation closes an open editor",
+        "4. Edit a non-administrator profile",
+        "4. Resend a customer-created invitation",
+        "Revoke review approvals and confirm retained state"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "04-delegated-administration/recording/walkthrough.webm",
+        "chapterVtt": "04-delegated-administration/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/04-delegated-administration.html",
+        "coverage": "covered",
+        "status": "covered: Before you start (preparation) — Pass; 1. Approve one board operation — Pass; 2. Perform only the approved change — Pass; 3. Prove revocation closes an open editor — Pass; 4. Review the other bounded operations: non-administrator profile — Pass; 4. Review the other bounded operations: resend customer-created invitation — Pass; Pass criteria and retained state — Pass",
+        "sections": [
+          {
+            "section": "Before you start (preparation)",
+            "result": "Pass",
+            "evidence": "prep-disposable-board, prep-msp-allocates-one-more-seat, prep-nonadmin-user; seats-2.png, prep-user-profile.png",
+            "note": "The disposable board 'CM-REVIEW-20261026-04 Delegation board' was created through Settings > Ticketing > Boards in failed attempt attempts/a1-failed-seat-limit and reused here. White Rabbit's only seat is used by Alice, so QA raised the allocation 1 -> 2 through Change seat allocation before Alice created the non-administrator user."
+          },
+          {
+            "section": "1. Approve one board operation",
+            "result": "Pass",
+            "evidence": "1-unassigned-staff-not-offered, 1-approval-summary-names-principal-operation-target, 1-grant-binds-principal-operation-and-board, 1-refreshed-approval-listed; 1-approval-form.png, 1-approved-refreshed.png",
+            "note": "Unassigned Oz staff (Tin Woodman) is not offered as a principal. Grant row binds QA, board_settings and the disposable board only."
+          },
+          {
+            "section": "2. Perform only the approved change",
+            "result": "Pass",
+            "evidence": "2-only-board-display-fields-offered, 2-delegated-change-persists-after-refresh, 2-customer-board-settings-show-persisted-description, 2-original-description-restored-through-approved-editor; 2-editor-filled.png, 2-customer-board-settings.png",
+            "note": "The editor offers exactly board name, description and live-ticket-timer. Alice saw the delegated description in her own board settings; QA restored the original description through the approved editor and it persisted after reload."
+          },
+          {
+            "section": "3. Prove revocation closes an open editor",
+            "result": "Pass",
+            "evidence": "3-customer-revoked-approval, 3-stale-editor-cannot-save, 3-retry-does-not-revive-revoked-approval, 3-refreshed-editor-no-longer-offers-record; 3-msp-editor-open.png, 3-customer-revoked.png, 3-stale-editor-save-attempt.png, 3-refreshed-after-revocation.png, customer-session/*.webm",
+            "note": "Alice revoked the approval in a second session while QA's editor stayed open. QA's stale save was refused and the board kept its original description. Retry same request did not bring the approval back. After Refresh access the record is no longer offered. Observation: the stale save shows the generic 'request could not be confirmed' text with a Retry button. It does not say the approval was revoked."
+          },
+          {
+            "section": "4. Review the other bounded operations: non-administrator profile",
+            "result": "Pass",
+            "evidence": "4-administrator-profile-not-eligible, 4-profile-grant-binds-one-user, 4-profile-fields-limited-to-name-and-timezone, 4-customer-users-shows-delegated-profile-after-reload, 4-profile-restored; 4-admin-not-eligible.png, 4-profile-saved.png, 4-customer-users.png",
+            "note": "Alice (administrator) is not an eligible target. QA changed the first name, and Alice saw it in Settings > Users after reload. QA then restored the original name. The time-zone field was offered but not changed."
+          },
+          {
+            "section": "4. Review the other bounded operations: resend customer-created invitation",
+            "result": "Pass",
+            "evidence": "4-customer-created-invitation-delivered, 4-invitation-grant-binds-one-invitation, 4-msp-sees-recipient-role-expiry, 4-resend-preserves-invitation-record, 4-delivered-resend-keeps-setup-link; 4-invitation-terms.png, 4-invitation-resent.png, invitation-delivery.json",
+            "note": "QA saw the recipient, Technician role and expiry. A second message reached the controlled SMTP sink. The invitation row (email, role, token, expiry 2026-10-27T03:37:05Z, metadata) was byte-identical before and after the resend, and the delivered setup link matched the original (sha256 recorded)."
+          },
+          {
+            "section": "Pass criteria and retained state",
+            "result": "Pass",
+            "evidence": "final-no-review-approval-offered, final-review-approvals-revoked, final-seat-allocation-restored; db-receipts.json",
+            "note": "All three review approvals were revoked. To return the allocation to 1, the profile user was deactivated and the review invitation was revoked through Settings > Users, then QA restored White Rabbit's allocation from 2 to 1."
+          }
+        ],
+        "resultFile": "04-delegated-administration/guide-result.json",
+        "recordingJson": "04-delegated-administration/recording/recording.json"
+      },
+      "limitations": [
+        "Invitation delivery is proven through the controlled SMTP sink only.",
+        "The disposable board was created through the UI in failed attempt a1 (kept under attempts/), not inside this recording.",
+        "The profile time-zone field was offered but not exercised."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.490597,
+        "chapters": 7,
+        "lateSeek": 128.6
+      }
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/05-ticket-queue.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/05-ticket-queue.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/05-ticket-queue.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:20:38.148Z",
+      "durationSeconds": 122.32,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        },
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer)"
+        }
+      ],
+      "steps": [
+        "QA temporarily assigned the existing guide-08 SLA policy to the White Rabbit client and mapped customer Critical/Low priorities",
+        "Alice created an out-of-scope board and five disposable tickets, then escalated each from the native ticket screen",
+        "QA restored the SLA mapping and client policy assignment to their baseline",
+        "QA checked All Tickets (native ticket present, shared work absent), then opened Customer Tickets",
+        "QA switched Working queue / Customer oversight, applied workspace, status, search and sort, reloaded, opened a result and used Back",
+        "QA exported CSV with the result split over pages",
+        "QA selected A and B, entered a handoff note and returned them; reopened each after reload; Alice checked her native handoff history",
+        "QA selected C, D, E and entered a note; Alice (second session) took C back and revoked E; QA submitted with the response dropped",
+        "QA reloaded, resumed the interrupted return, read the per-item outcomes and re-read oversight"
+      ],
+      "outcomes": [
+        "Queue URL scope (queueView, workspace, queueState, searchQuery, queueSort) survived reload and detail/back navigation",
+        "filtered-working-export.csv: 5 rows, each disposable ticket exactly once, White Rabbit IT only",
+        "A and B: customer responsibility, one handoff note each, visible to both sides after reload",
+        "Mixed recovery: D returned once (one note), C reported Ticket changed, E reported Access denied; neither C nor E received the bulk note",
+        "Escalation prerequisites back to baseline: no White Rabbit priority mappings, White Rabbit client has no SLA policy"
+      ],
+      "chapters": [
+        "Preparation: disposable customer tickets escalated to the MSP",
+        "1. Keep queue scope stable",
+        "2. Export the full filtered set",
+        "3. Return selected tickets once",
+        "4. Recover interrupted or mixed results"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "05-ticket-queue/recording/walkthrough.webm",
+        "chapterVtt": "05-ticket-queue/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/05-ticket-queue.html",
+        "coverage": "covered",
+        "status": "covered: Before you start (preparation) — Pass; 1. Keep queue scope stable — Pass; 2. Export the full filtered set — Pass; 3. Return selected tickets once — Pass; 4. Recover interrupted or mixed results — Pass",
+        "sections": [
+          {
+            "section": "Before you start (preparation)",
+            "result": "Pass",
+            "evidence": "prep-msp-escalation-prerequisites-applied, prep-five-msp-responsible-tickets, prep-escalation-prerequisites-restored-to-baseline; sla-*.png, quick-add-*.png",
+            "note": "Alice created five disposable tickets: A-D on Service Desk and E on a new 'CM-REVIEW-20261026-05 Explicit board' outside the MSP board scope. She escalated all five from the native ticket screen. Escalation is blocked until the MSP has an SLA policy that applies to the client and a mapping for the ticket's priority. So QA temporarily assigned guide 08's existing 'CM-REVIEW-20261026-08 final-b MSP policy' to the White Rabbit client and mapped customer Critical and Low to 'P1 - Critical'. Both were restored to the baseline (unassigned, Not mapped) right after the escalations."
+          },
+          {
+            "section": "1. Keep queue scope stable",
+            "result": "Pass",
+            "evidence": "1-native-all-tickets-lists-native-ticket, 1-native-desk-excludes-shared-work, 1-working-queue-lists-msp-responsible-work, 1-oversight-follows-customer-scope, 1-reload-retains-applied-scope, 1-result-opens-qualified-shared-ticket, 1-return-navigation-restores-scope, 1-displayed-organization-is-customer-workspace; 1-native-desk.png, 1-working.png, 1-oversight.png, 1-reloaded.png, 1-opened.png",
+            "note": "All Tickets listed the native 'Oz native switch closet audit' and none of the shared CM-REVIEW tickets. Workspace, status, search, view and sort were kept across reload, opening a result and Back. Guide fixture 000002 does not exist in the rebuilt environment, so the search used the CM-REVIEW-20261026-05 set."
+          },
+          {
+            "section": "2. Export the full filtered set",
+            "result": "Pass",
+            "evidence": "2-export-includes-every-filtered-row-once, 2-export-only-this-customer-and-filter; 2-paged.png, filtered-working-export.csv",
+            "note": "With pageSize=2 (three pages), the export had all 5 filtered rows once each, only White Rabbit IT, and no other tickets. Observation: the CSV includes raw workspace_tenant, relationship_id and ticket_id UUID columns."
+          },
+          {
+            "section": "3. Return selected tickets once",
+            "result": "Pass",
+            "evidence": "3-selected-count-and-labels-shown, 3-only-selected-tickets-changed, 3-one-handoff-note-per-returned-ticket, 3-msp-reload-shows-customer-responsibility-and-note-a/b, 3-customer-sees-same-note-a/b; 3-composer.png, 3-outcomes.png, 3-msp-history-*.png, 3-customer-history-*.png",
+            "note": "The composer said '2 selected ticket(s) will be returned.' A and B became customer-responsible with exactly one handoff note each; C, D and E stayed MSP. After reload, the MSP shared view and Alice's native history showed the same note once."
+          },
+          {
+            "section": "4. Recover interrupted or mixed results",
+            "result": "Pass",
+            "evidence": "4-customer-changed-selected-tickets, 4-reload-offers-interrupted-return-resume, 4-outcomes-distinguish-returned-changed-denied, 4-resume-creates-one-note-for-successful-item, 4-conflicted-and-denied-items-not-counted-returned, 4-reread-oversight-excludes-revoked-and-keeps-returned; 4-composer-three.png, 4-customer-changed.png, 4-lost-response.png, 4-resume-offered.png, 4-mixed-outcomes.png, 4-reread.png, customer-session/*.webm",
+            "note": "QA selected C, D and E. In a second session Alice took C back and revoked E's explicit grant. QA submitted, and the browser dropped the server's response after the server committed (labelled fault injection). After a same-tab reload the resume control appeared. Resuming showed D 'Returned to customer IT', C 'Ticket changed. Refresh before trying again.' and E 'Access denied'. D has exactly one bulk note; C and E have none. Oversight no longer lists E."
+          }
+        ],
+        "resultFile": "05-ticket-queue/guide-result.json",
+        "recordingJson": "05-ticket-queue/recording/recording.json"
+      },
+      "limitations": [
+        "The lost-response case was produced by dropping one bulk-return server-action response in the browser after the server committed it.",
+        "Guide fixture ticket 000002 does not exist in the rebuilt environment; the disposable CM-REVIEW-20261026-05 set was used.",
+        "Escalation needed guide 08's disposable SLA policy, temporarily assigned to White Rabbit (about 50 s, 04:16-04:17Z) and then restored."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.489242,
+        "chapters": 5,
+        "lateSeek": 121.32
+      }
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/06-projects-and-tasks.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/06-projects-and-tasks.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/06-projects-and-tasks.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:26:55.173Z",
+      "durationSeconds": 117.6,
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, active)"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        }
+      ],
+      "steps": [
+        "Alice creates shared + unshared disposable projects, phase, two tasks; sets Task A local assignee",
+        "Alice grants the shared project Collaborate on Co-managed access, saves, reloads",
+        "QA confirms technician staff assignment on the White Rabbit client co-managed tab",
+        "QA opens the unshared project URL (denied), compares working vs oversight queues, follows queue link",
+        "QA edits Task A name, reloads, checks history; Alice sees it on the native task; QA restores the name",
+        "QA assigns Task A to QA (Technician), checks working/Assigned to me/Assigned to my teams, removes assignment",
+        "QA starts a stale edit; Alice saves a newer name on the native task; QA save refused; Discard and reload; name restored",
+        "Alice logs 6 min and QA logs 12 min on Task A; both views and project totals compared",
+        "QA posts a task message with a text file; Alice reads it and downloads bytes",
+        "Alice removes the project grant; QA's task URL, queue and copied file link are refused; Alice keeps the native task"
+      ],
+      "outcomes": [
+        "Grant persisted after reload, unshared project unavailable",
+        "MSP edit visible natively after reload with 'QA Tester · Oz' history",
+        "MSP assignment did not change project_tasks.assigned_to (Alice)",
+        "Stale MSP save refused; DB kept customer value",
+        "Effort 0.1/0.2/0.3 h on task and project",
+        "After revocation: task page alert, file link 404, oversight queue empty; customer task intact"
+      ],
+      "chapters": [
+        "Before you start: customer creates a disposable project, phase and two tasks",
+        "1. Share only the prepared project (customer grants Collaborate)",
+        "1. MSP staff assignment for the customer and project task queues",
+        "2. Persist a task edit with attribution",
+        "3. Separate MSP assignment from customer-local ownership",
+        "4. Detect a stale MSP edit after a newer customer save",
+        "5. Compare effort on the shared task (customer and MSP time)",
+        "5. Task conversation and file while the grant is active",
+        "4. Revoke the project grant: fresh MSP reads close"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "06-projects-and-tasks/recording/walkthrough.webm",
+        "chapterVtt": "06-projects-and-tasks/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/06-projects-and-tasks.html",
+        "coverage": "covered",
+        "status": "covered: Before you start — Pass; 1. Share only the prepared project — Pass; 2. Persist a task edit with attribution — Pass; 3. Separate MSP assignment from local ownership — Pass; 4. Detect stale work and revoked access — Pass; 5. Compare effort and conversations — Pass",
+        "sections": [
+          {
+            "section": "Before you start",
+            "result": "Pass",
+            "evidence": "prep-task-a-has-customer-local-assignee, prep-native-project-phase-two-tasks-after-reload, prep-second-unshared-project-exists; prep-native-two-tasks.png",
+            "note": "Alice created 'CM-REVIEW-20261026-06 final Shared rollout' (phase + Task A/Task B) and 'CM-REVIEW-20261026-06 final Unshared private' on native Projects; Task A given customer-local assignee Alice."
+          },
+          {
+            "section": "1. Share only the prepared project",
+            "result": "Pass",
+            "evidence": "s1-customer-project-collaborate-survives-reload, s1-unshared-project-not-granted, s1-qa-technician-assignment-present-after-reload, s1-unshared-project-unavailable-to-msp, s1-working-queue-excludes-unassigned-shared-tasks, s1-oversight-view-lists-both-shared-tasks, s1-queue-link-is-customer-and-relationship-qualified, s1-followed-queue-link-opens-shared-task",
+            "note": "QA's technician staff assignment for White Rabbit already existed (added by another review agent at 03:16Z); this run did not change staff assignments. Working queue lists nothing until MSP assignment (by design: sharing alone creates no working row); Customer oversight lists both tasks."
+          },
+          {
+            "section": "2. Persist a task edit with attribution",
+            "result": "Pass",
+            "evidence": "s2-msp-edit-survives-reload, s2-history-records-qualified-author, s2-customer-native-task-shows-msp-edit, s2-restored-by-ordinary-save-history-retained; s2-history.png",
+            "note": "History shows 'QA Tester · Oz'. Co-managed history lists co-managed edits/assignments only (audit operations co_managed_project_task_update/assignment); the customer's native-screen save in section 4 is not listed there (by source design)."
+          },
+          {
+            "section": "3. Separate MSP assignment from local ownership",
+            "result": "Pass",
+            "evidence": "s3-only-eligible-assigned-principals-offered, s3-msp-assignment-persists-and-keeps-local-owner, s3-working-queue-lists-msp-assigned-task-only, s3-assigned-to-me-shows-assigned-task-only, s3-removed-msp-assignment-keeps-local-owner, s3-assigned-to-me-empty-after-removal",
+            "note": "Only 'QA Tester · Oz' offered (no unassigned Oz staff). Technician path exercised; Team path not offered because no team holds a White Rabbit assignment. 'Assigned to my teams' compared and empty (QA belongs to no team)."
+          },
+          {
+            "section": "4. Detect stale work and revoked access",
+            "result": "Pass",
+            "evidence": "s4-stale-msp-save-refused-customer-value-kept, s4-discard-and-reload-shows-current-values, s4-customer-project-grant-removed-after-reload, s4-revoked-task-closes-editor-conversation, s4-copied-task-file-link-denied-after-revocation (404), s4-revoked-tasks-absent-from-fresh-queue, s4-customer-keeps-native-task-and-history",
+            "note": "Customer change saved from a second (unrecorded-video, screenshot only) Alice context on the native task screen; revocation recorded last, after section 5."
+          },
+          {
+            "section": "5. Compare effort and conversations",
+            "result": "Pass",
+            "evidence": "s5-alice-time-persisted-on-same-task, s5-qa-time-persisted-on-same-task, s5-task-effort-shows-customer-msp-combined, s5-customer-sees-same-effort-totals, s5-customer-does-not-see-msp-private-time-note, s5-project-total-equals-task-total-counted-once, s5-msp-task-file-bytes-match, s5-customer-reads-task-message-and-file-bytes",
+            "note": "Customer 6 min (operational, billable 0, project_task) + MSP 12 min (Oz commercial co_managed) = 0.1/0.2/0.3 hours on task, same on project totals (counted once)."
+          }
+        ],
+        "resultFile": "06-projects-and-tasks/guide-result.json",
+        "recordingJson": "06-projects-and-tasks/recording/recording.json"
+      },
+      "limitations": [
+        "Team assignment / 'Assigned to my teams' positive case not exercised: QA is not a member of any team and no team holds a White Rabbit assignment; creating one was outside the guide's disposable scope.",
+        "The concurrent customer save ran in a second, separately signed-in Alice browser context; it is not in walkthrough.webm (its raw video was removed during duplicate-video cleanup). Evidence: screenshot recording/s4-customer-native-save.png, step s4-customer-saved-newer-value-on-native-task and the DB-confirmed task name."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.489846,
+        "chapters": 9,
+        "lateSeek": 116.6
+      }
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/07-conversations-and-files.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/07-conversations-and-files.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/07-conversations-and-files.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:40:16.410Z",
+      "durationSeconds": 176.96,
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, active)"
+        },
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        },
+        {
+          "name": "requester",
+          "email": "cm-review-20261026-07.requester@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, active)"
+        }
+      ],
+      "steps": [
+        "Alice creates the disposable ticket with the requester contact (requester created earlier via Users → Client Portal)",
+        "QA posts Shared IT teams message + file; Alice reads and downloads",
+        "Alice and QA each post My organization only + file; QA posts Requester and IT teams + file",
+        "Each staff identity reloads: own private visible, other private absent, copied private link refused",
+        "Requester signs in to the client portal: only requester message visible; staff file links refused",
+        "QA posts a disposable file and removes it; old link 404",
+        "QA sends with publish response dropped: unknown-outcome, draft kept, Retry publishes once",
+        "QA root message; Alice replies; QA edits; QA deletes root → tombstone, reply kept",
+        "QA private thread with reply + file; Change thread audience preview; disclose to Requester and IT teams; Alice/requester read; restrict to Shared IT teams; requester loses it",
+        "Requester-visible shared task: QA posts requester + private task messages and a file; requester reads, downloads, replies; QA reads reply; Alice removes grant"
+      ],
+      "outcomes": [
+        "Audience separation held for all three identities after reload, with byte-exact downloads",
+        "Unknown publish outcome recovered with one message (no duplicate)",
+        "Tombstone retained reply and attribution",
+        "Disclosure transferred thread + file; original private link 404 for customer; restriction revoked requester file (404)",
+        "Requester task reply persisted and visible to staff"
+      ],
+      "chapters": [
+        "Before you start: requester and disposable shared ticket (customer native screens)",
+        "1. Shared IT teams message with an attached file (QA)",
+        "1. Customer reads the shared message and file",
+        "1. Organization-private messages from each side, then requester audience",
+        "1. Requester sees only requester-audience content in the portal",
+        "2. Author removes a disposable attachment; old link stops downloading",
+        "2. Uncertain send: server saved the message but the response was lost",
+        "3. Reply from the other organization, edit, and delete the root",
+        "4. Whole-thread audience change: MSP-private thread with reply and file",
+        "4. Restrict the disclosed thread back to Shared IT teams",
+        "5. Requester task conversation (portal) on a requester-visible shared task",
+        "5. Cleanup: customer removes the requester project grant"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "07-conversations-and-files/recording/walkthrough.webm",
+        "chapterVtt": "07-conversations-and-files/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/07-conversations-and-files.html",
+        "coverage": "covered",
+        "status": "covered: Before you start — Pass; 1. Check all three audiences — Pass; 2. Publish and remove audience-bound files — Pass; 3. Keep replies and authors after edits or deletion — Pass; 4. Review a whole-thread audience change — Pass; 5. Requester task conversations and mail — Pass",
+        "sections": [
+          {
+            "section": "Before you start",
+            "result": "Pass",
+            "evidence": "prep-requester-exists-in-customer-tenant, prep-disposable-ticket-with-requester-contact",
+            "note": "Requester 'CM Review Requester 07' was created by Alice through Settings → Users → Client Portal in attempts/attempt-1 (credential stored privately, mode 600); final recording reuses it and creates ticket 'CM-REVIEW-20261026-07 final conversation ticket' with that contact."
+          },
+          {
+            "section": "1. Check all three audiences",
+            "result": "Pass",
+            "evidence": "qa-shared-*, alice-reads-shared-message-and-file-bytes, alice-customer-private-*, qa-msp-private-*, qa-requester-*, s1-qa/alice-cannot-see-other-organization-private-message, s1-requester-sees-only-requester-audience; supplement-grid-parity-readonly (grid-*)",
+            "note": "Entry layout in the main recording; Grid parity checked read-only in supplement-grid-parity-readonly on the same ticket."
+          },
+          {
+            "section": "2. Publish and remove audience-bound files",
+            "result": "Pass",
+            "evidence": "*-published-file-bytes-match, s2-*-downloads-own-private-file, s2-*-copied-other-private-file-link-denied (404), s2-requester-denied-* (401), s2-requester-downloads-requester-file-bytes, s2-remove-offered-to-author, s2-removed-file-absent-after-reload-and-link-denied (404), s2-retry-reuses-operation-no-duplicate, s2-uncertain-publication-complete-once-after-reload",
+            "note": "Re-check of the earlier defect: with the publish response dropped after server execution, this build showed the unknown-outcome message AND kept the composer open with draft text and staged file; Retry reused operationId e70eb605-… and produced exactly one message with a complete file. The earlier 'composer closes and clears text' defect did not reproduce on 54e75edfab."
+          },
+          {
+            "section": "3. Keep replies and authors after edits or deletion",
+            "result": "Pass",
+            "evidence": "s3-customer-cannot-edit-or-delete-msp-message, s3-customer-reply-persists, s3-msp-sees-reply-with-customer-author, s3-edit-visible-to-customer-reply-retained, s3-root-tombstoned-reply-survives, s3-customer-sees-tombstone-and-own-reply",
+            "note": ""
+          },
+          {
+            "section": "4. Review a whole-thread audience change",
+            "result": "Pass",
+            "evidence": "s4-private-thread-has-reply, s4-preview-counts-root-reply-and-attachment ('2 messages and 1 attachments'), s4-msp-private-original-read-only, s4-customer-receives-thread-reply-and-matching-file, s4-customer-cannot-use-msp-private-original-file-link, s4-requester-receives-disclosed-thread-and-file, s4-restriction-removes-thread-and-copied-file-from-requester, s4-customer-still-reads-thread-at-shared-it-audience",
+            "note": "MSP-private thread disclosed to Requester and IT teams, then restricted to Shared IT teams."
+          },
+          {
+            "section": "5. Requester task conversations and mail",
+            "result": "Pass",
+            "evidence": "s5-prep-requester-visible-shared-task, s5-requester-sees-public-task-message-with-staff-attribution, s5-requester-does-not-see-msp-private-task-message, s5-requester-downloads-task-file-bytes, s5-requester-reply-persists-after-reload, s5-staff-sees-requester-reply-with-author, s5-requester-project-grant-removed",
+            "note": "Disposable requester-visible project 'CM-REVIEW-20261026-07 final requester project' (portal phases/tasks on), shared Collaborate then grant removed. Mail delivery/inbound reply is delegated by the guide to guide 12 and was not tested here."
+          }
+        ],
+        "resultFile": "07-conversations-and-files/guide-result.json",
+        "recordingJson": "07-conversations-and-files/recording/recording.json"
+      },
+      "limitations": [
+        "Mail/inbound reply proof is guide 12 (not exercised here).",
+        "Grid layout parity is in the read-only supplement recording, not walkthrough.webm.",
+        "Requester account creation is in attempts/attempt-1, not the final walkthrough."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.487822,
+        "chapters": 12,
+        "lateSeek": 175.96
+      }
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/08-sla.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/08-sla.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/08-sla.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:05:07.941Z",
+      "durationSeconds": 398.92,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP)"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, active)"
+        },
+        {
+          "name": "kansas-admin",
+          "email": "admin@kansasfarms.test",
+          "organization": "Kansas Farms IT (customer, terminated)"
+        },
+        {
+          "name": "departed-customer-admin",
+          "email": "cm-review-20261026-01-accept-7@cmreview.test",
+          "organization": "CM-REVIEW-20261026-01 Accept-7 (customer, terminated by guide 10; supplement only, read-only)"
+        }
+      ],
+      "steps": [
+        "QA opens Co-managed SLA priorities, then Manage SLA policies; creates disposable policy assigned to White Rabbit",
+        "Alice creates two Medium tickets",
+        "QA maps Medium → P1, saves, reloads",
+        "Alice escalates ticket 1; both views show Oz SLA; handoff history",
+        "QA maps Medium → P2; ticket 1 targets unchanged; Alice escalates ticket 2 (4-minute response)",
+        "QA assigns ticket 2's MSP assignment to QA",
+        "QA returns ticket 1 to customer; both views paused; Alice re-escalates",
+        "Kansas Farms admin and QA departed-relationship read checks",
+        "Wait for ticket 2 response breach; inspect notifications, QA bell and SMTP sink",
+        "Restore mapping and unassign policy"
+      ],
+      "outcomes": [
+        "Captured targets: ticket 1 30/60 (P1), ticket 2 4/240 (P2)",
+        "Mapping change did not rewrite ticket 1 dueAt",
+        "Handback paused with history; re-escalation resumed same obligation",
+        "Breach notices delivered to the MSP assignee only (in-app + email)",
+        "Mapping and client policy back to original"
+      ],
+      "chapters": [
+        "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)",
+        "1. Configure and persist the customer-to-MSP priority mapping",
+        "2. Escalation starts the MSP obligation (not initial visibility)",
+        "3. Change the mapping: existing targets stay, new escalation uses current config",
+        "5 (prep). MSP assigns ticket 2 to QA so threshold notices have an assignee",
+        "4. MSP returns ticket 1 to the customer; history preserved",
+        "5. Departed relationship: Kansas Farms keeps its own outcome; MSP live read unavailable",
+        "5. Breach/routing notification on ticket 2 (4-minute response target)",
+        "Restore: mapping back to original, policy unassigned from White Rabbit",
+        "Supplement — 5. Departed customer keeps its own ticket; no live former-MSP clock",
+        "Supplement — 5. Former MSP cannot open the departed shared ticket or its clock"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "08-sla/recording-combined/walkthrough.webm",
+        "chapterVtt": "08-sla/recording-combined/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/08-sla.html",
+        "coverage": "covered",
+        "status": "covered: Before you start — Pass; 1. Configure and persist priority mapping — Pass; 2. Start a new MSP obligation on escalation — Pass; 3. Keep existing targets stable — Pass; 4. Pause MSP responsibility without erasing history — Pass; 5. Check lifecycle and notifications — Pass; Recovery — Pass",
+        "sections": [
+          {
+            "section": "Before you start",
+            "result": "Pass",
+            "evidence": "prep-policy-persisted-with-targets-and-client-assignment, prep-two-disposable-customer-tickets; prep-policy-form.png, prep-policy-list.png",
+            "note": "Oz had no SLA policies and White Rabbit had no mappings. QA created non-default 'CM-REVIEW-20261026-08 final-b MSP policy' (24/7 fallback schedule; P1 30m/60m, P2 4m/240m; default 50/75/90/100% thresholds) assigned only to the White Rabbit client. Alice created two Medium tickets."
+          },
+          {
+            "section": "1. Configure and persist priority mapping",
+            "result": "Pass",
+            "evidence": "s1-mapping-persists-after-reload; mapping-P1-Critical.png",
+            "note": "White Rabbit 'Medium' → Oz 'P1 - Critical'. Manage SLA policies link opened SLA settings."
+          },
+          {
+            "section": "2. Start a new MSP obligation on escalation",
+            "result": "Pass",
+            "evidence": "s2-visibility-alone-no-msp-obligation, s2-escalation-captures-policy-and-p1-targets, s2-handoff-history-shows-escalation",
+            "note": "Customer and MSP views show 'White Rabbit IT SLA: No SLA configured' separately from 'Oz SLA' with due times."
+          },
+          {
+            "section": "3. Keep existing targets stable",
+            "result": "Pass",
+            "evidence": "s3-mapping-change-keeps-old-captured-targets, s3-new-escalation-uses-current-p2-targets",
+            "note": "Mapping changed to P2; ticket 1 kept 30/60 and identical dueAt timestamps; ticket 2 captured 4/240."
+          },
+          {
+            "section": "4. Pause MSP responsibility without erasing history",
+            "result": "Pass",
+            "evidence": "s4-handback-pauses-msp-clock-targets-unchanged, s4-customer-history-has-escalation-and-return, s4-re-escalation-keeps-same-captured-targets",
+            "note": "Handback → pauseReasons [customer_responsible], both views 'Paused'; customer re-escalation resumed the same obligation (generation 1, targets unchanged, elapsed time preserved)."
+          },
+          {
+            "section": "5. Check lifecycle and notifications",
+            "result": "Pass",
+            "evidence": "s5-departed-customer-retains-native-ticket, s5-former-msp-cannot-read-departed-ticket-or-clock, s5-ticket2-msp-assignee-is-qa, s5-notification-events-created-for-obligation, s5-recipients-are-only-the-msp-assignee, s5-breach-email-delivered-to-assignee, s5-in-app-notice-visible-in-qa-bell, s5-no-sla-email-to-customer-or-unrelated-staff; supplement-departed-clock-readonly",
+            "note": "Kansas Farms (terminated) ticket had no MSP obligation, so a read-only supplement used guide 10's terminated Accept-7 relationship whose ticket had one: customer keeps its ticket without an Oz SLA panel; QA cannot open it. Ticket 2 (QA assigned) produced 50/75/90/100% events; recipients only QA; SMTP sink: 'SLA Warning: … at 90%' and 'SLA BREACH: … Response SLA Exceeded' to qa@emeraldcity.oz only; Alice received only her ticket-created mail."
+          },
+          {
+            "section": "Recovery",
+            "result": "Pass",
+            "evidence": "restore-mapping-and-client-policy-to-original; db-receipts.json before/after",
+            "note": "Mapping restored to Not mapped and policy unassigned from White Rabbit through the UI (before: no mappings, no client policy; after: same). Disposable non-default policies remain (referenced by obligations)."
+          }
+        ],
+        "resultFile": "08-sla/guide-result.json",
+        "recordingJson": "08-sla/recording-combined/recording.json"
+      },
+      "limitations": [
+        "Departure-with-live-clock evidence is the read-only supplement on another agent's terminated relationship (Kansas Farms ticket had no prior MSP obligation).",
+        "Business-hours (non-24/7) arithmetic not exercised: policy used the 24/7 fallback schedule.",
+        "Escalated disposable attempt/final tickets remain open with obligations; their breach notices also reached QA."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.486867,
+        "chapters": 11,
+        "lateSeek": 397.92
+      }
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/09-time-and-billing.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/09-time-and-billing.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/09-time-and-billing.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:43:17.791Z",
+      "durationSeconds": 118.32,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP, fa7f912f-6b62-463e-85cc-ffedab47ac44)"
+        },
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, c64b2666-7dd6-4c61-8ced-4b233f628e61)"
+        }
+      ],
+      "steps": [
+        "Alice created disposable ticket 'CM-REVIEW-20261026-09-f printer spooler time ticket' on Service Desk, plus a project, phase and task, and granted the project Collaborate access in Co-managed access.",
+        "QA opened the shared ticket and added a 15-minute Basic Support time entry, choosing the date before the service, then reloaded.",
+        "QA started the native stopwatch, stopped it after about 5 s, chose the service and saved the prefilled 1-minute entry, then reloaded.",
+        "Alice opened the native customer ticket and saw only the effort summary, with no time-entry flow.",
+        "Alice logged 5 operational minutes on the shared task. QA logged 6 commercial minutes on the same task.",
+        "Both Alice and QA reloaded the task's Recorded effort.",
+        "QA opened Time Entry, selected the 2026-10-19 period, checked the three rows in List view, and submitted the sheet.",
+        "QA, as team lead, opened Timesheet Approvals and approved the sheet, then reloaded.",
+        "QA opened Billing > Invoicing > Automatic Invoices, filtered to 11/01/2026, selected the Ready White Rabbit contract group, previewed it, and generated a draft.",
+        "QA opened draft INV-000002.",
+        "Restore: Alice removed the project grants. QA deleted the approval team, cleared the billing email, and terminated the disposable contract."
+      ],
+      "outcomes": [
+        "Oz entry ab5eb485 persisted after reload: co_managed work reference to the customer ticket, 15 commercial minutes, Basic Support, contract line 9e12f69d.",
+        "Stopwatch produced exactly one entry (2e383d4d, 1 minute) and no running or paused session remains.",
+        "Customer entry (White Rabbit tenant) persisted as operational: billable 0, no service or contract line.",
+        "Combined effort on the shared task equals customer plus MSP (0.08 + 0.1 = 0.18 h) in both organizations' views.",
+        "Timesheet b1adac9e was approved after reload. All three run-f shared entries are APPROVED.",
+        "Draft INV-000002 ($210.02, status draft, finalized_at null) traces to exactly the approved contract-line entries on the sheet. The customer entry is not invoiced."
+      ],
+      "chapters": [
+        "Before you start: customer prepares a disposable shared ticket and shared task",
+        "1. Persist one commercial entry (QA, native shared ticket, Add Time Entry)",
+        "2. Native stopwatch on the shared ticket: start, stop, one entry",
+        "2. Customer effort: native customer ticket offers no time entry; operational entry on the shared task",
+        "3. Follow the entries into the native timesheet, submit and approve",
+        "4. Reconcile commercial billing: Automatic Invoices preview and draft",
+        "Restore: remove project grant, delete approval team, clear billing email, terminate disposable contract; time and draft invoice retained"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "09-time-and-billing/recording/walkthrough.webm",
+        "chapterVtt": "09-time-and-billing/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/09-time-and-billing.html",
+        "coverage": "covered",
+        "status": "covered: Before you start — Pass; 1. Persist one commercial entry — Pass; 2. Check stopwatch and customer effort separately — Pass; 3. Follow the entry into normal timesheets — Pass; 4. Reconcile commercial billing — Pass; Restore — Pass",
+        "sections": [
+          {
+            "section": "Before you start",
+            "result": "Pass",
+            "evidence": "prep-customer-workspace-has-current-time-period, prep-customer-shares-disposable-project-collaborate; prep-native-setup (qa-collaborate-assignment-persists-after-reload, current-time-period-listed-after-reload, white-rabbit-contract-listed-after-reload); prep-approver-team; prep-billing-email-reopen-sheet; prep-catalog-usd-price",
+            "note": "Preparation done through the native UI in separately recorded prep scenarios: the QA technician assignment (missing from the reprovisioned data even though the brief lists it), an Oz time period from 2026-10-19 to 2026-11-01, a White Rabbit hourly contract, an approval team led by QA, a White Rabbit billing email, and a stored USD price for Basic Support. Inside the recording, Alice creates a disposable ticket, project, phase and task and grants the project Collaborate access. The White Rabbit time period was created by Alice in attempt run-b."
+          },
+          {
+            "section": "1. Persist one commercial entry",
+            "result": "Pass",
+            "evidence": "s1-exactly-one-persisted-entry, s1-entry-owned-by-oz-qualified-co-managed-not-foreign-id, s1-adds-exactly-15-commercial-minutes-on-contract-line, s1-msp-effort-delta-is-15-minutes, s1-entry-listed-on-ticket-after-reload; s1-02-form.png, s1-03-after-reload.png",
+            "note": "QA opened Add Time Entry on the native shared ticket, entered the date first, then service Basic Support, 15 minutes and a note, and saved once. One Oz entry persisted: work_item_type co_managed, with a work reference to the customer ticket rather than its foreign ID, 15 commercial minutes, and the contract line set. It is listed after reload."
+          },
+          {
+            "section": "2. Check stopwatch and customer effort separately",
+            "result": "Pass",
+            "evidence": "s2-stopwatch-stop-creates-exactly-one-commercial-entry, s2-no-open-timer-remains, s2-customer-ticket-shows-effort-summary-without-time-entry-flow, s2-customer-entry-is-operational-without-commercial-attributes, s2-msp-task-entry-commercial-qualified, alice/qa-combined-effort-is-sum-of-customer-and-msp, alice/qa-does-not-see-other-organization-note, s2-both-views-show-the-same-effort",
+            "note": "Native stopwatch: start, about 5 s, stop. The form prefilled 1 minute and saving produced exactly one entry; the session is logged and no timer remains open. The customer's native ticket (AlgaDesk workspace) shows only a Customer/MSP/Combined effort summary and offers no time-entry flow. The operational customer entry was therefore recorded on the disposable shared task: 5 minutes, billing_mode operational, billable 0, no service or contract line. On the same task QA logged 6 commercial minutes. Both organizations see 0.08 / 0.1 / 0.18 hours, and neither sees the other's note. There was no viewer account in this round, so the guide's viewer check was not run."
+          },
+          {
+            "section": "3. Follow the entry into normal timesheets",
+            "result": "Pass",
+            "evidence": "s3-timesheet-lists-commercial-15m, s3-timesheet-lists-stopwatch, s3-timesheet-lists-commercial-task-6m, s3-all-three-shared-entries-on-the-current-sheet, s3-sheet-submitted-after-reload, s3-approver-sees-shared-entries, s3-sheet-and-entries-approved-after-reload",
+            "note": "All three shared rows are visible and identifiable in the native timesheet List view. The sheet was submitted and then approved on Timesheet Approvals. The approver is the same QA user: no separate MSP approver identity was available, Glinda was excluded, and QA needed a disposable team-lead role. Approving the sheet also approves every other QA entry in that period, including guide-06 entry 705281b3."
+          },
+          {
+            "section": "4. Reconcile commercial billing",
+            "result": "Pass",
+            "evidence": "s4-preview-lists-contract-time, s4-draft-for-white-rabbit-not-finalized, s4-each-commercial-entry-invoiced-exactly-once, s4-draft-sources-equal-the-approved-contract-line-entries-on-the-sheet, s4-customer-operational-entry-never-invoiced, s4-draft-invoice-opens-with-its-number; s4-02-preview.png, s4-03-draft-invoice.png",
+            "note": "Automatic Invoices: the date filter was set to 11/01/2026 and the Ready Oct 2026 group for the contract was previewed, then a draft was generated. Draft INV-000002 is for White Rabbit, totals $210.02 and is not finalized. Its source entries are exactly the 17 approved contract-line entries on the sheet: run f plus the earlier attempts a–e, each invoiced once. The customer operational entry is not invoiced. Nothing was finalized or emailed."
+          },
+          {
+            "section": "Restore",
+            "result": "Pass",
+            "evidence": "restore-guide-09-project-grants-removed-after-reload, restore-disposable-approval-team-deleted-after-reload, restore-white-rabbit-billing-email-cleared-after-reload, restore-disposable-contract-terminated-draft-retained",
+            "note": "The following were restored: all CM-REVIEW-20261026-09* project grants removed, approval team deleted, billing email cleared, and the disposable contract terminated (client contract is_active=false). The Basic Support USD price row could not be removed: with a single price the editor offers no remove control (attempts/restore-catalog-usd-price-no-remove-control)."
+          }
+        ],
+        "resultFile": "09-time-and-billing/guide-result.json",
+        "recordingJson": "09-time-and-billing/recording/recording.json"
+      },
+      "limitations": [
+        "Approver and billing operator are the same QA user as the technician. QA got approval rights only by leading a disposable team created for this guide (since deleted).",
+        "Customer operational time and the combined-effort comparison use a disposable shared project task: the customer's native ticket in the AlgaDesk workspace has no time-entry flow.",
+        "Viewer comparison ('the viewer must not gain a time-entry flow') was not run: no viewer account (noassign@emeraldcity.oz) exists in the reprovisioned data.",
+        "Five earlier attempts (a–e) left commercial entries on the same contract line and sheet; the draft includes them. Attempt e's draft INV-000001 was reversed through Drafts > Reverse draft before the clean run.",
+        "Approving the QA sheet also approved guide-06's QA entry 705281b3 (12 min, no contract line, not invoiced). It remains APPROVED.",
+        "The 'contract line' in this run is a disposable hourly contract prepared in this round. A USD catalog price row had to be stored for Basic Support (see defects). That row remains."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.489789,
+        "chapters": 7,
+        "lateSeek": 117.32
+      }
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/10-departure-and-archives.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/10-departure-and-archives.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/10-departure-and-archives.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:54:24.709Z",
+      "durationSeconds": 234.2,
+      "actors": [
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (Emerald City) MSP"
+        },
+        {
+          "name": "Review Accept Admin",
+          "email": "cm-review-20261026-01-accept-7@cmreview.test",
+          "organization": "CM-REVIEW-20261026-01 Accept-7 IT"
+        },
+        {
+          "name": "Alice Liddell (cross-organization link probe only)",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT"
+        }
+      ],
+      "steps": [
+        "Part 1 (departure-recording): QA gave itself Collaborate access on the disposable client, created and applied an MSP SLA policy, mapped customer priorities",
+        "Customer created a native ticket and escalated it to the MSP with a handoff note",
+        "QA posted shared + MSP-private comments with files; the customer posted a private comment with a file; QA logged 15 commercial minutes",
+        "Baseline: each side's visibility and file bytes; archive baseline",
+        "Opened a second MSP tab on the shared ticket; Review departure > End relationship > Refresh status (ended)",
+        "Part 2 (departure-recording-continued): reloaded departure link and client tab; picked the ended relationship",
+        "Old file links, old shared route, MSP customer queue (all denied or empty); customer native ticket, own file and export page",
+        "Archive: retained files compared byte-for-byte; private exclusion; cross-org link probe as Alice; customer local-change attempt (not offered)",
+        "Overview, allocation, closure count, time entry and tenants reconciled"
+      ],
+      "outcomes": [
+        "Relationship e24c064b terminated at 2026-10-26T03:55:18Z (Accept-7 only; White Rabbit and Kansas Farms untouched).",
+        "Allocation ad0500f1 released once; pool capacity 7 kept.",
+        "Retained archive: shared and MSP-private files intact; customer-private excluded.",
+        "The customer workspace keeps its ticket, shared and private content and its own file, but becomes read-only for ticket edits/comments."
+      ],
+      "chapters": [
+        "Part 1 — Preparation: staff access, shared ticket, audiences, files, time",
+        "Part 1 — 1. Record the cutoff baseline",
+        "Part 1 — 2. End the disposable relationship",
+        "Part 2 — 2. End the disposable relationship (status after refresh and reload)",
+        "Part 2 — 3. Test the old access paths",
+        "Part 2 — 4. Read only retained evidence",
+        "Part 2 — 5. Reconcile seats and commercial continuity"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "10-departure-and-archives/departure-recording-combined/walkthrough.webm",
+        "chapterVtt": "10-departure-and-archives/departure-recording-combined/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/10-departure-and-archives.html",
+        "coverage": "partial",
+        "status": "partial: Preparation (disposable relationship CM-REVIEW-20261026-01 Accept-7 from guide 01) — Pass; 1. Record the cutoff baseline — Pass; 2. End the disposable relationship — Pass; 3. Test the old access paths — Pass; 4. Read only retained evidence — Pass; 5. Reconcile seats and commercial continuity — Pass",
+        "sections": [
+          {
+            "section": "Preparation (disposable relationship CM-REVIEW-20261026-01 Accept-7 from guide 01)",
+            "result": "Pass",
+            "evidence": "departure-recording: qa-has-technician-access-to-the-disposable-relationship, msp-sla-policy-applies-to-the-disposable-client, msp-maps-customer-priorities-to-its-sla, customer-native-ticket-escalated-to-msp, msp-commercial-time-recorded-on-shared-ticket; 10-p-*.png",
+            "note": "All through the UI. QA got Collaborate (technician) staff access. A new MSP SLA policy 'CM-REVIEW-20261026-10 MSP policy' was created (P1 - Critical, response 1 hour) and applied to the disposable client. The 5 customer priorities were mapped to P1 - Critical; escalation is refused without both, and Oz has no default SLA policy. The customer created native ticket '... 864549 shared ticket' and escalated it to the MSP. QA posted a Shared IT teams comment with a file and a My organization only comment with a file. The customer posted a Private to <org> comment with a file. QA logged 15 commercial minutes (billing_mode commercial, work_item_type co_managed, DRAFT)."
+          },
+          {
+            "section": "1. Record the cutoff baseline",
+            "result": "Pass",
+            "evidence": "departure-recording: msp-sees-shared-and-own-private-not-customer-private, msp-downloads-shared-file-before-cutoff, msp-downloads-msp-private-file-before-cutoff, customer-sees-shared-and-own-private-not-msp-private; 10-1-*.png, receipt.json (baseline)",
+            "note": "Private content was separated in both directions before cutoff, and file SHA-256s were recorded. The archive was opened for a baseline (10 evidence rows, 0 manifests). No invoice association was prepared."
+          },
+          {
+            "section": "2. End the disposable relationship",
+            "result": "Pass",
+            "evidence": "departure-recording: 10-2-review-departure.png, 10-2-ended.png (relationship terminated 2026-10-26T03:55:18Z); departure-recording-continued: departure-link-after-reload-reports-ended-without-offering-departure, client-view-shows-relationship-ended-and-seats-released, customer-tenant-still-exists",
+            "note": "Review departure > End this relationship? > End relationship > Refresh status showed 'This co-management relationship has ended'. Part 1 then failed its own assertion: after reload, the client's Co-managed IT tab defaults to 'Co-managed IT not enabled' with a Relationship picker and the setup form. The ended relationship ('Relationship ended', 'Seats released') shows only after picking it, or when coming from the departure link (which now redirects to ...&section=history). The departure itself completed once, so part 2 ('departure-recording-continued') resumed from part 1's receipt instead of ending a second relationship."
+          },
+          {
+            "section": "3. Test the old access paths",
+            "result": "Pass",
+            "evidence": "departure-recording-continued: old-live-shared/msp-private/customer-private-file-link-denied (404), fresh-navigation-to-old-shared-route-shows-no-live-ticket, msp-customer-ticket-queue-no-longer-lists-the-ticket, customer-keeps-native-ticket-shared-and-private-content, former-msp-live-sla-field-absent-for-customer, customer-export-still-offered-after-departure; 10-3-*.png",
+            "note": "Partial within the section. The already-open browser tab check was prepared (10-2-stale-tab-before.png) but never executed: part 1 stopped before it, and the tab cannot be reopened from before the cutoff. Queued notification/mail suppression after cutoff was not run, because it needs an SMTP fault on the shared sink other agents use. The customer can still download its own private file (200)."
+          },
+          {
+            "section": "4. Read only retained evidence",
+            "result": "Pass",
+            "evidence": "departure-recording-continued: retained-shared-file-bytes-match, retained-msp-private-file-bytes-match, archive-excludes-customer-private-content, archive-shows-author-organizations-and-history, unrelated-principal-denied-retained-file-link, archive-does-not-track-customer-post-departure-state; 10-4-archive-retained.png/.json",
+            "note": "Retained shared and MSP-private files download with matching SHA-256. Customer-private body and file are absent. Entries show 'QA Tester · Oz', plus the time-recorded entry and the saved work details. A retained-file link fetched by alice@whiterabbit.test (another organization) returned 404. That stands in for 'an unrelated MSP principal': no credentials exist for a second Oz user without assignment. The customer could not make a post-departure local change: the native ticket is read-only (no Add Comment, fields disabled), so 'archive does not track customer change' was only checked against a change that never happened. Observation: each message appears twice in Retained history (live capture plus the at-cutoff archived copy, e.g. private_comment_create and private_comment_archived) with identical labels."
+          },
+          {
+            "section": "5. Reconcile seats and commercial continuity",
+            "result": "Pass",
+            "evidence": "departure-recording-continued: allocation-released-once-and-sponsor-subscription-kept, msp-commercial-time-survives-departure, neither-organization-deleted; 10-5-overview-after.png, db-after.json",
+            "note": "Allocation ad0500f1 was released once with exactly 1 closure row. The sponsor entitlement (simulator subscription sub_774424209, capacity 7) is unchanged and was not cancelled. The commercial time entry 87a05c45 (15 min) survives. Both tenants exist. Invoice/draft continuity was not exercised."
+          }
+        ],
+        "resultFile": "10-departure-and-archives/guide-result.json",
+        "recordingJson": "10-departure-and-archives/departure-recording-combined/recording.json"
+      },
+      "limitations": [
+        "The recording is split in two: part 1 ended the relationship and then failed on the client-view assertion. Part 2 resumes from part 1's receipt. Neither alone covers the whole guide.",
+        "Stale already-open tab write check: not run.",
+        "Queued notification/mail suppression after cutoff: not run (needs a fault on the shared SMTP sink).",
+        "No unrelated Oz MSP principal credentials. A different-organization user (Alice) was used for the retained-link probe.",
+        "Customer post-departure local change was not possible: the ticket UI is read-only after departure. Duplicate, Create Task, Link to Task, Quick invoice and Delete still look enabled on that read-only ticket; not clicked.",
+        "Time entry stayed DRAFT. Approval and invoice/draft continuity across departure were not exercised.",
+        "QA sessions were refreshed through the form repeatedly (5-session limit under concurrent agents).",
+        "Dry runs left 3 more escalated test tickets ('... 703235', '... 818294', '... 429540'/'523506' partial) in the now-ended relationship; they appear in the archive list."
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.488467,
+        "chapters": 7,
+        "lateSeek": 233.2
+      }
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/11-export-restore-and-upgrade.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/11-export-restore-and-upgrade.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/11-export-restore-and-upgrade.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T04:01:52.489Z",
+      "durationSeconds": 20.52,
+      "actors": [
+        {
+          "name": "Review Accept Admin",
+          "email": "cm-review-20261026-01-accept-7@cmreview.test",
+          "organization": "CM-REVIEW-20261026-01 Accept-7 IT (departed customer workspace)"
+        }
+      ],
+      "steps": [
+        "Signed in as the departed disposable workspace administrator; opened Export workspace",
+        "Tried a short passphrase (refused), then a mismatched confirmation (refused)",
+        "Entered a matching 48-byte passphrase and downloaded the encrypted archive; stored it privately; reloaded the export page",
+        "Operator: restore-portable-workspace.ts --inspect --passphrase-stdin on the archive; repeated with a wrong passphrase and with a tampered copy",
+        "Opened Upgrade to AlgaPSA and recorded its requirements without purchasing"
+      ],
+      "outcomes": [
+        "Encrypted archive retained privately: /home/robert/card-review-private/co-managed-it-3363/cm-review-20261026-11-accept7-export.alga (sha256 83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb). Passphrase is in cm-review-20261026-11-accept7-export-secret.json (mode 600).",
+        "The inspect receipt matches the archive checksum. Wrong-passphrase and tampered archives are refused.",
+        "The upgrade screen requires the workspace's own paid subscription. Upgrade workspace stays disabled."
+      ],
+      "chapters": [
+        "1. Download an encrypted customer workspace (after departure)",
+        "2. Inspect the archive (operator CLI); restore needs an isolated destination",
+        "4. Upgrade a current workspace independently (screen boundary only)"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "11-export-restore-and-upgrade/export-recording/walkthrough.webm",
+        "chapterVtt": "11-export-restore-and-upgrade/export-recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/11-export-restore-and-upgrade.html",
+        "coverage": "blocked-external",
+        "status": "blocked-external: 1. Download an encrypted customer workspace — Pass; 2. Inspect and restore on an isolated destination — Blocked; 3. Activate with the destination's own entitlement — Blocked; 4. Upgrade a current workspace independently — Not run",
+        "sections": [
+          {
+            "section": "1. Download an encrypted customer workspace",
+            "result": "Pass",
+            "evidence": "export-screen-names-the-departed-workspace, short-passphrase-refused-by-form, mismatched-confirmation-refused-by-form, encrypted-archive-downloaded, export-page-still-available-after-reload; 11-1-*.png, export-receipt.json",
+            "note": "Run as the administrator of the departed disposable workspace CM-REVIEW-20261026-01 Accept-7 IT (ended in guide 10), so this is the post-departure export repeat. The form refused a short passphrase ('Use a passphrase between 16 and 1024 UTF-8 bytes.') and a mismatched confirmation. A 48-byte random passphrase produced a real browser download: 158,789 bytes, file alga-workspace-e3163e33-....alga-backup, sha256 83aa640b..., with the ALGA-WORKSPACE-ARCHIVE header and no plaintext workspace name in the bytes. The export page reloaded fine. Archive and passphrase are stored privately (mode 600); the passphrase never appears in evidence or arguments. Which contents are included or excluded (MSP-private stores, keys, sessions, credential vault) was not verified, because that needs a restore."
+          },
+          {
+            "section": "2. Inspect and restore on an isolated destination",
+            "result": "Blocked",
+            "evidence": "operator-inspect-authenticates-and-lists-contents, wrong-passphrase-refused, tampered-archive-refused; inspect-manifest.json, restore-negative.json",
+            "note": "Done: operator --inspect with the passphrase piped through --passphrase-stdin. It authenticated the archive and returned sourceTenant 0a3c039e..., packageId e3163e33..., a sha256 equal to the downloaded file, and one administrator (Review Accept Admin). Inspect gives no content counts. A wrong passphrase and an archive with one byte flipped were both refused (exit 1, 'failed during archive inspection'). Not done: --restore. The review database is shared with other agents and is not an isolated destination installation, so restore was not run."
+          },
+          {
+            "section": "3. Activate with the destination's own entitlement",
+            "result": "Blocked",
+            "evidence": "none",
+            "note": "Needs a restored destination tenant plus either a Pro licence signed for that tenant or the destination's own verified hosted subscription. None is available."
+          },
+          {
+            "section": "4. Upgrade a current workspace independently",
+            "result": "Not run",
+            "evidence": "11-4-upgrade-screen.png/.json",
+            "note": "Boundary only. As the departed customer, Upgrade to AlgaPSA shows 'Your MSP relationship has already ended', 'Paid technician seats required: 1', and 'An active, paid AlgaPSA subscription belonging to this workspace is required before upgrading'. It offers a purchase form (seats, Monthly, Review purchase) with Upgrade workspace disabled. No purchase or conversion was attempted. It needs the customer's own test or paid entitlement. The guide also asks for a separate disposable live relationship, and converting one would end another relationship."
+          }
+        ],
+        "resultFile": "11-export-restore-and-upgrade/guide-result.json",
+        "recordingJson": "11-export-restore-and-upgrade/export-recording/recording.json"
+      },
+      "limitations": [
+        "No restore was run. Proving archive contents, excluded MSP-private data, file links and credential vault recovery is therefore not done.",
+        "After the last assertion, the harness's Node process did not exit (probably the download tab); it was killed once recording.json, walkthrough.webm and chapters.vtt were written.",
+        "The customer upgrade screen labels its seat field 'Total seats in your pool', which is MSP pool wording. Copy observation only.",
+        "Missing resource: Isolated destination installation (database-owner operator and file storage) for --restore",
+        "Missing resource: Destination entitlement: a tenant-bound signed Pro licence for the restored tenant, or that tenant's own verified hosted subscription",
+        "Missing resource: Customer's own paid/test AlgaPSA subscription (or tenant-bound signed licence) and a separate disposable live relationship for the independent upgrade"
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.489577,
+        "chapters": 3,
+        "lateSeek": 19.52
+      }
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "candidateRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordingPaths": {
+        "webm": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/12-customer-integrations.webm",
+        "chapterVtt": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/12-customer-integrations.vtt",
+        "recordingJson": "guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/12-customer-integrations.json"
+      },
+      "status": "complete",
+      "testedRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+      "recordedAt": "2026-10-26T03:55:51.580Z",
+      "durationSeconds": 52.88,
+      "actors": [
+        {
+          "name": "Alice Liddell",
+          "email": "alice@whiterabbit.test",
+          "organization": "White Rabbit IT (customer, c64b2666-7dd6-4c61-8ced-4b233f628e61)"
+        },
+        {
+          "name": "QA Tester",
+          "email": "qa@emeraldcity.oz",
+          "organization": "Oz (MSP sponsor, fa7f912f-6b62-463e-85cc-ffedab47ac44)"
+        }
+      ],
+      "steps": [
+        "Alice signed in; the session tenant is White Rabbit.",
+        "Alice opened Email settings (outbound: Nine Minds Managed), then Inbound > Open Providers.",
+        "Alice inspected the Google form, then on Microsoft used New app registration: display name, simulator client ID, simulator directory ID and secret, with Staff sign-in and Outlook email checked, and saved.",
+        "Alice reloaded the providers page and checked the redaction, used Back to Email settings and reloaded, then opened /msp/settings/integrations and was denied.",
+        "QA signed in separately and opened its own Integrations page.",
+        "Signed out and opened the MSP sign-in page; Alice opened Security > Single Sign-On.",
+        "Alice reviewed Security Settings tabs and Entra Direct for a directory entry.",
+        "Alice created a requester contact and a ticket for it, then posted Shared IT, Private, and Requester-audience comments.",
+        "The SMTP sink was polled for the requester's mailbox.",
+        "Alice archived the test app registration and reloaded."
+      ],
+      "outcomes": [
+        "microsoft_profiles row 'CM-REVIEW-20261026-12-c simulator app' exists in White Rabbit and none in Oz. Its secret is masked after reload.",
+        "Customer broad integration catalog denied; sponsor catalog unaffected.",
+        "Requester mailbox (SMTP sink) received the ticket-created mail, the requester-audience comment once, and the Shared IT comment (leak).",
+        "The test app registration is archived (is_archived=true) after reload."
+      ],
+      "chapters": [
+        "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)",
+        "2. Staff sign-in and callback: entry points only (no approved identity provider)",
+        "3. Directory provisioning entry (customer workspace)",
+        "4. Requester-audience message reaches the controlled mailbox (SMTP sink); private bodies excluded",
+        "5. Revoke the test binding through the provider control (archive) and reload"
+      ],
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "runtime": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "mode": "production",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "buildId": "build-1792983401994",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "dist": ".next-review-final-54e75edf"
+      },
+      "build": {
+        "sourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+        "buildId": "build-1792983401994",
+        "dist": ".next-review-final-54e75edf",
+        "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b"
+      },
+      "recordingSourcePaths": {
+        "webm": "12-customer-integrations/recording/walkthrough.webm",
+        "chapterVtt": "12-customer-integrations/recording/chapters.vtt"
+      },
+      "scenario": {
+        "guide": "guides/12-customer-integrations.html",
+        "coverage": "blocked-external",
+        "status": "blocked-external: 1. Save customer-owned provider configuration — Pass; 2. Exercise staff sign-in and callback — Blocked; 3. Provision or sync a directory user — Blocked; 4. Deliver a message and ingest the reply — Fail; 5. Check revoked bindings and paused relationships — Blocked",
+        "sections": [
+          {
+            "section": "1. Save customer-owned provider configuration",
+            "result": "Pass",
+            "evidence": "s1-session-is-customer-workspace-not-sponsor, s1-outbound-provider-is-nine-minds-managed, s1-open-providers-reaches-customer-provider-workbench, s1-google-form-offers-provider-specific-fields, s1-binding-persisted-in-customer-tenant-only, s1-secret-redacted-after-reload, s1-back-link-returns-to-customer-email-settings-after-reload, s1-customer-broad-integration-catalog-denied, s1-sponsor-separate-signin-does-not-see-customer-binding; s1-01..s1-08 screenshots",
+            "note": "Simulator evidence. Alice's session is the White Rabbit workspace, and outbound email is Nine Minds Managed (not replaced). Email > Inbound > Open Providers reaches the customer workbench. Alice created the Microsoft app registration 'CM-REVIEW-20261026-12-c simulator app' with the operator-prepared Graph simulator client (cm-review-rabbit-client, White Rabbit Review Directory). It persisted in microsoft_profiles under White Rabbit only. After reload the secret appears masked ('••••…' plus its last 4 characters); the full secret is not in page HTML or text. The back link returns to Email settings, also after reload. /msp/settings/integrations is 'Page not available' for the customer. QA (Oz), signed in separately, sees the sponsor catalog without the customer binding, and Oz has no such profile."
+          },
+          {
+            "section": "2. Exercise staff sign-in and callback",
+            "result": "Blocked",
+            "evidence": "s2-signin-sso-entries (ssoButtons: []), s2-customer-sso-settings; s2-01-msp-signin.png, s2-02-customer-sso-settings.png",
+            "note": "Not executable. The MSP sign-in page offers only email/password, with no SSO entry. Production-mode SSO safeguards were left unchanged. In the customer's Security > Single Sign-On, Microsoft 365 shows 'Not configured' and bulk Microsoft assignment is disabled. No approved Microsoft Entra application with a publicly reachable redirect URI exists, so no provider redirect or callback was attempted."
+          },
+          {
+            "section": "3. Provision or sync a directory user",
+            "result": "Blocked",
+            "evidence": "s3-directory-entry-points; s3-01-entra-direct.png",
+            "note": "Blocked: directory setup entry not prepared. The customer Security Settings tabs are Roles, Sessions, Single Sign-On, Permissions, User Roles, Policies, API Keys and Webhooks; there is no user-provisioning/SCIM tab. Entra Direct reports 'No enabled app'. The simulator directory user review.tech@whiterabbit.test was not provisioned."
+          },
+          {
+            "section": "4. Deliver a message and ingest the reply",
+            "result": "Fail",
+            "evidence": "s4-disposable-ticket-has-requester-contact, s4-requester-mail-delivered-once-to-controlled-mailbox, step s4-FAIL-shared-it-body-emailed-to-requester, step s4-reply-ingestion-not-possible; s4-03-three-audiences.png, s4-04-after-reload.png; probe-shared-audience-mail/ (reproduction)",
+            "note": "Outbound delivery works but the audience is wrong. Alice created requester contact cm-review-20261026-12-c.requester@whiterabbit.test and a ticket for it, then posted three comments: Shared IT teams, Private to White Rabbit IT, and Requester and IT teams. The requester-audience update reached the controlled SMTP-sink mailbox exactly once. However, the 'Shared IT teams' body was also emailed to the requester (defect below). The private body was excluded. Reply ingestion is blocked: there is no inbound mailbox binding (Inbound shows Gmail 0, Microsoft 0, IMAP 0) and the sink is outbound only."
+          },
+          {
+            "section": "5. Check revoked bindings and paused relationships",
+            "result": "Blocked",
+            "evidence": "s5-test-binding-archived-after-reload; s5-01-archived.png",
+            "note": "Partly exercised. The test binding was revoked through the provider's own Archive control and stayed archived after reload. There is no live send, sync or ingest through that binding to replay against, and lifecycle (departure/lapse) queue checks were not run."
+          }
+        ],
+        "resultFile": "12-customer-integrations/guide-result.json",
+        "recordingJson": "12-customer-integrations/recording/recording.json"
+      },
+      "limitations": [
+        "All provider evidence uses the local Graph simulator client prepared by the operator; this is not real-provider acceptance.",
+        "No staff sign-in, callback, directory provisioning, inbound reply, or revocation replay was executed (see missingResources).",
+        "Production SSO safeguards were not changed.",
+        "Missing resource: An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, for staff sign-in/callback",
+        "Missing resource: A customer-facing directory provisioning entry (SCIM / Entra Direct enabled app) for the White Rabbit workspace",
+        "Missing resource: An inbound mailbox binding (Microsoft/Gmail/IMAP) for White Rabbit that the reply path and ingestion worker can use"
+      ],
+      "playerCheck": {
+        "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+        "rangeStatus": 206,
+        "played": 1.487377,
+        "chapters": 5,
+        "lateSeek": 51.88
+      }
+    }
+  ]
+}

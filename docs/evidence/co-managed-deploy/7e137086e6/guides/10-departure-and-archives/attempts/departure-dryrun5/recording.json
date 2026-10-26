@@ -1,0 +1,224 @@
+{
+  "scenario": "attempts/departure-dryrun5",
+  "recordedAt": "2026-10-26T03:53:38.442Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "qa-has-technician-access-to-the-disposable-relationship",
+      "passed": true,
+      "at": "2026-10-26T03:53:42.705Z",
+      "data": {
+        "qaId": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "id": "msp-sla-policy-applies-to-the-disposable-client",
+      "passed": true,
+      "at": "2026-10-26T03:53:43.126Z",
+      "data": {
+        "policy": "CM-REVIEW-20261026-10 MSP policy"
+      }
+    },
+    {
+      "id": "msp-maps-customer-priorities-to-its-sla",
+      "passed": true,
+      "at": "2026-10-26T03:53:45.382Z",
+      "data": {
+        "mapCount": 5
+      }
+    },
+    {
+      "id": "customer-native-ticket-escalated-to-msp",
+      "passed": true,
+      "at": "2026-10-26T03:53:51.786Z",
+      "data": {
+        "ticket": "aa3ff00e-dc65-4f87-b970-da3efe2128b4",
+        "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:53:38.483Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:38.628Z",
+      "seconds": 0.186,
+      "title": "chapter",
+      "data": "Preparation: staff access, shared ticket, audiences, files, time"
+    },
+    {
+      "at": "2026-10-26T03:53:40.553Z",
+      "seconds": 2.111,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:42.550Z",
+      "seconds": 4.108,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:53:42.705Z",
+      "seconds": 4.263,
+      "actor": "qa",
+      "title": "qa-has-technician-access-to-the-disposable-relationship",
+      "data": {
+        "qaId": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:43.127Z",
+      "seconds": 4.685,
+      "actor": "qa",
+      "title": "msp-sla-policy-applies-to-the-disposable-client",
+      "data": {
+        "policy": "CM-REVIEW-20261026-10 MSP policy"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:45.081Z",
+      "seconds": 6.639,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:53:45.382Z",
+      "seconds": 6.94,
+      "actor": "qa",
+      "title": "msp-maps-customer-priorities-to-its-sla",
+      "data": {
+        "mapCount": 5
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:46.920Z",
+      "seconds": 8.478,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:48.949Z",
+      "seconds": 10.507,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:53:51.786Z",
+      "seconds": 13.344,
+      "actor": "accept7-admin",
+      "title": "customer-native-ticket-escalated-to-msp",
+      "data": {
+        "ticket": "aa3ff00e-dc65-4f87-b970-da3efe2128b4",
+        "route": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:53.285Z",
+      "seconds": 14.843,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:53:55.326Z",
+      "seconds": 16.884,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+    },
+    {
+      "at": "2026-10-26T03:53:59.418Z",
+      "seconds": 20.976,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+    },
+    {
+      "at": "2026-10-26T03:54:03.171Z",
+      "seconds": 24.729,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:05.210Z",
+      "seconds": 26.768,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+    },
+    {
+      "at": "2026-10-26T03:54:08.739Z",
+      "seconds": 30.297,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:54:10.762Z",
+      "seconds": 32.32,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/aa3ff00e-dc65-4f87-b970-da3efe2128b4"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.186,
+      "title": "Preparation: staff access, shared ticket, audiences, files, time",
+      "end": 36.830000000000005
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "dry run: stopped at the time-entry form"
+  ],
+  "durationSeconds": 36.88,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "accept7-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    }
+  ]
+}

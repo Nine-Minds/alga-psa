@@ -1,0 +1,15 @@
+{
+  "suffix": "CM-REVIEW-20261026-01",
+  "accept": {
+    "clientName": "CM-REVIEW-20261026-01 Accept-5",
+    "clientId": "daf80ed5-cddd-4523-ac5b-a423a3988391",
+    "workspace": "CM-REVIEW-20261026-01 Accept-5 IT",
+    "adminEmail": "cm-review-20261026-01-accept-5@cmreview.test",
+    "visibility": "Oversight of the initial service desk board",
+    "escalationBoard": "General Support",
+    "operationId": "01bc16ac-a3e3-43e9-92ac-eef150899611",
+    "customer": "27508bd4-7f89-4f3d-b502-4fb8612f6c20",
+    "relationship": "c52db90c-cc18-403e-a597-e0504a37b182",
+    "allocationId": "ed83214a-e797-4a3e-92f9-4b68032aa15e"
+  }
+}

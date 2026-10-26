@@ -1,0 +1,75 @@
+{
+  "scenario": "prep-contract-line-rate",
+  "recordedAt": "2026-10-26T03:37:09.576Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:37:09.620Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:09.769Z",
+      "seconds": 0.193,
+      "title": "before",
+      "data": {
+        "config_rate": null,
+        "service_rate": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:11.828Z",
+      "seconds": 2.252,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:11.828Z",
+      "seconds": 2.252,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: set the hourly rate explicitly on the disposable contract line"
+    },
+    {
+      "at": "2026-10-26T03:37:13.825Z",
+      "seconds": 4.249,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts&contractId=19921bc5-ab8d-4b33-a4e1-39a4dd1f7464&contractView=lines"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.252,
+      "title": "Prep: set the hourly rate explicitly on the disposable contract line",
+      "end": 38.75
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out rate persisted false",
+  "durationSeconds": 38.8,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

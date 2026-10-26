@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:00.044 --> 00:00:09.495
+Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid
+
+2
+00:00:09.495 --> 00:00:20.851
+Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board
+
+3
+00:00:20.851 --> 00:00:28.966
+MSP opens the same authoritative ticket in Entry and Grid
+
+4
+00:00:28.966 --> 00:00:32.632
+MSP edits status, priority and category natively; persisted to the customer ticket
+
+5
+00:00:32.632 --> 00:00:35.020
+MSP assigns its own technician in the Co-managed section
+
+6
+00:00:35.020 --> 00:00:37.086
+Field and privacy boundaries for the MSP in Entry and Grid
+
+7
+00:00:37.086 --> 00:00:50.086
+Customer sees MSP edits and assignment, assigns natively and writes privately
+
+8
+00:00:50.086 --> 00:01:01.527
+MSP sees the customer assignee but not the customer-private note
+
+9
+00:01:01.527 --> 00:02:16.060
+Ended Kansas Farms workspace: read-only check (no mutation attempted)
+
+10
+00:02:16.060 --> 00:02:26.710
+Restore: MSP clears its assignment on the disposable ticket

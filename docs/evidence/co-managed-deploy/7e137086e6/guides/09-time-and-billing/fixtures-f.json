@@ -1,0 +1,15 @@
+{
+  "suffix": "CM-REVIEW-20261026-09-f",
+  "ticketId": "6ca3357d-4596-45ad-959f-0629501a1d14",
+  "projectId": "7f988a76-d51b-4fc8-8967-ab6f560818c9",
+  "phaseId": "456145e0-f717-46b8-b6a6-74b498a14312",
+  "taskId": "5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+  "contractLine": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+  "period": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+  "links": {
+    "mspTicket": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/6ca3357d-4596-45ad-959f-0629501a1d14",
+    "customerTicket": "http://feature-co-managed-it.localhost:23374/msp/tickets/6ca3357d-4596-45ad-959f-0629501a1d14",
+    "mspTask": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5ea0bbb2-2660-4ef4-8022-61bd917b2ec9",
+    "customerProject": "http://feature-co-managed-it.localhost:23374/msp/projects/7f988a76-d51b-4fc8-8967-ab6f560818c9"
+  }
+}

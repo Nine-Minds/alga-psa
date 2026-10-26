@@ -1,0 +1,153 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings?tab=ticketing&section=boards",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nGeneral\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nAdmin Settings\nTicket Settings\nDisplay\nTicket Numbering\nBoards\nPriorities\nCategories\nChecklist Templates\nExternal systems\nBoards\n\nBoards organize tickets into logical groups. Each board can have its own default agent, priority, and SLA policy.\n\nAdd Board\nImport from Standard Boards\n1 Active\n0 Inactive\n1 column hidden.\nShow all\nName\n\t\nDefault Agent\n\t\nSLA Policy\n\t\nStatuses\n\t\nTicket load\n\t\n\n\nService Desk\n\t\n—\n\t\n—\n\t\n5\n\t\n1\n/ 1\n\t",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-0",
+      "text": "Display",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-1",
+      "text": "Ticket Numbering",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-2",
+      "text": "Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-3",
+      "text": "Priorities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-4",
+      "text": "Categories",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-5",
+      "text": "Checklist Templates",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-6",
+      "text": "External systems",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-board-button",
+      "text": " Add Board",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "import-boards-button",
+      "text": "Import from Standard Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "boards-search",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-actions-menu-76cc335e-e600-4e0c-b964-bad0628c6958",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

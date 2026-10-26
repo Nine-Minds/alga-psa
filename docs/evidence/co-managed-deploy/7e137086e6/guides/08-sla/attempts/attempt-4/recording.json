@@ -1,0 +1,1040 @@
+{
+  "scenario": "attempt-4",
+  "recordedAt": "2026-10-26T03:48:13.161Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-policy-persisted-with-targets-and-client-assignment",
+      "passed": true,
+      "at": "2026-10-26T03:48:23.587Z",
+      "data": {
+        "policyId": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "targets": [
+          {
+            "priority_id": "8635149a-31a7-4a04-b541-71d9fe413a3d",
+            "response_time_minutes": 4,
+            "resolution_time_minutes": 240,
+            "is_24x7": false
+          },
+          {
+            "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+            "response_time_minutes": 30,
+            "resolution_time_minutes": 60,
+            "is_24x7": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "prep-two-disposable-customer-tickets",
+      "passed": true,
+      "at": "2026-10-26T03:48:34.911Z",
+      "data": {
+        "t1": "17e22913-387b-4b5b-8886-042ff65c9466",
+        "t2": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+        "priority": "Medium"
+      }
+    },
+    {
+      "id": "s1-mapping-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:48:40.865Z",
+      "data": {
+        "customerPriority": "Medium",
+        "mspPriority": "P1 - Critical"
+      }
+    },
+    {
+      "id": "s2-visibility-alone-no-msp-obligation",
+      "passed": true,
+      "at": "2026-10-26T03:48:41.059Z"
+    },
+    {
+      "id": "s2-escalation-captures-policy-and-p1-targets",
+      "passed": true,
+      "at": "2026-10-26T03:48:45.076Z",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T04:18:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:48:44.858Z",
+          "resolution": {
+            "dueAt": "2026-10-26T04:48:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        }
+      }
+    },
+    {
+      "id": "s2-handoff-history-shows-escalation",
+      "passed": true,
+      "at": "2026-10-26T03:48:52.895Z",
+      "data": {
+        "history": "Dialog Content\nShared IT handoff history\n\nEscalated to MSP\n\nAlice Liddell · White Rabbit IT\n\nOct 25, 2026, 11:48 PM\n\nCM-REVIEW-20261026-08 escalate ticket 1"
+      }
+    },
+    {
+      "id": "s3-mapping-change-keeps-old-captured-targets",
+      "passed": true,
+      "at": "2026-10-26T03:49:00.966Z",
+      "data": {
+        "clockBefore": "[[\"ab2e2904-963e-45d0-b0b0-def7562dc647\",30,60,\"2026-10-26T04:18:44.858Z\",\"2026-10-26T04:48:44.858Z\"]]"
+      }
+    },
+    {
+      "id": "s3-new-escalation-uses-current-p2-targets",
+      "passed": true,
+      "at": "2026-10-26T03:49:05.159Z",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+            "obligationId": "95ac9d14-ce0b-4849-becb-5662742f75e5",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T03:53:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 4,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:49:04.959Z",
+          "observedAt": "2026-10-26T03:49:04.959Z",
+          "resolution": {
+            "dueAt": "2026-10-26T07:49:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 240,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        }
+      }
+    },
+    {
+      "id": "s5-ticket2-msp-assignee-is-qa",
+      "passed": true,
+      "at": "2026-10-26T03:49:12.684Z"
+    },
+    {
+      "id": "s4-handback-pauses-msp-clock-targets-unchanged",
+      "passed": true,
+      "at": "2026-10-26T03:49:17.805Z",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": null,
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:49:16.376Z",
+          "resolution": {
+            "dueAt": null,
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [
+            "customer_responsible"
+          ],
+          "elapsedMilliseconds": 31518
+        }
+      }
+    },
+    {
+      "id": "s4-customer-history-has-escalation-and-return",
+      "passed": true,
+      "at": "2026-10-26T03:49:22.993Z",
+      "data": {
+        "history": "Dialog Content\nShared IT handoff history\n\nReturned to customer\n\nQA Tester · Oz\n\nOct 25, 2026, 11:49 PM\n\nCM-REVIEW-20261026-08 return to customer\n\nEscalated to MSP\n\nAlice Liddell · White Rabbit IT\n\nOct 25, 2026, 11:48 PM\n\nCM-REVIEW-20261026-08 escalate ticket 1"
+      }
+    },
+    {
+      "id": "s4-re-escalation-keeps-same-captured-targets",
+      "passed": true,
+      "at": "2026-10-26T03:49:23.712Z",
+      "data": {
+        "obligations": 1
+      }
+    },
+    {
+      "id": "s5-departed-customer-retains-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T03:49:29.827Z"
+    },
+    {
+      "id": "s5-former-msp-cannot-read-departed-ticket-or-clock",
+      "passed": true,
+      "at": "2026-10-26T03:49:36.283Z"
+    },
+    {
+      "id": "restore-mapping-and-client-policy-to-original",
+      "passed": true,
+      "at": "2026-10-26T03:56:25.129Z",
+      "data": {
+        "before": {
+          "mappings": [],
+          "clientPolicy": "",
+          "policies": [
+            {
+              "sla_policy_id": "3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+              "policy_name": "CM-REVIEW-20261026-08 a1 MSP policy",
+              "is_default": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:48:13.203Z",
+      "seconds": 0.042,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:14.024Z",
+      "seconds": 0.863,
+      "title": "chapter",
+      "data": "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)"
+    },
+    {
+      "at": "2026-10-26T03:48:15.949Z",
+      "seconds": 2.788,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:18.004Z",
+      "seconds": 4.843,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:48:23.587Z",
+      "seconds": 10.426,
+      "actor": "qa",
+      "title": "prep-policy-persisted-with-targets-and-client-assignment",
+      "data": {
+        "policyId": "ced18386-54d4-4bab-aaad-f1c05cf4ff49",
+        "targets": [
+          {
+            "priority_id": "8635149a-31a7-4a04-b541-71d9fe413a3d",
+            "response_time_minutes": 4,
+            "resolution_time_minutes": 240,
+            "is_24x7": false
+          },
+          {
+            "priority_id": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+            "response_time_minutes": 30,
+            "resolution_time_minutes": 60,
+            "is_24x7": false
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:25.409Z",
+      "seconds": 12.248,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:27.566Z",
+      "seconds": 14.405,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:48:32.330Z",
+      "seconds": 19.169,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:48:34.911Z",
+      "seconds": 21.75,
+      "actor": "alice",
+      "title": "prep-two-disposable-customer-tickets",
+      "data": {
+        "t1": "17e22913-387b-4b5b-8886-042ff65c9466",
+        "t2": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+        "priority": "Medium"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:34.911Z",
+      "seconds": 21.75,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Configure and persist the customer-to-MSP priority mapping"
+    },
+    {
+      "at": "2026-10-26T03:48:36.781Z",
+      "seconds": 23.62,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:38.681Z",
+      "seconds": 25.52,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:48:40.865Z",
+      "seconds": 27.704,
+      "actor": "qa",
+      "title": "s1-mapping-persists-after-reload",
+      "data": {
+        "customerPriority": "Medium",
+        "mspPriority": "P1 - Critical"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:40.908Z",
+      "seconds": 27.747,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Escalation starts the MSP obligation (not initial visibility)"
+    },
+    {
+      "at": "2026-10-26T03:48:41.059Z",
+      "seconds": 27.898,
+      "actor": "qa",
+      "title": "s2-visibility-alone-no-msp-obligation"
+    },
+    {
+      "at": "2026-10-26T03:48:42.520Z",
+      "seconds": 29.359,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:44.592Z",
+      "seconds": 31.431,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/17e22913-387b-4b5b-8886-042ff65c9466"
+    },
+    {
+      "at": "2026-10-26T03:48:45.076Z",
+      "seconds": 31.915,
+      "actor": "alice",
+      "title": "s2-escalation-captures-policy-and-p1-targets",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T04:18:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:48:44.858Z",
+          "resolution": {
+            "dueAt": "2026-10-26T04:48:44.858Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:47.430Z",
+      "seconds": 34.269,
+      "actor": "alice",
+      "title": "s2-customer-sla-display",
+      "data": {
+        "text": "WHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nResponse\nIn progress\n\nDue · Oct 26, 2026, 12:18 AM\n\nResolution\nIn progress\n\nDue · Oct 26, 2026, 12:48 AM"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:49.014Z",
+      "seconds": 35.853,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:51.246Z",
+      "seconds": 38.085,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/17e22913-387b-4b5b-8886-042ff65c9466"
+    },
+    {
+      "at": "2026-10-26T03:48:51.258Z",
+      "seconds": 38.097,
+      "actor": "qa",
+      "title": "s2-msp-sla-display",
+      "data": {
+        "text": "WHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nResponse\nIn progress\n\nDue · Oct 26, 2026, 12:18 AM\n\nResolution\nIn progress\n\nDue · Oct 26, 2026, 12:48 AM"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:52.895Z",
+      "seconds": 39.734,
+      "actor": "qa",
+      "title": "s2-handoff-history-shows-escalation",
+      "data": {
+        "history": "Dialog Content\nShared IT handoff history\n\nEscalated to MSP\n\nAlice Liddell · White Rabbit IT\n\nOct 25, 2026, 11:48 PM\n\nCM-REVIEW-20261026-08 escalate ticket 1"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:53.093Z",
+      "seconds": 39.932,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Change the mapping: existing targets stay, new escalation uses current config"
+    },
+    {
+      "at": "2026-10-26T03:48:54.763Z",
+      "seconds": 41.602,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:56.693Z",
+      "seconds": 43.532,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:49:00.819Z",
+      "seconds": 47.658,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/17e22913-387b-4b5b-8886-042ff65c9466"
+    },
+    {
+      "at": "2026-10-26T03:49:00.966Z",
+      "seconds": 47.805,
+      "actor": "qa",
+      "title": "s3-mapping-change-keeps-old-captured-targets",
+      "data": {
+        "clockBefore": "[[\"ab2e2904-963e-45d0-b0b0-def7562dc647\",30,60,\"2026-10-26T04:18:44.858Z\",\"2026-10-26T04:48:44.858Z\"]]"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:02.763Z",
+      "seconds": 49.602,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:04.762Z",
+      "seconds": 51.601,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/0220c421-80cb-4331-8ba2-faffb0e95b1f"
+    },
+    {
+      "at": "2026-10-26T03:49:05.159Z",
+      "seconds": 51.998,
+      "actor": "alice",
+      "title": "s3-new-escalation-uses-current-p2-targets",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "0220c421-80cb-4331-8ba2-faffb0e95b1f",
+            "obligationId": "95ac9d14-ce0b-4849-becb-5662742f75e5",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T03:53:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 4,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:49:04.959Z",
+          "observedAt": "2026-10-26T03:49:04.959Z",
+          "resolution": {
+            "dueAt": "2026-10-26T07:49:04.959Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 240,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 0
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:07.160Z",
+      "seconds": 53.999,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "5 (prep). MSP assigns ticket 2 to QA so threshold notices have an assignee"
+    },
+    {
+      "at": "2026-10-26T03:49:08.635Z",
+      "seconds": 55.474,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:10.625Z",
+      "seconds": 57.464,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/0220c421-80cb-4331-8ba2-faffb0e95b1f"
+    },
+    {
+      "at": "2026-10-26T03:49:12.684Z",
+      "seconds": 59.523,
+      "actor": "qa",
+      "title": "s5-ticket2-msp-assignee-is-qa"
+    },
+    {
+      "at": "2026-10-26T03:49:12.685Z",
+      "seconds": 59.524,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. MSP returns ticket 1 to the customer; history preserved"
+    },
+    {
+      "at": "2026-10-26T03:49:14.159Z",
+      "seconds": 60.998,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:16.171Z",
+      "seconds": 63.01,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/17e22913-387b-4b5b-8886-042ff65c9466"
+    },
+    {
+      "at": "2026-10-26T03:49:17.621Z",
+      "seconds": 64.46,
+      "actor": "qa",
+      "title": "s4-msp-sla-after-handback",
+      "data": {
+        "text": "WHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nPaused\nResolution\nPaused"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:17.805Z",
+      "seconds": 64.644,
+      "actor": "qa",
+      "title": "s4-handback-pauses-msp-clock-targets-unchanged",
+      "data": {
+        "clock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": null,
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:49:16.376Z",
+          "resolution": {
+            "dueAt": null,
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [
+            "customer_responsible"
+          ],
+          "elapsedMilliseconds": 31518
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:19.316Z",
+      "seconds": 66.155,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:21.335Z",
+      "seconds": 68.174,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/17e22913-387b-4b5b-8886-042ff65c9466"
+    },
+    {
+      "at": "2026-10-26T03:49:21.349Z",
+      "seconds": 68.188,
+      "actor": "alice",
+      "title": "s4-customer-sla-after-handback",
+      "data": {
+        "text": "WHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nPaused\nResolution\nPaused"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:22.993Z",
+      "seconds": 69.832,
+      "actor": "alice",
+      "title": "s4-customer-history-has-escalation-and-return",
+      "data": {
+        "history": "Dialog Content\nShared IT handoff history\n\nReturned to customer\n\nQA Tester · Oz\n\nOct 25, 2026, 11:49 PM\n\nCM-REVIEW-20261026-08 return to customer\n\nEscalated to MSP\n\nAlice Liddell · White Rabbit IT\n\nOct 25, 2026, 11:48 PM\n\nCM-REVIEW-20261026-08 escalate ticket 1"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:23.711Z",
+      "seconds": 70.55,
+      "actor": "alice",
+      "title": "s4-re-escalation-result",
+      "data": {
+        "generations": [
+          1
+        ],
+        "lastClock": {
+          "identity": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "ticketId": "17e22913-387b-4b5b-8886-042ff65c9466",
+            "obligationId": "ab2e2904-963e-45d0-b0b0-def7562dc647",
+            "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+          },
+          "response": {
+            "dueAt": "2026-10-26T04:18:51.734Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 30,
+            "completedElapsedMilliseconds": null
+          },
+          "schedule": {
+            "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+            "entries": [],
+            "is_24x7": true,
+            "holidays": [],
+            "timezone": "UTC",
+            "is_default": false,
+            "schedule_id": "24x7-fallback",
+            "schedule_name": "24x7 (Fallback)"
+          },
+          "startedAt": "2026-10-26T03:48:44.858Z",
+          "observedAt": "2026-10-26T03:49:23.252Z",
+          "resolution": {
+            "dueAt": "2026-10-26T04:48:51.734Z",
+            "breached": false,
+            "breachedAt": null,
+            "completedAt": null,
+            "targetMinutes": 60,
+            "completedElapsedMilliseconds": null
+          },
+          "pauseReasons": [],
+          "elapsedMilliseconds": 31518
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:23.712Z",
+      "seconds": 70.551,
+      "actor": "alice",
+      "title": "s4-re-escalation-keeps-same-captured-targets",
+      "data": {
+        "obligations": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:23.846Z",
+      "seconds": 70.685,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "5. Departed relationship: Kansas Farms keeps its own outcome; MSP live read unavailable"
+    },
+    {
+      "at": "2026-10-26T03:49:25.321Z",
+      "seconds": 72.16,
+      "actor": "kansas-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:27.315Z",
+      "seconds": 74.154,
+      "actor": "kansas-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T03:49:29.827Z",
+      "seconds": 76.666,
+      "actor": "kansas-admin",
+      "title": "s5-departed-customer-retains-native-ticket"
+    },
+    {
+      "at": "2026-10-26T03:49:31.338Z",
+      "seconds": 78.177,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:33.267Z",
+      "seconds": 80.106,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/3261f313-8e04-45df-94bc-0343e92ba454/ad0808b5-25df-4e95-987a-aa650c8ba24f/0a767ca1-0f61-4817-a1af-e8d4183ff402"
+    },
+    {
+      "at": "2026-10-26T03:49:36.283Z",
+      "seconds": 83.122,
+      "actor": "qa",
+      "title": "s5-former-msp-cannot-read-departed-ticket-or-clock"
+    },
+    {
+      "at": "2026-10-26T03:49:36.316Z",
+      "seconds": 83.155,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "5. Breach/routing notification on ticket 2 (4-minute response target)"
+    },
+    {
+      "at": "2026-10-26T03:49:38.315Z",
+      "seconds": 85.154,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:40.288Z",
+      "seconds": 87.127,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/0220c421-80cb-4331-8ba2-faffb0e95b1f"
+    },
+    {
+      "at": "2026-10-26T03:55:49.606Z",
+      "seconds": 456.445,
+      "actor": "qa",
+      "title": "s5-ticket2-clock-after-target",
+      "data": {
+        "responseBreached": true,
+        "observedAt": "2026-10-26T03:54:11.170Z",
+        "slaDisplay": "",
+        "notificationEvents": [
+          {
+            "notification_event_id": "8e64ea4d-9610-4ffe-9a68-858b9a354a58",
+            "sla_type": "response",
+            "notification_type": "warning",
+            "threshold_percent": 50
+          },
+          {
+            "notification_event_id": "84ab695c-9641-4e2d-a719-fa370472bf2f",
+            "sla_type": "response",
+            "notification_type": "warning",
+            "threshold_percent": 75
+          },
+          {
+            "notification_event_id": "bdc6653a-2f9c-45ec-8e08-46815dd3b0db",
+            "sla_type": "response",
+            "notification_type": "warning",
+            "threshold_percent": 90
+          },
+          {
+            "notification_event_id": "499c222f-164e-4297-97c5-160f5deadded",
+            "sla_type": "response",
+            "notification_type": "breach",
+            "threshold_percent": 100
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:56:15.018Z",
+      "seconds": 481.857,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore: mapping back to original, policy unassigned from White Rabbit"
+    },
+    {
+      "at": "2026-10-26T03:56:16.938Z",
+      "seconds": 483.777,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:56:18.948Z",
+      "seconds": 485.787,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=1a832203-2725-4b90-8d4b-90207ebfc23f"
+    },
+    {
+      "at": "2026-10-26T03:56:25.129Z",
+      "seconds": 491.968,
+      "actor": "qa",
+      "title": "restore-mapping-and-client-policy-to-original",
+      "data": {
+        "before": {
+          "mappings": [],
+          "clientPolicy": "",
+          "policies": [
+            {
+              "sla_policy_id": "3caf4485-e263-4d99-ba9b-3253b1bb5b73",
+              "policy_name": "CM-REVIEW-20261026-08 a1 MSP policy",
+              "is_default": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.863,
+      "title": "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)",
+      "end": 21.75
+    },
+    {
+      "start": 21.75,
+      "title": "1. Configure and persist the customer-to-MSP priority mapping",
+      "end": 27.747
+    },
+    {
+      "start": 27.747,
+      "title": "2. Escalation starts the MSP obligation (not initial visibility)",
+      "end": 39.932
+    },
+    {
+      "start": 39.932,
+      "title": "3. Change the mapping: existing targets stay, new escalation uses current config",
+      "end": 53.999
+    },
+    {
+      "start": 53.999,
+      "title": "5 (prep). MSP assigns ticket 2 to QA so threshold notices have an assignee",
+      "end": 59.524
+    },
+    {
+      "start": 59.524,
+      "title": "4. MSP returns ticket 1 to the customer; history preserved",
+      "end": 70.685
+    },
+    {
+      "start": 70.685,
+      "title": "5. Departed relationship: Kansas Farms keeps its own outcome; MSP live read unavailable",
+      "end": 83.155
+    },
+    {
+      "start": 83.155,
+      "title": "5. Breach/routing notification on ticket 2 (4-minute response target)",
+      "end": 481.857
+    },
+    {
+      "start": 481.857,
+      "title": "Restore: mapping back to original, policy unassigned from White Rabbit",
+      "end": 493.27
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#notification-bell')\n",
+  "durationSeconds": 493.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "kansas-admin",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

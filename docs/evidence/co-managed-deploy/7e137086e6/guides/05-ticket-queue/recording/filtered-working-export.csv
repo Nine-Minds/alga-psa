@@ -1,0 +1,6 @@
+workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at
+c64b2666-7dd6-4c61-8ced-4b233f628e61,2be5cb32-91e8-491a-9ec4-16ab019c7d40,6e72984f-9d4e-4d78-b38c-d11edc3a3c51,White Rabbit IT,000028,CM-REVIEW-20261026-05 mixed E explicit,Open,Critical,false,msp,2026-10-26T04:16:31.122+00:00,2026-10-26T04:16:31.122+00:00
+c64b2666-7dd6-4c61-8ced-4b233f628e61,2be5cb32-91e8-491a-9ec4-16ab019c7d40,ac2d0e9a-588f-48fd-83bf-b60ddf249e33,White Rabbit IT,000027,CM-REVIEW-20261026-05 mixed D,Open,Low,false,msp,2026-10-26T04:16:27.45+00:00,2026-10-26T04:16:27.45+00:00
+c64b2666-7dd6-4c61-8ced-4b233f628e61,2be5cb32-91e8-491a-9ec4-16ab019c7d40,5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf,White Rabbit IT,000026,CM-REVIEW-20261026-05 mixed C,Open,Low,false,msp,2026-10-26T04:16:23.817+00:00,2026-10-26T04:16:23.817+00:00
+c64b2666-7dd6-4c61-8ced-4b233f628e61,2be5cb32-91e8-491a-9ec4-16ab019c7d40,463f082b-e225-4198-a3eb-3b3fa84d6a12,White Rabbit IT,000025,CM-REVIEW-20261026-05 bulk B,Open,Low,false,msp,2026-10-26T04:16:20.173+00:00,2026-10-26T04:16:20.173+00:00
+c64b2666-7dd6-4c61-8ced-4b233f628e61,2be5cb32-91e8-491a-9ec4-16ab019c7d40,899670b9-7ad5-43a4-9f99-950e03a4f8f1,White Rabbit IT,000024,CM-REVIEW-20261026-05 bulk A,Open,Low,false,msp,2026-10-26T04:16:16.425+00:00,2026-10-26T04:16:16.425+00:00

@@ -1,0 +1,139 @@
+{
+  "pool": {
+    "capacity": 7,
+    "source": "hosted",
+    "source_reference": "sub_774424209",
+    "revision": 12,
+    "allocated": 5
+  },
+  "allocations": [
+    {
+      "allocation_id": "7e5d128c-b67d-42e2-ac86-adfc03b3b75a",
+      "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+      "seats": 1,
+      "state": "active",
+      "released_at": null,
+      "created_at": "2026-10-26T00:07:39.03783+00:00"
+    },
+    {
+      "allocation_id": "573598ea-8bbc-49c7-81b5-98136929182d",
+      "customer_tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T00:13:30.705+00:00",
+      "created_at": "2026-10-26T00:09:43.756294+00:00"
+    },
+    {
+      "allocation_id": "c2ab8cd8-3f2c-45d8-a7aa-c0d3a22c704e",
+      "customer_tenant": "3c52c25f-6bc2-4d4c-97ad-11ffa31d87e3",
+      "seats": 1,
+      "state": "active",
+      "released_at": null,
+      "created_at": "2026-10-26T03:21:10.203049+00:00"
+    },
+    {
+      "allocation_id": "9b450028-b10d-4721-bacb-cfc3e0cf3f4c",
+      "customer_tenant": "70a9908e-5372-41ec-b4c6-b22dae109fff",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:24:22.039731+00:00",
+      "created_at": "2026-10-26T03:22:09.805006+00:00"
+    },
+    {
+      "allocation_id": "6a0436f0-49a2-49ad-b259-b7c5f92f1e8f",
+      "customer_tenant": "689799d0-9b7f-489b-aac3-a8ad6a485528",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:26:08.299697+00:00",
+      "created_at": "2026-10-26T03:24:40.859617+00:00"
+    },
+    {
+      "allocation_id": "7b02523e-9f39-4ce2-8409-c60f30f73b25",
+      "customer_tenant": "2953aec7-3e03-47d8-8637-171af6c6e5c0",
+      "seats": 1,
+      "state": "active",
+      "released_at": null,
+      "created_at": "2026-10-26T03:26:36.946636+00:00"
+    },
+    {
+      "allocation_id": "bbc14e09-dbfa-402d-8822-8396df16aa9e",
+      "customer_tenant": "1f947059-8670-4a91-82e3-3f5ee1d88357",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:29:38.309547+00:00",
+      "created_at": "2026-10-26T03:27:39.117104+00:00"
+    },
+    {
+      "allocation_id": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+      "customer_tenant": "a53cba7c-fa11-482f-972d-579637aa09f5",
+      "seats": 1,
+      "state": "active",
+      "released_at": null,
+      "created_at": "2026-10-26T03:30:04.580792+00:00"
+    },
+    {
+      "allocation_id": "f39843ac-3393-4b59-ba58-5992859c16e4",
+      "customer_tenant": "fa472cf2-9361-4b39-98ec-5a39fc8e082b",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:35:01.374495+00:00",
+      "created_at": "2026-10-26T03:31:11.511481+00:00"
+    },
+    {
+      "allocation_id": "ed83214a-e797-4a3e-92f9-4b68032aa15e",
+      "customer_tenant": "27508bd4-7f89-4f3d-b502-4fb8612f6c20",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:36:41.285323+00:00",
+      "created_at": "2026-10-26T03:35:29.383014+00:00"
+    },
+    {
+      "allocation_id": "b2604e7b-3e52-4aef-a1d7-a1696878ff4e",
+      "customer_tenant": "42e3a01b-0726-4eb2-a3d1-f1e11c92f45c",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:41:06.062642+00:00",
+      "created_at": "2026-10-26T03:37:02.893575+00:00"
+    },
+    {
+      "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+      "customer_tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+      "seats": 1,
+      "state": "active",
+      "released_at": null,
+      "created_at": "2026-10-26T03:41:22.790414+00:00"
+    },
+    {
+      "allocation_id": "dbd520b8-a8b5-4927-8a6b-34a0821cca9a",
+      "customer_tenant": "455cd911-d6d3-4beb-8450-112e42648443",
+      "seats": 1,
+      "state": "released",
+      "released_at": "2026-10-26T03:43:37.222731+00:00",
+      "created_at": "2026-10-26T03:42:29.592032+00:00"
+    }
+  ],
+  "accept": {
+    "operation_id": "54fb5726-1a14-45a2-8c72-0c5780e65a88",
+    "customer_tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a",
+    "relationship_id": "e24c064b-1b13-471d-8f24-3441f26d9b0e",
+    "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+    "state": "pending_acceptance",
+    "invitation_sent_at": "2026-10-26T03:42:06.882011+00:00",
+    "invitation_delivery_error": null,
+    "client_id": "42b27ac2-5221-446a-ad94-f781c3398493",
+    "visibility": "board_scope",
+    "board": "14221a98-159d-4bb4-aa6f-0890913dfee1"
+  },
+  "cancel": {
+    "operation_id": "e7127cab-2af3-4096-8a66-80c306ed512b",
+    "customer_tenant": "455cd911-d6d3-4beb-8450-112e42648443",
+    "relationship_id": "c66b3c06-125d-41e6-bf37-fa00187542af",
+    "allocation_id": "dbd520b8-a8b5-4927-8a6b-34a0821cca9a",
+    "state": "cancelled",
+    "invitation_sent_at": "2026-10-26T03:42:30.098614+00:00",
+    "invitation_delivery_error": null,
+    "client_id": "31131015-d619-4b20-bb27-c3e40bb56cf9",
+    "visibility": "escalation_only",
+    "board": "14221a98-159d-4bb4-aa6f-0890913dfee1"
+  }
+}

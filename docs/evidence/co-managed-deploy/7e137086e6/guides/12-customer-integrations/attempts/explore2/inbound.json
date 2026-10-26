@@ -1,0 +1,125 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/email",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nEmail\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nEmail\nEmail Configuration\n\nConfigure email providers, domains, and settings\n\nInbound Email\nOutbound Email\nConfigure inbound email routing and provider-specific automation.\nProviders\nDefaults\nInbound Rules\nEmail Provider Configuration\n\nConfigure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets\n\nGmail: 0 · Microsoft: 0 · IMAP: 0\n\nAdd Email Provider\nNo Email Providers Configured\n\nAdd an email provider to start receiving and processing inbound emails as tickets.\n\nAdd Email Provider\nSetup Instructions\nMicrosoft 365 Setup\n\nBring your own Microsoft app — register it in Azure AD (Microsoft Entra ID), grant mail permissions, and connect it to your Microsoft 365 mailbox.\n\nMicrosoft app setup is managed in Providers.\n\nOpen Providers\nGmail Setup\n\n1. Enter your Gmail address and provider name\n2. Click \"Connect Gmail\" to authorize access\n3. Configure email processing preferences\n4. Save to complete setup",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Inbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Outbound Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "nav-providers",
+      "text": "Providers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "nav-defaults",
+      "text": "Defaults",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "nav-inbound-rules",
+      "text": "Inbound Rules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-provider-btn",
+      "text": "Add Email Provider",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "empty-add-provider-btn",
+      "text": "Add Email Provider",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "open-microsoft-providers-settings-button",
+      "text": "Open Providers",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

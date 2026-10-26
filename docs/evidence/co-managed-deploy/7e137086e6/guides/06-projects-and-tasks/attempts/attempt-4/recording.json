@@ -1,0 +1,79 @@
+{
+  "scenario": "attempt-4",
+  "recordedAt": "2026-10-26T03:22:12.886Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:22:12.931Z",
+      "seconds": 0.045,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:22:13.268Z",
+      "seconds": 0.382,
+      "title": "chapter",
+      "data": "Before you start: customer creates a disposable project, phase and two tasks"
+    },
+    {
+      "at": "2026-10-26T03:22:15.191Z",
+      "seconds": 2.305,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:22:17.256Z",
+      "seconds": 4.37,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:22:19.734Z",
+      "seconds": 6.848,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/3af2079b-da1d-40d8-bc10-93d31ad2be36"
+    },
+    {
+      "at": "2026-10-26T03:22:26.667Z",
+      "seconds": 13.781,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/3af2079b-da1d-40d8-bc10-93d31ad2be36/tasks/76855e1b-80c4-491d-8027-f027be6d3f5f"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.382,
+      "title": "Before you start: customer creates a disposable project, phase and two tasks",
+      "end": 39.230000000000004
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for getByRole('option', { name: /Alice Liddell/ }).first()\n",
+  "durationSeconds": 39.28,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

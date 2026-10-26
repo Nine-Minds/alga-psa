@@ -1,0 +1,1062 @@
+{
+  "scenario": "recording",
+  "recordedAt": "2026-10-26T03:26:55.173Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-task-a-has-customer-local-assignee",
+      "passed": true,
+      "at": "2026-10-26T03:27:14.399Z"
+    },
+    {
+      "id": "prep-native-project-phase-two-tasks-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:27:14.399Z",
+      "data": {
+        "pid": "b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0",
+        "phaseId": "77d1bc78-c971-465f-b25d-d7e24375de20",
+        "taskIds": [
+          "ccbcc459-1986-4226-bf92-f0499093b006",
+          "5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a"
+        ]
+      }
+    },
+    {
+      "id": "prep-second-unshared-project-exists",
+      "passed": true,
+      "at": "2026-10-26T03:27:19.998Z",
+      "data": {
+        "unsharedId": "ae0bafcd-92dc-4360-89e5-1a07bb24802d"
+      }
+    },
+    {
+      "id": "s1-customer-project-collaborate-survives-reload",
+      "passed": true,
+      "at": "2026-10-26T03:27:25.084Z"
+    },
+    {
+      "id": "s1-unshared-project-not-granted",
+      "passed": true,
+      "at": "2026-10-26T03:27:25.086Z"
+    },
+    {
+      "id": "s1-qa-technician-assignment-present-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:27:30.885Z",
+      "data": {
+        "addedByThisRun": false
+      }
+    },
+    {
+      "id": "s1-unshared-project-unavailable-to-msp",
+      "passed": true,
+      "at": "2026-10-26T03:27:33.096Z"
+    },
+    {
+      "id": "s1-working-queue-excludes-unassigned-shared-tasks",
+      "passed": true,
+      "at": "2026-10-26T03:27:36.398Z",
+      "data": {
+        "note": "sharing alone creates no MSP working row"
+      }
+    },
+    {
+      "id": "s1-oversight-view-lists-both-shared-tasks",
+      "passed": true,
+      "at": "2026-10-26T03:27:36.618Z"
+    },
+    {
+      "id": "s1-queue-link-is-customer-and-relationship-qualified",
+      "passed": true,
+      "at": "2026-10-26T03:27:36.681Z",
+      "data": {
+        "href": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+      }
+    },
+    {
+      "id": "s1-followed-queue-link-opens-shared-task",
+      "passed": true,
+      "at": "2026-10-26T03:27:36.903Z",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+      }
+    },
+    {
+      "id": "s2-msp-edit-survives-reload",
+      "passed": true,
+      "at": "2026-10-26T03:27:39.279Z",
+      "data": {
+        "edited": "CM-REVIEW-20261026-06 final Task A MSP edit"
+      }
+    },
+    {
+      "id": "s2-history-records-qualified-author",
+      "passed": true,
+      "at": "2026-10-26T03:27:40.073Z",
+      "data": {
+        "history": "Change history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A MSP edit\nPrevious\nNext"
+      }
+    },
+    {
+      "id": "s2-customer-native-task-shows-msp-edit",
+      "passed": true,
+      "at": "2026-10-26T03:27:43.855Z"
+    },
+    {
+      "id": "s2-restored-by-ordinary-save-history-retained",
+      "passed": true,
+      "at": "2026-10-26T03:27:48.789Z",
+      "data": {
+        "history": "Change history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A MSP edit\nPrevious\nNext"
+      }
+    },
+    {
+      "id": "s3-only-eligible-assigned-principals-offered",
+      "passed": true,
+      "at": "2026-10-26T03:27:49.059Z",
+      "data": {
+        "offered": [
+          "Select...",
+          "QA Tester · Oz"
+        ]
+      }
+    },
+    {
+      "id": "s3-msp-assignment-persists-and-keeps-local-owner",
+      "passed": true,
+      "at": "2026-10-26T03:27:50.982Z",
+      "data": {
+        "localOwner": "a288a520-c353-44d2-91e0-001f75d236de"
+      }
+    },
+    {
+      "id": "s3-working-queue-lists-msp-assigned-task-only",
+      "passed": true,
+      "at": "2026-10-26T03:27:53.187Z"
+    },
+    {
+      "id": "s3-assigned-to-me-shows-assigned-task-only",
+      "passed": true,
+      "at": "2026-10-26T03:27:53.419Z"
+    },
+    {
+      "id": "s3-removed-msp-assignment-keeps-local-owner",
+      "passed": true,
+      "at": "2026-10-26T03:27:58.842Z"
+    },
+    {
+      "id": "s3-assigned-to-me-empty-after-removal",
+      "passed": true,
+      "at": "2026-10-26T03:28:02.900Z"
+    },
+    {
+      "id": "s4-stale-msp-save-refused-customer-value-kept",
+      "passed": true,
+      "at": "2026-10-26T03:28:09.972Z"
+    },
+    {
+      "id": "s4-discard-and-reload-shows-current-values",
+      "passed": true,
+      "at": "2026-10-26T03:28:10.123Z"
+    },
+    {
+      "id": "s5-alice-time-persisted-on-same-task",
+      "passed": true,
+      "at": "2026-10-26T03:28:16.344Z",
+      "data": {
+        "row": {
+          "entry_id": "613f1bb1-be2e-4cc8-a9f3-832e9992fcb3",
+          "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "work_item_type": "project_task",
+          "work_item_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "id": "s5-qa-time-persisted-on-same-task",
+      "passed": true,
+      "at": "2026-10-26T03:28:21.232Z",
+      "data": {
+        "row": {
+          "entry_id": "a05e236a-cf7c-460b-9776-1e34ac27bc4a",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "billing_mode": "commercial",
+          "billable_duration": 12,
+          "work_item_type": "co_managed",
+          "work_item_id": "c1223811-28bc-4305-a37d-62afdc690b9a",
+          "minutes": 12
+        }
+      }
+    },
+    {
+      "id": "s5-task-effort-shows-customer-msp-combined",
+      "passed": true,
+      "at": "2026-10-26T03:28:21.748Z",
+      "data": {
+        "expected": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "minutesLoggedThisRun": {
+          "customer": 6,
+          "msp": 12
+        },
+        "priorSuffixMinutes": 12
+      }
+    },
+    {
+      "id": "s5-customer-sees-same-effort-totals",
+      "passed": true,
+      "at": "2026-10-26T03:28:25.212Z",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "id": "s5-customer-does-not-see-msp-private-time-note",
+      "passed": true,
+      "at": "2026-10-26T03:28:25.223Z"
+    },
+    {
+      "id": "s5-project-total-equals-task-total-counted-once",
+      "passed": true,
+      "at": "2026-10-26T03:28:28.702Z",
+      "data": {
+        "projectEffort": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "taskEffort": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "id": "s5-msp-task-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:28:32.484Z"
+    },
+    {
+      "id": "s5-customer-reads-task-message-and-file-bytes",
+      "passed": true,
+      "at": "2026-10-26T03:28:36.091Z"
+    },
+    {
+      "id": "s4-customer-project-grant-removed-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:28:39.340Z"
+    },
+    {
+      "id": "s4-revoked-task-closes-editor-conversation",
+      "passed": true,
+      "at": "2026-10-26T03:28:43.095Z"
+    },
+    {
+      "id": "s4-copied-task-file-link-denied-after-revocation",
+      "passed": true,
+      "at": "2026-10-26T03:28:43.153Z",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "id": "s4-revoked-tasks-absent-from-fresh-queue",
+      "passed": true,
+      "at": "2026-10-26T03:28:47.781Z"
+    },
+    {
+      "id": "s4-customer-keeps-native-task-and-history",
+      "passed": true,
+      "at": "2026-10-26T03:28:51.853Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:26:55.219Z",
+      "seconds": 0.046,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:26:55.521Z",
+      "seconds": 0.348,
+      "title": "chapter",
+      "data": "Before you start: customer creates a disposable project, phase and two tasks"
+    },
+    {
+      "at": "2026-10-26T03:26:57.510Z",
+      "seconds": 2.337,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:26:59.754Z",
+      "seconds": 4.581,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:27:03.461Z",
+      "seconds": 8.288,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0"
+    },
+    {
+      "at": "2026-10-26T03:27:13.869Z",
+      "seconds": 18.696,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0/tasks/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:27:14.399Z",
+      "seconds": 19.226,
+      "actor": "alice",
+      "title": "prep-task-a-has-customer-local-assignee"
+    },
+    {
+      "at": "2026-10-26T03:27:14.399Z",
+      "seconds": 19.226,
+      "actor": "alice",
+      "title": "prep-native-project-phase-two-tasks-after-reload",
+      "data": {
+        "pid": "b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0",
+        "phaseId": "77d1bc78-c971-465f-b25d-d7e24375de20",
+        "taskIds": [
+          "ccbcc459-1986-4226-bf92-f0499093b006",
+          "5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:16.524Z",
+      "seconds": 21.351,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects"
+    },
+    {
+      "at": "2026-10-26T03:27:19.998Z",
+      "seconds": 24.825,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/ae0bafcd-92dc-4360-89e5-1a07bb24802d"
+    },
+    {
+      "at": "2026-10-26T03:27:19.998Z",
+      "seconds": 24.825,
+      "actor": "alice",
+      "title": "prep-second-unshared-project-exists",
+      "data": {
+        "unsharedId": "ae0bafcd-92dc-4360-89e5-1a07bb24802d"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:20.305Z",
+      "seconds": 25.132,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. Share only the prepared project (customer grants Collaborate)"
+    },
+    {
+      "at": "2026-10-26T03:27:22.324Z",
+      "seconds": 27.151,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:27:25.084Z",
+      "seconds": 29.911,
+      "actor": "alice",
+      "title": "s1-customer-project-collaborate-survives-reload"
+    },
+    {
+      "at": "2026-10-26T03:27:25.086Z",
+      "seconds": 29.913,
+      "actor": "alice",
+      "title": "s1-unshared-project-not-granted"
+    },
+    {
+      "at": "2026-10-26T03:27:25.345Z",
+      "seconds": 30.172,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "1. MSP staff assignment for the customer and project task queues"
+    },
+    {
+      "at": "2026-10-26T03:27:27.199Z",
+      "seconds": 32.026,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:29.173Z",
+      "seconds": 34,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:27:30.885Z",
+      "seconds": 35.712,
+      "actor": "qa",
+      "title": "s1-qa-technician-assignment-present-after-reload",
+      "data": {
+        "addedByThisRun": false
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:33.084Z",
+      "seconds": 37.911,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ae0bafcd-92dc-4360-89e5-1a07bb24802d"
+    },
+    {
+      "at": "2026-10-26T03:27:33.096Z",
+      "seconds": 37.923,
+      "actor": "qa",
+      "title": "s1-unshared-project-unavailable-to-msp"
+    },
+    {
+      "at": "2026-10-26T03:27:35.091Z",
+      "seconds": 39.918,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-26T03:27:36.398Z",
+      "seconds": 41.225,
+      "actor": "qa",
+      "title": "s1-working-queue-excludes-unassigned-shared-tasks",
+      "data": {
+        "note": "sharing alone creates no MSP working row"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:36.618Z",
+      "seconds": 41.445,
+      "actor": "qa",
+      "title": "s1-oversight-view-lists-both-shared-tasks"
+    },
+    {
+      "at": "2026-10-26T03:27:36.681Z",
+      "seconds": 41.508,
+      "actor": "qa",
+      "title": "s1-queue-link-is-customer-and-relationship-qualified",
+      "data": {
+        "href": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:36.903Z",
+      "seconds": 41.73,
+      "actor": "qa",
+      "title": "s1-followed-queue-link-opens-shared-task",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:36.904Z",
+      "seconds": 41.731,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Persist a task edit with attribution"
+    },
+    {
+      "at": "2026-10-26T03:27:39.279Z",
+      "seconds": 44.106,
+      "actor": "qa",
+      "title": "s2-msp-edit-survives-reload",
+      "data": {
+        "edited": "CM-REVIEW-20261026-06 final Task A MSP edit"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:40.073Z",
+      "seconds": 44.9,
+      "actor": "qa",
+      "title": "s2-history-records-qualified-author",
+      "data": {
+        "history": "Change history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A MSP edit\nPrevious\nNext"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:41.937Z",
+      "seconds": 46.764,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:43.842Z",
+      "seconds": 48.669,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0/tasks/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:27:43.855Z",
+      "seconds": 48.682,
+      "actor": "alice",
+      "title": "s2-customer-native-task-shows-msp-edit"
+    },
+    {
+      "at": "2026-10-26T03:27:45.442Z",
+      "seconds": 50.269,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:47.537Z",
+      "seconds": 52.364,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:27:48.789Z",
+      "seconds": 53.616,
+      "actor": "qa",
+      "title": "s2-restored-by-ordinary-save-history-retained",
+      "data": {
+        "history": "Change history\nReload current access\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A\nQA Tester · Oz\nOct 25, 2026, 11:27 PM\nTask name\nCM-REVIEW-20261026-06 final Task A MSP edit\nPrevious\nNext"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:48.790Z",
+      "seconds": 53.617,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Separate MSP assignment from customer-local ownership"
+    },
+    {
+      "at": "2026-10-26T03:27:49.059Z",
+      "seconds": 53.886,
+      "actor": "qa",
+      "title": "s3-only-eligible-assigned-principals-offered",
+      "data": {
+        "offered": [
+          "Select...",
+          "QA Tester · Oz"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:50.982Z",
+      "seconds": 55.809,
+      "actor": "qa",
+      "title": "s3-msp-assignment-persists-and-keeps-local-owner",
+      "data": {
+        "localOwner": "a288a520-c353-44d2-91e0-001f75d236de"
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:53.033Z",
+      "seconds": 57.86,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-26T03:27:53.187Z",
+      "seconds": 58.014,
+      "actor": "qa",
+      "title": "s3-working-queue-lists-msp-assigned-task-only"
+    },
+    {
+      "at": "2026-10-26T03:27:53.419Z",
+      "seconds": 58.246,
+      "actor": "qa",
+      "title": "s3-assigned-to-me-shows-assigned-task-only"
+    },
+    {
+      "at": "2026-10-26T03:27:55.087Z",
+      "seconds": 59.914,
+      "actor": "qa",
+      "title": "s3-assigned-to-my-teams-observed",
+      "data": {
+        "listsTaskA": false
+      }
+    },
+    {
+      "at": "2026-10-26T03:27:57.128Z",
+      "seconds": 61.955,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:27:58.842Z",
+      "seconds": 63.669,
+      "actor": "qa",
+      "title": "s3-removed-msp-assignment-keeps-local-owner"
+    },
+    {
+      "at": "2026-10-26T03:28:00.717Z",
+      "seconds": 65.544,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-26T03:28:02.900Z",
+      "seconds": 67.727,
+      "actor": "qa",
+      "title": "s3-assigned-to-me-empty-after-removal"
+    },
+    {
+      "at": "2026-10-26T03:28:02.937Z",
+      "seconds": 67.764,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Detect a stale MSP edit after a newer customer save"
+    },
+    {
+      "at": "2026-10-26T03:28:04.855Z",
+      "seconds": 69.682,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:09.382Z",
+      "seconds": 74.209,
+      "actor": "qa",
+      "title": "s4-customer-saved-newer-value-on-native-task",
+      "data": {
+        "customerName": "CM-REVIEW-20261026-06 final Task A customer current"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:09.972Z",
+      "seconds": 74.799,
+      "actor": "qa",
+      "title": "s4-stale-msp-save-refused-customer-value-kept"
+    },
+    {
+      "at": "2026-10-26T03:28:10.123Z",
+      "seconds": 74.95,
+      "actor": "qa",
+      "title": "s4-discard-and-reload-shows-current-values"
+    },
+    {
+      "at": "2026-10-26T03:28:10.125Z",
+      "seconds": 74.952,
+      "actor": "qa",
+      "title": "s4-history-after-customer-native-save",
+      "data": {
+        "customerChangeListed": false,
+        "history": "Change history\nReload current access\n\nLoading customer seat capacity…"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:10.999Z",
+      "seconds": 75.826,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "5. Compare effort on the shared task (customer and MSP time)"
+    },
+    {
+      "at": "2026-10-26T03:28:12.631Z",
+      "seconds": 77.458,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:14.548Z",
+      "seconds": 79.375,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:16.344Z",
+      "seconds": 81.171,
+      "actor": "alice",
+      "title": "s5-alice-time-persisted-on-same-task",
+      "data": {
+        "row": {
+          "entry_id": "613f1bb1-be2e-4cc8-a9f3-832e9992fcb3",
+          "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "billing_mode": "operational",
+          "billable_duration": 0,
+          "work_item_type": "project_task",
+          "work_item_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+          "minutes": 6
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:17.820Z",
+      "seconds": 82.647,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:19.735Z",
+      "seconds": 84.562,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:21.232Z",
+      "seconds": 86.059,
+      "actor": "qa",
+      "title": "s5-qa-time-persisted-on-same-task",
+      "data": {
+        "row": {
+          "entry_id": "a05e236a-cf7c-460b-9776-1e34ac27bc4a",
+          "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+          "billing_mode": "commercial",
+          "billable_duration": 12,
+          "work_item_type": "co_managed",
+          "work_item_id": "c1223811-28bc-4305-a37d-62afdc690b9a",
+          "minutes": 12
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:21.748Z",
+      "seconds": 86.575,
+      "actor": "qa",
+      "title": "s5-task-effort-shows-customer-msp-combined",
+      "data": {
+        "expected": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "minutesLoggedThisRun": {
+          "customer": 6,
+          "msp": 12
+        },
+        "priorSuffixMinutes": 12
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:23.224Z",
+      "seconds": 88.051,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:25.200Z",
+      "seconds": 90.027,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:25.212Z",
+      "seconds": 90.039,
+      "actor": "alice",
+      "title": "s5-customer-sees-same-effort-totals",
+      "data": {
+        "displayed": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:25.223Z",
+      "seconds": 90.05,
+      "actor": "alice",
+      "title": "s5-customer-does-not-see-msp-private-time-note"
+    },
+    {
+      "at": "2026-10-26T03:28:26.770Z",
+      "seconds": 91.597,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:28.685Z",
+      "seconds": 93.512,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/projects/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0"
+    },
+    {
+      "at": "2026-10-26T03:28:28.702Z",
+      "seconds": 93.529,
+      "actor": "qa",
+      "title": "s5-project-total-equals-task-total-counted-once",
+      "data": {
+        "projectEffort": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ],
+        "taskEffort": [
+          "0.1 hours",
+          "0.2 hours",
+          "0.3 hours"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:28.735Z",
+      "seconds": 93.562,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "5. Task conversation and file while the grant is active"
+    },
+    {
+      "at": "2026-10-26T03:28:30.648Z",
+      "seconds": 95.475,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:32.484Z",
+      "seconds": 97.311,
+      "actor": "qa",
+      "title": "s5-msp-task-file-bytes-match"
+    },
+    {
+      "at": "2026-10-26T03:28:34.052Z",
+      "seconds": 98.879,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:36.063Z",
+      "seconds": 100.89,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:36.091Z",
+      "seconds": 100.918,
+      "actor": "alice",
+      "title": "s5-customer-reads-task-message-and-file-bytes"
+    },
+    {
+      "at": "2026-10-26T03:28:36.091Z",
+      "seconds": 100.918,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "4. Revoke the project grant: fresh MSP reads close"
+    },
+    {
+      "at": "2026-10-26T03:28:38.041Z",
+      "seconds": 102.868,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:28:39.340Z",
+      "seconds": 104.167,
+      "actor": "alice",
+      "title": "s4-customer-project-grant-removed-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:28:41.064Z",
+      "seconds": 105.891,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:43.082Z",
+      "seconds": 107.909,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:43.095Z",
+      "seconds": 107.922,
+      "actor": "qa",
+      "title": "s4-revoked-task-closes-editor-conversation"
+    },
+    {
+      "at": "2026-10-26T03:28:43.153Z",
+      "seconds": 107.98,
+      "actor": "qa",
+      "title": "s4-copied-task-file-link-denied-after-revocation",
+      "data": {
+        "status": 404
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:45.070Z",
+      "seconds": 109.897,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks"
+    },
+    {
+      "at": "2026-10-26T03:28:47.781Z",
+      "seconds": 112.608,
+      "actor": "qa",
+      "title": "s4-revoked-tasks-absent-from-fresh-queue"
+    },
+    {
+      "at": "2026-10-26T03:28:49.654Z",
+      "seconds": 114.481,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:28:51.819Z",
+      "seconds": 116.646,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0/tasks/ccbcc459-1986-4226-bf92-f0499093b006"
+    },
+    {
+      "at": "2026-10-26T03:28:51.853Z",
+      "seconds": 116.68,
+      "actor": "alice",
+      "title": "s4-customer-keeps-native-task-and-history"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.348,
+      "title": "Before you start: customer creates a disposable project, phase and two tasks",
+      "end": 25.132
+    },
+    {
+      "start": 25.132,
+      "title": "1. Share only the prepared project (customer grants Collaborate)",
+      "end": 30.172
+    },
+    {
+      "start": 30.172,
+      "title": "1. MSP staff assignment for the customer and project task queues",
+      "end": 41.731
+    },
+    {
+      "start": 41.731,
+      "title": "2. Persist a task edit with attribution",
+      "end": 53.617
+    },
+    {
+      "start": 53.617,
+      "title": "3. Separate MSP assignment from customer-local ownership",
+      "end": 67.764
+    },
+    {
+      "start": 67.764,
+      "title": "4. Detect a stale MSP edit after a newer customer save",
+      "end": 75.826
+    },
+    {
+      "start": 75.826,
+      "title": "5. Compare effort on the shared task (customer and MSP time)",
+      "end": 93.562
+    },
+    {
+      "start": 93.562,
+      "title": "5. Task conversation and file while the grant is active",
+      "end": 100.918
+    },
+    {
+      "start": 100.918,
+      "title": "4. Revoke the project grant: fresh MSP reads close",
+      "end": 117.55
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 117.6,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

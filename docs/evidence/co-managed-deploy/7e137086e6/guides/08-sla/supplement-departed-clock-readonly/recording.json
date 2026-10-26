@@ -1,0 +1,154 @@
+{
+  "scenario": "supplement-departed-clock-readonly",
+  "recordedAt": "2026-10-26T04:13:26.563Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "departed-customer-retains-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:13:33.194Z"
+    },
+    {
+      "id": "departed-customer-has-no-live-oz-sla-display",
+      "passed": true,
+      "at": "2026-10-26T04:13:33.196Z",
+      "data": {
+        "coManagedSectionPresent": 0
+      }
+    },
+    {
+      "id": "former-msp-cannot-read-departed-ticket-or-clock",
+      "passed": true,
+      "at": "2026-10-26T04:13:40.251Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:13:26.606Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:26.753Z",
+      "seconds": 0.19,
+      "title": "obligation-before",
+      "data": [
+        {
+          "obligation_id": "624d2a33-4bd1-4f54-96c5-9b2a075230f2",
+          "pause": [
+            "customer_responsible"
+          ],
+          "response_completed": "2026-10-26T03:52:05.189Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T04:13:26.753Z",
+      "seconds": 0.19,
+      "title": "chapter",
+      "data": "5. Departed customer keeps its own ticket; no live former-MSP clock"
+    },
+    {
+      "at": "2026-10-26T04:13:28.669Z",
+      "seconds": 2.106,
+      "actor": "departed-customer-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:30.676Z",
+      "seconds": 4.113,
+      "actor": "departed-customer-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/8120f19f-dc24-4c9d-9585-1e510ca5a245"
+    },
+    {
+      "at": "2026-10-26T04:13:33.194Z",
+      "seconds": 6.631,
+      "actor": "departed-customer-admin",
+      "title": "departed-customer-retains-native-ticket"
+    },
+    {
+      "at": "2026-10-26T04:13:33.196Z",
+      "seconds": 6.633,
+      "actor": "departed-customer-admin",
+      "title": "departed-customer-has-no-live-oz-sla-display",
+      "data": {
+        "coManagedSectionPresent": 0
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:33.252Z",
+      "seconds": 6.689,
+      "actor": "departed-customer-admin",
+      "title": "chapter",
+      "data": "5. Former MSP cannot open the departed shared ticket or its clock"
+    },
+    {
+      "at": "2026-10-26T04:13:34.748Z",
+      "seconds": 8.185,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:13:36.733Z",
+      "seconds": 10.17,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/8120f19f-dc24-4c9d-9585-1e510ca5a245"
+    },
+    {
+      "at": "2026-10-26T04:13:40.251Z",
+      "seconds": 13.688,
+      "actor": "qa",
+      "title": "former-msp-cannot-read-departed-ticket-or-clock"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.19,
+      "title": "5. Departed customer keeps its own ticket; no live former-MSP clock",
+      "end": 6.689
+    },
+    {
+      "start": 6.689,
+      "title": "5. Former MSP cannot open the departed shared ticket or its clock",
+      "end": 14.59
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Read-only supplement on guide 10's disposable relationship; no data changed."
+  ],
+  "durationSeconds": 14.64,
+  "actors": [
+    {
+      "name": "departed-customer-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

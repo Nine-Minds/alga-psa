@@ -1,0 +1,25 @@
+{
+  "rpc": [
+    {
+      "n": "mutateCoManagedTicketCommentAction",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792983401994\"}\n1:{\"ok\":true,\"receipt\":{\"storeTenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"threadId\":\"8ff7c123-01ac-4a14-ba73-010c2a7b3f2c\",\"commentId\":\"8ff7c123-01ac-4a14-ba73-010c2a7b3f2c\",\"operationId\":\"99ffda6d-f807-4188-9e18-dd929e7ba17f\",\"updatedAt\":\"2026-10-26T03:38:01.836735Z\",\"deleted\":false}}\n"
+    },
+    {
+      "n": "getCoManagedTicketConversationScreenAction",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792983401994\"}\n1:{\"resource\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"relationshipId\":\"2be5cb32-91e8-491a-9ec4-16ab019c7d40\",\"kind\":\"ticket\",\"id\":\"5420c7b3-70f5-4352-bd32-280c1ed2e5fd\"},\"items\":[{\"storeTenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"commentId\":\"0804f8ea-326a-4c8a-8e42-e512e392bfee\",\"threadId\":\"8ff7c123-01ac-4a14-ba73-010c2a7b3f2c\",\"parentCommentId\":\"8ff7c123-01ac-4a14-ba73-010c2a7b3f2c\",\"audience\":\"shared_it\",\"createdAt\":\"2026-10-26T03:37:00.614000Z\",\"updatedAt\":\"2026-10-26T03:37:00.614000Z\",\"deleted\":false,\"revision\":n"
+    }
+  ],
+  "texts": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "db": "[{\"id\":\"8518a6fe-4c22-4ee9-8bbf-dad80e713917\",\"type\":\"paragraph\",\"props\":{\"backgroundColor\":\"default\",\"textColor\":\"default\",\"textAlignment\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"CM-REVIEW-20261026-07 root 1792985802359 probe-edit\",\"styles\":{}}],\"children\":[]}]"
+}

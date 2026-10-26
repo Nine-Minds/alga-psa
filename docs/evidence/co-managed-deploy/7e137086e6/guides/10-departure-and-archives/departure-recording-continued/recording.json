@@ -1,0 +1,611 @@
+{
+  "scenario": "departure-recording-continued",
+  "recordedAt": "2026-10-26T03:56:58.605Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "departure-link-after-reload-reports-ended-without-offering-departure",
+      "passed": true,
+      "at": "2026-10-26T03:57:05.195Z",
+      "data": {
+        "landed": "http://feature-co-managed-it.localhost:23374/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&section=history"
+      }
+    },
+    {
+      "id": "client-view-shows-relationship-ended-and-seats-released",
+      "passed": true,
+      "at": "2026-10-26T03:57:12.520Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Relationship ended Refresh workspaces Technician seats Seats released Customer workspace CM-REVIEW-20261026-01 Accept-7 IT Administrator cm-review-20261026-01-accept-7@cmreview.test Administrator invitation —"
+      }
+    },
+    {
+      "id": "customer-tenant-still-exists",
+      "passed": true,
+      "at": "2026-10-26T03:57:12.656Z"
+    },
+    {
+      "id": "old-live-shared-file-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:57:12.972Z",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "id": "old-live-msp-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:57:12.983Z",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "id": "old-live-customer-private-file-link-denied",
+      "passed": true,
+      "at": "2026-10-26T03:57:13.000Z",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "id": "fresh-navigation-to-old-shared-route-shows-no-live-ticket",
+      "passed": true,
+      "at": "2026-10-26T03:57:17.462Z",
+      "data": {
+        "excerpt": "This ticket or access list could not be loaded. Your access may have changed. Restricted ticket"
+      }
+    },
+    {
+      "id": "msp-customer-ticket-queue-no-longer-lists-the-ticket",
+      "passed": true,
+      "at": "2026-10-26T03:57:21.937Z"
+    },
+    {
+      "id": "customer-keeps-native-ticket-shared-and-private-content",
+      "passed": true,
+      "at": "2026-10-26T03:58:26.744Z"
+    },
+    {
+      "id": "former-msp-live-sla-field-absent-for-customer",
+      "passed": true,
+      "at": "2026-10-26T03:58:26.746Z"
+    },
+    {
+      "id": "customer-export-still-offered-after-departure",
+      "passed": true,
+      "at": "2026-10-26T03:58:29.049Z"
+    },
+    {
+      "id": "retained-shared-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:58:34.672Z",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "a33d6d3bee6dae3606a39cb23db43ac09ad1dc2df84220dca3ec5e6fdb161930"
+      }
+    },
+    {
+      "id": "retained-msp-private-file-bytes-match",
+      "passed": true,
+      "at": "2026-10-26T03:58:34.698Z",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "4ec35ed9fe06d78cbd822d8ed2fc396df13b7721285b5709ea5faba86af398f6"
+      }
+    },
+    {
+      "id": "archive-excludes-customer-private-content",
+      "passed": true,
+      "at": "2026-10-26T03:58:34.702Z"
+    },
+    {
+      "id": "archive-shows-author-organizations-and-history",
+      "passed": true,
+      "at": "2026-10-26T03:58:34.702Z",
+      "data": {
+        "excerpt": "Shared work archive Retained history and files from work your organization participated in. Reload current access CM-REVIEW-20261026-10 864549 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-10 703235 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-10 818294 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-09-c toner audit task White Rabbit CM-REVIEW-20261026-09-d toner audit task White Rabbit CM-REVIEW-20261026-09-e toner audit task White Rabbit CM-REVIEW-20261026-09-f toner audit task White Rabbit CM-REVIEW-20261026-06 a4 Task A White Rabbit CM-"
+      }
+    },
+    {
+      "id": "unrelated-principal-denied-retained-file-link",
+      "passed": true,
+      "at": "2026-10-26T03:58:36.201Z",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "id": "archive-does-not-track-customer-post-departure-state",
+      "passed": true,
+      "at": "2026-10-26T03:59:46.427Z",
+      "data": {
+        "changeResult": "not offered: locator.waitFor: Timeout 60000ms exceeded."
+      }
+    },
+    {
+      "id": "allocation-released-once-and-sponsor-subscription-kept",
+      "passed": true,
+      "at": "2026-10-26T03:59:52.911Z",
+      "data": {
+        "pool": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 4
+        },
+        "allocation": {
+          "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-26T03:55:18.42+00:00"
+        },
+        "closures": 1,
+        "baselineCapacity": 7,
+        "purchasesSinceBaseline": []
+      }
+    },
+    {
+      "id": "msp-commercial-time-survives-departure",
+      "passed": true,
+      "at": "2026-10-26T03:59:53.055Z",
+      "data": {
+        "entry_id": "87a05c45-a167-4ea7-afec-238268e7bc90",
+        "billable_duration": 15,
+        "billing_mode": "commercial",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "neither-organization-deleted",
+      "passed": true,
+      "at": "2026-10-26T03:59:53.209Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:56:58.648Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:56:58.778Z",
+      "seconds": 0.173,
+      "title": "chapter",
+      "data": "2. End the disposable relationship (status after refresh and reload)"
+    },
+    {
+      "at": "2026-10-26T03:57:00.692Z",
+      "seconds": 2.087,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:02.622Z",
+      "seconds": 4.017,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/departure?operationId=54fb5726-1a14-45a2-8c72-0c5780e65a88"
+    },
+    {
+      "at": "2026-10-26T03:57:05.195Z",
+      "seconds": 6.59,
+      "actor": "qa",
+      "title": "departure-link-after-reload-reports-ended-without-offering-departure",
+      "data": {
+        "landed": "http://feature-co-managed-it.localhost:23374/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed&relationshipId=e24c064b-1b13-471d-8f24-3441f26d9b0e&section=history"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:07.275Z",
+      "seconds": 8.67,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/42b27ac2-5221-446a-ad94-f781c3398493?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:57:09.844Z",
+      "seconds": 11.239,
+      "actor": "qa",
+      "title": "client-view-default-after-departure",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Co-managed IT not enabled Relationship Select... Refresh workspaces"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:12.520Z",
+      "seconds": 13.915,
+      "actor": "qa",
+      "title": "client-view-shows-relationship-ended-and-seats-released",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-7 Relationship ended Refresh workspaces Technician seats Seats released Customer workspace CM-REVIEW-20261026-01 Accept-7 IT Administrator cm-review-20261026-01-accept-7@cmreview.test Administrator invitation —"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:12.656Z",
+      "seconds": 14.051,
+      "actor": "qa",
+      "title": "customer-tenant-still-exists"
+    },
+    {
+      "at": "2026-10-26T03:57:12.656Z",
+      "seconds": 14.051,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Test the old access paths"
+    },
+    {
+      "at": "2026-10-26T03:57:12.972Z",
+      "seconds": 14.367,
+      "actor": "qa",
+      "title": "old-live-shared-file-link-denied",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:12.983Z",
+      "seconds": 14.378,
+      "actor": "qa",
+      "title": "old-live-msp-private-file-link-denied",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:13.000Z",
+      "seconds": 14.395,
+      "actor": "qa",
+      "title": "old-live-customer-private-file-link-denied",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:14.916Z",
+      "seconds": 16.311,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/0a3c039e-c4c7-4108-8301-bfe5232a829a/e24c064b-1b13-471d-8f24-3441f26d9b0e/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:57:17.462Z",
+      "seconds": 18.857,
+      "actor": "qa",
+      "title": "fresh-navigation-to-old-shared-route-shows-no-live-ticket",
+      "data": {
+        "excerpt": "This ticket or access list could not be loaded. Your access may have changed. Restricted ticket"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:19.388Z",
+      "seconds": 20.783,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?workspace=0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    },
+    {
+      "at": "2026-10-26T03:57:21.937Z",
+      "seconds": 23.332,
+      "actor": "qa",
+      "title": "msp-customer-ticket-queue-no-longer-lists-the-ticket"
+    },
+    {
+      "at": "2026-10-26T03:57:23.771Z",
+      "seconds": 25.166,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:57:25.840Z",
+      "seconds": 27.235,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:58:26.744Z",
+      "seconds": 88.139,
+      "actor": "accept7-admin",
+      "title": "customer-keeps-native-ticket-shared-and-private-content"
+    },
+    {
+      "at": "2026-10-26T03:58:26.746Z",
+      "seconds": 88.141,
+      "actor": "accept7-admin",
+      "title": "former-msp-live-sla-field-absent-for-customer"
+    },
+    {
+      "at": "2026-10-26T03:58:27.070Z",
+      "seconds": 88.465,
+      "actor": "accept7-admin",
+      "title": "customer-own-private-file-after-cutoff",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "0c958c3ea9aa64df6f59b9babc23081531c39a257c92fea1a90955aa3fffa524"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:28.996Z",
+      "seconds": 90.391,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/co-management/export"
+    },
+    {
+      "at": "2026-10-26T03:58:29.049Z",
+      "seconds": 90.444,
+      "actor": "accept7-admin",
+      "title": "customer-export-still-offered-after-departure"
+    },
+    {
+      "at": "2026-10-26T03:58:29.049Z",
+      "seconds": 90.444,
+      "actor": "accept7-admin",
+      "title": "chapter",
+      "data": "4. Read only retained evidence"
+    },
+    {
+      "at": "2026-10-26T03:58:30.550Z",
+      "seconds": 91.945,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:32.523Z",
+      "seconds": 93.918,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-26T03:58:34.672Z",
+      "seconds": 96.067,
+      "actor": "qa",
+      "title": "retained-shared-file-bytes-match",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "a33d6d3bee6dae3606a39cb23db43ac09ad1dc2df84220dca3ec5e6fdb161930"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:34.698Z",
+      "seconds": 96.093,
+      "actor": "qa",
+      "title": "retained-msp-private-file-bytes-match",
+      "data": {
+        "status": 200,
+        "ok": true,
+        "sha256": "4ec35ed9fe06d78cbd822d8ed2fc396df13b7721285b5709ea5faba86af398f6"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:34.702Z",
+      "seconds": 96.097,
+      "actor": "qa",
+      "title": "archive-excludes-customer-private-content"
+    },
+    {
+      "at": "2026-10-26T03:58:34.702Z",
+      "seconds": 96.097,
+      "actor": "qa",
+      "title": "archive-shows-author-organizations-and-history",
+      "data": {
+        "excerpt": "Shared work archive Retained history and files from work your organization participated in. Reload current access CM-REVIEW-20261026-10 864549 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-10 703235 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-10 818294 shared ticket CM-REVIEW-20261026-01 Accept-7 CM-REVIEW-20261026-09-c toner audit task White Rabbit CM-REVIEW-20261026-09-d toner audit task White Rabbit CM-REVIEW-20261026-09-e toner audit task White Rabbit CM-REVIEW-20261026-09-f toner audit task White Rabbit CM-REVIEW-20261026-06 a4 Task A White Rabbit CM-"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:36.187Z",
+      "seconds": 97.582,
+      "actor": "alice-unrelated",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:36.201Z",
+      "seconds": 97.596,
+      "actor": "alice-unrelated",
+      "title": "unrelated-principal-denied-retained-file-link",
+      "data": {
+        "status": 404,
+        "ok": false,
+        "sha256": null
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:37.685Z",
+      "seconds": 99.08,
+      "actor": "accept7-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T03:58:39.723Z",
+      "seconds": 101.118,
+      "actor": "accept7-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/745f1c87-247d-40d6-a033-d1284bd76947"
+    },
+    {
+      "at": "2026-10-26T03:59:40.631Z",
+      "seconds": 162.026,
+      "actor": "accept7-admin",
+      "title": "customer-post-departure-change",
+      "data": "not offered: locator.waitFor: Timeout 60000ms exceeded."
+    },
+    {
+      "at": "2026-10-26T03:59:42.414Z",
+      "seconds": 163.809,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:44.319Z",
+      "seconds": 165.714,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-26T03:59:46.427Z",
+      "seconds": 167.822,
+      "actor": "qa",
+      "title": "archive-does-not-track-customer-post-departure-state",
+      "data": {
+        "changeResult": "not offered: locator.waitFor: Timeout 60000ms exceeded."
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:46.427Z",
+      "seconds": 167.822,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "5. Reconcile seats and commercial continuity"
+    },
+    {
+      "at": "2026-10-26T03:59:48.396Z",
+      "seconds": 169.791,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:59:52.911Z",
+      "seconds": 174.306,
+      "actor": "qa",
+      "title": "allocation-released-once-and-sponsor-subscription-kept",
+      "data": {
+        "pool": {
+          "capacity": 7,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 12,
+          "allocated": 4
+        },
+        "allocation": {
+          "allocation_id": "ad0500f1-7d51-431b-93cf-809063ced061",
+          "seats": 1,
+          "state": "released",
+          "released_at": "2026-10-26T03:55:18.42+00:00"
+        },
+        "closures": 1,
+        "baselineCapacity": 7,
+        "purchasesSinceBaseline": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:53.055Z",
+      "seconds": 174.45,
+      "actor": "qa",
+      "title": "msp-commercial-time-survives-departure",
+      "data": {
+        "entry_id": "87a05c45-a167-4ea7-afec-238268e7bc90",
+        "billable_duration": 15,
+        "billing_mode": "commercial",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T03:59:53.209Z",
+      "seconds": 174.604,
+      "actor": "qa",
+      "title": "neither-organization-deleted"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.173,
+      "title": "2. End the disposable relationship (status after refresh and reload)",
+      "end": 14.051
+    },
+    {
+      "start": 14.051,
+      "title": "3. Test the old access paths",
+      "end": 90.444
+    },
+    {
+      "start": 90.444,
+      "title": "4. Read only retained evidence",
+      "end": 167.822
+    },
+    {
+      "start": 167.822,
+      "title": "5. Reconcile seats and commercial continuity",
+      "end": 174.79
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [],
+  "durationSeconds": 174.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "accept7-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    },
+    {
+      "name": "alice-unrelated",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

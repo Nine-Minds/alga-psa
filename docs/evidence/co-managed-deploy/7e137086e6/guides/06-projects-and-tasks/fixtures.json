@@ -1,0 +1,28 @@
+{
+  "projectId": "b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0",
+  "projectName": "CM-REVIEW-20261026-06 final Shared rollout",
+  "phaseId": "77d1bc78-c971-465f-b25d-d7e24375de20",
+  "taskIds": [
+    "ccbcc459-1986-4226-bf92-f0499093b006",
+    "5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a"
+  ],
+  "taskNames": [
+    "CM-REVIEW-20261026-06 final Task A",
+    "CM-REVIEW-20261026-06 final Task B"
+  ],
+  "unsharedProjectId": "ae0bafcd-92dc-4360-89e5-1a07bb24802d",
+  "unsharedProjectName": "CM-REVIEW-20261026-06 final Unshared private",
+  "links": {
+    "mspProject": "http://feature-co-managed-it.localhost:23374/msp/co-management/projects/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0",
+    "mspTasks": [
+      "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/ccbcc459-1986-4226-bf92-f0499093b006",
+      "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a"
+    ],
+    "customerProject": "http://feature-co-managed-it.localhost:23374/msp/projects/b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0"
+  },
+  "fileName": "cm-review-20261026-06-1792985291000.txt",
+  "fileHref": "/api/co-management/attachments/910568db-81f9-45b6-8aec-e55453b01f1c?customerTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&relationshipId=2be5cb32-91e8-491a-9ec4-16ab019c7d40&taskId=ccbcc459-1986-4226-bf92-f0499093b006&storeTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&threadId=9947bcc5-87ec-4814-9077-197669449ed3&commentId=9947bcc5-87ec-4814-9077-197669449ed3",
+  "message": "CM-REVIEW-20261026-06 shared task message 1792985291000",
+  "addedQaAssignment": false,
+  "finalProjectGrant": "revoked"
+}

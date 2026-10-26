@@ -1,0 +1,230 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings?tab=ticketing&section=boards",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nGeneral\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nAdmin Settings\nTicket Settings\nDisplay\nTicket Numbering\nBoards\nPriorities\nCategories\nChecklist Templates\nExternal systems\nBack to Boards\nAdd Board\nGeneral\n\nName, description, visibility and default\n\nBoard Name*\nDescription\nDisplay Order\n\nControls the order boards appear in the list\n\nMark as inactive\nDefault board for client portal tickets\n\nNew tickets submitted from the client portal land on this board. Only one board can be the default.\n\nAppearance & defaults\n\nTab pinning and the board's default list view\n\nPin to the tickets screen\n\nPinned boards get a permanent tab on the tickets screen. Unpinned boards stay reachable from All tickets and the board filter.\n\nAssignment & SLA\n\nDefault routing, SLA and board manager\n\nNotifications\n\nNotify technicians about new tickets and status changes, and set default watchers\n\nEmail & inbound replies\n\nReopen tickets when clients reply by email\n\nPriorities & statuses*\nRequired\n\nDefault priority and the ticket statuses for this board\n\nDisplay & behaviour\n\nStopwatch and board type\n\nAll changes saved\n\nCancel\nCreate",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-0",
+      "text": "Display",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-1",
+      "text": "Ticket Numbering",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-2",
+      "text": "Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-3",
+      "text": "Priorities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-4",
+      "text": "Categories",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-5",
+      "text": "Checklist Templates",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_12_-trigger-6",
+      "text": "External systems",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-back",
+      "text": "Back to Boards",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-general",
+      "text": "GeneralName, description, visibility and default",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "board_name",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "description",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "display_order",
+      "text": "",
+      "value": "0",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_inactive",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_default",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-appearance",
+      "text": "Appearance & defaultsTab pinning and the board's default list view",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "is_pinned",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-assignment",
+      "text": "Assignment & SLADefault routing, SLA and board manager",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-notifications",
+      "text": "NotificationsNotify technicians about new tickets and status changes, and set default watchers",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-inbound",
+      "text": "Email & inbound repliesReopen tickets when clients reply by email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-statuses",
+      "text": "Priorities & statuses*RequiredDefault priority and the ticket statuses for this board",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "board-editor-section-display",
+      "text": "Display & behaviourStopwatch and board type",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-board-dialog",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "save-board-button",
+      "text": "Create",
+      "value": "",
+      "disabled": true
+    }
+  ]
+}

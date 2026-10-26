@@ -1,0 +1,328 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=service-catalog",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nService Catalog Management\nReview rates\nAll Service Types\nAll Billing Methods\nAdd Service\n3 columns hidden.\nShow all\n\t\nService Name\n\t\nService Type\n\t\nBilling Method\n\t\nPricing\n\t\nActions\n\n\n\t\nBasic Support\n\t\nHourly Time\n\t\nHourly\n\t\n$100.00\n\t\nOpen menu\n\n\n\t\nEmerald City Security\n\t\nFixed Price\n\t\nFixed Fee\n\t\n$5,000.00\n\t\nOpen menu\n\n\n\t\nLooking Glass Maintenance\n\t\nFixed Price\n\t\nFixed Fee\n\t\n$150.00\n\t\nOpen menu\n\n\n\t\nPremium Support\n\t\nHourly Time\n\t\nHourly\n\t\n$150.00\n\t\nOpen menu\n\n\n\t\nRabbit Tracking\n\t\nHourly Time\n\t\nHourly\n\t\n$75.00\n\t\nOpen menu\n\n\n\t\nShrinking Potion\n\t\nUsage Based\n\t\nUsage\n\t\n$25.00\n\t\nOpen menu\n\n\n\t\nYellow Brick Road Repair\n\t\nHourly Time\n\t\nHourly\n\t\n$100.00\n\t\nOpen menu\nEdit Service\nService Name\nService Type\nHourly Time\nBilling Method\nHourly\nDescription\nPricing *(Per Hour)\n+ Add Currency\nSelected USD ($)\nUSD ($)\n$\nRemove\nSelected EUR (€)\nEUR (€)\n€\nRemove\n\nAdd prices in multiple currencies. The first currency is the primary rate.\n\nUnit of Measure\nHour\n\nThe measurable unit for billing (e.g., GB, API call, user)\n\nTax Rate (Optional)\nSelect Tax Rate (or leave blank for Non-Taxable)\nCancel\nSave Changes",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "open-rate-review",
+      "text": "Review rates",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-search",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-catalog-service-type-filter",
+      "text": "All Service Types",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-catalog-billing-method-filter",
+      "text": "All Billing Methods",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-service",
+      "text": "Add Service",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Show all",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-all",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-3105a420-8aab-434e-a872-abd01ad26926",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-3105a420-8aab-434e-a872-abd01ad26926",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-57bb406d-7769-4a71-b4ef-156da8f80ddf",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-57bb406d-7769-4a71-b4ef-156da8f80ddf",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-5cdf9c5d-9f3b-4aa4-99e0-7e3d8d0a2090",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-5cdf9c5d-9f3b-4aa4-99e0-7e3d8d0a2090",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-d795f150-f3b6-4587-873d-c5361f64093d",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-d795f150-f3b6-4587-873d-c5361f64093d",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-e6d5cc56-af34-4808-a6fc-ab94b7904419",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-e6d5cc56-af34-4808-a6fc-ab94b7904419",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-7a4ec8a0-bfed-4612-a3e0-4be6996ea002",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-7a4ec8a0-bfed-4612-a3e0-4be6996ea002",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-catalog-select-b15e4fb9-74b8-4a73-8de0-57fdf51558c3",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "service-actions-menu-b15e4fb9-74b8-4a73-8de0-57fdf51558c3",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "service-name",
+      "text": "",
+      "value": "Basic Support",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Hourly Time",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "billing-method",
+      "text": "Hourly",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "description",
+      "text": "",
+      "value": "Standard support package",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-currency-btn",
+      "text": "+ Add Currency",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-price-currency-0",
+      "text": "USD ($)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "edit-price-rate-0",
+      "text": "",
+      "value": "100.00",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-price-0",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-price-currency-1",
+      "text": "EUR (€)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "edit-price-rate-1",
+      "text": "",
+      "value": "0.00",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-price-1",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "unit-of-measure",
+      "text": "Hour",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-service-tax-rate-select",
+      "text": "Select Tax Rate (or leave blank for Non-Taxable)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "cancel-button",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "save-button",
+      "text": "Save Changes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

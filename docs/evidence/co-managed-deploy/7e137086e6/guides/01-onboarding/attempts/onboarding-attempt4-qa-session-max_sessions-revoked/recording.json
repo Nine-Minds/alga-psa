@@ -1,0 +1,424 @@
+{
+  "scenario": "onboarding-recording",
+  "recordedAt": "2026-10-26T03:29:57.379Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "one-workspace-for-this-client-awaiting-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:30:44.176Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-4 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-4 IT Administrator cm-review-20261026-01-accept-4@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "cf2e86f0-9713-4b07-bb43-37e2e06fb15e"
+      }
+    },
+    {
+      "id": "seats-reserved-once",
+      "passed": true,
+      "at": "2026-10-26T03:30:45.022Z",
+      "data": {
+        "allocation": {
+          "allocation_id": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 4
+        }
+      }
+    },
+    {
+      "id": "msp-has-no-live-relationship-before-acceptance",
+      "passed": true,
+      "at": "2026-10-26T03:30:45.220Z"
+    },
+    {
+      "id": "resend-keeps-one-workspace-and-one-allocation",
+      "passed": true,
+      "at": "2026-10-26T03:30:48.330Z",
+      "data": {
+        "retryLabel": "Resend administrator invitation",
+        "mailCount": 2
+      }
+    },
+    {
+      "id": "invited-admin-signed-into-the-exact-customer-workspace",
+      "passed": true,
+      "at": "2026-10-26T03:30:51.716Z"
+    },
+    {
+      "id": "review-shows-sponsor-scope-and-destination-queue",
+      "passed": true,
+      "at": "2026-10-26T03:30:51.716Z",
+      "data": {
+        "review": "Review your co-management relationship Oz has prepared this IT workspace for your organization. Review the proposed access before activating the relationship. The MSP can oversee tickets on the following boards, including tickets your team is handling: Service Desk — View and collaborate Escalated tickets go immediately to the MSP’s General Support queue. This initial scope includes no shared projects or delegated workspace administration. Organization-private notes stay with their organization. Your administrators control the relationship scope and can change or revoke access. Accept and activate workspaceSign out Welcome to the team!"
+      }
+    },
+    {
+      "id": "deep-link-to-native-work-still-shows-acceptance-before-approval",
+      "passed": true,
+      "at": "2026-10-26T03:30:52.189Z"
+    },
+    {
+      "id": "customer-reaches-own-workspace-after-acceptance-with-no-projects-or-delegation",
+      "passed": true,
+      "at": "2026-10-26T03:30:59.626Z",
+      "data": {
+        "relationship": "active",
+        "initialGrants": {
+          "board_scopes": 1,
+          "project_scopes": 0,
+          "delegated_grants": 0
+        }
+      }
+    },
+    {
+      "id": "msp-client-view-shows-active-and-no-cancel-setup",
+      "passed": true,
+      "at": "2026-10-26T03:31:05.851Z",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-4 Active Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-4 IT Administrator cm-review-20261026-01-accept-4@cmreview.test Administrator invitation —",
+        "allocation": {
+          "allocation_id": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+          "seats": 1,
+          "state": "active",
+          "released_at": null
+        }
+      }
+    },
+    {
+      "id": "lost-response-reports-unconfirmed-result-and-keeps-form",
+      "passed": true,
+      "at": "2026-10-26T03:32:11.747Z",
+      "data": {
+        "alert": "The request result could not be confirmed. Retry these same details to recover it.",
+        "button": "Create workspace and invite administrator"
+      }
+    },
+    {
+      "id": "retry-recovers-the-same-operation-one-workspace-one-allocation",
+      "passed": true,
+      "at": "2026-10-26T03:32:14.759Z",
+      "data": {
+        "operationId": "a4f27c65-b4c8-4f44-a6ac-283c9674c7e6",
+        "buttonAfterLostResponse": "Create workspace and invite administrator"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:29:57.422Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:59.669Z",
+      "seconds": 2.29,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:29:59.669Z",
+      "seconds": 2.29,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Create one workspace for one client"
+    },
+    {
+      "at": "2026-10-26T03:30:01.763Z",
+      "seconds": 4.384,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-26T03:30:02.143Z",
+      "seconds": 4.764,
+      "actor": "qa",
+      "title": "client-created",
+      "data": {
+        "clientName": "CM-REVIEW-20261026-01 Accept-4",
+        "clientId": "4d392586-2f08-4fca-b8f9-1bd19135902c"
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:04.250Z",
+      "seconds": 6.871,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/4d392586-2f08-4fca-b8f9-1bd19135902c?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:30:40.578Z",
+      "seconds": 43.199,
+      "actor": "qa",
+      "title": "observed-status-labels",
+      "data": [
+        "Queued"
+      ]
+    },
+    {
+      "at": "2026-10-26T03:30:44.176Z",
+      "seconds": 46.797,
+      "actor": "qa",
+      "title": "one-workspace-for-this-client-awaiting-acceptance",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-4 Awaiting customer acceptance Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-4 IT Administrator cm-review-20261026-01-accept-4@cmreview.test Administrator invitation Administrator invitation sent",
+        "operationId": "cf2e86f0-9713-4b07-bb43-37e2e06fb15e"
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:45.022Z",
+      "seconds": 47.643,
+      "actor": "qa",
+      "title": "seats-reserved-once",
+      "data": {
+        "allocation": {
+          "allocation_id": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+          "seats": 1,
+          "state": "reserved",
+          "released_at": null
+        },
+        "pool": {
+          "capacity": 5,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 10,
+          "allocated": 4
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:45.220Z",
+      "seconds": 47.841,
+      "actor": "qa",
+      "title": "msp-has-no-live-relationship-before-acceptance"
+    },
+    {
+      "at": "2026-10-26T03:30:45.221Z",
+      "seconds": 47.842,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Recover the existing setup (resend invitation)"
+    },
+    {
+      "at": "2026-10-26T03:30:48.330Z",
+      "seconds": 50.951,
+      "actor": "qa",
+      "title": "resend-keeps-one-workspace-and-one-allocation",
+      "data": {
+        "retryLabel": "Resend administrator invitation",
+        "mailCount": 2
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:50.261Z",
+      "seconds": 52.882,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Require customer approval"
+    },
+    {
+      "at": "2026-10-26T03:30:51.716Z",
+      "seconds": 54.337,
+      "actor": "qa",
+      "title": "invited-admin-signed-into-the-exact-customer-workspace"
+    },
+    {
+      "at": "2026-10-26T03:30:51.716Z",
+      "seconds": 54.337,
+      "actor": "qa",
+      "title": "review-shows-sponsor-scope-and-destination-queue",
+      "data": {
+        "review": "Review your co-management relationship Oz has prepared this IT workspace for your organization. Review the proposed access before activating the relationship. The MSP can oversee tickets on the following boards, including tickets your team is handling: Service Desk — View and collaborate Escalated tickets go immediately to the MSP’s General Support queue. This initial scope includes no shared projects or delegated workspace administration. Organization-private notes stay with their organization. Your administrators control the relationship scope and can change or revoke access. Accept and activate workspaceSign out Welcome to the team!"
+      }
+    },
+    {
+      "at": "2026-10-26T03:30:52.189Z",
+      "seconds": 54.81,
+      "actor": "qa",
+      "title": "deep-link-to-native-work-still-shows-acceptance-before-approval"
+    },
+    {
+      "at": "2026-10-26T03:30:54.351Z",
+      "seconds": 56.972,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:30:58.811Z",
+      "seconds": 61.432,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T03:30:59.626Z",
+      "seconds": 62.247,
+      "actor": "qa",
+      "title": "customer-reaches-own-workspace-after-acceptance-with-no-projects-or-delegation",
+      "data": {
+        "relationship": "active",
+        "initialGrants": {
+          "board_scopes": 1,
+          "project_scopes": 0,
+          "delegated_grants": 0
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:31:01.421Z",
+      "seconds": 64.042,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:31:03.410Z",
+      "seconds": 66.031,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/4d392586-2f08-4fca-b8f9-1bd19135902c?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:31:05.851Z",
+      "seconds": 68.472,
+      "actor": "qa",
+      "title": "msp-client-view-shows-active-and-no-cancel-setup",
+      "data": {
+        "status": "Co-managed IT for CM-REVIEW-20261026-01 Accept-4 Active Refresh workspaces Technician seats 1 of 1 technician seat Customer workspace CM-REVIEW-20261026-01 Accept-4 IT Administrator cm-review-20261026-01-accept-4@cmreview.test Administrator invitation —",
+        "allocation": {
+          "allocation_id": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+          "seats": 1,
+          "state": "active",
+          "released_at": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:31:05.852Z",
+      "seconds": 68.473,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Recover the existing setup (lost response, Retry same details)"
+    },
+    {
+      "at": "2026-10-26T03:31:07.968Z",
+      "seconds": 70.589,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients"
+    },
+    {
+      "at": "2026-10-26T03:31:08.454Z",
+      "seconds": 71.075,
+      "actor": "qa",
+      "title": "client-created",
+      "data": {
+        "clientName": "CM-REVIEW-20261026-01 Cancel-4",
+        "clientId": "f0e5b463-2f8a-49b3-855d-9da1c52b9646"
+      }
+    },
+    {
+      "at": "2026-10-26T03:31:10.533Z",
+      "seconds": 73.154,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f0e5b463-2f8a-49b3-855d-9da1c52b9646?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:32:11.747Z",
+      "seconds": 134.368,
+      "actor": "qa",
+      "title": "lost-response-reports-unconfirmed-result-and-keeps-form",
+      "data": {
+        "alert": "The request result could not be confirmed. Retry these same details to recover it.",
+        "button": "Create workspace and invite administrator"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:11.748Z",
+      "seconds": 134.369,
+      "actor": "qa",
+      "title": "after-lost-response",
+      "data": {
+        "button": "Create workspace and invite administrator",
+        "operationId": "a4f27c65-b4c8-4f44-a6ac-283c9674c7e6"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:14.759Z",
+      "seconds": 137.38,
+      "actor": "qa",
+      "title": "retry-recovers-the-same-operation-one-workspace-one-allocation",
+      "data": {
+        "operationId": "a4f27c65-b4c8-4f44-a6ac-283c9674c7e6",
+        "buttonAfterLostResponse": "Create workspace and invite administrator"
+      }
+    },
+    {
+      "at": "2026-10-26T03:32:16.652Z",
+      "seconds": 139.273,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f0e5b463-2f8a-49b3-855d-9da1c52b9646?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.29,
+      "title": "1. Create one workspace for one client",
+      "end": 47.842
+    },
+    {
+      "start": 47.842,
+      "title": "3. Recover the existing setup (resend invitation)",
+      "end": 52.882
+    },
+    {
+      "start": 52.882,
+      "title": "2. Require customer approval",
+      "end": 68.473
+    },
+    {
+      "start": 68.473,
+      "title": "3. Recover the existing setup (lost response, Retry same details)",
+      "end": 230.19
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for locator('[id$=\"-status\"]').first() to be visible\n",
+  "durationSeconds": 230.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

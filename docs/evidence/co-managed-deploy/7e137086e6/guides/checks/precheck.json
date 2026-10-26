@@ -1,0 +1,1466 @@
+[
+  {
+    "page": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/precheck.html",
+    "checkedAt": "2026-10-26T04:37:18.055Z",
+    "videos": [
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/main.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/12753621",
+        "duration": 144.32,
+        "played": 1.286072,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Native Oz ticket TIC001011 (control): full native MSP controls in Entry and Grid",
+            "start": 0.042,
+            "currentTime": 0.042,
+            "ok": true,
+            "frame": {
+              "mean": 718.54453125,
+              "variance": 1502.7480169677874
+            }
+          },
+          {
+            "via": "track",
+            "title": "Customer (Alice) creates a board category and a disposable ticket on the shared Service Desk board",
+            "start": 11.857,
+            "currentTime": 11.857,
+            "ok": true,
+            "frame": {
+              "mean": 714.061328125,
+              "variance": 2347.341941986
+            }
+          },
+          {
+            "via": "track",
+            "title": "MSP opens the same authoritative ticket in Entry and Grid",
+            "start": 23.132,
+            "currentTime": 23.132,
+            "ok": true,
+            "frame": {
+              "mean": 718.256640625,
+              "variance": 1489.0954637145624
+            }
+          },
+          {
+            "via": "track",
+            "title": "MSP edits status, priority and category natively; persisted to the customer ticket",
+            "start": 30.883,
+            "currentTime": 30.883,
+            "ok": true,
+            "frame": {
+              "mean": 615.069921875,
+              "variance": 61718.280657806376
+            }
+          },
+          {
+            "via": "track",
+            "title": "MSP assigns its own technician in the Co-managed section",
+            "start": 34.548,
+            "currentTime": 34.548,
+            "ok": true,
+            "frame": {
+              "mean": 616.923828125,
+              "variance": 62648.533650970436
+            }
+          },
+          {
+            "via": "track",
+            "title": "Field and privacy boundaries for the MSP in Entry and Grid",
+            "start": 37.002,
+            "currentTime": 37.002,
+            "ok": true,
+            "frame": {
+              "mean": 615.9171875,
+              "variance": 62447.809548339865
+            }
+          },
+          {
+            "via": "track",
+            "title": "Customer sees MSP edits and assignment, assigns natively and writes privately",
+            "start": 39.04,
+            "currentTime": 39.04,
+            "ok": true,
+            "frame": {
+              "mean": 714.05625,
+              "variance": 2349.590585937549
+            }
+          },
+          {
+            "via": "track",
+            "title": "MSP sees the customer assignee but not the customer-private note",
+            "start": 46.891,
+            "currentTime": 46.891,
+            "ok": true,
+            "frame": {
+              "mean": 616.351171875,
+              "variance": 62843.69425643922
+            }
+          },
+          {
+            "via": "track",
+            "title": "Ended Kansas Farms workspace: read-only check (no mutation attempted)",
+            "start": 58.37,
+            "currentTime": 58.37,
+            "ok": true,
+            "frame": {
+              "mean": 717.951171875,
+              "variance": 1491.7386314392206
+            }
+          },
+          {
+            "via": "track",
+            "title": "Restore: MSP clears its assignment on the disposable ticket",
+            "start": 133.11,
+            "currentTime": 133.11,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          }
+        ],
+        "trackCues": 10,
+        "lateSeek": {
+          "target": 143.32,
+          "currentTime": 143.32,
+          "frame": {
+            "mean": 617.279296875,
+            "variance": 62742.22160263063
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/01-onboarding.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/15031618",
+        "duration": 157.72,
+        "played": 1.490652,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "1. Create one workspace for one client",
+            "start": 0.36,
+            "currentTime": 0.36,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Recover the existing setup (resend invitation)",
+            "start": 45.173,
+            "currentTime": 45.173,
+            "ok": true,
+            "frame": {
+              "mean": 631.40859375,
+              "variance": 70263.50023864745
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Require customer approval",
+            "start": 54.428,
+            "currentTime": 54.428,
+            "ok": true,
+            "frame": {
+              "mean": 744,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Recover the existing setup (lost response, Retry same details)",
+            "start": 69.218,
+            "currentTime": 69.218,
+            "ok": true,
+            "frame": {
+              "mean": 629.0796875,
+              "variance": 70373.80771240237
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Cancel only an unclaimed workspace",
+            "start": 141.844,
+            "currentTime": 141.844,
+            "ok": true,
+            "frame": {
+              "mean": 305.372265625,
+              "variance": 30711.853996429447
+            }
+          }
+        ],
+        "trackCues": 5,
+        "lateSeek": {
+          "target": 156.72,
+          "currentTime": 156.72,
+          "frame": {
+            "mean": 623.10078125,
+            "variance": 62581.860155639704
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/02-licensing-and-seats.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/4744341",
+        "duration": 42.48,
+        "played": 1.485889,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "1. Reconcile the pool with customer allocations",
+            "start": 2.483,
+            "currentTime": 2.483,
+            "ok": true,
+            "frame": {
+              "mean": 599.125390625,
+              "variance": 61364.80888656614
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Review a hosted pool purchase (configured simulator)",
+            "start": 10.967,
+            "currentTime": 10.967,
+            "ok": true,
+            "frame": {
+              "mean": 629.125390625,
+              "variance": 70288.04248031613
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Change a customer allocation (White Rabbit, reversible +1)",
+            "start": 19.977,
+            "currentTime": 19.977,
+            "ok": true,
+            "frame": {
+              "mean": 624.659765625,
+              "variance": 62843.10884994507
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Self-hosted branch (License Management link only)",
+            "start": 31.143,
+            "currentTime": 31.143,
+            "ok": true,
+            "frame": {
+              "mean": 629.01328125,
+              "variance": 70248.0482611084
+            }
+          },
+          {
+            "via": "track",
+            "title": "Retained state: return the pool to its pre-recording quantity",
+            "start": 38.142,
+            "currentTime": 38.142,
+            "ok": true,
+            "frame": {
+              "mean": 598.66328125,
+              "variance": 61188.830370483454
+            }
+          }
+        ],
+        "trackCues": 5,
+        "lateSeek": {
+          "target": 41.48,
+          "currentTime": 41.48,
+          "frame": {
+            "mean": 624.547265625,
+            "variance": 62743.77667221066
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/03-access-policies.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/18419486",
+        "duration": 154.28,
+        "played": 1.488123,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Preparation: disposable board, tickets and viewer principal",
+            "start": 0.617,
+            "currentTime": 0.617,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Customer controls board and project scope",
+            "start": 11.037,
+            "currentTime": 11.037,
+            "ok": true,
+            "frame": {
+              "mean": 617.609375,
+              "variance": 62871.51616210939
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. MSP assigns its own people",
+            "start": 18.159,
+            "currentTime": 18.159,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Escalated tickets only versus board oversight",
+            "start": 41.55,
+            "currentTime": 41.55,
+            "ok": true,
+            "frame": {
+              "mean": 763.3453125,
+              "variance": 2.044821777381003
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Compare a viewer with a technician",
+            "start": 91.905,
+            "currentTime": 91.905,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Revoke the right grant",
+            "start": 120.149,
+            "currentTime": 120.149,
+            "ok": true,
+            "frame": {
+              "mean": 763.875390625,
+              "variance": 1.359863128629513
+            }
+          },
+          {
+            "via": "track",
+            "title": "Restore reviewed access",
+            "start": 147.381,
+            "currentTime": 147.381,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          }
+        ],
+        "trackCues": 7,
+        "lateSeek": {
+          "target": 153.28,
+          "currentTime": 153.28,
+          "frame": {
+            "mean": 630.128125,
+            "variance": 70401.68358398444
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/04-delegated-administration.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/14112327",
+        "duration": 129.6,
+        "played": 1.490597,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Preparation: disposable board, non-administrator user and invitation",
+            "start": 0.191,
+            "currentTime": 0.191,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Approve one board operation",
+            "start": 12.852,
+            "currentTime": 12.852,
+            "ok": true,
+            "frame": {
+              "mean": 598.50078125,
+              "variance": 61386.50312438962
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Perform only the approved change",
+            "start": 21.626,
+            "currentTime": 21.626,
+            "ok": true,
+            "frame": {
+              "mean": 714.019921875,
+              "variance": 2345.149993743864
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Prove revocation closes an open editor",
+            "start": 41.616,
+            "currentTime": 41.616,
+            "ok": true,
+            "frame": {
+              "mean": 628.42890625,
+              "variance": 70044.45275817876
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Edit a non-administrator profile",
+            "start": 57.398,
+            "currentTime": 57.398,
+            "ok": true,
+            "frame": {
+              "mean": 718.139453125,
+              "variance": 1491.6371934508788
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Resend a customer-created invitation",
+            "start": 87.845,
+            "currentTime": 87.845,
+            "ok": true,
+            "frame": {
+              "mean": 714.377734375,
+              "variance": 2349.374113616883
+            }
+          },
+          {
+            "via": "track",
+            "title": "Revoke review approvals and confirm retained state",
+            "start": 110.699,
+            "currentTime": 110.699,
+            "ok": true,
+            "frame": {
+              "mean": 713.951171875,
+              "variance": 2340.7308189392206
+            }
+          }
+        ],
+        "trackCues": 7,
+        "lateSeek": {
+          "target": 128.6,
+          "currentTime": 128.6,
+          "frame": {
+            "mean": 337.5734375,
+            "variance": 42556.5071069336
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/05-ticket-queue.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/12226086",
+        "duration": 122.32,
+        "played": 1.489242,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Preparation: disposable customer tickets escalated to the MSP",
+            "start": 0.041,
+            "currentTime": 0.041,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Keep queue scope stable",
+            "start": 49.265,
+            "currentTime": 49.265,
+            "ok": true,
+            "frame": {
+              "mean": 713.872265625,
+              "variance": 2339.625480804534
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Export the full filtered set",
+            "start": 64.192,
+            "currentTime": 64.191998,
+            "ok": true,
+            "frame": {
+              "mean": 620.759765625,
+              "variance": 61625.653615570045
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Return selected tickets once",
+            "start": 66.79,
+            "currentTime": 66.79,
+            "ok": true,
+            "frame": {
+              "mean": 621.052734375,
+              "variance": 61772.19760971068
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Recover interrupted or mixed results",
+            "start": 94.502,
+            "currentTime": 94.502,
+            "ok": true,
+            "frame": {
+              "mean": 430.1765625,
+              "variance": 62604.275856933615
+            }
+          }
+        ],
+        "trackCues": 5,
+        "lateSeek": {
+          "target": 121.32,
+          "currentTime": 121.32,
+          "frame": {
+            "mean": 619.696875,
+            "variance": 61328.92999023438
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/06-projects-and-tasks.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/13386775",
+        "duration": 117.6,
+        "played": 1.489846,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Before you start: customer creates a disposable project, phase and two tasks",
+            "start": 0.348,
+            "currentTime": 0.348,
+            "ok": true,
+            "frame": {
+              "mean": 741,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Share only the prepared project (customer grants Collaborate)",
+            "start": 25.132,
+            "currentTime": 25.132,
+            "ok": true,
+            "frame": {
+              "mean": 618.8484375,
+              "variance": 62078.554372558545
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. MSP staff assignment for the customer and project task queues",
+            "start": 30.172,
+            "currentTime": 30.172,
+            "ok": true,
+            "frame": {
+              "mean": 714.06015625,
+              "variance": 2336.9026312256465
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Persist a task edit with attribution",
+            "start": 41.731,
+            "currentTime": 41.731,
+            "ok": true,
+            "frame": {
+              "mean": 616.204296875,
+              "variance": 61185.05552841193
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Separate MSP assignment from customer-local ownership",
+            "start": 53.617,
+            "currentTime": 53.617,
+            "ok": true,
+            "frame": {
+              "mean": 617.5953125,
+              "variance": 61483.26825927739
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Detect a stale MSP edit after a newer customer save",
+            "start": 67.764,
+            "currentTime": 67.764,
+            "ok": true,
+            "frame": {
+              "mean": 743.409375,
+              "variance": 1.1495996094308794
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Compare effort on the shared task (customer and MSP time)",
+            "start": 75.826,
+            "currentTime": 75.826,
+            "ok": true,
+            "frame": {
+              "mean": 617.775,
+              "variance": 61492.34078124998
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Task conversation and file while the grant is active",
+            "start": 93.562,
+            "currentTime": 93.562,
+            "ok": true,
+            "frame": {
+              "mean": 744,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Revoke the project grant: fresh MSP reads close",
+            "start": 100.918,
+            "currentTime": 100.918,
+            "ok": true,
+            "frame": {
+              "mean": 744,
+              "variance": 0
+            }
+          }
+        ],
+        "trackCues": 9,
+        "lateSeek": {
+          "target": 116.6,
+          "currentTime": 116.6,
+          "frame": {
+            "mean": 615.81796875,
+            "variance": 61928.79577087407
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/07-conversations-and-files.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/21165731",
+        "duration": 176.96,
+        "played": 1.487822,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+            "start": 0.048,
+            "currentTime": 0.048,
+            "ok": true,
+            "frame": {
+              "mean": 714.51484375,
+              "variance": 2351.3911859131767
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Shared IT teams message with an attached file (QA)",
+            "start": 7.415,
+            "currentTime": 7.415,
+            "ok": true,
+            "frame": {
+              "mean": 713.95234375,
+              "variance": 2419.5235101319267
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Customer reads the shared message and file",
+            "start": 14.556,
+            "currentTime": 14.556,
+            "ok": true,
+            "frame": {
+              "mean": 713.473828125,
+              "variance": 2397.7868150330614
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Organization-private messages from each side, then requester audience",
+            "start": 18.289,
+            "currentTime": 18.289,
+            "ok": true,
+            "frame": {
+              "mean": 617.80625,
+              "variance": 62805.108554687526
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Requester sees only requester-audience content in the portal",
+            "start": 42.506,
+            "currentTime": 42.506,
+            "ok": true,
+            "frame": {
+              "mean": 716.051953125,
+              "variance": 1822.1375352478935
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Author removes a disposable attachment; old link stops downloading",
+            "start": 46.358,
+            "currentTime": 46.358,
+            "ok": true,
+            "frame": {
+              "mean": 712.934375,
+              "variance": 2417.1886621093145
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Uncertain send: server saved the message but the response was lost",
+            "start": 60.996,
+            "currentTime": 60.996,
+            "ok": true,
+            "frame": {
+              "mean": 617.369140625,
+              "variance": 62928.20787582395
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Reply from the other organization, edit, and delete the root",
+            "start": 73.4,
+            "currentTime": 73.4,
+            "ok": true,
+            "frame": {
+              "mean": 744,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Whole-thread audience change: MSP-private thread with reply and file",
+            "start": 107.906,
+            "currentTime": 107.906,
+            "ok": true,
+            "frame": {
+              "mean": 713.103125,
+              "variance": 2382.297958984447
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Restrict the disclosed thread back to Shared IT teams",
+            "start": 130.795,
+            "currentTime": 130.794998,
+            "ok": true,
+            "frame": {
+              "mean": 713.47578125,
+              "variance": 2541.158788452216
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Requester task conversation (portal) on a requester-visible shared task",
+            "start": 145.044,
+            "currentTime": 145.044,
+            "ok": true,
+            "frame": {
+              "mean": 713.031640625,
+              "variance": 2359.0720457457937
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Cleanup: customer removes the requester project grant",
+            "start": 172.578,
+            "currentTime": 172.578,
+            "ok": true,
+            "frame": {
+              "mean": 712.087109375,
+              "variance": 2526.3224900818896
+            }
+          }
+        ],
+        "trackCues": 12,
+        "lateSeek": {
+          "target": 175.96,
+          "currentTime": 175.96,
+          "frame": {
+            "mean": 624.234375,
+            "variance": 62916.10600585939
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/08-sla.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/32407858",
+        "duration": 398.92,
+        "played": 1.486867,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Before you start: disposable MSP SLA policy for White Rabbit (SLA settings)",
+            "start": 0.906,
+            "currentTime": 0.906,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Configure and persist the customer-to-MSP priority mapping",
+            "start": 23.834,
+            "currentTime": 23.834,
+            "ok": true,
+            "frame": {
+              "mean": 471.6390625,
+              "variance": 69331.12831787104
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Escalation starts the MSP obligation (not initial visibility)",
+            "start": 34.892,
+            "currentTime": 34.892,
+            "ok": true,
+            "frame": {
+              "mean": 630.30703125,
+              "variance": 70421.8291693115
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Change the mapping: existing targets stay, new escalation uses current config",
+            "start": 46.68,
+            "currentTime": 46.68,
+            "ok": true,
+            "frame": {
+              "mean": 616.5609375,
+              "variance": 61988.867380371026
+            }
+          },
+          {
+            "via": "track",
+            "title": "5 (prep). MSP assigns ticket 2 to QA so threshold notices have an assignee",
+            "start": 66.348,
+            "currentTime": 66.348,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. MSP returns ticket 1 to the customer; history preserved",
+            "start": 72.125,
+            "currentTime": 72.125,
+            "ok": true,
+            "frame": {
+              "mean": 715.7734375,
+              "variance": 2411.393200683582
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Departed relationship: Kansas Farms keeps its own outcome; MSP live read unavailable",
+            "start": 83.491,
+            "currentTime": 83.491,
+            "ok": true,
+            "frame": {
+              "mean": 714.390625,
+              "variance": 2354.409912109375
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Breach/routing notification on ticket 2 (4-minute response target)",
+            "start": 96.013,
+            "currentTime": 96.013,
+            "ok": true,
+            "frame": {
+              "mean": 717.041015625,
+              "variance": 1485.6713645934942
+            }
+          },
+          {
+            "via": "track",
+            "title": "Restore: mapping back to original, policy unassigned from White Rabbit",
+            "start": 373.514,
+            "currentTime": 373.514,
+            "ok": true,
+            "frame": {
+              "mean": 614.78828125,
+              "variance": 62040.540331420954
+            }
+          },
+          {
+            "via": "track",
+            "title": "Supplement — 5. Departed customer keeps its own ticket; no live former-MSP clock",
+            "start": 384.47,
+            "currentTime": 384.47,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "Supplement — 5. Former MSP cannot open the departed shared ticket or its clock",
+            "start": 390.969,
+            "currentTime": 390.969,
+            "ok": true,
+            "frame": {
+              "mean": 717.794140625,
+              "variance": 1484.8791062927921
+            }
+          }
+        ],
+        "trackCues": 11,
+        "lateSeek": {
+          "target": 397.92,
+          "currentTime": 397.92,
+          "frame": {
+            "mean": 618.11875,
+            "variance": 61278.998398437514
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/09-time-and-billing.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/11754416",
+        "duration": 118.32,
+        "played": 1.489789,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Before you start: customer prepares a disposable shared ticket and shared task",
+            "start": 0.381,
+            "currentTime": 0.381,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "1. Persist one commercial entry (QA, native shared ticket, Add Time Entry)",
+            "start": 18.295,
+            "currentTime": 18.295,
+            "ok": true,
+            "frame": {
+              "mean": 718.032421875,
+              "variance": 1499.171214447124
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Native stopwatch on the shared ticket: start, stop, one entry",
+            "start": 28.501,
+            "currentTime": 28.501,
+            "ok": true,
+            "frame": {
+              "mean": 617.108984375,
+              "variance": 62652.81273178104
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Customer effort: native customer ticket offers no time entry; operational entry on the shared task",
+            "start": 39.131,
+            "currentTime": 39.131,
+            "ok": true,
+            "frame": {
+              "mean": 713.85859375,
+              "variance": 2334.40578552254
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Follow the entries into the native timesheet, submit and approve",
+            "start": 58.65,
+            "currentTime": 58.65,
+            "ok": true,
+            "frame": {
+              "mean": 617.177734375,
+              "variance": 61456.225051116955
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Reconcile commercial billing: Automatic Invoices preview and draft",
+            "start": 77.808,
+            "currentTime": 77.808,
+            "ok": true,
+            "frame": {
+              "mean": 619.094140625,
+              "variance": 61040.58215316769
+            }
+          },
+          {
+            "via": "track",
+            "title": "Restore: remove project grant, delete approval team, clear billing email, terminate disposable contract; time and draft invoice retained",
+            "start": 96.635,
+            "currentTime": 96.635,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          }
+        ],
+        "trackCues": 7,
+        "lateSeek": {
+          "target": 117.32,
+          "currentTime": 117.32,
+          "frame": {
+            "mean": 621.299609375,
+            "variance": 59737.49421859736
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/10-departure-and-archives.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/19815267",
+        "duration": 234.2,
+        "played": 1.488467,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Part 1 — Preparation: staff access, shared ticket, audiences, files, time",
+            "start": 0.218,
+            "currentTime": 0.218,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 1 — 1. Record the cutoff baseline",
+            "start": 34.45,
+            "currentTime": 34.45,
+            "ok": true,
+            "frame": {
+              "mean": 616.013671875,
+              "variance": 62767.536922454834
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 1 — 2. End the disposable relationship",
+            "start": 48.105,
+            "currentTime": 48.105,
+            "ok": true,
+            "frame": {
+              "mean": 609.0125,
+              "variance": 60122.523281249916
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 2 — 2. End the disposable relationship (status after refresh and reload)",
+            "start": 59.533,
+            "currentTime": 59.533,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 2 — 3. Test the old access paths",
+            "start": 73.411,
+            "currentTime": 73.411,
+            "ok": true,
+            "frame": {
+              "mean": 630.38828125,
+              "variance": 69931.13205017097
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 2 — 4. Read only retained evidence",
+            "start": 149.804,
+            "currentTime": 149.804,
+            "ok": true,
+            "frame": {
+              "mean": 718.00859375,
+              "variance": 1498.3975823973888
+            }
+          },
+          {
+            "via": "track",
+            "title": "Part 2 — 5. Reconcile seats and commercial continuity",
+            "start": 227.182,
+            "currentTime": 227.182,
+            "ok": true,
+            "frame": {
+              "mean": 607.13125,
+              "variance": 61430.8335546875
+            }
+          }
+        ],
+        "trackCues": 7,
+        "lateSeek": {
+          "target": 233.2,
+          "currentTime": 233.2,
+          "frame": {
+            "mean": 623.859765625,
+            "variance": 62723.11900619505
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/11-export-restore-and-upgrade.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/1483772",
+        "duration": 20.52,
+        "played": 1.489577,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "1. Download an encrypted customer workspace (after departure)",
+            "start": 2.077,
+            "currentTime": 2.077,
+            "ok": true,
+            "frame": {
+              "mean": 598.36953125,
+              "variance": 61068.315790405264
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Inspect the archive (operator CLI); restore needs an isolated destination",
+            "start": 6.135,
+            "currentTime": 6.135,
+            "ok": true,
+            "frame": {
+              "mean": 619.364453125,
+              "variance": 61788.4636582947
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Upgrade a current workspace independently (screen boundary only)",
+            "start": 13.673,
+            "currentTime": 13.673,
+            "ok": true,
+            "frame": {
+              "mean": 619.13828125,
+              "variance": 61904.669940795924
+            }
+          }
+        ],
+        "trackCues": 3,
+        "lateSeek": {
+          "target": 19.52,
+          "currentTime": 19.52,
+          "frame": {
+            "mean": 619.2421875,
+            "variance": 61878.192126464855
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/12-customer-integrations.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/5958568",
+        "duration": 52.88,
+        "played": 1.487377,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)",
+            "start": 0.334,
+            "currentTime": 0.334,
+            "ok": true,
+            "frame": {
+              "mean": 765,
+              "variance": 0
+            }
+          },
+          {
+            "via": "track",
+            "title": "2. Staff sign-in and callback: entry points only (no approved identity provider)",
+            "start": 16.847,
+            "currentTime": 16.847,
+            "ok": true,
+            "frame": {
+              "mean": 714.1671875,
+              "variance": 2346.279860839946
+            }
+          },
+          {
+            "via": "track",
+            "title": "3. Directory provisioning entry (customer workspace)",
+            "start": 24.575,
+            "currentTime": 24.575,
+            "ok": true,
+            "frame": {
+              "mean": 621.76328125,
+              "variance": 62330.62521423341
+            }
+          },
+          {
+            "via": "track",
+            "title": "4. Requester-audience message reaches the controlled mailbox (SMTP sink); private bodies excluded",
+            "start": 28.154,
+            "currentTime": 28.154,
+            "ok": true,
+            "frame": {
+              "mean": 619.529296875,
+              "variance": 62528.03195419314
+            }
+          },
+          {
+            "via": "track",
+            "title": "5. Revoke the test binding through the provider control (archive) and reload",
+            "start": 46.735,
+            "currentTime": 46.735,
+            "ok": true,
+            "frame": {
+              "mean": 619.0640625,
+              "variance": 63058.53495849611
+            }
+          }
+        ],
+        "trackCues": 5,
+        "lateSeek": {
+          "target": 51.88,
+          "currentTime": 51.88,
+          "frame": {
+            "mean": 619.417578125,
+            "variance": 62679.67601913458
+          }
+        },
+        "ok": true
+      },
+      {
+        "src": "http://127.0.0.1:8874/guides/current/54e75edfabfd814edb9ca0685a5e46d0e050a470/collection.webm",
+        "rangeStatus": 206,
+        "contentRange": "bytes 0-1023/3801125",
+        "duration": 29.96,
+        "played": 1.482812,
+        "playedOk": true,
+        "chapters": [
+          {
+            "via": "track",
+            "title": "Open the guide collection",
+            "start": 0.043,
+            "currentTime": 0.043,
+            "ok": true,
+            "frame": {
+              "mean": 602.01484375,
+              "variance": 58157.113060913165
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 01: partial",
+            "start": 0.289,
+            "currentTime": 0.289,
+            "ok": true,
+            "frame": {
+              "mean": 672.607421875,
+              "variance": 35222.10564804077
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 02: blocked-external",
+            "start": 2.686,
+            "currentTime": 2.686,
+            "ok": true,
+            "frame": {
+              "mean": 672.596875,
+              "variance": 34610.36952148442
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 03: partial",
+            "start": 5.058,
+            "currentTime": 5.058,
+            "ok": true,
+            "frame": {
+              "mean": 673.508984375,
+              "variance": 34587.9913255311
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 04: covered",
+            "start": 7.409,
+            "currentTime": 7.409,
+            "ok": true,
+            "frame": {
+              "mean": 671.93125,
+              "variance": 34812.089023437526
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 05: covered",
+            "start": 9.783,
+            "currentTime": 9.783,
+            "ok": true,
+            "frame": {
+              "mean": 716.358203125,
+              "variance": 2781.542393646145
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 06: covered",
+            "start": 12.115,
+            "currentTime": 12.115,
+            "ok": true,
+            "frame": {
+              "mean": 672.49609375,
+              "variance": 34878.83826599119
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 07: covered",
+            "start": 14.479,
+            "currentTime": 14.479,
+            "ok": true,
+            "frame": {
+              "mean": 671.90546875,
+              "variance": 34909.086376342806
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 08: covered",
+            "start": 16.844,
+            "currentTime": 16.844,
+            "ok": true,
+            "frame": {
+              "mean": 755.801171875,
+              "variance": 369.47492050169967
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 09: covered",
+            "start": 19.142,
+            "currentTime": 19.142,
+            "ok": true,
+            "frame": {
+              "mean": 669.680078125,
+              "variance": 33935.85038436891
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 10: partial",
+            "start": 21.512,
+            "currentTime": 21.512,
+            "ok": true,
+            "frame": {
+              "mean": 670.55078125,
+              "variance": 34877.05679626466
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 11: blocked-external",
+            "start": 23.9,
+            "currentTime": 23.9,
+            "ok": true,
+            "frame": {
+              "mean": 752.959765625,
+              "variance": 584.1761155700078
+            }
+          },
+          {
+            "via": "track",
+            "title": "Section 12: blocked-external",
+            "start": 26.246,
+            "currentTime": 26.246,
+            "ok": true,
+            "frame": {
+              "mean": 668.2453125,
+              "variance": 34343.27888427739
+            }
+          },
+          {
+            "via": "track",
+            "title": "Return to the collection",
+            "start": 28.575,
+            "currentTime": 28.575,
+            "ok": true,
+            "frame": {
+              "mean": 650.96875,
+              "variance": 48325.65214843751
+            }
+          }
+        ],
+        "trackCues": 14,
+        "lateSeek": {
+          "target": 28.96,
+          "currentTime": 28.96,
+          "frame": {
+            "mean": 650.92109375,
+            "variance": 48296.25393005379
+          }
+        },
+        "ok": true
+      }
+    ],
+    "ok": true
+  }
+]

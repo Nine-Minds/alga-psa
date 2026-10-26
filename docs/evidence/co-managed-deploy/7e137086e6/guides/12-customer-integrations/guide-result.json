@@ -1,0 +1,60 @@
+{
+  "guide": "guides/12-customer-integrations.html",
+  "coverage": "blocked-external",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "1. Save customer-owned provider configuration", "result": "Pass", "evidence": "s1-session-is-customer-workspace-not-sponsor, s1-outbound-provider-is-nine-minds-managed, s1-open-providers-reaches-customer-provider-workbench, s1-google-form-offers-provider-specific-fields, s1-binding-persisted-in-customer-tenant-only, s1-secret-redacted-after-reload, s1-back-link-returns-to-customer-email-settings-after-reload, s1-customer-broad-integration-catalog-denied, s1-sponsor-separate-signin-does-not-see-customer-binding; s1-01..s1-08 screenshots", "note": "Simulator evidence. Alice's session is the White Rabbit workspace, and outbound email is Nine Minds Managed (not replaced). Email > Inbound > Open Providers reaches the customer workbench. Alice created the Microsoft app registration 'CM-REVIEW-20261026-12-c simulator app' with the operator-prepared Graph simulator client (cm-review-rabbit-client, White Rabbit Review Directory). It persisted in microsoft_profiles under White Rabbit only. After reload the secret appears masked ('••••…' plus its last 4 characters); the full secret is not in page HTML or text. The back link returns to Email settings, also after reload. /msp/settings/integrations is 'Page not available' for the customer. QA (Oz), signed in separately, sees the sponsor catalog without the customer binding, and Oz has no such profile." },
+    { "section": "2. Exercise staff sign-in and callback", "result": "Blocked", "evidence": "s2-signin-sso-entries (ssoButtons: []), s2-customer-sso-settings; s2-01-msp-signin.png, s2-02-customer-sso-settings.png", "note": "Not executable. The MSP sign-in page offers only email/password, with no SSO entry. Production-mode SSO safeguards were left unchanged. In the customer's Security > Single Sign-On, Microsoft 365 shows 'Not configured' and bulk Microsoft assignment is disabled. No approved Microsoft Entra application with a publicly reachable redirect URI exists, so no provider redirect or callback was attempted." },
+    { "section": "3. Provision or sync a directory user", "result": "Blocked", "evidence": "s3-directory-entry-points; s3-01-entra-direct.png", "note": "Blocked: directory setup entry not prepared. The customer Security Settings tabs are Roles, Sessions, Single Sign-On, Permissions, User Roles, Policies, API Keys and Webhooks; there is no user-provisioning/SCIM tab. Entra Direct reports 'No enabled app'. The simulator directory user review.tech@whiterabbit.test was not provisioned." },
+    { "section": "4. Deliver a message and ingest the reply", "result": "Fail", "evidence": "s4-disposable-ticket-has-requester-contact, s4-requester-mail-delivered-once-to-controlled-mailbox, step s4-FAIL-shared-it-body-emailed-to-requester, step s4-reply-ingestion-not-possible; s4-03-three-audiences.png, s4-04-after-reload.png; probe-shared-audience-mail/ (reproduction)", "note": "Outbound delivery works but the audience is wrong. Alice created requester contact cm-review-20261026-12-c.requester@whiterabbit.test and a ticket for it, then posted three comments: Shared IT teams, Private to White Rabbit IT, and Requester and IT teams. The requester-audience update reached the controlled SMTP-sink mailbox exactly once. However, the 'Shared IT teams' body was also emailed to the requester (defect below). The private body was excluded. Reply ingestion is blocked: there is no inbound mailbox binding (Inbound shows Gmail 0, Microsoft 0, IMAP 0) and the sink is outbound only." },
+    { "section": "5. Check revoked bindings and paused relationships", "result": "Blocked", "evidence": "s5-test-binding-archived-after-reload; s5-01-archived.png", "note": "Partly exercised. The test binding was revoked through the provider's own Archive control and stayed archived after reload. There is no live send, sync or ingest through that binding to replay against, and lifecycle (departure/lapse) queue checks were not run." }
+  ],
+  "actors": [
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer, c64b2666-7dd6-4c61-8ced-4b233f628e61)" },
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP sponsor, fa7f912f-6b62-463e-85cc-ffedab47ac44)" }
+  ],
+  "steps": [
+    "Alice signed in; the session tenant is White Rabbit.",
+    "Alice opened Email settings (outbound: Nine Minds Managed), then Inbound > Open Providers.",
+    "Alice inspected the Google form, then on Microsoft used New app registration: display name, simulator client ID, simulator directory ID and secret, with Staff sign-in and Outlook email checked, and saved.",
+    "Alice reloaded the providers page and checked the redaction, used Back to Email settings and reloaded, then opened /msp/settings/integrations and was denied.",
+    "QA signed in separately and opened its own Integrations page.",
+    "Signed out and opened the MSP sign-in page; Alice opened Security > Single Sign-On.",
+    "Alice reviewed Security Settings tabs and Entra Direct for a directory entry.",
+    "Alice created a requester contact and a ticket for it, then posted Shared IT, Private, and Requester-audience comments.",
+    "The SMTP sink was polled for the requester's mailbox.",
+    "Alice archived the test app registration and reloaded."
+  ],
+  "outcomes": [
+    "microsoft_profiles row 'CM-REVIEW-20261026-12-c simulator app' exists in White Rabbit and none in Oz. Its secret is masked after reload.",
+    "Customer broad integration catalog denied; sponsor catalog unaffected.",
+    "Requester mailbox (SMTP sink) received the ticket-created mail, the requester-audience comment once, and the Shared IT comment (leak).",
+    "The test app registration is archived (is_archived=true) after reload."
+  ],
+  "defects": [
+    "Privacy: a 'Shared IT teams' comment on a customer ticket is emailed to the ticket's requester contact. Repro (White Rabbit, as Alice): create a contact with an email; create a ticket on Service Desk with that contact; Add Comment, choose audience 'Shared IT teams' (the select shows it before posting) and post. The comment persists with is_internal=false, a co_management_requester_email_deliveries row is created for it, and the SMTP sink receives 'New comment on a ticket' with the Shared IT body for the requester. Reproduced three times: run b, run c (comment 820c3cfc-8f6d-4ca0-a911-2d33aaf67afa) and probe-shared-audience-mail (comment 7574b17c-e2bb-46a6-a886-f9de24180415). 'Private to White Rabbit IT' is stored is_internal=true and is not mailed.",
+    "Requester email 'Open ticket' links use non-canonical origins that differ between messages (http://feature-co-managed-it.localhost:23377/... and http://feature-co-managed-it.localhost:3374/...) instead of the served origin :23374.",
+    "The first Microsoft app registration created in a workspace with no persisted profile silently becomes Default, even with 'Set this as the default Microsoft app' unchecked. A default app cannot be archived ('Default Microsoft profile cannot be archived until another profile is default'), and the Archive confirm dialog just stays open. So a customer cannot fully revoke its only app registration through the provider controls. Seen with attempt profile 'CM-REVIEW-20261026-12-a simulator app' (556f8c7b), which remains Default and active."
+  ],
+  "limitations": [
+    "All provider evidence uses the local Graph simulator client prepared by the operator; this is not real-provider acceptance.",
+    "No staff sign-in, callback, directory provisioning, inbound reply, or revocation replay was executed (see missingResources).",
+    "Production SSO safeguards were not changed."
+  ],
+  "missingResources": [
+    "An approved Microsoft Entra app registration (client ID, directory ID, client secret, admin consent) with a redirect URI on a publicly reachable base URL, for staff sign-in/callback",
+    "A customer-facing directory provisioning entry (SCIM / Entra Direct enabled app) for the White Rabbit workspace",
+    "An inbound mailbox binding (Microsoft/Gmail/IMAP) for White Rabbit that the reply path and ingestion worker can use"
+  ],
+  "dataLeftBehind": [
+    "White Rabbit Microsoft app registration 'CM-REVIEW-20261026-12-a simulator app' (556f8c7b), Default and active. It cannot be archived through the UI while it is the only/default profile. No service binding selects it.",
+    "Archived registrations '…-12-b' (d77cdc1f) and '…-12-c'.",
+    "Contacts and tickets for runs a/b/c (CM-REVIEW-20261026-12-*), with their comments and the requester mails in the SMTP sink."
+  ],
+  "dbReceipts": [
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/12-customer-integrations/db-receipts-c.json"
+  ],
+  "recordingDir": "docs/evidence/co-managed-deploy/7e137086e6/guides/12-customer-integrations/recording",
+  "durationSeconds": 52.88,
+  "chapterCount": 5
+}

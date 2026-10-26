@@ -1,0 +1,90 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/time-entry",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nTime Entry\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nTime Entry\nTime Entry Settings\n\nManage your time entry settings and time periods\n\nTime Period Settings\nTime Periods\nTime Period Settings\n\nConfigure billing time period settings\n\nUnderstanding Time Period Settings\n\nYou can define multiple active settings to create complex billing cycles. End Day is the last day included in the period.\n\nFor example, to set up semi-monthly periods (1st–15th and 16th–End of Month):\n\nSetting 1: Start Day: 1, End Day: 15 → Period covers 1st through 15th\nSetting 2: Start Day: 16, End Day: End of month → Period covers 16th through last day\n\nThe system uses these settings to suggest and generate time periods. Ensure your settings cover the entire cycle without gaps.\n\nAdd New Time Period Setting",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-0",
+      "text": "Time Period Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_o_-trigger-1",
+      "text": "Time Periods",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-new-setting-button",
+      "text": "Add New Time Period Setting",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

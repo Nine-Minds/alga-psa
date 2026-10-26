@@ -1,0 +1,205 @@
+{
+  "scenario": "attempt-7",
+  "recordedAt": "2026-10-26T03:36:42.311Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-requester-exists-in-customer-tenant",
+      "passed": true,
+      "at": "2026-10-26T03:36:44.542Z",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "id": "prep-disposable-ticket-with-requester-contact",
+      "passed": true,
+      "at": "2026-10-26T03:36:44.891Z",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "id": "qa-root-message-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:36:54.386Z"
+    },
+    {
+      "id": "s3-customer-cannot-edit-or-delete-msp-message",
+      "passed": true,
+      "at": "2026-10-26T03:36:58.716Z"
+    },
+    {
+      "id": "s3-customer-reply-persists",
+      "passed": true,
+      "at": "2026-10-26T03:37:01.699Z"
+    },
+    {
+      "id": "s3-msp-sees-reply-with-customer-author",
+      "passed": true,
+      "at": "2026-10-26T03:37:05.987Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:36:42.357Z",
+      "seconds": 0.046,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:42.359Z",
+      "seconds": 0.048,
+      "title": "chapter",
+      "data": "Before you start: requester and disposable shared ticket (customer native screens)"
+    },
+    {
+      "at": "2026-10-26T03:36:44.359Z",
+      "seconds": 2.048,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:44.542Z",
+      "seconds": 2.231,
+      "actor": "alice",
+      "title": "prep-requester-exists-in-customer-tenant",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:44.891Z",
+      "seconds": 2.58,
+      "actor": "alice",
+      "title": "prep-disposable-ticket-with-requester-contact",
+      "data": {
+        "ticketId": "5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:44.891Z",
+      "seconds": 2.58,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "3. Reply from the other organization, edit, and delete the root"
+    },
+    {
+      "at": "2026-10-26T03:36:46.430Z",
+      "seconds": 4.119,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:48.858Z",
+      "seconds": 6.547,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:36:54.386Z",
+      "seconds": 12.075,
+      "actor": "qa",
+      "title": "qa-root-message-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:36:56.397Z",
+      "seconds": 14.086,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:36:58.605Z",
+      "seconds": 16.294,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:36:58.716Z",
+      "seconds": 16.405,
+      "actor": "alice",
+      "title": "s3-customer-cannot-edit-or-delete-msp-message"
+    },
+    {
+      "at": "2026-10-26T03:37:01.699Z",
+      "seconds": 19.388,
+      "actor": "alice",
+      "title": "s3-customer-reply-persists"
+    },
+    {
+      "at": "2026-10-26T03:37:03.616Z",
+      "seconds": 21.305,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:37:05.805Z",
+      "seconds": 23.494,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/5420c7b3-70f5-4352-bd32-280c1ed2e5fd"
+    },
+    {
+      "at": "2026-10-26T03:37:05.987Z",
+      "seconds": 23.676,
+      "actor": "qa",
+      "title": "s3-msp-sees-reply-with-customer-author"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.048,
+      "title": "Before you start: requester and disposable shared ticket (customer native screens)",
+      "end": 2.58
+    },
+    {
+      "start": 2.58,
+      "title": "3. Reply from the other organization, edit, and delete the root",
+      "end": 50.27
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 25000ms exceeded.\nCall log:\n  - waiting for getByText('CM-REVIEW-20261026-07 root 1792985802359 edited', { exact: true }).filter({ visible: true }).first() to be visible\n",
+  "durationSeconds": 50.32,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

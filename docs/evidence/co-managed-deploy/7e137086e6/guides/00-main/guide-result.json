@@ -1,0 +1,60 @@
+{
+  "guide": "index.html",
+  "coverage": "covered",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "Native Oz ticket control (TIC001011)", "result": "Pass", "evidence": "native-entry-offers-full-native-controls, native-entry-has-no-co-managed-section, native-grid-offers-same-native-controls; 01-native-entry.png, 02-native-grid.png", "note": "In Entry, QA has enabled Delete, Duplicate, Quick invoice, Tags, assignee, contact and client pickers, Add Time Entry and Save on the ordinary Oz ticket, and there is no Co-managed section. Grid offers enabled status, priority, board and assignee, plus tags and Quick invoice. The control ticket was not modified." },
+    { "section": "Customer prepares category and disposable shared ticket", "result": "Pass", "evidence": "customer-admin-creates-board-category-natively; 03-customer-category.png, 04-customer-ticket-created.png", "note": "Alice created category 'CM-REVIEW-20261026-00-b printers' on the shared Service Desk board, and ticket #000021 'CM-REVIEW-20261026-00-b shared walkthrough ticket' (Open/Low). Both use native settings and quick add." },
+    { "section": "Shared ticket layouts (QA)", "result": "Pass", "evidence": "qa-entry-uses-qualified-shared-route, qa-grid-same-ticket-same-values; 05-qa-shared-entry.png, 06-qa-shared-grid.png", "note": "QA opens the same authoritative customer ticket on the qualified /msp/co-management/tickets/<customer>/<relationship>/<ticket> route. Entry and Grid show the same values without changing the route." },
+    { "section": "Native edit: status, priority, category (QA)", "result": "Pass", "evidence": "msp-edits-render-after-reload; 07-qa-edits-before-save.png, 08-qa-edits-after-reload.png", "note": "Changed Open→In Progress, Low→Medium, and category→customer category, then Save Changes. The customer ticket row persisted these values (DB receipt) and they render after reload." },
+    { "section": "MSP assignment", "result": "Pass", "evidence": "msp-assignment-persists-after-reload; 09-qa-assignment.png", "note": "The Co-managed section Change control assigned QA Tester. After reload, co_managed_ticket_references.assigned_to is QA, and the customer's native assignee was left unchanged." },
+    { "section": "Field and privacy controls (QA, Entry and Grid)", "result": "Pass", "evidence": "customer-owned-assignee-board-contact-client-read-only-for-msp, customer-only-actions-and-sections-absent-for-msp, grid-enforces-same-authority-and-shows-edited-values; 10-qa-entry-boundaries.png, 11-qa-grid-boundaries.png", "note": "In both layouts the customer-owned assignee, board, contact and client are read-only. Delete, Duplicate, Quick invoice, Tags, Create Task, Materials, Documents upload, Passwords, Watch list, Checklist and Revoke are absent. In Grid, status and priority stay editable and the edited values are shown." },
+    { "section": "Customer (Alice) view, native assignment and private note", "result": "Pass", "evidence": "customer-native-ticket-shows-msp-edits-and-assignment, customer-keeps-native-customer-controls, customer-assigns-own-technician-natively; 12-customer-sees-msp-edits.png, 13-customer-assigns-and-writes-privately.png", "note": "Alice's native ticket shows In Progress, Medium, the category, and MSP assignment QA Tester. She keeps native Delete, Tags, assignee and board controls. She assigned herself through the native picker and saved (tickets.assigned_to = Alice), then posted a 'Private to White Rabbit IT' comment." },
+    { "section": "MSP sees customer assignee, not the private note", "result": "Pass", "evidence": "msp-sees-customer-assignee-name, msp-cannot-see-customer-private-note, msp-grid-also-hides-private-note; 14-msp-after-customer-changes.png", "note": "QA sees the assignee name 'Alice' on a read-only picker. The private note is absent in both Entry and Grid." },
+    { "section": "Read-only Kansas workspace (ended relationship)", "result": "Pass", "evidence": "kansas-ticket-fields-read-only; steps kansas-co-management-page, kansas-actions-still-offered-not-exercised, kansas-entry-controls; 15-kansas-co-management.png, 16-kansas-grid.png, 17-kansas-entry.png", "note": "Read-only checks only; no mutation attempted. On ticket 0a767ca1, status, priority, board, assignee, due and Resolve are disabled, and Entry offers no Save Changes and no Add Comment. Findings (not exercised): Grid still offers enabled Duplicate, Delete, Create Task, Quick invoice, Add contact, Add Material, Add a document, Add link, Add Asset and title edit. The Co-managed access page shows 'Could not load access settings. Reload to try again.' rather than an ended-relationship notice." },
+    { "section": "Restore", "result": "Pass", "evidence": "msp-assignment-cleared-after-reload; 18-restored.png", "note": "The MSP assignment on the disposable ticket was cleared. The ticket keeps the customer's own edits (disposable record). Fixture ticket 000001 and TIC001011 were not modified." }
+  ],
+  "actors": [
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP, fa7f912f-6b62-463e-85cc-ffedab47ac44)" },
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer, active, c64b2666-7dd6-4c61-8ced-4b233f628e61)" },
+    { "name": "Dorothy Gale", "email": "admin@kansasfarms.test", "organization": "Kansas Farms IT (customer, relationship terminated 2026-10-26T00:13Z, 3261f313-8e04-45df-94bc-0343e92ba454)" }
+  ],
+  "steps": [
+    "QA opened native Oz ticket TIC001011 in Entry and Grid and inspected its controls.",
+    "Alice created a Service Desk category and a disposable ticket.",
+    "QA opened the shared ticket in Entry and in Grid.",
+    "QA changed status, priority and category, saved, and reloaded.",
+    "QA assigned QA Tester in the Co-managed section and reloaded.",
+    "QA checked read-only and absent customer-only controls in Entry and Grid.",
+    "Alice opened the native ticket, assigned herself and saved, and posted a private comment.",
+    "QA reopened the shared ticket and checked the assignee name and that the private note is hidden (Entry and Grid).",
+    "The Kansas admin opened Co-managed access and their ticket in Grid and Entry (read-only).",
+    "QA cleared the MSP assignment and reloaded."
+  ],
+  "outcomes": [
+    "Shared ticket b41d4144 persisted In Progress / Medium / customer category after the MSP save and reload.",
+    "MSP assignment was persisted in the sponsor reference and later cleared. The customer assignee (Alice) was persisted on the customer ticket.",
+    "The customer-private comment is not visible to the MSP in either layout.",
+    "Kansas ticket fields are read-only and unchanged (updated_at 2026-10-26T00:11:55Z)."
+  ],
+  "defects": [
+    "Ended (terminated) customer workspace, Kansas Farms ticket in Grid: ticket fields are disabled, but Duplicate, Delete, Create Task, Quick invoice, Add contact, Add Material, Add a document, Add link, Add Asset and the title edit control are still enabled. They were not exercised (data rule: read-only checks only), so whether the server refuses them is unverified.",
+    "Ended Kansas workspace: /msp/co-management shows 'Could not load access settings. Reload to try again.' instead of an ended-relationship state, while Upgrade/Export/End co-management actions remain displayed."
+  ],
+  "limitations": [
+    "A disposable shared ticket on the shared Service Desk board was used instead of fixture 000001, to avoid disturbing concurrent guides 05/07/08.",
+    "There is no MSP viewer account (noassign@emeraldcity.oz) in the reprovisioned data. The read-only comparison uses the ended Kansas workspace, as the brief specifies.",
+    "QA's co-managed technician assignment on White Rabbit was missing from the reprovisioned data. It was added through the sponsor's Co-managed IT view (guide 09 prep-native-setup) and left in place."
+  ],
+  "missingResources": [],
+  "dataLeftBehind": [
+    "White Rabbit categories 'CM-REVIEW-20261026-00-a printers' and '…-00-b printers'.",
+    "Tickets 'CM-REVIEW-20261026-00-a/-b shared walkthrough ticket' (In Progress/Medium, assigned to Alice, each with one customer-private comment). MSP assignment cleared."
+  ],
+  "dbReceipts": [
+    "docs/evidence/co-managed-deploy/7e137086e6/guides/00-main/db-receipts-b.json"
+  ],
+  "recordingDir": "docs/evidence/co-managed-deploy/7e137086e6/guides/00-main/recording",
+  "durationSeconds": 144.32,
+  "chapterCount": 10
+}

@@ -1,0 +1,36 @@
+{
+  "guide": "guides/11-export-restore-and-upgrade.html",
+  "coverage": "blocked-external",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "1. Download an encrypted customer workspace", "result": "Pass", "evidence": "export-screen-names-the-departed-workspace, short-passphrase-refused-by-form, mismatched-confirmation-refused-by-form, encrypted-archive-downloaded, export-page-still-available-after-reload; 11-1-*.png, export-receipt.json", "note": "Run as the administrator of the departed disposable workspace CM-REVIEW-20261026-01 Accept-7 IT (ended in guide 10), so this is the post-departure export repeat. The form refused a short passphrase ('Use a passphrase between 16 and 1024 UTF-8 bytes.') and a mismatched confirmation. A 48-byte random passphrase produced a real browser download: 158,789 bytes, file alga-workspace-e3163e33-....alga-backup, sha256 83aa640b..., with the ALGA-WORKSPACE-ARCHIVE header and no plaintext workspace name in the bytes. The export page reloaded fine. Archive and passphrase are stored privately (mode 600); the passphrase never appears in evidence or arguments. Which contents are included or excluded (MSP-private stores, keys, sessions, credential vault) was not verified, because that needs a restore." },
+    { "section": "2. Inspect and restore on an isolated destination", "result": "Blocked", "evidence": "operator-inspect-authenticates-and-lists-contents, wrong-passphrase-refused, tampered-archive-refused; inspect-manifest.json, restore-negative.json", "note": "Done: operator --inspect with the passphrase piped through --passphrase-stdin. It authenticated the archive and returned sourceTenant 0a3c039e..., packageId e3163e33..., a sha256 equal to the downloaded file, and one administrator (Review Accept Admin). Inspect gives no content counts. A wrong passphrase and an archive with one byte flipped were both refused (exit 1, 'failed during archive inspection'). Not done: --restore. The review database is shared with other agents and is not an isolated destination installation, so restore was not run." },
+    { "section": "3. Activate with the destination's own entitlement", "result": "Blocked", "evidence": "none", "note": "Needs a restored destination tenant plus either a Pro licence signed for that tenant or the destination's own verified hosted subscription. None is available." },
+    { "section": "4. Upgrade a current workspace independently", "result": "Not run", "evidence": "11-4-upgrade-screen.png/.json", "note": "Boundary only. As the departed customer, Upgrade to AlgaPSA shows 'Your MSP relationship has already ended', 'Paid technician seats required: 1', and 'An active, paid AlgaPSA subscription belonging to this workspace is required before upgrading'. It offers a purchase form (seats, Monthly, Review purchase) with Upgrade workspace disabled. No purchase or conversion was attempted. It needs the customer's own test or paid entitlement. The guide also asks for a separate disposable live relationship, and converting one would end another relationship." }
+  ],
+  "actors": [ { "name": "Review Accept Admin", "email": "cm-review-20261026-01-accept-7@cmreview.test", "organization": "CM-REVIEW-20261026-01 Accept-7 IT (departed customer workspace)" } ],
+  "steps": [
+    "Signed in as the departed disposable workspace administrator; opened Export workspace",
+    "Tried a short passphrase (refused), then a mismatched confirmation (refused)",
+    "Entered a matching 48-byte passphrase and downloaded the encrypted archive; stored it privately; reloaded the export page",
+    "Operator: restore-portable-workspace.ts --inspect --passphrase-stdin on the archive; repeated with a wrong passphrase and with a tampered copy",
+    "Opened Upgrade to AlgaPSA and recorded its requirements without purchasing"
+  ],
+  "outcomes": [
+    "Encrypted archive retained privately: /home/robert/card-review-private/co-managed-it-3363/cm-review-20261026-11-accept7-export.alga (sha256 83aa640bcb938c9e5a3007ab59e1559c08460b0b86eb77b6d8cefab54225bfdb). Passphrase is in cm-review-20261026-11-accept7-export-secret.json (mode 600).",
+    "The inspect receipt matches the archive checksum. Wrong-passphrase and tampered archives are refused.",
+    "The upgrade screen requires the workspace's own paid subscription. Upgrade workspace stays disabled."
+  ],
+  "limitations": [
+    "No restore was run. Proving archive contents, excluded MSP-private data, file links and credential vault recovery is therefore not done.",
+    "After the last assertion, the harness's Node process did not exit (probably the download tab); it was killed once recording.json, walkthrough.webm and chapters.vtt were written.",
+    "The customer upgrade screen labels its seat field 'Total seats in your pool', which is MSP pool wording. Copy observation only."
+  ],
+  "missingResources": [
+    "Isolated destination installation (database-owner operator and file storage) for --restore",
+    "Destination entitlement: a tenant-bound signed Pro licence for the restored tenant, or that tenant's own verified hosted subscription",
+    "Customer's own paid/test AlgaPSA subscription (or tenant-bound signed licence) and a separate disposable live relationship for the independent upgrade"
+  ],
+  "dbReceipts": [ "export-recording/export-receipt.json", "export-recording/inspect-manifest.json", "export-recording/restore-negative.json" ],
+  "recordingDir": "export-recording"
+}

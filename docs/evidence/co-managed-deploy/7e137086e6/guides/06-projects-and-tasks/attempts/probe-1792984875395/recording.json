@@ -1,0 +1,59 @@
+{
+  "scenario": "probe-1792984875395",
+  "recordedAt": "2026-10-26T03:21:15.561Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:21:15.605Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:21:17.513Z",
+      "seconds": 1.952,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:21:19.416Z",
+      "seconds": 3.855,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/af17f6fd-1d75-49f0-8a5a-c075501d4d48"
+    },
+    {
+      "at": "2026-10-26T03:21:27.429Z",
+      "seconds": 11.868,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/projects/875858d7-d6c1-476e-8f40-b3ba94e7cc00/tasks/af17f6fd-1d75-49f0-8a5a-c075501d4d48"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "probe",
+  "limitations": [],
+  "durationSeconds": 15.88,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

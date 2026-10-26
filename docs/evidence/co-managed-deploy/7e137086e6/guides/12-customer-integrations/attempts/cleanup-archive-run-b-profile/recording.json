@@ -1,0 +1,67 @@
+{
+  "scenario": "cleanup-archive-run-b-profile",
+  "recordedAt": "2026-10-26T03:55:34.116Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:55:34.270Z",
+      "seconds": 0.154,
+      "title": "before",
+      "data": [
+        {
+          "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+          "display_name": "CM-REVIEW-20261026-12-a simulator app",
+          "is_default": true
+        },
+        {
+          "profile_id": "d77cdc1f-44c7-4d43-a272-2f72b95549fa",
+          "display_name": "CM-REVIEW-20261026-12-b simulator app",
+          "is_default": false
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T03:55:36.193Z",
+      "seconds": 2.077,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:55:38.108Z",
+      "seconds": 3.992,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/providers"
+    },
+    {
+      "at": "2026-10-26T03:55:44.111Z",
+      "seconds": 9.995,
+      "actor": "alice",
+      "title": "after",
+      "data": [
+        {
+          "profile_id": "556f8c7b-4d83-4b69-b0f3-1bec93f54c44",
+          "display_name": "CM-REVIEW-20261026-12-a simulator app",
+          "is_default": true
+        }
+      ]
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "cleanup",
+  "limitations": [],
+  "durationSeconds": 10.8,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

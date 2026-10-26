@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:02.077 --> 00:00:06.135
+1. Download an encrypted customer workspace (after departure)
+
+2
+00:00:06.135 --> 00:00:13.673
+2. Inspect the archive (operator CLI); restore needs an isolated destination
+
+3
+00:00:13.673 --> 00:00:20.470
+4. Upgrade a current workspace independently (screen boundary only)

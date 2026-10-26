@@ -1,0 +1,160 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/billing?tab=client-contracts&contractId=19921bc5-ab8d-4b33-a4e1-39a4dd1f7464&contractView=lines",
+  "text": "AlgaPSA\nBack to Main\n\nCONTRACTS\n\nContract Templates\nClient Contracts\nContract Line Presets\n\nINVOICING\n\nInvoicing\nInvoice Layouts\nBilling Cycles\nService Periods\nCredits\n\nQUOTES\n\nQuotes\nQuote Templates\nQuote Layouts\n\nPRICING\n\nService Types\nService Categories\nServices\nProducts\nTax\n\nTRACKING & REPORTS\n\nUsage Tracking\nReports\nAccounting Exports\nv1.6.12\nHome\nDashboard\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBilling\nBack to Contracts\nCM-REVIEW-20261026-09 hourly contract\nActive\nClient-owned\nBilling Frequency:\nMonthly\n•\nCurrency:\nUSD\n•\nContract Lines:\n1\n•\nStart Date:\nOct 1, 2026\n•\nEnd Date:\nOngoing\n•\nLast Updated:\nOct 25, 2026\nOverview\nContract Lines\nPricing Schedules\nDocuments\nInvoices\nContract Lines\n\nManage the contract lines and services for this contract\n\n+ Add location\nAdd from Presets\nCreate Custom\nName:\nCM-REVIEW-20261026-09 hourly contract - Hourly\nType:\nHourly\n•\nFrequency: Monthly\n•\nServices: 1 service\n•\nRabbit Hole\nEdit\nRemove\n\nContract Line Configuration\n\nSettings that apply to this contract line\n\nLOCATION\n\nRabbit Hole\n\nBILLING TIMING\n\nIn Arrears\n\nCADENCE OWNER\n\nClient schedule\n\nMINIMUM BILLABLE TIME (MINUTES)\n\n15 minutes\n\nROUND UP TO NEAREST (MINUTES)\n\n15 minutes\n\nServices (1)\n\nBasic Support\n\nHourly Service\n\nHOURLY RATE\n\n$100.00\n\nBucket Pools\nAdd Pool\n\nA contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab.\n\nNo bucket pools on this line. Add a pool to include prepaid hours.",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-to-contracts",
+      "text": "Back to Contracts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Overview",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Contract Lines",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Pricing Schedules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Invoices",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-location-group-select",
+      "text": "+ Add location",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-contract-line-from-preset-btn",
+      "text": "Add from Presets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-custom-contract-line-btn",
+      "text": "Create Custom",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "edit-9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "remove-9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "text": "Remove",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-bucket-pool-button",
+      "text": "Add Pool",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "scenario": "explore3",
+  "recordedAt": "2026-10-26T03:48:14.688Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:48:16.622Z",
+      "seconds": 1.934,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:48:18.722Z",
+      "seconds": 4.034,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T03:48:23.170Z",
+      "seconds": 8.482,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/security-settings"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 11.48,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "scenario": "supplement-departed-clock-readonly",
+  "recordedAt": "2026-10-26T04:12:17.203Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T04:12:17.250Z",
+      "seconds": 0.047,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:12:17.399Z",
+      "seconds": 0.196,
+      "title": "obligation-before",
+      "data": [
+        {
+          "obligation_id": "624d2a33-4bd1-4f54-96c5-9b2a075230f2",
+          "pause": [
+            "customer_responsible"
+          ],
+          "response_completed": "2026-10-26T03:52:05.189Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T04:12:17.399Z",
+      "seconds": 0.196,
+      "title": "chapter",
+      "data": "5. Departed customer keeps its own ticket; no live former-MSP clock"
+    },
+    {
+      "at": "2026-10-26T04:12:19.324Z",
+      "seconds": 2.121,
+      "actor": "departed-customer-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-7@cmreview.test",
+        "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+      }
+    },
+    {
+      "at": "2026-10-26T04:12:21.404Z",
+      "seconds": 4.201,
+      "actor": "departed-customer-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/8120f19f-dc24-4c9d-9585-1e510ca5a245"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.196,
+      "title": "5. Departed customer keeps its own ticket; no live former-MSP clock",
+      "end": 65.11
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for getByText('CM-REVIEW-20261026-10 703235 shared ticket').first() to be visible\n    124 × locator resolved to hidden <h1 class=\"text-lg font-bold truncate transition-all duration-200 opacity-0 max-h-0 overflow-hidden\">CM-REVIEW-20261026-10 703235 shared ticket</h1>\n",
+  "durationSeconds": 65.16,
+  "actors": [
+    {
+      "name": "departed-customer-admin",
+      "email": "cm-review-20261026-01-accept-7@cmreview.test",
+      "tenant": "0a3c039e-c4c7-4108-8301-bfe5232a829a"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "commentsAfterSection1": [
+    {
+      "comment_id": "27908fe6-92eb-42ec-80fb-e9719bd430a5",
+      "author_type": "internal",
+      "is_internal": true,
+      "publish_state": "published",
+      "n": "",
+      "created_at": "2026-10-26T03:40:29.07+00:00"
+    },
+    {
+      "comment_id": "93f60fa0-1c8b-43d1-a852-91937b311862",
+      "author_type": "internal",
+      "is_internal": true,
+      "publish_state": "published",
+      "n": "",
+      "created_at": "2026-10-26T03:40:38.651+00:00"
+    },
+    {
+      "comment_id": "2f178394-dc84-4741-b3bc-e35d5d84b4e7",
+      "author_type": "internal",
+      "is_internal": false,
+      "publish_state": "published",
+      "n": "",
+      "created_at": "2026-10-26T03:40:50.878+00:00"
+    }
+  ],
+  "unknownOutcome": {
+    "persistedMessages": 1,
+    "composerOpenAfterUnknown": true,
+    "draftTextRetained": true,
+    "stagedFileRetained": true,
+    "toast": "could not confirm whether the message was saved. Retry to check the same request.",
+    "operationId": "e70eb605-3934-4317-8259-a66fa0bc7ea0"
+  }
+}

@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.343 --> 00:00:26.402
+Before you start: customer prepares a disposable shared ticket and shared task
+
+2
+00:00:26.402 --> 00:00:35.420
+1. Persist one commercial entry (QA, native shared ticket, Add Time Entry)
+
+3
+00:00:35.420 --> 00:00:45.045
+2. Native stopwatch on the shared ticket: start, stop, one entry
+
+4
+00:00:45.045 --> 00:01:04.951
+2. Customer effort: native customer ticket offers no time entry; operational entry on the shared task
+
+5
+00:01:04.951 --> 00:01:40.590
+3. Follow the entries into the native timesheet, submit and approve

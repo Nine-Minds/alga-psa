@@ -1,0 +1,136 @@
+{
+  "scenario": "attempts/restore-mode-1792985197477",
+  "recordedAt": "2026-10-26T03:26:37.638Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "mode-restored",
+      "passed": true,
+      "at": "2026-10-26T03:26:42.824Z",
+      "data": {
+        "relationship": {
+          "visibility_mode": "board_scope",
+          "revision": 12,
+          "state": "active"
+        },
+        "boards": [],
+        "projects": [
+          {
+            "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+            "can_collaborate": true
+          },
+          {
+            "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+            "can_collaborate": true
+          },
+          {
+            "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+            "can_collaborate": true
+          }
+        ],
+        "staff": [
+          {
+            "principal_type": "user",
+            "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+            "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+            "relationship_role": "viewer"
+          },
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "principal": "qa@emeraldcity.oz",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:26:37.679Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:26:39.584Z",
+      "seconds": 1.946,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:26:41.469Z",
+      "seconds": 3.831,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T03:26:42.824Z",
+      "seconds": 5.186,
+      "actor": "alice",
+      "title": "mode-restored",
+      "data": {
+        "relationship": {
+          "visibility_mode": "board_scope",
+          "revision": 12,
+          "state": "active"
+        },
+        "boards": [],
+        "projects": [
+          {
+            "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+            "can_collaborate": true
+          },
+          {
+            "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+            "can_collaborate": true
+          },
+          {
+            "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+            "can_collaborate": true
+          }
+        ],
+        "staff": [
+          {
+            "principal_type": "user",
+            "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+            "principal": "cm-review-20261026-03-viewer@emeraldcity.oz",
+            "relationship_role": "viewer"
+          },
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "principal": "qa@emeraldcity.oz",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 5,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

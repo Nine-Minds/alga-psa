@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.041 --> 00:00:49.265
+Preparation: disposable customer tickets escalated to the MSP
+
+2
+00:00:49.265 --> 00:01:04.192
+1. Keep queue scope stable
+
+3
+00:01:04.192 --> 00:01:06.790
+2. Export the full filtered set
+
+4
+00:01:06.790 --> 00:01:34.502
+3. Return selected tickets once
+
+5
+00:01:34.502 --> 00:02:02.270
+4. Recover interrupted or mixed results

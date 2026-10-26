@@ -1,0 +1,73 @@
+{
+  "requester": {
+    "email": "cm-review-20261026-07.requester@whiterabbit.test",
+    "userId": "e2021d42-e989-40a9-964d-3c304da60316",
+    "contactId": "60f947a2-018b-4cab-8df8-aa941e82e18c"
+  },
+  "ticketId": "99a62c02-6235-408f-9755-959424089b76",
+  "title": "CM-REVIEW-20261026-07 final conversation ticket",
+  "links": {
+    "customer": "http://feature-co-managed-it.localhost:23374/msp/tickets/99a62c02-6235-408f-9755-959424089b76",
+    "msp": "http://feature-co-managed-it.localhost:23374/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76",
+    "portal": "http://feature-co-managed-it.localhost:23374/client-portal/tickets/99a62c02-6235-408f-9755-959424089b76"
+  },
+  "messages": {
+    "shared": "CM-REVIEW-20261026-07 shared 1792986016458",
+    "customer-private": "CM-REVIEW-20261026-07 customer-private 1792986016458",
+    "msp-private": "CM-REVIEW-20261026-07 msp-private 1792986016458",
+    "requester": "CM-REVIEW-20261026-07 requester 1792986016458",
+    "removable": "CM-REVIEW-20261026-07 removable 1792986016458",
+    "root": "CM-REVIEW-20261026-07 root 1792986016458",
+    "thread": "CM-REVIEW-20261026-07 thread 1792986016458"
+  },
+  "files": {
+    "shared": {
+      "name": "cm-review-20261026-07-shared-1792986016458.txt",
+      "href": "/api/co-management/attachments/e315929b-a440-40d2-892b-a03132f98426?customerTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&relationshipId=2be5cb32-91e8-491a-9ec4-16ab019c7d40&ticketId=99a62c02-6235-408f-9755-959424089b76&storeTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&threadId=27908fe6-92eb-42ec-80fb-e9719bd430a5&commentId=27908fe6-92eb-42ec-80fb-e9719bd430a5",
+      "sha256": "673ef046dc900d05f187b445370ff36dafe23fc1b3fc27970d2075c0110787b5"
+    },
+    "customer-private": {
+      "name": "cm-review-20261026-07-customer-private-1792986016458.txt",
+      "href": "/api/co-management/attachments/8f3cc830-05de-4f38-81dd-b63aed8aacce?customerTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&relationshipId=2be5cb32-91e8-491a-9ec4-16ab019c7d40&ticketId=99a62c02-6235-408f-9755-959424089b76&storeTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&threadId=93f60fa0-1c8b-43d1-a852-91937b311862&commentId=93f60fa0-1c8b-43d1-a852-91937b311862",
+      "sha256": "8fce113bb367abbf352b375e37418311b9170086788cedf1debc0f9edfa61f29"
+    },
+    "msp-private": {
+      "name": "cm-review-20261026-07-msp-private-1792986016458.txt",
+      "href": "/api/co-management/attachments/344f4957-4e5e-4bc5-bd78-7d715d2f70ab?customerTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&relationshipId=2be5cb32-91e8-491a-9ec4-16ab019c7d40&ticketId=99a62c02-6235-408f-9755-959424089b76&storeTenant=fa7f912f-6b62-463e-85cc-ffedab47ac44&threadId=23a311e1-386b-4b21-b8fb-d9921d6f0deb&commentId=23a311e1-386b-4b21-b8fb-d9921d6f0deb",
+      "sha256": "8d5e7418cb70c10ed1069e30269990730e9e8483dc3c95ed0d84d062b2162e7e"
+    },
+    "requester": {
+      "name": "cm-review-20261026-07-requester-1792986016458.txt",
+      "href": "/api/co-management/attachments/b066d240-5d76-459c-9b73-e43b2878bc57?customerTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&relationshipId=2be5cb32-91e8-491a-9ec4-16ab019c7d40&ticketId=99a62c02-6235-408f-9755-959424089b76&storeTenant=c64b2666-7dd6-4c61-8ced-4b233f628e61&threadId=2f178394-dc84-4741-b3bc-e35d5d84b4e7&commentId=2f178394-dc84-4741-b3bc-e35d5d84b4e7",
+      "sha256": "db929fc704e681d4670da2361b7659cd111c3908b96fc20f3824e8308218ca53"
+    }
+  },
+  "unknownOutcome": {
+    "persistedMessages": 1,
+    "composerOpenAfterUnknown": true,
+    "draftTextRetained": true,
+    "stagedFileRetained": true,
+    "toast": "could not confirm whether the message was saved. Retry to check the same request.",
+    "operationId": "e70eb605-3934-4317-8259-a66fa0bc7ea0"
+  },
+  "disclosure": {
+    "sourceRoot": "a1733af9-75f0-423e-bac0-a0c7aa2d263d",
+    "sourceThread": "a1733af9-75f0-423e-bac0-a0c7aa2d263d",
+    "destinationRoot": "5842aca5-8a32-4e89-8a85-160870b54ed8",
+    "reply": "CM-REVIEW-20261026-07 MSP private reply 1792986016458"
+  },
+  "requesterProject": {
+    "pid": "eefd8378-f6ff-4212-94bb-57a7a96b393b",
+    "tid": "7965ad44-0715-4bb4-88f8-6e6557b1f2da",
+    "links": {
+      "msp": "http://feature-co-managed-it.localhost:23374/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da",
+      "portal": "http://feature-co-managed-it.localhost:23374/client-portal/projects/eefd8378-f6ff-4212-94bb-57a7a96b393b?taskId=7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    }
+  },
+  "requesterTask": {
+    "pubText": "CM-REVIEW-20261026-07 task requester message 1792986016458",
+    "privText": "CM-REVIEW-20261026-07 task MSP private 1792986016458",
+    "reqReply": "CM-REVIEW-20261026-07 requester task reply 1792986016458",
+    "file": "cm-review-20261026-07-task-1792986016458.txt"
+  }
+}

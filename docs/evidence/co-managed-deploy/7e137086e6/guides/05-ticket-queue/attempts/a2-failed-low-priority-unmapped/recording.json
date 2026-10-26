@@ -1,0 +1,106 @@
+{
+  "scenario": "attempts/a2",
+  "recordedAt": "2026-10-26T04:18:37.575Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-msp-escalation-prerequisites-applied",
+      "passed": true,
+      "at": "2026-10-26T04:18:50.231Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:18:37.617Z",
+      "seconds": 0.042,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:37.618Z",
+      "seconds": 0.043,
+      "title": "chapter",
+      "data": "Preparation: disposable customer tickets escalated to the MSP"
+    },
+    {
+      "at": "2026-10-26T04:18:39.793Z",
+      "seconds": 2.218,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:40.213Z",
+      "seconds": 2.638,
+      "actor": "qa",
+      "title": "escalation prerequisites before",
+      "data": {
+        "mapping": "",
+        "clientPolicy": "",
+        "policyId": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:49.932Z",
+      "seconds": 12.357,
+      "actor": "qa",
+      "title": "escalation prerequisites applied",
+      "data": {
+        "mapping": "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+        "clientPolicy": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:50.231Z",
+      "seconds": 12.656,
+      "actor": "qa",
+      "title": "prep-msp-escalation-prerequisites-applied"
+    },
+    {
+      "at": "2026-10-26T04:18:52.032Z",
+      "seconds": 14.457,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.043,
+      "title": "Preparation: disposable customer tickets escalated to the MSP",
+      "end": 78.15
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator('#co-ticket-handoff-note') to be detached\n    3 × locator resolved to visible <textarea rows=\"1\" disabled required=\"\" maxlength=\"10000\" id=\"co-ticket-handoff-note\" data-automation-id=\"co-ticket-handoff-note\" class=\"↵          w-full max-w-4xl↵          py-2 px-3↵          border↵          border-border↵          rounded-lg↵          shadow-sm↵          focus:outline-none↵          focus:ring-2↵          focus:ring-[rgb(var(--color-primary-500))]↵          focus:border-transparent↵          resize-none↵          overflow-hidden↵          whitespace-pre-wrap break-words↵          p…>CM-REVIEW-20261026-05 prepare MSP responsibility A</textarea>\n    121 × locator resolved to visible <textarea rows=\"1\" required=\"\" maxlength=\"10000\" id=\"co-ticket-handoff-note\" data-automation-id=\"co-ticket-handoff-note\" class=\"↵          w-full max-w-4xl↵          py-2 px-3↵          border↵          border-border↵          rounded-lg↵          shadow-sm↵          focus:outline-none↵          focus:ring-2↵          focus:ring-[rgb(var(--color-primary-500))]↵          focus:border-transparent↵          resize-none↵          overflow-hidden↵          whitespace-pre-wrap break-words↵          placeholde…>CM-REVIEW-20261026-05 prepare MSP responsibility A</textarea>\n",
+  "durationSeconds": 78.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

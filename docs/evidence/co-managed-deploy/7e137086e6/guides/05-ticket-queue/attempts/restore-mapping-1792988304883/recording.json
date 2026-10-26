@@ -1,0 +1,57 @@
+{
+  "scenario": "attempts/restore-mapping-1792988304883",
+  "recordedAt": "2026-10-26T04:18:25.037Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "critical-mapping-restored",
+      "passed": true,
+      "at": "2026-10-26T04:18:31.692Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:18:25.078Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:26.997Z",
+      "seconds": 1.96,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:18:31.692Z",
+      "seconds": 6.655,
+      "actor": "qa",
+      "title": "critical-mapping-restored"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 6.6,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

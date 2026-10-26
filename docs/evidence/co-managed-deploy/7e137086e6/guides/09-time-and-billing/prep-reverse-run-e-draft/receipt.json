@@ -1,0 +1,10 @@
+{
+  "before": {
+    "invoice": "{\"invoice_number\":\"INV-000001\",\"status\":\"draft\",\"subtotal\":17335}",
+    "sheet": "APPROVED"
+  },
+  "after": {
+    "invoiceRows": "0",
+    "sheet": "CHANGES_REQUESTED"
+  }
+}

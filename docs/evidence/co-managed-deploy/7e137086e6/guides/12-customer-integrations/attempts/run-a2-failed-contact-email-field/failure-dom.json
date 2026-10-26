@@ -1,0 +1,419 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/contacts",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nContacts\nc64b2666-7dd6-4c61-8ced-4b233f628e61\nQuick Create\nAL\nContacts\n+ Add Contact\nFilter\nActive contacts\nDefault view\nName\n↑\n\t\nCreated\n\t\nEmail\n\t\nPhone Number\n\t\nClient\n\t\nTags\n\t\nActions\n\n\nAL\nAlice Liddell\n\t\nOct 25, 2026\n\t\nalice@whiterabbit.test\n\t\nN/A\n\t\nWR\nWhite Rabbit IT\n\t\n\t\nOpen menu\n\n\nC0\nCM Review Requester 07\n\t\nOct 25, 2026\n\t\ncm-review-20261026-07.requester@whiterabbit.test\n\t\nN/A\n\t\nWR\nWhite Rabbit IT\n\t\n\t\nOpen menu\n\n\nCS\nCSV Active 0238 Short\n\t\nOct 25, 2026\n\t\ncsv.active.0238@example.test\n\t\nN/A\n\t\n—\nNo Client\n\t\n\t\nOpen menu\n\n3 items total\n\n10 items/page\nAdd New Contact\nFull Name *\nEmail Addresses\n\nAdd one or more email addresses and choose exactly one default.\n\nAdd Email\nPrimary email\nThis remains the default address stored on the contact record\nDefault\nEmail Address\nEmail Label\nWork\nSelect...\nWork\nPersonal\nBilling\nOther\nCustom\nPhone Numbers\n\nPhone number editor with type management, validation, defaults, and extension support\n\nAdd phone\nPhone 1\nDefault phone number\nPhone\nPhone Type\nWork\nSelect...\nWork\nMobile\nHome\nFax\nOther\nCustom\nClient (Optional)\nSelect Client\nRole\nNotes\nTags\nStatus\nActive\nCancel\nAdd Contact",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_7_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "AL",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "new-contact-dialog-button",
+      "text": "+ Add Contact",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-actions-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "filter-contacts",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-filter-trigger",
+      "text": "Filter",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "filter-status",
+      "text": "Active contacts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "reset-filters-button",
+      "text": "Reset",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-view-picker-trigger",
+      "text": "Default view",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-actions-menu",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-actions-menu",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tag-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-actions-menu",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "contacts-table-pagination-items-per-page",
+      "text": "10 items/page",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-name",
+      "text": "",
+      "value": "CM-REVIEW-20261026-12-a Requester",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-email-add",
+      "text": "Add Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-email-default-primary-email-primary",
+      "text": "",
+      "value": "email-primary",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-email-primary-email",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-email-primary-type",
+      "text": "Work",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select...WorkPersonalBillingOtherCustom",
+      "value": "work",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-phone-add-phone",
+      "text": "Add phone",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-phone-phone-0",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-phone-phone-0-ext",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-phone-type-0",
+      "text": "Work",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "text": "Select...WorkMobileHomeFaxOtherCustom",
+      "value": "work",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-client-trigger",
+      "text": "Select Client",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "quick-add-contact-role",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-tags-add-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-status",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-cancel",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "quick-add-contact-submit",
+      "text": "Add Contact",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

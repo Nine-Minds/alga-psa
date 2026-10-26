@@ -1,0 +1,51 @@
+{
+  "scenario": "explore-alice",
+  "recordedAt": "2026-10-26T03:06:49.248Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": null,
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T03:06:51.179Z",
+      "seconds": 1.931,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:06:53.254Z",
+      "seconds": 4.006,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T03:06:58.345Z",
+      "seconds": 9.097,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings?tab=time-entry"
+    },
+    {
+      "at": "2026-10-26T03:07:03.344Z",
+      "seconds": 14.096,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "exploration",
+  "limitations": [],
+  "durationSeconds": 18.08,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

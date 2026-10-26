@@ -1,0 +1,26 @@
+{
+  "suffix": "CM-REVIEW-20261026-01",
+  "accept": {
+    "clientName": "CM-REVIEW-20261026-01 Accept-4",
+    "clientId": "4d392586-2f08-4fca-b8f9-1bd19135902c",
+    "workspace": "CM-REVIEW-20261026-01 Accept-4 IT",
+    "adminEmail": "cm-review-20261026-01-accept-4@cmreview.test",
+    "visibility": "Oversight of the initial service desk board",
+    "escalationBoard": "General Support",
+    "operationId": "cf2e86f0-9713-4b07-bb43-37e2e06fb15e",
+    "customer": "a53cba7c-fa11-482f-972d-579637aa09f5",
+    "relationship": "7b58d23d-4a4b-4eec-8b7e-ded9c079923b",
+    "allocationId": "32fabf2b-a581-4a5a-a964-de1f4923713e",
+    "credentialFile": "cm-review-20261026-01-accept-4-admin.json"
+  },
+  "cancel": {
+    "clientName": "CM-REVIEW-20261026-01 Cancel-4",
+    "clientId": "f0e5b463-2f8a-49b3-855d-9da1c52b9646",
+    "workspace": "CM-REVIEW-20261026-01 Cancel-4 IT",
+    "adminEmail": "cm-review-20261026-01-cancel-4@cmreview.test",
+    "visibility": "Escalated tickets only",
+    "operationId": "a4f27c65-b4c8-4f44-a6ac-283c9674c7e6",
+    "customer": "fa472cf2-9361-4b39-98ec-5a39fc8e082b",
+    "allocationId": "f39843ac-3393-4b59-ba58-5992859c16e4"
+  }
+}

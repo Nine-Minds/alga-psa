@@ -1,0 +1,580 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nClients\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nBack to Clients\nCC\nCM-REVIEW-20261026-01 Cancel\nAwaiting customer acceptance\n1 of 1 technician seat\nManage access\nEnable co-managed IT\nPrint\nMerge\nDelete\nOpportunities\nService\nOpen\n0\nopen tickets\n—\noldest open\n0\noverdue\n\nNo open tickets.\n\nNew ticket\nClient record\nEdit\nAccount manager\nnot set\nDefault contact\nnot set\nClient since\n10/25/2026\nAdditional info\nMoney\nOpen\n\nNothing outstanding on finalized invoices.\n\nActive contracts\n0\nBilling setup·Tax settings\nInstall base\nOpen\n0\nmanaged assets\n0\nsold units\n0\nopen RMAs\n\nNo delivered equipment yet.\n\nManaged assets\nPeople\nOpen\n\nNo contacts yet.\n\nAdd contact\nLocations\nManage\n\nNo locations yet.\n\nDocuments\nOpen\n\nNo documents yet.\n\nNotes\nAdd note\n\nNo notes yet.\n\nNo survey responses yet.\n\nEverything, in order\nAll\nService\nMoney\nInventory\nInteractions\n\nNothing recorded yet for this client.\n\nDialog Content\nCo-managed IT\nDetails\nSERVICE\nTickets\nRecurring tickets\nInteractions\nCo-managed IT\nMONEY\nBilling\nBilling Dashboard\nTax Settings\nINSTALL BASE\nAssets\nEquipment\nRECORDS\nContacts\nDocuments\nAdditional Info\nNotes\nMORE\nOpportunities\nPasswords\n\nCo-managed IT for CM-REVIEW-20261026-01 Cancel\n\nAwaiting customer acceptance\nRefresh workspaces\nTechnician seats\n1 of 1 technician seat\nCustomer workspace\nCM-REVIEW-20261026-01 Cancel IT\nAdministrator\ncm-review-20261026-01-cancel@cmreview.test\nAdministrator invitation\nAdministrator invitation sent\nSetup progress\n\nThe customer administrator must accept before access is granted.\n\nResend administrator invitation\nCancel setup\nCancel workspace setup?\n\nThis deletes the customer workspace before it is activated, including the administrator's account if they have already signed up. Seats remain reserved until cleanup completes.\n\nDelete workspace and cancel\nKeep setup\nCapacity\nChange seat allocation\nShared tickets\nFilters\nView\n\n0 tickets · 0 open · 0 closed\n\nNo customer tickets to show yet.\n\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-navigation-button",
+      "text": "Back to Clients",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-summary-action",
+      "text": "Manage access",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-enable-co-managed",
+      "text": "Enable co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-print-button",
+      "text": "Print",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-merge-client-button",
+      "text": "Merge",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-delete-client-button",
+      "text": "Delete",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-open-opportunities",
+      "text": "Opportunities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-service-open",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-service-new-ticket",
+      "text": "New ticket",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-record-open",
+      "text": "Edit",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-record-link-additional-info",
+      "text": "Additional info",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-money-open",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-money-link-billing-setup",
+      "text": "Billing setup",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-money-link-tax-settings",
+      "text": "Tax settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-install-base-open",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-install-base-link-assets",
+      "text": "Managed assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-people-open",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-people-add-contact",
+      "text": "Add contact",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-locations-open",
+      "text": "Manage",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-documents-open",
+      "text": "Open",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-card-notes-open",
+      "text": "Add note",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-timeline-filter-all",
+      "text": "All",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-timeline-filter-service",
+      "text": "Service",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-timeline-filter-money",
+      "text": "Money",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-timeline-filter-inventory",
+      "text": "Inventory",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-timeline-filter-interactions",
+      "text": "Interactions",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-close",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-details",
+      "text": "Details",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-tickets",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-recurring-tickets",
+      "text": "Recurring tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-interactions",
+      "text": "Interactions",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-co-managed",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-billing",
+      "text": "Billing",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-billing-dashboard",
+      "text": "Billing Dashboard",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-tax-settings",
+      "text": "Tax Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-assets",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-equipment",
+      "text": "Equipment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-contacts",
+      "text": "Contacts",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-documents",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-additional-info",
+      "text": "Additional Info",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-notes",
+      "text": "Notes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-opportunities",
+      "text": "Opportunities",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-cc-focus-rail-credentials",
+      "text": "Passwords",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-refresh",
+      "text": "Refresh workspaces",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-recovery-retry",
+      "text": "Resend administrator invitation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-recovery-cancel",
+      "text": "Cancel setup",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-recovery-cancel-confirm-button",
+      "text": "Delete workspace and cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-recovery-cancel-keep",
+      "text": "Keep setup",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-seats-seats-open",
+      "text": "Change seat allocation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "client-details-co-managed-shared-tickets-search",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-shared-tickets-toggle-filters",
+      "text": "Filters",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-shared-tickets-reset",
+      "text": "Reset",
+      "value": "",
+      "disabled": true
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-shared-tickets-view-menu-trigger",
+      "text": "View",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "client-details-co-managed-shared-tickets-share",
+      "text": "",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

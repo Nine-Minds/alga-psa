@@ -1,0 +1,113 @@
+{
+  "scenario": "attempts/run-a",
+  "recordedAt": "2026-10-26T03:49:42.356Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "s1-session-is-customer-workspace-not-sponsor",
+      "passed": true,
+      "at": "2026-10-26T03:49:44.622Z",
+      "data": {
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "product": "co_managed"
+      }
+    },
+    {
+      "id": "s1-outbound-provider-is-nine-minds-managed",
+      "passed": true,
+      "at": "2026-10-26T03:49:46.611Z"
+    },
+    {
+      "id": "s1-open-providers-reaches-customer-provider-workbench",
+      "passed": true,
+      "at": "2026-10-26T03:49:46.954Z",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:49:42.399Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:42.687Z",
+      "seconds": 0.331,
+      "title": "chapter",
+      "data": "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)"
+    },
+    {
+      "at": "2026-10-26T03:49:44.600Z",
+      "seconds": 2.244,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:44.622Z",
+      "seconds": 2.266,
+      "actor": "alice",
+      "title": "s1-session-is-customer-workspace-not-sponsor",
+      "data": {
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "product": "co_managed"
+      }
+    },
+    {
+      "at": "2026-10-26T03:49:46.601Z",
+      "seconds": 4.245,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/settings/email"
+    },
+    {
+      "at": "2026-10-26T03:49:46.611Z",
+      "seconds": 4.255,
+      "actor": "alice",
+      "title": "s1-outbound-provider-is-nine-minds-managed"
+    },
+    {
+      "at": "2026-10-26T03:49:46.954Z",
+      "seconds": 4.598,
+      "actor": "alice",
+      "title": "s1-open-providers-reaches-customer-provider-workbench",
+      "data": {
+        "url": "http://feature-co-managed-it.localhost:23374/msp/co-management/providers"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.331,
+      "title": "1. Customer saves a customer-owned Microsoft app registration (Graph simulator binding)",
+      "end": 5.63
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "s1-google-form-offers-provider-specific-fields \"\"",
+  "durationSeconds": 5.68,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

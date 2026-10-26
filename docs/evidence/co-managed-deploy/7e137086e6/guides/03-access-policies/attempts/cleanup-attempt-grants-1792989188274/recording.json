@@ -1,0 +1,90 @@
+{
+  "scenario": "attempts/cleanup-attempt-grants-1792989188274",
+  "recordedAt": "2026-10-26T04:33:08.457Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "attempt-grants-revoked",
+      "passed": true,
+      "at": "2026-10-26T04:33:17.248Z",
+      "data": {
+        "ids": [
+          "3a848fd8-6e35-4329-80b9-9fadaa18aa6b",
+          "1eb1d622-47ab-43ab-9ab2-6af1defc89df"
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:33:08.509Z",
+      "seconds": 0.052,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:33:10.604Z",
+      "seconds": 2.147,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:33:12.486Z",
+      "seconds": 4.029,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/ticket-access"
+    },
+    {
+      "at": "2026-10-26T04:33:14.728Z",
+      "seconds": 6.271,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/ticket-access"
+    },
+    {
+      "at": "2026-10-26T04:33:16.872Z",
+      "seconds": 8.415,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/ticket-access"
+    },
+    {
+      "at": "2026-10-26T04:33:17.248Z",
+      "seconds": 8.791,
+      "actor": "alice",
+      "title": "attempt-grants-revoked",
+      "data": {
+        "ids": [
+          "3a848fd8-6e35-4329-80b9-9fadaa18aa6b",
+          "1eb1d622-47ab-43ab-9ab2-6af1defc89df"
+        ]
+      }
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 9.4,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

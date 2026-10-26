@@ -1,0 +1,258 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/tickets/customer?queueView=oversight&workspace=all&searchQuery=CM-REVIEW-20261026-03",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCustomer Tickets\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n3\nQT\nCustomer Tickets\n\nCustomer tickets within your approved access, including work handled by customer IT.\n\nWorking queue\nCustomer oversight\nFilters\nReset\nView\n\n4 tickets · 4 open · 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n↓\n\n\n\t\n000030 · CM-REVIEW-20261026-03 r4 board-only ticket\nWhite Rabbit IT\n\t\nIn Progress\n\t\nCritical\n\t\nCustomer IT\n\t\n10/26/2026\n\n\n\t\n000029 · CM-REVIEW-20261026-03 r4 escalated board ticket\nWhite Rabbit IT\n\t\nOpen\n\t\nCritical\n\t\nMSP\n\t\n10/26/2026\n\n\n\t\n000004 · CM-REVIEW-20261026-03 board-only ticket\nWhite Rabbit IT\n\t\nIn Progress\n\t\nCritical\n\t\nCustomer IT\n\t\n10/26/2026\n\n\n\t\n000003 · CM-REVIEW-20261026-03 escalated board ticket\nWhite Rabbit IT\n\t\nOpen\n\t\nCritical\n\t\nMSP\n\t\n10/25/2026",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "3",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-share",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-view-working",
+      "text": "Working queue",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-view-oversight",
+      "text": "Customer oversight",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "customer-tickets-search",
+      "text": "",
+      "value": "CM-REVIEW-20261026-03",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-toggle-filters",
+      "text": "Filters",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-reset",
+      "text": "Reset",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "customer-tickets-view-menu-trigger",
+      "text": "View",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "customer-tickets-select-all",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "customer-tickets-select-shared|c64b2666-7dd6-4c61-8ced-4b233f628e61|2be5cb32-91e8-491a-9ec4-16ab019c7d40|1eb1d622-47ab-43ab-9ab2-6af1defc89df",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "customer-tickets-select-shared|c64b2666-7dd6-4c61-8ced-4b233f628e61|2be5cb32-91e8-491a-9ec4-16ab019c7d40|3a848fd8-6e35-4329-80b9-9fadaa18aa6b",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,551 @@
+{
+  "scenario": "licensing-recording",
+  "recordedAt": "2026-10-26T03:18:05.157Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "pool-stats-match-entitlement-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:15.027Z",
+      "data": {
+        "shown": {
+          "capacity": 3,
+          "allocated": 1,
+          "available": 2
+        },
+        "db": {
+          "capacity": 3,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 3,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "customer-allocations-fit-inside-verified-capacity",
+      "passed": true,
+      "at": "2026-10-26T03:18:15.027Z",
+      "data": {
+        "capacity": 3,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 3,
+        "allocated": 1
+      }
+    },
+    {
+      "id": "client-allocation-matches-db-and-pool-hint",
+      "passed": true,
+      "at": "2026-10-26T03:18:20.907Z",
+      "data": {
+        "inputSeats": 1,
+        "dbSeats": 1,
+        "poolHint": "Pool: 3 purchased, 1 allocated, 2 available"
+      }
+    },
+    {
+      "id": "review-shows-quantity-monthly-total-and-amount-due",
+      "passed": true,
+      "at": "2026-10-26T03:18:23.451Z",
+      "data": {
+        "reviewText": "Review customer seat purchase 4 seats · $45.96 per month Estimated amount due now: $11.49 Confirm purchase"
+      }
+    },
+    {
+      "id": "capacity-unchanged-while-only-reviewed",
+      "passed": true,
+      "at": "2026-10-26T03:18:23.858Z",
+      "data": {
+        "capacity": 3
+      }
+    },
+    {
+      "id": "capacity-increases-after-verification-and-reconciles-on-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:26.169Z",
+      "data": {
+        "shown": {
+          "capacity": 4,
+          "allocated": 1,
+          "available": 3
+        },
+        "db": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 4,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "id": "provider-subscription-quantity-matches-pool",
+      "passed": true,
+      "at": "2026-10-26T03:18:26.169Z",
+      "data": {
+        "subscriptions": [
+          {
+            "id": "sub_2a87b2f33",
+            "quantity": 1
+          },
+          {
+            "id": "sub_774424209",
+            "kind": "co_managed",
+            "quantity": 4
+          }
+        ],
+        "operation": {
+          "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+          "quantity": 4,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:18:24.193788+00:00"
+        }
+      }
+    },
+    {
+      "id": "purchase-recorded-as-one-operation",
+      "passed": true,
+      "at": "2026-10-26T03:18:26.169Z",
+      "data": {
+        "operation": {
+          "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+          "quantity": 4,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:18:24.193788+00:00"
+        },
+        "count": 2
+      }
+    },
+    {
+      "id": "no-pending-purchase-left-to-resume",
+      "passed": true,
+      "at": "2026-10-26T03:18:26.174Z"
+    },
+    {
+      "id": "probe-same-operation-replay-creates-no-second-charge",
+      "passed": true,
+      "at": "2026-10-26T03:18:29.865Z",
+      "data": {
+        "status": 200,
+        "afterReplay": {
+          "pool": {
+            "capacity": 4,
+            "source": "hosted",
+            "source_reference": "sub_774424209",
+            "revision": 5,
+            "allocated": 1
+          },
+          "purchases": [
+            {
+              "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+              "quantity": 3,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T00:03:11.801858+00:00"
+            },
+            {
+              "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+              "quantity": 4,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:18:24.193788+00:00"
+            }
+          ],
+          "subscriptions": [
+            4
+          ],
+          "events": 1
+        }
+      }
+    },
+    {
+      "id": "allocation-changes-by-requested-amount-availability-by-opposite",
+      "passed": true,
+      "at": "2026-10-26T03:18:36.299Z",
+      "data": {
+        "reloadedHint": "Pool: 4 purchased, 2 allocated, 2 available",
+        "seats": 2
+      }
+    },
+    {
+      "id": "reduction-below-usage-minimum-cannot-be-saved",
+      "passed": true,
+      "at": "2026-10-26T03:18:36.524Z",
+      "data": {
+        "min": "1"
+      }
+    },
+    {
+      "id": "shortfall-reviews-new-pool-total-without-charging",
+      "passed": true,
+      "at": "2026-10-26T03:18:36.919Z",
+      "data": {
+        "shortText": "Dialog Content Co-managed IT Details SERVICE Tickets Recurring tickets Interactions Co-managed IT MONEY Billing Billing Dashboard Tax Settings INSTALL BASE Assets Equipment RECORDS Contacts Documents Additional Info Notes MORE Opportunities Passwords Co-managed IT for White Rabbit Active Refresh workspaces Technician seats 1 of 2 technician seats Customer workspace White Rabbit IT Administrator alice@whiterabbit.test Administrator invitation — Capacity Change seat allocation Change seat allocation Move seats between this customer and your purchased co-managed pool. Active technicians and pending invitations must fit within the allocation. At least one seat is required. Technician seats Pool: 4 purchased, 2 allocated, 2 available Save allocation Cancel Review customer seat purchase Add 1 seat to the sponsor pool (new total 5). 5 seats · $57.45 per month Estimated amount due now: $11.49 Confirm purchase Co-managed access White Rabbit IT Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply. Delegated administrationCo-managed SLA priorities Customer-approved access Oversight of the initial service desk board Boards Service Desk: Collaborate Projects Staff QA Tester Access for QA Tester Collaborate Remove Search Select an item Select... Add Teams No access configured. Search Select an item Select... Add Save access Reload current access Co-managed SLA priorities Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets. Configure an MSP SLA policy before escalation. Manage SLA policies MSP priority for Critical Not mapped MSP priority for Low Not mapped MSP priority for Medium Not mapped MSP priority for High Not mapped MSP priority for Urgent Not mapped Save access Reload current access Delegated administration Customer-approved assistance with selected settings and user records. Refresh access Customer workspace: White Rabbit IT · MSP: Oz No administration tasks are currently approved. Shared tickets Filters View 0 tickets · 0 open · 0 closed No customer tickets to show yet. Open in Customer Tickets Work Client projects and shared task queues stay in the MSP shell with their qualified identities. Projects Project task queues End co-management Review what happens when this relationship ends. White Rabbit IT Live access between these organizations ends immediately when you confirm. The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available. The MSP retains its own records and permitted historical evidence of shared work it participated in. Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace. Review departureRefresh status"
+      }
+    },
+    {
+      "id": "white-rabbit-allocation-restored-and-pool-unchanged",
+      "passed": true,
+      "at": "2026-10-26T03:18:41.720Z",
+      "data": {
+        "seats": 1,
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 5,
+          "allocated": 1
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:18:05.197Z",
+      "seconds": 0.04,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:07.594Z",
+      "seconds": 2.437,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:07.594Z",
+      "seconds": 2.437,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Reconcile the pool with customer allocations"
+    },
+    {
+      "at": "2026-10-26T03:18:09.481Z",
+      "seconds": 4.324,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:18:15.027Z",
+      "seconds": 9.87,
+      "actor": "qa",
+      "title": "pool-stats-match-entitlement-after-reload",
+      "data": {
+        "shown": {
+          "capacity": 3,
+          "allocated": 1,
+          "available": 2
+        },
+        "db": {
+          "capacity": 3,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 3,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:15.027Z",
+      "seconds": 9.87,
+      "actor": "qa",
+      "title": "customer-allocations-fit-inside-verified-capacity",
+      "data": {
+        "capacity": 3,
+        "source": "hosted",
+        "source_reference": "sub_774424209",
+        "revision": 3,
+        "allocated": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:17.406Z",
+      "seconds": 12.249,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:18:20.907Z",
+      "seconds": 15.75,
+      "actor": "qa",
+      "title": "client-allocation-matches-db-and-pool-hint",
+      "data": {
+        "inputSeats": 1,
+        "dbSeats": 1,
+        "poolHint": "Pool: 3 purchased, 1 allocated, 2 available"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:20.994Z",
+      "seconds": 15.837,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Review a hosted pool purchase (configured simulator)"
+    },
+    {
+      "at": "2026-10-26T03:18:23.121Z",
+      "seconds": 17.964,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    },
+    {
+      "at": "2026-10-26T03:18:23.134Z",
+      "seconds": 17.977,
+      "actor": "qa",
+      "title": "purchase-baseline",
+      "data": {
+        "existingQuantity": 3,
+        "proposedTotal": 4
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:23.451Z",
+      "seconds": 18.294,
+      "actor": "qa",
+      "title": "review-shows-quantity-monthly-total-and-amount-due",
+      "data": {
+        "reviewText": "Review customer seat purchase 4 seats · $45.96 per month Estimated amount due now: $11.49 Confirm purchase"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:23.858Z",
+      "seconds": 18.701,
+      "actor": "qa",
+      "title": "capacity-unchanged-while-only-reviewed",
+      "data": {
+        "capacity": 3
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:26.169Z",
+      "seconds": 21.012,
+      "actor": "qa",
+      "title": "capacity-increases-after-verification-and-reconciles-on-reload",
+      "data": {
+        "shown": {
+          "capacity": 4,
+          "allocated": 1,
+          "available": 3
+        },
+        "db": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 4,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:26.169Z",
+      "seconds": 21.012,
+      "actor": "qa",
+      "title": "provider-subscription-quantity-matches-pool",
+      "data": {
+        "subscriptions": [
+          {
+            "id": "sub_2a87b2f33",
+            "quantity": 1
+          },
+          {
+            "id": "sub_774424209",
+            "kind": "co_managed",
+            "quantity": 4
+          }
+        ],
+        "operation": {
+          "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+          "quantity": 4,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:18:24.193788+00:00"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:26.169Z",
+      "seconds": 21.012,
+      "actor": "qa",
+      "title": "purchase-recorded-as-one-operation",
+      "data": {
+        "operation": {
+          "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+          "quantity": 4,
+          "state": "completed",
+          "provider_reference": "sub_774424209",
+          "created_at": "2026-10-26T03:18:24.193788+00:00"
+        },
+        "count": 2
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:26.174Z",
+      "seconds": 21.017,
+      "actor": "qa",
+      "title": "no-pending-purchase-left-to-resume"
+    },
+    {
+      "at": "2026-10-26T03:18:29.865Z",
+      "seconds": 24.708,
+      "actor": "qa",
+      "title": "probe-same-operation-replay-creates-no-second-charge",
+      "data": {
+        "status": 200,
+        "afterReplay": {
+          "pool": {
+            "capacity": 4,
+            "source": "hosted",
+            "source_reference": "sub_774424209",
+            "revision": 5,
+            "allocated": 1
+          },
+          "purchases": [
+            {
+              "operation_id": "2e291017-aa34-4f49-a072-3c02ec44929d",
+              "quantity": 3,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T00:03:11.801858+00:00"
+            },
+            {
+              "operation_id": "da1cdd56-2f05-4625-bdf8-12b5e80bc6ba",
+              "quantity": 4,
+              "state": "completed",
+              "provider_reference": "sub_774424209",
+              "created_at": "2026-10-26T03:18:24.193788+00:00"
+            }
+          ],
+          "subscriptions": [
+            4
+          ],
+          "events": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:29.866Z",
+      "seconds": 24.709,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Change a customer allocation (White Rabbit, reversible +1)"
+    },
+    {
+      "at": "2026-10-26T03:18:32.272Z",
+      "seconds": 27.115,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:18:36.299Z",
+      "seconds": 31.142,
+      "actor": "qa",
+      "title": "allocation-changes-by-requested-amount-availability-by-opposite",
+      "data": {
+        "reloadedHint": "Pool: 4 purchased, 2 allocated, 2 available",
+        "seats": 2
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:36.524Z",
+      "seconds": 31.367,
+      "actor": "qa",
+      "title": "reduction-below-usage-minimum-cannot-be-saved",
+      "data": {
+        "min": "1"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:36.919Z",
+      "seconds": 31.762,
+      "actor": "qa",
+      "title": "shortfall-reviews-new-pool-total-without-charging",
+      "data": {
+        "shortText": "Dialog Content Co-managed IT Details SERVICE Tickets Recurring tickets Interactions Co-managed IT MONEY Billing Billing Dashboard Tax Settings INSTALL BASE Assets Equipment RECORDS Contacts Documents Additional Info Notes MORE Opportunities Passwords Co-managed IT for White Rabbit Active Refresh workspaces Technician seats 1 of 2 technician seats Customer workspace White Rabbit IT Administrator alice@whiterabbit.test Administrator invitation — Capacity Change seat allocation Change seat allocation Move seats between this customer and your purchased co-managed pool. Active technicians and pending invitations must fit within the allocation. At least one seat is required. Technician seats Pool: 4 purchased, 2 allocated, 2 available Save allocation Cancel Review customer seat purchase Add 1 seat to the sponsor pool (new total 5). 5 seats · $57.45 per month Estimated amount due now: $11.49 Confirm purchase Co-managed access White Rabbit IT Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply. Delegated administrationCo-managed SLA priorities Customer-approved access Oversight of the initial service desk board Boards Service Desk: Collaborate Projects Staff QA Tester Access for QA Tester Collaborate Remove Search Select an item Select... Add Teams No access configured. Search Select an item Select... Add Save access Reload current access Co-managed SLA priorities Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets. Configure an MSP SLA policy before escalation. Manage SLA policies MSP priority for Critical Not mapped MSP priority for Low Not mapped MSP priority for Medium Not mapped MSP priority for High Not mapped MSP priority for Urgent Not mapped Save access Reload current access Delegated administration Customer-approved assistance with selected settings and user records. Refresh access Customer workspace: White Rabbit IT · MSP: Oz No administration tasks are currently approved. Shared tickets Filters View 0 tickets · 0 open · 0 closed No customer tickets to show yet. Open in Customer Tickets Work Client projects and shared task queues stay in the MSP shell with their qualified identities. Projects Project task queues End co-management Review what happens when this relationship ends. White Rabbit IT Live access between these organizations ends immediately when you confirm. The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available. The MSP retains its own records and permitted historical evidence of shared work it participated in. Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace. Review departureRefresh status"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:41.721Z",
+      "seconds": 36.564,
+      "actor": "qa",
+      "title": "white-rabbit-allocation-restored-and-pool-unchanged",
+      "data": {
+        "seats": 1,
+        "pool": {
+          "capacity": 4,
+          "source": "hosted",
+          "source_reference": "sub_774424209",
+          "revision": 5,
+          "allocated": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:41.792Z",
+      "seconds": 36.635,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "4. Self-hosted branch (License Management link only)"
+    },
+    {
+      "at": "2026-10-26T03:18:43.729Z",
+      "seconds": 38.572,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.437,
+      "title": "1. Reconcile the pool with customer allocations",
+      "end": 15.837
+    },
+    {
+      "start": 15.837,
+      "title": "2. Review a hosted pool purchase (configured simulator)",
+      "end": 24.709
+    },
+    {
+      "start": 24.709,
+      "title": "3. Change a customer allocation (White Rabbit, reversible +1)",
+      "end": 36.635
+    },
+    {
+      "start": 36.635,
+      "title": "4. Self-hosted branch (License Management link only)",
+      "end": 64.31
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#co-managed-manage-license')\n",
+  "durationSeconds": 64.36,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

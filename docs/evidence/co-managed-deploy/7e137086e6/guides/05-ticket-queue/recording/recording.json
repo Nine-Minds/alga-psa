@@ -1,0 +1,783 @@
+{
+  "scenario": "attempts/a3",
+  "recordedAt": "2026-10-26T04:20:38.148Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "prep-msp-escalation-prerequisites-applied",
+      "passed": true,
+      "at": "2026-10-26T04:20:56.359Z"
+    },
+    {
+      "id": "prep-five-msp-responsible-tickets",
+      "passed": true,
+      "at": "2026-10-26T04:21:10.569Z",
+      "data": {
+        "a": {
+          "ticket": "899670b9-7ad5-43a4-9f99-950e03a4f8f1",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "b": {
+          "ticket": "463f082b-e225-4198-a3eb-3b3fa84d6a12",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "c": {
+          "ticket": "5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "d": {
+          "ticket": "ac2d0e9a-588f-48fd-83bf-b60ddf249e33",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "e": {
+          "ticket": "6e72984f-9d4e-4d78-b38c-d11edc3a3c51",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        }
+      }
+    },
+    {
+      "id": "prep-escalation-prerequisites-restored-to-baseline",
+      "passed": true,
+      "at": "2026-10-26T04:21:27.413Z",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "id": "1-native-all-tickets-lists-native-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:21:33.793Z"
+    },
+    {
+      "id": "1-native-desk-excludes-shared-work",
+      "passed": true,
+      "at": "2026-10-26T04:21:36.322Z"
+    },
+    {
+      "id": "1-working-queue-lists-msp-responsible-work",
+      "passed": true,
+      "at": "2026-10-26T04:21:38.887Z"
+    },
+    {
+      "id": "1-oversight-follows-customer-scope",
+      "passed": true,
+      "at": "2026-10-26T04:21:39.793Z",
+      "data": {
+        "oversightCount": 5,
+        "note": "oversight = Service Desk board scope plus explicit grants"
+      }
+    },
+    {
+      "id": "1-reload-retains-applied-scope",
+      "passed": true,
+      "at": "2026-10-26T04:21:41.087Z",
+      "data": {
+        "queueView": "working",
+        "workspace": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "queueState": "all",
+        "searchQuery": "CM-REVIEW-20261026-05",
+        "queueSort": "title",
+        "queueDirection": null
+      }
+    },
+    {
+      "id": "1-result-opens-qualified-shared-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:21:41.413Z",
+      "data": {
+        "orgShown": true
+      }
+    },
+    {
+      "id": "1-return-navigation-restores-scope",
+      "passed": true,
+      "at": "2026-10-26T04:21:42.339Z",
+      "data": {
+        "queueView": "working",
+        "workspace": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "searchQuery": "CM-REVIEW-20261026-05",
+        "queueState": "all",
+        "queueSort": "title"
+      }
+    },
+    {
+      "id": "1-displayed-organization-is-customer-workspace",
+      "passed": true,
+      "at": "2026-10-26T04:21:42.340Z"
+    },
+    {
+      "id": "2-export-includes-every-filtered-row-once",
+      "passed": true,
+      "at": "2026-10-26T04:21:44.937Z",
+      "data": {
+        "counts": {
+          "a": 1,
+          "b": 1,
+          "c": 1,
+          "d": 1,
+          "e": 1
+        },
+        "rows": 5,
+        "header": "workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at"
+      }
+    },
+    {
+      "id": "2-export-only-this-customer-and-filter",
+      "passed": true,
+      "at": "2026-10-26T04:21:44.938Z",
+      "data": {
+        "header": "workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at"
+      }
+    },
+    {
+      "id": "3-selected-count-and-labels-shown",
+      "passed": true,
+      "at": "2026-10-26T04:21:47.191Z",
+      "data": {
+        "sample": "2 selected ticket(s) will be returned."
+      }
+    },
+    {
+      "id": "3-only-selected-tickets-changed",
+      "passed": true,
+      "at": "2026-10-26T04:21:49.266Z"
+    },
+    {
+      "id": "3-one-handoff-note-per-returned-ticket",
+      "passed": true,
+      "at": "2026-10-26T04:21:49.724Z"
+    },
+    {
+      "id": "3-msp-reload-shows-customer-responsibility-and-note-a",
+      "passed": true,
+      "at": "2026-10-26T04:21:57.495Z",
+      "data": {
+        "resp": "Responsible\nWhite Rabbit IT"
+      }
+    },
+    {
+      "id": "3-msp-reload-shows-customer-responsibility-and-note-b",
+      "passed": true,
+      "at": "2026-10-26T04:22:03.550Z",
+      "data": {
+        "resp": "Responsible\nWhite Rabbit IT"
+      }
+    },
+    {
+      "id": "3-customer-sees-same-note-a",
+      "passed": true,
+      "at": "2026-10-26T04:22:07.836Z"
+    },
+    {
+      "id": "3-customer-sees-same-note-b",
+      "passed": true,
+      "at": "2026-10-26T04:22:12.552Z"
+    },
+    {
+      "id": "4-customer-changed-selected-tickets",
+      "passed": true,
+      "at": "2026-10-26T04:22:25.887Z",
+      "data": {
+        "c": {
+          "responsibility": "customer",
+          "grant_revoked_at": null,
+          "revision": 2
+        },
+        "e": {
+          "responsibility": "customer",
+          "grant_revoked_at": "2026-10-26T04:22:24.75+00:00",
+          "revision": 2
+        }
+      }
+    },
+    {
+      "id": "4-reload-offers-interrupted-return-resume",
+      "passed": true,
+      "at": "2026-10-26T04:22:28.996Z"
+    },
+    {
+      "id": "4-outcomes-distinguish-returned-changed-denied",
+      "passed": true,
+      "at": "2026-10-26T04:22:29.954Z"
+    },
+    {
+      "id": "4-resume-creates-one-note-for-successful-item",
+      "passed": true,
+      "at": "2026-10-26T04:22:30.167Z"
+    },
+    {
+      "id": "4-conflicted-and-denied-items-not-counted-returned",
+      "passed": true,
+      "at": "2026-10-26T04:22:30.527Z"
+    },
+    {
+      "id": "4-reread-oversight-excludes-revoked-and-keeps-returned",
+      "passed": true,
+      "at": "2026-10-26T04:22:39.323Z"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T04:20:38.188Z",
+      "seconds": 0.04,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T04:20:38.189Z",
+      "seconds": 0.041,
+      "title": "chapter",
+      "data": "Preparation: disposable customer tickets escalated to the MSP"
+    },
+    {
+      "at": "2026-10-26T04:20:40.521Z",
+      "seconds": 2.373,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:20:41.073Z",
+      "seconds": 2.925,
+      "actor": "qa",
+      "title": "escalation prerequisites before",
+      "data": {
+        "mappings": {
+          "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+          "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+        },
+        "clientPolicy": "",
+        "policyId": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:20:55.933Z",
+      "seconds": 17.785,
+      "actor": "qa",
+      "title": "escalation prerequisites applied",
+      "data": {
+        "mappings": [
+          "bfc90e45-843b-4797-b7bf-6b1a048652fb",
+          "bfc90e45-843b-4797-b7bf-6b1a048652fb"
+        ],
+        "clientPolicy": "85aab5ea-d398-4cd6-89b3-35b02f3eb53b"
+      }
+    },
+    {
+      "at": "2026-10-26T04:20:56.359Z",
+      "seconds": 18.211,
+      "actor": "qa",
+      "title": "prep-msp-escalation-prerequisites-applied"
+    },
+    {
+      "at": "2026-10-26T04:20:58.150Z",
+      "seconds": 20.002,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:10.569Z",
+      "seconds": 32.421,
+      "actor": "alice",
+      "title": "prep-five-msp-responsible-tickets",
+      "data": {
+        "a": {
+          "ticket": "899670b9-7ad5-43a4-9f99-950e03a4f8f1",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "b": {
+          "ticket": "463f082b-e225-4198-a3eb-3b3fa84d6a12",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "c": {
+          "ticket": "5cd524f7-fbe1-47ed-bf94-ac338ffbaaaf",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "d": {
+          "ticket": "ac2d0e9a-588f-48fd-83bf-b60ddf249e33",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        },
+        "e": {
+          "ticket": "6e72984f-9d4e-4d78-b38c-d11edc3a3c51",
+          "responsibility": "msp",
+          "grant_revoked_at": null,
+          "revision": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:12.367Z",
+      "seconds": 34.219,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:27.412Z",
+      "seconds": 49.264,
+      "actor": "qa",
+      "title": "escalation prerequisites restored",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:27.413Z",
+      "seconds": 49.265,
+      "actor": "qa",
+      "title": "prep-escalation-prerequisites-restored-to-baseline",
+      "data": {
+        "before": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        },
+        "after": {
+          "mappings": {
+            "6fdf4c04-6d0b-441b-a9bd-368c202f7e72": "",
+            "eb97b64f-1bf2-4677-9320-9b4865692b89": ""
+          },
+          "clientPolicy": ""
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:27.413Z",
+      "seconds": 49.265,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "1. Keep queue scope stable"
+    },
+    {
+      "at": "2026-10-26T04:21:29.192Z",
+      "seconds": 51.044,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:31.255Z",
+      "seconds": 53.107,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-26T04:21:33.793Z",
+      "seconds": 55.645,
+      "actor": "qa",
+      "title": "1-native-all-tickets-lists-native-ticket"
+    },
+    {
+      "at": "2026-10-26T04:21:36.322Z",
+      "seconds": 58.174,
+      "actor": "qa",
+      "title": "1-native-desk-excludes-shared-work"
+    },
+    {
+      "at": "2026-10-26T04:21:38.319Z",
+      "seconds": 60.171,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=all"
+    },
+    {
+      "at": "2026-10-26T04:21:38.887Z",
+      "seconds": 60.739,
+      "actor": "qa",
+      "title": "1-working-queue-lists-msp-responsible-work"
+    },
+    {
+      "at": "2026-10-26T04:21:39.793Z",
+      "seconds": 61.645,
+      "actor": "qa",
+      "title": "1-oversight-follows-customer-scope",
+      "data": {
+        "oversightCount": 5,
+        "note": "oversight = Service Desk board scope plus explicit grants"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:41.087Z",
+      "seconds": 62.939,
+      "actor": "qa",
+      "title": "1-reload-retains-applied-scope",
+      "data": {
+        "queueView": "working",
+        "workspace": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "queueState": "all",
+        "searchQuery": "CM-REVIEW-20261026-05",
+        "queueSort": "title",
+        "queueDirection": null
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:41.413Z",
+      "seconds": 63.265,
+      "actor": "qa",
+      "title": "1-result-opens-qualified-shared-ticket",
+      "data": {
+        "orgShown": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:42.339Z",
+      "seconds": 64.191,
+      "actor": "qa",
+      "title": "1-return-navigation-restores-scope",
+      "data": {
+        "queueView": "working",
+        "workspace": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "searchQuery": "CM-REVIEW-20261026-05",
+        "queueState": "all",
+        "queueSort": "title"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:42.340Z",
+      "seconds": 64.192,
+      "actor": "qa",
+      "title": "1-displayed-organization-is-customer-workspace"
+    },
+    {
+      "at": "2026-10-26T04:21:42.340Z",
+      "seconds": 64.192,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "2. Export the full filtered set"
+    },
+    {
+      "at": "2026-10-26T04:21:44.675Z",
+      "seconds": 66.527,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=c64b2666-7dd6-4c61-8ced-4b233f628e61&searchQuery=CM-REVIEW-20261026-05&queueState=all&queueSort=title&pageSize=2"
+    },
+    {
+      "at": "2026-10-26T04:21:44.937Z",
+      "seconds": 66.789,
+      "actor": "qa",
+      "title": "2-export-includes-every-filtered-row-once",
+      "data": {
+        "counts": {
+          "a": 1,
+          "b": 1,
+          "c": 1,
+          "d": 1,
+          "e": 1
+        },
+        "rows": 5,
+        "header": "workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:44.938Z",
+      "seconds": 66.79,
+      "actor": "qa",
+      "title": "2-export-only-this-customer-and-filter",
+      "data": {
+        "header": "workspace_tenant,relationship_id,ticket_id,workspace_name,ticket_number,title,status_name,priority_name,is_closed,responsibility,entered_at,updated_at"
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:44.938Z",
+      "seconds": 66.79,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "3. Return selected tickets once"
+    },
+    {
+      "at": "2026-10-26T04:21:46.994Z",
+      "seconds": 68.846,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=c64b2666-7dd6-4c61-8ced-4b233f628e61&searchQuery=CM-REVIEW-20261026-05&queueState=all&queueSort=title&pageSize=25"
+    },
+    {
+      "at": "2026-10-26T04:21:47.191Z",
+      "seconds": 69.043,
+      "actor": "qa",
+      "title": "3-selected-count-and-labels-shown",
+      "data": {
+        "sample": "2 selected ticket(s) will be returned."
+      }
+    },
+    {
+      "at": "2026-10-26T04:21:49.266Z",
+      "seconds": 71.118,
+      "actor": "qa",
+      "title": "3-only-selected-tickets-changed"
+    },
+    {
+      "at": "2026-10-26T04:21:49.724Z",
+      "seconds": 71.576,
+      "actor": "qa",
+      "title": "3-one-handoff-note-per-returned-ticket"
+    },
+    {
+      "at": "2026-10-26T04:21:57.495Z",
+      "seconds": 79.347,
+      "actor": "qa",
+      "title": "3-msp-reload-shows-customer-responsibility-and-note-a",
+      "data": {
+        "resp": "Responsible\nWhite Rabbit IT"
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:03.550Z",
+      "seconds": 85.402,
+      "actor": "qa",
+      "title": "3-msp-reload-shows-customer-responsibility-and-note-b",
+      "data": {
+        "resp": "Responsible\nWhite Rabbit IT"
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:05.452Z",
+      "seconds": 87.304,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:07.460Z",
+      "seconds": 89.312,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/899670b9-7ad5-43a4-9f99-950e03a4f8f1"
+    },
+    {
+      "at": "2026-10-26T04:22:07.836Z",
+      "seconds": 89.688,
+      "actor": "alice",
+      "title": "3-customer-sees-same-note-a"
+    },
+    {
+      "at": "2026-10-26T04:22:10.746Z",
+      "seconds": 92.598,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/463f082b-e225-4198-a3eb-3b3fa84d6a12"
+    },
+    {
+      "at": "2026-10-26T04:22:12.552Z",
+      "seconds": 94.404,
+      "actor": "alice",
+      "title": "3-customer-sees-same-note-b"
+    },
+    {
+      "at": "2026-10-26T04:22:12.650Z",
+      "seconds": 94.502,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "4. Recover interrupted or mixed results"
+    },
+    {
+      "at": "2026-10-26T04:22:14.737Z",
+      "seconds": 96.589,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:16.696Z",
+      "seconds": 98.548,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=working&workspace=all"
+    },
+    {
+      "at": "2026-10-26T04:22:25.887Z",
+      "seconds": 107.739,
+      "actor": "qa",
+      "title": "4-customer-changed-selected-tickets",
+      "data": {
+        "c": {
+          "responsibility": "customer",
+          "grant_revoked_at": null,
+          "revision": 2
+        },
+        "e": {
+          "responsibility": "customer",
+          "grant_revoked_at": "2026-10-26T04:22:24.75+00:00",
+          "revision": 2
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:26.137Z",
+      "seconds": 107.989,
+      "actor": "qa",
+      "title": "fault injection: next bulk-return response will be dropped after the server commits",
+      "data": {
+        "actionFound": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:28.364Z",
+      "seconds": 110.216,
+      "actor": "qa",
+      "title": "lost-response screen",
+      "data": {
+        "retryOffered": true
+      }
+    },
+    {
+      "at": "2026-10-26T04:22:28.996Z",
+      "seconds": 110.848,
+      "actor": "qa",
+      "title": "4-reload-offers-interrupted-return-resume"
+    },
+    {
+      "at": "2026-10-26T04:22:29.954Z",
+      "seconds": 111.806,
+      "actor": "qa",
+      "title": "4-outcomes-distinguish-returned-changed-denied"
+    },
+    {
+      "at": "2026-10-26T04:22:30.167Z",
+      "seconds": 112.019,
+      "actor": "qa",
+      "title": "4-resume-creates-one-note-for-successful-item"
+    },
+    {
+      "at": "2026-10-26T04:22:30.527Z",
+      "seconds": 112.379,
+      "actor": "qa",
+      "title": "4-conflicted-and-denied-items-not-counted-returned"
+    },
+    {
+      "at": "2026-10-26T04:22:36.125Z",
+      "seconds": 117.977,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/customer?queueView=oversight&workspace=all"
+    },
+    {
+      "at": "2026-10-26T04:22:39.323Z",
+      "seconds": 121.175,
+      "actor": "qa",
+      "title": "4-reread-oversight-excludes-revoked-and-keeps-returned"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.041,
+      "title": "Preparation: disposable customer tickets escalated to the MSP",
+      "end": 49.265
+    },
+    {
+      "start": 49.265,
+      "title": "1. Keep queue scope stable",
+      "end": 64.192
+    },
+    {
+      "start": 64.192,
+      "title": "2. Export the full filtered set",
+      "end": 66.79
+    },
+    {
+      "start": 66.79,
+      "title": "3. Return selected tickets once",
+      "end": 94.502
+    },
+    {
+      "start": 94.502,
+      "title": "4. Recover interrupted or mixed results",
+      "end": 122.27
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "The lost-response case is produced by dropping one server-action response in the browser after the server committed it.",
+    "Existing fixture 000002 from the guide does not exist in the rebuilt environment; the disposable CM-REVIEW-20261026-05 set was used instead."
+  ],
+  "durationSeconds": 122.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

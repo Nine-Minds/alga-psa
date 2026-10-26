@@ -1,0 +1,156 @@
+{
+  "staffAssignmentsBefore": [
+    {
+      "principal_type": "user",
+      "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "relationship_role": "technician"
+    },
+    {
+      "principal_type": "user",
+      "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+      "relationship_role": "viewer"
+    }
+  ],
+  "projectScopesBefore": [
+    {
+      "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+      "can_collaborate": true
+    }
+  ],
+  "originalTasks": [
+    {
+      "task_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+      "task_name": "CM-REVIEW-20261026-06 final Task A",
+      "assigned_to": "a288a520-c353-44d2-91e0-001f75d236de",
+      "due_date": null,
+      "project_status_mapping_id": "b851e263-2fa7-4d8b-960a-c9399e026f9b",
+      "updated_at": "2026-10-26T03:27:14.106+00:00"
+    },
+    {
+      "task_id": "5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a",
+      "task_name": "CM-REVIEW-20261026-06 final Task B",
+      "assigned_to": null,
+      "due_date": null,
+      "project_status_mapping_id": "b851e263-2fa7-4d8b-960a-c9399e026f9b",
+      "updated_at": "2026-10-26T03:27:10.089096+00:00"
+    }
+  ],
+  "projectScopesAfterGrant": [
+    {
+      "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "57304524-bee3-41d9-aada-f7c678e097a5",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "b7ddad0d-a12a-4cf2-a4cd-ca1c55332fd0",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+      "can_collaborate": true
+    }
+  ],
+  "staffAssignmentsDuring": [
+    {
+      "principal_type": "user",
+      "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "relationship_role": "technician"
+    },
+    {
+      "principal_type": "user",
+      "principal_id": "b3b6b60d-30c9-42f4-92e3-c3054209f62d",
+      "relationship_role": "viewer"
+    }
+  ],
+  "mspTaskAssignment": [
+    {
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "reference_id": "817984c9-e748-42ad-8064-a196fee4880c",
+      "customer_tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+      "relationship_id": "2be5cb32-91e8-491a-9ec4-16ab019c7d40",
+      "task_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+      "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+      "assigned_to": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "assigned_team_id": null,
+      "active": true,
+      "revision": 1,
+      "assignee_name": "QA Tester",
+      "organization_name": "Oz",
+      "task_name": "CM-REVIEW-20261026-06 final Task A",
+      "project_name": "CM-REVIEW-20261026-06 final Shared rollout",
+      "created_at": "2026-10-26T03:27:49.200737+00:00",
+      "updated_at": "2026-10-26T03:27:49.200737+00:00"
+    }
+  ],
+  "timeEntries": [
+    {
+      "entry_id": "613f1bb1-be2e-4cc8-a9f3-832e9992fcb3",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+      "billing_mode": "operational",
+      "billable_duration": 0,
+      "work_item_type": "project_task",
+      "work_item_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+      "minutes": 6
+    },
+    {
+      "entry_id": "a05e236a-cf7c-460b-9776-1e34ac27bc4a",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "billing_mode": "commercial",
+      "billable_duration": 12,
+      "work_item_type": "co_managed",
+      "work_item_id": "c1223811-28bc-4305-a37d-62afdc690b9a",
+      "minutes": 12
+    }
+  ],
+  "projectScopesAfterRevoke": [
+    {
+      "project_id": "3af2079b-da1d-40d8-bc10-93d31ad2be36",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "57304524-bee3-41d9-aada-f7c678e097a5",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "875858d7-d6c1-476e-8f40-b3ba94e7cc00",
+      "can_collaborate": true
+    },
+    {
+      "project_id": "d9ad9f83-33fb-473e-be4c-88d9d9d1ace4",
+      "can_collaborate": true
+    }
+  ],
+  "finalTasks": [
+    {
+      "task_id": "ccbcc459-1986-4226-bf92-f0499093b006",
+      "task_name": "CM-REVIEW-20261026-06 final Task A",
+      "assigned_to": "a288a520-c353-44d2-91e0-001f75d236de",
+      "due_date": null,
+      "project_status_mapping_id": "b851e263-2fa7-4d8b-960a-c9399e026f9b",
+      "updated_at": "2026-10-26T03:28:15.284+00:00"
+    },
+    {
+      "task_id": "5795a6b1-330b-4d4a-b1cb-8677dbc1cc7a",
+      "task_name": "CM-REVIEW-20261026-06 final Task B",
+      "assigned_to": null,
+      "due_date": null,
+      "project_status_mapping_id": "b851e263-2fa7-4d8b-960a-c9399e026f9b",
+      "updated_at": "2026-10-26T03:27:10.089096+00:00"
+    }
+  ]
+}

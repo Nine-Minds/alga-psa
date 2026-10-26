@@ -1,0 +1,104 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/time-entry?subtab=time-periods",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nTime Entry\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nTime Entry\nTime Entry Settings\n\nManage your time entry settings and time periods\n\nTime Period Settings\nTime Periods\nTime Periods\n\nView and manage time entry periods for time tracking\n\nCreate New Time Period\nStart Date\n\t\nLast Day\n\t\nActions\n\n\n2026-10-12\n\t\n2026-10-18\n\t\nOpen menu\n\n\n2026-09-01\n\t\n2026-09-30\n\t\nOpen menu",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_n_-trigger-0",
+      "text": "Time Period Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "tabs-_r_n_-trigger-1",
+      "text": "Time Periods",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "create-time-period-button",
+      "text": "Create New Time Period",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-period-actions-menu-3dc1af2c-a862-4d38-8620-84ecbdb5556a",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "time-period-actions-menu-81dcf8ea-4c28-4e53-8831-ef92075030e0",
+      "text": "Open menu",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

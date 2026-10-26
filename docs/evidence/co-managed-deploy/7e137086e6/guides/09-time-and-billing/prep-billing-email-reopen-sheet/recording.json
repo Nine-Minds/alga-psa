@@ -1,0 +1,212 @@
+{
+  "scenario": "prep-billing-email-reopen-sheet",
+  "recordedAt": "2026-10-26T03:34:44.181Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "billing-email-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:34:49.331Z"
+    },
+    {
+      "id": "sheet-open-for-changes",
+      "passed": true,
+      "at": "2026-10-26T03:34:54.653Z",
+      "data": {
+        "sheet": "CHANGES_REQUESTED",
+        "entries": [
+          {
+            "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "705281b3-006a-4c64-8250-ae707f80254a",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+            "approval_status": "CHANGES_REQUESTED"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:34:44.237Z",
+      "seconds": 0.056,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:44.512Z",
+      "seconds": 0.331,
+      "title": "before",
+      "data": {
+        "client": {
+          "billing_email": null,
+          "billing_contact_id": null
+        },
+        "sheet": "APPROVED"
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:46.450Z",
+      "seconds": 2.269,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:46.450Z",
+      "seconds": 2.269,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: White Rabbit billing configuration gets a disposable alternative billing email"
+    },
+    {
+      "at": "2026-10-26T03:34:48.487Z",
+      "seconds": 4.306,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T03:34:49.331Z",
+      "seconds": 5.15,
+      "actor": "qa",
+      "title": "billing-email-persists-after-reload"
+    },
+    {
+      "at": "2026-10-26T03:34:49.497Z",
+      "seconds": 5.316,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep: re-open the sheet approved in attempt run-c"
+    },
+    {
+      "at": "2026-10-26T03:34:51.451Z",
+      "seconds": 7.27,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T03:34:54.020Z",
+      "seconds": 9.839,
+      "actor": "qa",
+      "title": "after-reverse",
+      "data": {
+        "sheet": "CHANGES_REQUESTED"
+      }
+    },
+    {
+      "at": "2026-10-26T03:34:54.653Z",
+      "seconds": 10.472,
+      "actor": "qa",
+      "title": "sheet-open-for-changes",
+      "data": {
+        "sheet": "CHANGES_REQUESTED",
+        "entries": [
+          {
+            "entry_id": "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "3b2deed8-b692-41d4-a8eb-211a6876189a",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "702f57e7-4040-44c6-af4b-14d7defff6ae",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "705281b3-006a-4c64-8250-ae707f80254a",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "802d1a8a-25e6-49a6-91c6-24052843e843",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+            "approval_status": "CHANGES_REQUESTED"
+          },
+          {
+            "entry_id": "f22d39e6-e5a3-4354-b41d-48d204a55286",
+            "approval_status": "CHANGES_REQUESTED"
+          }
+        ]
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.269,
+      "title": "Prep: White Rabbit billing configuration gets a disposable alternative billing email",
+      "end": 5.316
+    },
+    {
+      "start": 5.316,
+      "title": "Prep: re-open the sheet approved in attempt run-c",
+      "end": 10.79
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Preparation only; billing email is cleared after the guide 09 recording."
+  ],
+  "durationSeconds": 10.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

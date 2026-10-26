@@ -1,0 +1,236 @@
+{
+  "scenario": "prep-native-setup",
+  "recordedAt": "2026-10-26T03:18:10.075Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "qa-collaborate-assignment-persists-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:21.017Z",
+      "data": {
+        "assignments": [
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    },
+    {
+      "id": "current-time-period-listed-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:27.265Z",
+      "data": {
+        "period": {
+          "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+          "start_date": "2026-10-19",
+          "end_date": "2026-11-02"
+        }
+      }
+    },
+    {
+      "id": "white-rabbit-contract-listed-after-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:07.275Z",
+      "data": {
+        "contract": [
+          {
+            "contract_id": "19921bc5-ab8d-4b33-a4e1-39a4dd1f7464",
+            "contract_name": "CM-REVIEW-20261026-09 hourly contract",
+            "status": "active",
+            "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+            "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+            "is_active": true,
+            "start_date": "2026-10-01"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:18:10.118Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:10.596Z",
+      "seconds": 0.521,
+      "title": "before",
+      "data": {
+        "assignments": [
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "relationship_role": "technician"
+          }
+        ],
+        "periods": [
+          {
+            "period_id": "81dcf8ea-4c28-4e53-8831-ef92075030e0",
+            "start_date": "2026-09-01",
+            "end_date": "2026-10-01"
+          },
+          {
+            "period_id": "3dc1af2c-a862-4d38-8620-84ecbdb5556a",
+            "start_date": "2026-10-12",
+            "end_date": "2026-10-19"
+          },
+          {
+            "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+            "start_date": "2026-10-19",
+            "end_date": "2026-11-02"
+          }
+        ],
+        "contract": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:15.146Z",
+      "seconds": 5.071,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:15.146Z",
+      "seconds": 5.071,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep 1: MSP assigns QA as a co-managed technician (client Co-managed IT view)"
+    },
+    {
+      "at": "2026-10-26T03:18:17.441Z",
+      "seconds": 7.366,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T03:18:21.017Z",
+      "seconds": 10.942,
+      "actor": "qa",
+      "title": "qa-collaborate-assignment-persists-after-reload",
+      "data": {
+        "assignments": [
+          {
+            "principal_type": "user",
+            "principal_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+            "relationship_role": "technician"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:21.073Z",
+      "seconds": 10.998,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep 2: current Oz time period (Settings > Time Entry > Time Periods)"
+    },
+    {
+      "at": "2026-10-26T03:18:23.170Z",
+      "seconds": 13.095,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings/time-entry"
+    },
+    {
+      "at": "2026-10-26T03:18:27.265Z",
+      "seconds": 17.19,
+      "actor": "qa",
+      "title": "current-time-period-listed-after-reload",
+      "data": {
+        "period": {
+          "period_id": "a9f7bb1e-89a1-4cf4-b59b-ce8c1d6ee53c",
+          "start_date": "2026-10-19",
+          "end_date": "2026-11-02"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:27.310Z",
+      "seconds": 17.235,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Prep 3: White Rabbit hourly contract through the contract wizard"
+    },
+    {
+      "at": "2026-10-26T03:18:29.902Z",
+      "seconds": 19.827,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T03:19:07.118Z",
+      "seconds": 57.043,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T03:19:07.275Z",
+      "seconds": 57.2,
+      "actor": "qa",
+      "title": "white-rabbit-contract-listed-after-reload",
+      "data": {
+        "contract": [
+          {
+            "contract_id": "19921bc5-ab8d-4b33-a4e1-39a4dd1f7464",
+            "contract_name": "CM-REVIEW-20261026-09 hourly contract",
+            "status": "active",
+            "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+            "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8",
+            "is_active": true,
+            "start_date": "2026-10-01"
+          }
+        ]
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 5.071,
+      "title": "Prep 1: MSP assigns QA as a co-managed technician (client Co-managed IT view)",
+      "end": 10.998
+    },
+    {
+      "start": 10.998,
+      "title": "Prep 2: current Oz time period (Settings > Time Entry > Time Periods)",
+      "end": 17.235
+    },
+    {
+      "start": 17.235,
+      "title": "Prep 3: White Rabbit hourly contract through the contract wizard",
+      "end": 54.910000000000004
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Preparation only (native UI). QA staff assignment was absent in the reprovisioned data although the brief lists it; it was added through the documented sponsor flow and is removed at the end of guide 09/main recordings."
+  ],
+  "durationSeconds": 54.96,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

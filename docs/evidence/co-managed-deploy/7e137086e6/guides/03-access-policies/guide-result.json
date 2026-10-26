@@ -1,0 +1,62 @@
+{
+  "guide": "guides/03-access-policies.html",
+  "coverage": "partial",
+  "build": { "dist": ".next-review-final-54e75edf", "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994" },
+  "sections": [
+    { "section": "Before you start (preparation)", "result": "Pass", "evidence": "prep-disposable-board, prep-disposable-tickets, prep-viewer-principal; quick-add-*.png", "note": "Alice created two disposable tickets on the disposable board inside this recording (#000031 'CM-REVIEW-20261026-03 r5 escalated board ticket', #000032 'r5 board-only ticket'). The board 'CM-REVIEW-20261026-03 Access board' and the viewer principal were created through the UI in failed attempt a2 (kept under attempts/) and reused here. The documented viewer noassign@emeraldcity.oz does not exist in the rebuilt Oz tenant, so QA created cm-review-20261026-03-viewer@emeraldcity.oz (Technician role) in Settings > Users." },
+    { "section": "1. Customer controls board and project scope", "result": "Pass", "evidence": "1-proposed-ticket-access-modes, 1-projects-configured-separately, 1-board-view-persists-after-reload, 1-escalation-only-persists, 1-escalation-only-hides-unescalated-board-ticket, 1-technician-assignment-cannot-expand-customer-scope, 1-customer-escalates-through-native-ticket, 1-escalated-ticket-now-available, 1-unescalated-sibling-still-unavailable, 1-board-oversight-and-boards-restored, 1-escalation-prerequisites-restored, 1-board-oversight-reopens-unescalated-ticket; 1-*.png", "note": "Alice searched for the disposable board, added it with View, saved and reloaded; the View level persisted. She then switched to 'Escalated tickets only'. Both disposable tickets were denied to QA even though QA has a technician assignment. Alice escalated #000031 from its native ticket, after which QA could open it while #000032 stayed denied. Back in board oversight, #000032 opened again. Saving escalation-only clears every board grant (the editor empties the board list in that mode). Restoring oversight re-adds them, so the White Rabbit relationship had no board grants for 17 s (04:31:16.9Z to 04:31:33.8Z); Service Desk/Collaborate and the disposable board/View were re-added and verified. Escalation is blocked until the MSP has a client SLA policy and a mapping for the ticket's priority. QA temporarily assigned guide 08's 'CM-REVIEW-20261026-08 final-b MSP policy' to White Rabbit and mapped Critical to P1 (04:31:02Z to 04:31:47Z), then restored both to baseline." },
+    { "section": "2. MSP assigns its own people", "result": "Pass", "evidence": "2-unassigned-principal-denied-by-url, 2-staff-assignments-persist-after-reload, 2-assigned-technician-reads-approved-board, 2-customer-view-scope-limits-technician-to-read-only, 2-customer-private-note-saved, 2-customer-private-note-hidden-from-assigned-technician; 2-*.png", "note": "The unassigned viewer opening the shared ticket URL was denied. In the White Rabbit client's Co-managed IT view, QA saved QA Tester as Collaborate (already present in the baseline) and the viewer as View; both persisted after reload. The board was approved only for View, so the technician could read but got no save bar. Alice's 'Private to' note on #000032 was not visible to the assigned technician." },
+    { "section": "3. Compare a viewer with a technician", "result": "Pass", "evidence": "3-board-collaborate-saved, 3-technician-entry-category-enabled, 3-shared-ticket-has-no-tags, 3-technician-edit-persists-after-reload, 3-shared-category-creation-absent, 3-technician-grid-offers-edit-and-shows-persisted-status, 3-viewer-entry-category-disabled, 3-viewer-entry-status-readable, 3-viewer-entry-no-save-bar, 3-viewer-grid-status-readable-and-locked, 3-viewer-grid-no-save-bar; 3-*.png", "note": "Alice raised the disposable board to Collaborate. In Entry, QA changed status Open to In Progress and saved; the value persisted after reload. No Tags control or category creation was offered. The viewer saw 'In Progress' read-only in both layouts: Category and Status disabled, no save bar. Uncertain observation: in Grid, the first button inside QA's category control reported disabled while Entry offered the picker. The screenshot (3-technician-grid.png) looks enabled and White Rabbit has no categories, so this is not claimed as a defect." },
+    { "section": "4. Revoke the right grant", "result": "Pass", "evidence": "4-oversight-lists-both-before-revocation, 4-board-only-ticket-has-no-explicit-grant, 4-revoked-grant-gone-on-reopen, 4-independent-board-grant-still-allows-read, 4-disposable-board-scope-removed, 4-old-url-denied-after-last-grant-removed, 4-board-only-ticket-denied, 4-captured-attachment-link-denied, 4-fresh-list-excludes-revoked-work, 4-fresh-export-excludes-revoked-work; 4-*.png, 3-attachment-posted.png, oversight-after-revocation.csv", "note": "Before revocation, QA posted a Shared IT teams comment with a file on #000031 and downloaded it (200). Alice revoked #000031 in Individual ticket access with a handoff note; on reopening the page it was gone. QA could still read #000031 through the independent board grant. After Alice removed the disposable board from scope, both old URLs were denied and the captured attachment link returned 404. Fresh Customer oversight showed 0 rows and the fresh CSV export contained neither title. The export used the same search filter, so the CSV was header-only." },
+    { "section": "Field visibility limits", "result": "Not run", "evidence": "-", "note": "No operator-prepared restricted field policy exists in this environment. The guide says to verify such a policy through the shared screen and has no UI for creating one, so shared field redaction was not exercised." },
+    { "section": "Pass criteria and recovery", "result": "Pass", "evidence": "restore-customer-scope-matches-baseline, restore-qa-assignment-unchanged-from-baseline, restore-viewer-assignment-removed; db-receipts.json, restore-final-staff.png", "note": "Final scope: board_scope with Service Desk/Collaborate only, as in the baseline. QA technician is unchanged; the viewer assignment was removed through the MSP UI. Escalation prerequisites (White Rabbit client SLA policy, Critical mapping) are back to none/Not mapped." }
+  ],
+  "actors": [
+    { "name": "Alice Liddell", "email": "alice@whiterabbit.test", "organization": "White Rabbit IT (customer)" },
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (MSP)" },
+    { "name": "CMReview03 Viewer", "email": "cm-review-20261026-03-viewer@emeraldcity.oz", "organization": "Oz (MSP), Technician role, viewer assignment during the run" }
+  ],
+  "steps": [
+    "Alice created two disposable tickets on the disposable board",
+    "Alice inspected Ticket access modes, Boards and Projects; added the disposable board with View; saved and reloaded",
+    "Viewer (unassigned) opened the shared ticket URL and was denied",
+    "QA assigned QA Tester (Collaborate) and the viewer (View) in the client's Co-managed IT view; saved and reloaded",
+    "QA opened the board-only ticket read-only (customer View scope)",
+    "Alice added a 'Private to' note; QA confirmed it is not shown",
+    "QA temporarily assigned the guide-08 SLA policy to White Rabbit and mapped Critical",
+    "Alice switched to Escalated tickets only; QA denied on both tickets; Alice escalated one; QA could open only that one",
+    "Alice restored board oversight and re-added Service Desk and the disposable board; QA restored SLA prerequisites; QA could read the board-only ticket again",
+    "Alice set the disposable board to Collaborate; QA edited status in Entry, reloaded, checked Grid",
+    "Viewer checked Entry and Grid read-only state",
+    "QA posted a shared comment with an attachment on the escalated ticket and downloaded it",
+    "QA listed both tickets in Customer oversight",
+    "Alice revoked the individual ticket grant with a handoff note and reopened the page",
+    "QA still read the ticket via the board grant; Alice removed the disposable board; QA refreshed old URLs, the attachment link, oversight list and CSV export",
+    "QA removed the viewer assignment"
+  ],
+  "outcomes": [
+    "Board scope View persisted after reload (can_collaborate=false)",
+    "Escalation-only: un-escalated tickets denied even to an assigned technician; escalated #000031 available; sibling denied",
+    "Staff assignments technician/viewer persisted after reload; customer View scope made the technician read-only",
+    "Customer-private note absent from the technician's shared view",
+    "Technician status edit (In Progress) persisted after reload; viewer read-only in Entry and Grid",
+    "Explicit grant revoked (grant_revoked_at set, responsibility returned to customer); independent board grant still allowed reads until the board was removed",
+    "After removal: old URLs denied, captured attachment link 404, fresh oversight list and CSV excluded both tickets",
+    "Scope, mode, staff and SLA prerequisites match the run's baseline"
+  ],
+  "limitations": [
+    "Field visibility limits were not exercised: no operator-prepared restricted field policy exists.",
+    "noassign@emeraldcity.oz does not exist in the rebuilt Oz tenant; a disposable viewer principal was created through Settings > Users instead.",
+    "Board and viewer were created through the UI in failed attempt a2, not inside this recording.",
+    "Escalation-only clears all board grants, so the White Rabbit relationship had no board grants for 17 s (04:31:16.9Z to 04:31:33.8Z), which affected concurrent reviewers. An earlier failed attempt (a2) caused a ~2 min gap (03:25:13Z to 03:27Z), and Service Desk was re-added through the customer UI (attempts/restore-service-desk-*).",
+    "Customer escalation needed guide 08's disposable SLA policy temporarily assigned to White Rabbit plus a Critical mapping (45 s); both were restored."
+  ],
+  "missingResources": ["Operator-prepared restricted shared-field policy (for 'Field visibility limits')"],
+  "dataLeftBehind": [
+    "White Rabbit board 'CM-REVIEW-20261026-03 Access board' (no longer in MSP scope)",
+    "Tickets #000003/#000004 (attempt a2/a3), #000029/#000030 (attempt a4), #000031/#000032 (recording); escalated ones were revoked (attempt leftovers via attempts/cleanup-attempt-grants-*). #000004 and #000032 are 'In Progress' and carry customer-private notes; #000031 has a shared comment and attachment",
+    "Oz user cm-review-20261026-03-viewer@emeraldcity.oz (active, Technician role, no co-managed assignment; credential at private dir cm-review-20261026-03-viewer.json)"
+  ],
+  "dbReceipts": ["recording/db-receipts.json", "recording/oversight-after-revocation.csv"],
+  "recordingDir": "03-access-policies/recording"
+}

@@ -1,0 +1,63 @@
+{
+  "baseline": {
+    "ticketId": "3822c94d-35cd-4cb2-8e75-c83da4ecf0b3",
+    "categoryId": "2c7d6720-83a1-412b-9725-c7a31bf37d5a",
+    "baseline": {
+      "title": "CM-REVIEW-20261026-00-a shared walkthrough ticket",
+      "status_id": "5f0cdbde-231a-4ca7-bdff-1b9e391e6eee",
+      "priority_id": "eb97b64f-1bf2-4677-9320-9b4865692b89",
+      "category_id": null,
+      "assigned_to": null,
+      "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958",
+      "status": "Open",
+      "priority": "Low"
+    }
+  },
+  "kansas": {
+    "fields": {
+      "status": true,
+      "priority": true,
+      "board": true,
+      "assignee": true,
+      "due": true,
+      "resolve": true
+    },
+    "stillEnabled": {
+      "ticket-details-duplicate-ticket-button": true,
+      "ticket-details-delete-ticket-button": true,
+      "create-task-from-ticket-button": true,
+      "ticket-details-quick-invoice-button": true,
+      "ticket-details-bento-contact-add": true,
+      "ticket-details-bento-materials-add-btn": true,
+      "ticket-details-bento-documents-section-add-link": true,
+      "ticket-details-bento-external-links-section-add-button": true,
+      "add-asset-button": true,
+      "ticket-details-bento-hero-title-edit": true,
+      "ticket-details-bento-timeline-tile-add-comment-btn": false
+    },
+    "entry": {
+      "save": false,
+      "addComment": false
+    },
+    "ticket": {
+      "title": "Kansas Farms barn Wi-Fi drops",
+      "status_id": "edd6e44e-45b6-496d-b5d3-d14dc79d8086",
+      "updated_at": "2026-10-26T00:11:55.136+00:00"
+    }
+  },
+  "final": {
+    "ticket": {
+      "title": "CM-REVIEW-20261026-00-a shared walkthrough ticket",
+      "status_id": "c71458d9-80e7-4fa3-8326-6c74567630be",
+      "priority_id": "86fbf2bf-cce7-4767-a64b-4945a2f9a2ca",
+      "category_id": "2c7d6720-83a1-412b-9725-c7a31bf37d5a",
+      "assigned_to": "a288a520-c353-44d2-91e0-001f75d236de",
+      "board_id": "76cc335e-e600-4e0c-b964-bad0628c6958"
+    },
+    "mspAssignment": [
+      {
+        "assigned_to": null
+      }
+    ]
+  }
+}

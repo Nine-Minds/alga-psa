@@ -1,0 +1,356 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/time-sheet-approvals",
+  "text": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nApprovals\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\nQT\nTime Sheet Approvals\nShow Approved\nSelect\n\t\nEmployee\n\t\nPeriod\n\t\nStatus\n\t\nActions\n\n\n\t\nQA Tester\n\t\nOct 19, 2026 - Nov 2, 2026\n\t\nSubmitted\n\t\nView\n\n\n\t\nGlinda Good\n\t\nOct 12, 2026 - Oct 19, 2026\n\t\nSubmitted\n\t\nView\nDialog Content\nTime Sheet Approval for QA Tester\nSubmitted\nPeriod\nOct 19, 2026 – Nov 2, 2026\nSubmitted\nSun, Oct 25, 2026\nSummary\n\n1h 56m\n\nTotal\n\n1h 56m\n\nBillable\n\n0m\n\nNon-Billable\n\nBreakdown by Work Item Type\nCo Managed\n1h 56m\nDaily Breakdown\nMon, Oct 26\n1h 56m\nDetailed Time Entries\nDATE\tWORK ITEM\tSTART\tEND\tBILLABLE\tSTATUS\t\nOct 26\tCM-REVIEW-20261026-09-b printer spooler time ticket (co_managed)\t4:00 AM\t4:15 AM\t15m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-c toner audit task (co_managed)\t4:00 AM\t4:06 AM\t6m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-c printer spooler time ticket (co_managed)\t4:00 AM\t4:15 AM\t15m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-a printer spooler time ticket (co_managed)\t4:00 AM\t4:15 AM\t15m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-06 a6 Task A (co_managed)\t4:00 AM\t4:12 AM\t12m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-d toner audit task (co_managed)\t4:00 AM\t4:06 AM\t6m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-b toner audit task (co_managed)\t4:00 AM\t4:06 AM\t6m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-e toner audit task (co_managed)\t4:00 AM\t4:06 AM\t6m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-d printer spooler time ticket (co_managed)\t4:00 AM\t4:15 AM\t15m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-e printer spooler time ticket (co_managed)\t4:00 AM\t4:15 AM\t15m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-e printer spooler time ticket (co_managed)\t11:40 PM\t11:41 PM\t1m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-d printer spooler time ticket (co_managed)\t11:35 PM\t11:36 PM\t1m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-c printer spooler time ticket (co_managed)\t11:31 PM\t11:32 PM\t1m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-b printer spooler time ticket (co_managed)\t11:27 PM\t11:28 PM\t1m\t\n\t\n\nOct 26\tCM-REVIEW-20261026-09-a printer spooler time ticket (co_managed)\t11:23 PM\t11:24 PM\t1m\t\n\t\nComments\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:40 PM\n\nApproval reversed: Approval reversed by manager\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:36 PM\n\nTime sheet approved\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:34 PM\n\nApproval reversed: Approval reversed by manager\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:31 PM\n\nTime sheet approved\n\nQA Tester\n\nApprover\n\nOct 25, 2026, 11:30 PM\n\nChanges requested for time sheet\n\nAdd Comment\nApprove\nRequest Changes",
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Tickets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Projects",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Co-managed IT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Documents",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Assets",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Time Management",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Workflows",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "System Monitoring",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "Settings",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-approved-btn",
+      "text": "Show Approved",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "timesheet-select-b1adac9e-430c-4c28-abe8-6389bd9a7e70",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-timesheet-b1adac9e-430c-4c28-abe8-6389bd9a7e70-btn",
+      "text": "View",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "timesheet-select-5b0f9eb1-dfc0-4bd5-9ceb-825a2aee6e6a",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "view-timesheet-5b0f9eb1-dfc0-4bd5-9ceb-825a2aee6e6a-btn",
+      "text": "View",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "drawer-close-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-705281b3-006a-4c64-8250-ae707f80254a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-715aaae6-f601-410c-9503-53170b1ca849",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-802d1a8a-25e6-49a6-91c6-24052843e843",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-87568b45-b19d-48ae-bbf6-7762a07394d5",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-ab96527a-ebcd-4db3-b402-25f1adc2390a",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-c8a7659c-88de-4c61-a6ea-58e440d02175",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-d52924b9-b13e-4432-98c9-749ddef8870d",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-2888e49a-4670-416d-8536-0720b483204f",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "toggle-details-f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "add-comment-button",
+      "text": "Add Comment",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "timesheet-approve-btn",
+      "text": "Approve",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "timesheet-request-changes-btn",
+      "text": "Request Changes",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

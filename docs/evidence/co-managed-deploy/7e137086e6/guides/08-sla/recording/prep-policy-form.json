@@ -1,0 +1,342 @@
+{
+  "url": "http://feature-co-managed-it.localhost:23374/msp/settings/sla?tab=policies",
+  "text": "AlgaPSA\nBack to Main\n\nORGANIZATION & ACCESS\n\nGeneral\nUsers\nTeams\nLanguage\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\nProjects\nAssets\nInteractions\nOpportunities\n\nTIME & BILLING\n\nTime Entry\nBilling\n\nCOMMUNICATION\n\nNotifications\nEmail\n\nDATA & INTEGRATION\n\nSecrets\nImport/Export\nIntegrations\nExtensions\n\nEXPERIMENTAL\n\nExperimental Features\nv1.6.12\nHome\nSLA\nfa7f912f-6b62-463e-85cc-ffedab47ac44\nQuick Create\n2\nQT\nSLA Settings\n\nConfigure service level agreement policies, business hours, and pause rules\n\nDashboard\nPolicies\nBusiness Hours\nPause Rules\nEscalation\nBack to Policies\nCreate SLA Policy\nBasic Information\nPolicy Name*\nSet as default policy\nDescription\nBusiness Hours Schedule\nNo business hours (24/7)\nAssign to Boards\nSelect...\nAssign to Clients\n1 selected\nResponse and Resolution Targets\n\nSet the maximum time allowed to first respond to and fully resolve tickets for each priority level.\n\nWhimsical Wish\nNot configured\nCurious Conundrum\nNot configured\nEnchanted Emergency\nNot configured\nP1 - Critical\nResponse: 30m\nResolution: 1h\n24/7 (ignore business hours)\nResponse Time\n30 minutes\nResolution Time\n1 hour\nEscalation Thresholds (% of time elapsed)\nLevel 1 (%)\nLevel 2 (%)\nLevel 3 (%)\nP2 - High\nResponse: 4m\nResolution: 4h\n24/7 (ignore business hours)\nResponse Time\nminutes\nUse preset\nResolution Time\n4 hours\nEscalation Thresholds (% of time elapsed)\nLevel 1 (%)\nLevel 2 (%)\nLevel 3 (%)\nP3 - Medium\nNot configured\nP4 - Low\nNot configured\nP5 - Planning\nNot configured\nNotification Thresholds\n\nConfigure when and how to notify team members as SLA deadlines approach or are breached.\n\nAdd Threshold\n50% warning\nAssignee\nvia In-App\n75% warning\nAssignee, Board Mgr\nvia In-App\n90% warning\nAssignee, Board Mgr, Escalation Mgr\nvia In-App, Email\n100% breach\nAssignee, Board Mgr, Escalation Mgr\nvia In-App, Email\nCancel\nCreate Policy",
+  "inputs": [
+    {
+      "tag": "BUTTON",
+      "id": "settings-back-to-main-button",
+      "text": "Back to Main",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "radix-_r_6_",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sidebar-toggle-button",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "global-quick-create-trigger",
+      "text": "Quick Create",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "header-resources-menu-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "theme-toggle",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "notification-bell",
+      "text": "2",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "job-activity-trigger",
+      "text": "",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "user-menu-trigger",
+      "text": "QT",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-0",
+      "text": "Dashboard",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-1",
+      "text": "Policies",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-2",
+      "text": "Business Hours",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-3",
+      "text": "Pause Rules",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-settings-trigger-4",
+      "text": "Escalation",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "back-to-policies-list",
+      "text": "Back to Policies",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-policy-name",
+      "text": "",
+      "value": "CM-REVIEW-20261026-08 final-b MSP policy",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-policy-is-default",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-business-hours",
+      "text": "No business hours (24/7)",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-boards",
+      "text": "Select...",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-clients",
+      "text": "1 selected",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-08ea9601-ee48-4cd6-a91e-513992e0b379",
+      "text": "Whimsical WishNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-a2a72496-cfcb-40a7-b1d2-fa087a68a374",
+      "text": "Curious ConundrumNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-119eae1f-a69c-4c65-b046-2550f6a9ef7d",
+      "text": "Enchanted EmergencyNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "P1 - CriticalResponse: 30mResolution: 1h",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-24x7-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-response-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "30 minutes",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-resolution-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "1 hour",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-1-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "",
+      "value": "70",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-2-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "",
+      "value": "90",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-3-bfc90e45-843b-4797-b7bf-6b1a048652fb",
+      "text": "",
+      "value": "110",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "P2 - HighResponse: 4mResolution: 4h",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-24x7-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "",
+      "value": "on",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-response-custom-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "",
+      "value": "4",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-response-preset-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "Use preset",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-resolution-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "4 hours",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-1-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "",
+      "value": "70",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-2-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "",
+      "value": "90",
+      "disabled": false
+    },
+    {
+      "tag": "INPUT",
+      "id": "sla-target-escalation-3-8635149a-31a7-4a04-b541-71d9fe413a3d",
+      "text": "",
+      "value": "110",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-98047b82-9b94-47e4-be96-e75b860b89a7",
+      "text": "P3 - MediumNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-6ead1cb1-ff73-46c0-8e1a-7aa2257aec98",
+      "text": "P4 - LowNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-target-trigger-8e96246a-60f8-4435-8e7e-898b34b1f902",
+      "text": "P5 - PlanningNot configured",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-add-threshold",
+      "text": "Add Threshold",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-threshold-trigger-0",
+      "text": "50% warningAssigneevia In-App",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-threshold-trigger-1",
+      "text": "75% warningAssignee, Board Mgrvia In-App",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-threshold-trigger-2",
+      "text": "90% warningAssignee, Board Mgr, Escalation Mgrvia In-App, Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-threshold-trigger-3",
+      "text": "100% breachAssignee, Board Mgr, Escalation Mgrvia In-App, Email",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-cancel",
+      "text": "Cancel",
+      "value": "",
+      "disabled": false
+    },
+    {
+      "tag": "BUTTON",
+      "id": "sla-policy-save",
+      "text": "Create Policy",
+      "value": "",
+      "disabled": false
+    }
+  ]
+}

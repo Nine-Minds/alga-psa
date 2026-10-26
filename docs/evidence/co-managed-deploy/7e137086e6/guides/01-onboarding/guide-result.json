@@ -1,0 +1,56 @@
+{
+  "guide": "guides/01-onboarding.html",
+  "coverage": "partial",
+  "build": { "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470", "buildId": "build-1792983401994", "dist": ".next-review-final-54e75edf" },
+  "sections": [
+    { "section": "1. Create one workspace for one client", "result": "Pass", "evidence": "one-workspace-for-this-client-awaiting-acceptance, seats-reserved-once, msp-has-no-live-relationship-before-acceptance; 01-accept-setup-form.png, 01-1-awaiting-acceptance.png", "note": "Client 'CM-REVIEW-20261026-01 Accept-7' was created through Clients > New. Enable co-managed IT was filled in on the client's Co-managed IT tab: workspace 'CM-REVIEW-20261026-01 Accept-7 IT', 1 seat, Oversight of the initial service desk board, General Support queue. The UI briefly showed 'Queued', then 'Awaiting customer acceptance' after reload. Exactly one operation and one allocation exist for this customer; the allocation was reserved and the relationship not active until acceptance. The intermediate 'Preparing workspace' label was not caught in the UI." },
+    { "section": "2. Require customer approval", "result": "Pass", "evidence": "invited-admin-signed-into-the-exact-customer-workspace, review-shows-sponsor-scope-and-destination-queue, deep-link-to-native-work-still-shows-acceptance-before-approval, customer-reaches-own-workspace-after-acceptance-with-no-projects-or-delegation, msp-client-view-shows-active-and-no-cancel-setup; 01-2-*.png, invitation-mail.json", "note": "The invitation was opened from the SMTP sink. The administrator set a password on /auth/team/setup and was signed into the new customer tenant. The review screen showed the sponsor (Oz), 'Service Desk — View and collaborate', the General Support escalation queue, and 'no shared projects or delegated workspace administration'. A deep link to /msp/tickets still showed the review screen before acceptance. After 'Accept and activate workspace' and the first-run setup, the Ticketing Dashboard survived a reload. The relationship became active with 1 board scope, 0 project scopes and 0 delegated grants. The MSP client view showed Active, offered no Cancel setup, and the allocation became active." },
+    { "section": "3. Recover the existing setup", "result": "Pass", "evidence": "resend-keeps-one-workspace-and-one-allocation, lost-response-reports-unconfirmed-result-and-keeps-form, retry-recovers-the-same-operation-one-workspace-one-allocation; 01-3-after-resend.png, 01-3-lost-response-retry.png", "note": "Resend administrator invitation on the pending setup delivered a second mail to the sink with the same operation, tenant and single allocation. For the second setup the provision response was dropped in the browser after the server executed it. The form showed 'The request result could not be confirmed. Retry these same details to recover it.' and kept the details. Resubmitting recovered the same operation (one operation, one allocation). Doc/UI mismatch: the guide says to use 'Retry', but after a lost response the button still reads 'Create workspace and invite administrator'. Worker-failure recovery, expired invitation and invitation delivery failure were not induced." },
+    { "section": "4. Cancel only an unclaimed workspace", "result": "Pass", "evidence": "cancel-fixture-holds-one-reserved-seat, cancel-dialog-explains-deletion, cancel-deletes-unclaimed-workspace-and-releases-seat-once, accepted-workspace-unaffected-by-cancellation; 01-4-*.png", "note": "On 'CM-REVIEW-20261026-01 Cancel-7' (Escalated tickets only, never accepted): Cancel setup opened 'Cancel workspace setup?', then Delete workspace and cancel. DB states observed: cleanup_requested with the seat still reserved, then cancelled with the seat released. The customer tenant row is gone and the allocation was released once. The accepted Accept-7 workspace stayed Active. Refusal for a claimed workspace was checked only as the absence of Cancel setup on the accepted client." }
+  ],
+  "actors": [
+    { "name": "QA Tester", "email": "qa@emeraldcity.oz", "organization": "Oz (Emerald City) MSP" },
+    { "name": "Review Accept Admin", "email": "cm-review-20261026-01-accept-7@cmreview.test", "organization": "CM-REVIEW-20261026-01 Accept-7 IT (new customer workspace)" }
+  ],
+  "steps": [
+    "Preparation: the pool was short (other agents changed allocations concurrently), so 6 -> 7 seats were added through the pool editor (simulator)",
+    "QA created client CM-REVIEW-20261026-01 Accept-7 and opened its Co-managed IT tab",
+    "Filled Enable co-managed IT and selected Create workspace and invite administrator; waited for Awaiting customer acceptance; reloaded",
+    "Used Resend administrator invitation; confirmed a second invitation mail in the SMTP sink",
+    "Opened the latest invitation link as the new administrator, set a password, read Review your co-management relationship",
+    "Tried /msp/tickets before acceptance (review screen still shown), then Accept and activate workspace, completed first-run setup, reloaded the Ticketing Dashboard",
+    "QA reopened the Accept-7 client: Active, no Cancel setup",
+    "QA created client CM-REVIEW-20261026-01 Cancel-7, filled setup (Escalated tickets only); the provision response was dropped in the browser; resubmitted the same details",
+    "Cancel setup > Delete workspace and cancel; waited for cleanup; reloaded; rechecked Accept-7 and the overview"
+  ],
+  "outcomes": [
+    "Accepted fixture retained for guide 10: client 42b27ac2-5221-446a-ad94-f781c3398493, customer tenant 0a3c039e-c4c7-4108-8301-bfe5232a829a, relationship e24c064b-1b13-471d-8f24-3441f26d9b0e, operation 54fb5726-1a14-45a2-8c72-0c5780e65a88, allocation ad0500f1 (1 seat, active). Credentials are in cm-review-20261026-01-accept-7-admin.json (mode 600).",
+    "Cancel-7: operation e7127cab cancelled, allocation dbd520b8 released, customer tenant 455cd911 deleted.",
+    "Pool after the run: 7 purchased (simulator)."
+  ],
+  "limitations": [
+    "QA is limited to 5 concurrent sessions (MAX_SESSIONS=5, oldest revoked first) and other agents sign in as QA 4-9 times a minute. A QA session lived about 35-70 s, so the recording signs QA in again through the form when needed (qa-session-refresh steps). Four earlier attempts failed on this or on concurrent allocation changes.",
+    "The SMTP sink is the configured simulator, not a real mailbox.",
+    "The lost response was induced with Playwright route interception (the server executed the request and the browser response was aborted).",
+    "Worker failure, expired-invitation resend and invitation delivery failure were not induced.",
+    "Refusal to cancel a claimed workspace was not probed directly.",
+    "co_managed_provisioning_operations.state stays 'pending_acceptance' after acceptance (also true for White Rabbit), while the relationship and UI show Active. Recorded as an observation."
+  ],
+  "missingResources": [],
+  "dbReceipts": [ "onboarding-recording/db-before.json", "onboarding-recording/fixtures.json", "onboarding-recording/invitation-mail.json", "onboarding-recording/db-after.json" ],
+  "recordingDir": "onboarding-recording",
+  "attempts": [
+    "attempts/onboarding-attempt1-cancel-dialog-selector (left accepted 'CM-REVIEW-20261026-01 Accept' active)",
+    "attempts/onboarding-attempt2-session-signed-out (Accept-2 later cancelled)",
+    "attempts/onboarding-attempt3-alert-selector (left accepted Accept-3 active)",
+    "attempts/onboarding-attempt4-qa-session-max_sessions-revoked (left accepted Accept-4 active)",
+    "attempts/onboarding-attempt5-concurrent-allocation-change (Accept-5 later cancelled)",
+    "attempts/onboarding-attempt6-resend-session-revoked (Accept-6 later cancelled)",
+    "attempts/onboarding-attempt*-cleanup-cancel and onboarding-capacity-prep-add-seat* (UI cleanup cancels and simulator seat additions between attempts)"
+  ],
+  "dataLeftBehind": [
+    "Active disposable relationships from failed attempts, each holding 1 seat: 'CM-REVIEW-20261026-01 Accept IT', 'Accept-3 IT', 'Accept-4 IT' (credentials cm-review-20261026-01-accept{,-3,-4}-admin.json)",
+    "Cancelled setups and their clients: Cancel, Accept-2, Cancel-3, Cancel-4, Accept-5, Accept-6, Cancel-7",
+    "Simulator pool raised from 4 to 7 through the pool editor"
+  ]
+}
