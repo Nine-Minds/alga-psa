@@ -259,6 +259,24 @@ export interface IBillingCharge extends TenantEntity {
    * instead of duplicating on regeneration.
    */
   contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+  /**
+   * Set when the charge's source evidence (e.g. approved time) is dated inside
+   * a service period an earlier invoice already closed. The charge bills on
+   * this invoice and reports the period the work belongs to; it never claims
+   * this invoice's recurring service period and never reopens the earlier one.
+   */
+  lateForServicePeriod?: ILateServicePeriodSource | null;
+}
+
+export interface ILateServicePeriodSource {
+  /** Inclusive start of the closed service period the evidence is dated in. */
+  servicePeriodStart: ISO8601String;
+  /** Inclusive end of that period. */
+  servicePeriodEnd: ISO8601String;
+  /** The closed recurring service period record, when one is materialized. */
+  servicePeriodRecordId: string | null;
+  /** The invoice that closed that period, when known. */
+  closedByInvoiceId: string | null;
 }
 
 export interface IContractChangeAdjustmentSource {

@@ -5,6 +5,7 @@ import type {
   IAdjustment,
   IBillingCharge,
   IBillingPeriod,
+  ILateServicePeriodSource,
 } from "@alga-psa/types";
 import type { DiscountComputeCandidate } from "../compute";
 
@@ -164,6 +165,8 @@ export type ResolvedContractBillingChargeFacts =
         phaseRateOverride?: TimeBasedPhaseRateOverride | null;
         projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
+        /** Set when the activity is dated in a service period an earlier invoice already closed. */
+        latePeriod?: ILateServicePeriodSource | null;
         /** Retained work evidence for the immutable invoice receipt. */
         workItem?: {
           id?: string | null;

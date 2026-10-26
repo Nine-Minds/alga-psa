@@ -420,7 +420,22 @@ function getRecurringChargeFamilyForInvoiceLinkage(
   }
 }
 
+/**
+ * Line description for a time charge: overtime segments say so, and late time
+ * names the closed service period it belongs to. Shared by preview and persist.
+ */
+export function describeTimeCharge(
+  charge: Pick<ITimeBasedCharge, 'serviceName' | 'timeSegment' | 'lateForServicePeriod'>,
+): string {
+  const base = charge.timeSegment === 'overtime' ? `${charge.serviceName} (overtime)` : charge.serviceName;
+  const late = charge.lateForServicePeriod;
+  return late ? `${base} (late time, service period ${late.servicePeriodStart} – ${late.servicePeriodEnd})` : base;
+}
+
 function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  // Late evidence belongs to a period an earlier invoice already closed; this
+  // invoice's own period is claimed by its own charges or the chargeless sweep.
+  if (charge.lateForServicePeriod) return false;
   return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
@@ -1512,10 +1527,10 @@ export async function persistInvoiceCharges(
           ? `License: ${charge.serviceName}`
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+            : charge.type === 'time'
               // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
-              ? `${charge.serviceName} (overtime)`
+              ? describeTimeCharge(charge as ITimeBasedCharge)
               : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),

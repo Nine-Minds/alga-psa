@@ -212,6 +212,7 @@ export function normalizeResolvedContractCharge(input: {
           phaseRateOverride: charge.inputs.resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id),
           projectChargeConfig: entry.project_id ? charge.inputs.getProjectChargeConfig?.(entry.project_id) : undefined,
           billingProfileId: entry.work_item_billing_profile_id,
+          ...(entry.late_for_service_period ? { latePeriod: entry.late_for_service_period } : {}),
           workItem: {
             id: entry.work_item_id,
             type: entry.work_item_type,
@@ -495,6 +496,7 @@ export function calculateNormalizedContractCharge(
             ticket_title: entry.workItem?.ticketTitle,
             ticket_description: entry.workItem?.ticketDescription,
             project_task_name: entry.workItem?.projectTaskName,
+            ...(entry.latePeriod ? { late_for_service_period: entry.latePeriod } : {}),
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,

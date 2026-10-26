@@ -329,6 +329,33 @@ describe("computeTimeBasedCharges", () => {
     expect(result.charges[0].tax_amount).toBe(3000);
   });
 
+  it("bills late time under the same terms but reports its closed service period", async () => {
+    const late = {
+      servicePeriodStart: "2026-07-01",
+      servicePeriodEnd: "2026-07-31",
+      servicePeriodRecordId: "rsp-july",
+      closedByInvoiceId: "inv-july",
+    };
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        timeEntries: [
+          entry({ entry_id: "late", start_time: new Date("2026-07-20T10:00:00Z"), late_for_service_period: late }),
+          entry({ entry_id: "current" }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    const [lateCharge, currentCharge] = result.charges;
+    expect(lateCharge).toMatchObject({ entryId: "late", total: 30000, rate: 15000, servicePeriodStart: "2026-07-01", servicePeriodEnd: "2026-07-31", lateForServicePeriod: late });
+    // The late charge keeps the current record id for the document pipeline;
+    // persistence refuses to claim it from a late charge.
+    expect(lateCharge.servicePeriodRecordId).toBe(currentCharge.servicePeriodRecordId);
+    expect(currentCharge.lateForServicePeriod).toBeUndefined();
+    expect(currentCharge.servicePeriodStart).not.toBe("2026-07-01");
+    expect(result.explanations[0].note).toContain("2026-07-01 – 2026-07-31");
+  });
+
   it("applies minimum billable time and round-up increments", async () => {
     const config = {
       config: {

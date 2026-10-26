@@ -145,6 +145,76 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
     expect(await f.sponsor.table('invoice_time_entries')).toHaveLength(1);
   }));
 
+  it('shared invoice journey bills late-approved MSP effort in an invoiced period once on the next invoice without reopening history', async () => withBilling(async f => {
+    const b = f.billing, onTime = await f.save();
+    await b.approve(onTime.entry_id);
+    const { createClientContractFromWizard } = await import('../../../../../../packages/billing/src/actions/contractWizardActions');
+    const { runWithApiKeyUser } = await import('../../../../../../packages/auth/src/lib/apiKeyUserContext');
+    const created = await runWithApiKeyUser(f.user, () => createClientContractFromWizard({ contract_name: 'Co-managed late time contract', client_id: b.clientId,
+      start_date: '2026-08-01', billing_timing: 'advance', currency_code: 'USD', billing_frequency: 'monthly', enable_proration: false,
+      fixed_services: [], hourly_services: [{ service_id: f.serviceId, hourly_rate: 12000 }], usage_services: [], po_required: false }));
+    expect(created, JSON.stringify(created)).toHaveProperty('contract_line_id');
+    const lineId = (created as any).contract_line_id;
+    await f.sponsor.table('contract_lines').where('contract_line_id', lineId).update({ billing_profile_id: b.profileId });
+    const { syncRecurringServicePeriodsForContractLine } = await import('../../../../../../packages/billing/src/actions/recurringServicePeriodSync');
+    await b.db.transaction((trx: Knex.Transaction) => syncRecurringServicePeriodsForContractLine(trx, {
+      tenant: b.tenant, contractLineId: lineId, sourceRunPrefix: 'co-managed-late-time' }));
+    const live = () => f.sponsor.table('recurring_service_periods').where('obligation_id', lineId).whereNotIn('lifecycle_state', ['archived', 'superseded']);
+    const closed = await live().where('service_period_start', '<=', '2026-09-08').where('service_period_end', '>', '2026-09-08').orderBy('revision', 'desc').first();
+    const next = await live().where('service_period_start', closed.service_period_end).orderBy('revision', 'desc').first();
+    expect(next).toBeDefined();
+    const { buildClientCadenceDueSelectionInput } = await import('../../../../../../shared/billingClients/recurringRunExecutionIdentity');
+    const { seedBillingCycle } = await import('../../../../../../server/test-utils/billingProfileTestHelpers');
+    const day = (date: Date | string) => new Date(date).toISOString().slice(0, 10);
+    const selectionFor = async (period: any, cycleId: string) => {
+      const selection = buildClientCadenceDueSelectionInput({ clientId: b.clientId, scheduleKey: period.schedule_key,
+        periodKey: period.period_key, windowStart: day(period.invoice_window_start), windowEnd: day(period.invoice_window_end) });
+      return () => b.generation.generateInvoiceForSelectionInputs([selection], {}, { billingCycleId: cycleId });
+    };
+    await f.sponsor.table('client_billing_cycles').where('billing_cycle_id', b.cycleId).update({ effective_date: day(closed.invoice_window_start),
+      period_start_date: day(closed.invoice_window_start), period_end_date: day(closed.invoice_window_end) });
+    const nextCycleId = randomUUID();
+    await seedBillingCycle(b.db, b.tenant, { tenant: b.tenant, billing_cycle_id: nextCycleId, client_id: b.clientId, billing_profile_id: b.profileId,
+      billing_cycle: 'monthly', effective_date: day(next.invoice_window_start), period_start_date: day(next.invoice_window_start), period_end_date: day(next.invoice_window_end) });
+    const generateClosed = await selectionFor(closed, b.cycleId), generateNext = await selectionFor(next, nextCycleId);
+
+    const first = await generateClosed();
+    expect(first, JSON.stringify(first)).toHaveProperty('invoice_id');
+    const snapshot = async (invoiceId: string) => ({
+      invoice: await f.sponsor.table('invoices').where('invoice_id', invoiceId).first('subtotal', 'total_amount', 'status'),
+      charges: await f.sponsor.table('invoice_charges').where('invoice_id', invoiceId).orderBy('item_id').select('item_id', 'description', 'net_amount'),
+      links: (await f.sponsor.table('invoice_time_entries').where('invoice_id', invoiceId).select('entry_id')).map((row: any) => row.entry_id).sort(),
+    });
+    const closedBefore = await snapshot(first.invoice_id);
+    expect(Number(closedBefore.invoice.subtotal)).toBe(12000);
+    expect(closedBefore.links).toEqual([onTime.entry_id]);
+
+    // More MSP effort on the same shared ticket, dated inside the invoiced period, approved afterwards.
+    const late = await f.save({ entry_id: '', start_time: '2026-09-08T10:00:00Z', end_time: '2026-09-08T10:30:00Z', billable_duration: 30 });
+    await b.approve(late.entry_id);
+    await Promise.allSettled([generateClosed()]);
+    expect(await snapshot(first.invoice_id)).toEqual(closedBefore);
+
+    const results = await Promise.allSettled([generateNext(), generateNext()]);
+    const nextInvoices = await f.sponsor.table('invoices').whereNot('invoice_id', first.invoice_id);
+    expect(nextInvoices, JSON.stringify(results)).toHaveLength(1);
+    const after = await snapshot(nextInvoices[0].invoice_id);
+    expect(after.links).toEqual([late.entry_id]);
+    expect(Number(after.invoice.subtotal)).toBe(6000);
+    expect(after.charges[0].description).toContain(`service period ${day(closed.service_period_start)}`);
+    const link = await f.sponsor.table('invoice_time_entries').where('entry_id', late.entry_id).first();
+    expect(link.work_item_snapshot).toMatchObject({ sourceTenant: f.resource.tenant, relationshipId: f.resource.relationshipId,
+      workReferenceId: f.referenceId, workItemId: f.resource.id, billedMinutes: 30, netAmount: 6000 });
+    expect(await f.sponsor.table('time_entries').where('entry_id', late.entry_id).first()).toMatchObject({ invoiced: true, work_item_type: 'co_managed' });
+    expect(await live().where('record_id', closed.record_id).first()).toMatchObject({ invoice_id: first.invoice_id });
+
+    await Promise.allSettled([generateNext(), generateClosed()]);
+    expect(await snapshot(first.invoice_id)).toEqual(closedBefore);
+    expect(await snapshot(nextInvoices[0].invoice_id)).toEqual(after);
+    expect(await f.sponsor.table('invoices')).toHaveLength(2);
+    expect(await f.sponsor.table('invoice_time_entries').where('entry_id', late.entry_id)).toHaveLength(1);
+  }));
+
   it('shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion', async () => withBilling(async f => {
     const b = f.billing, shared = await f.save();
     await b.approve(shared.entry_id);

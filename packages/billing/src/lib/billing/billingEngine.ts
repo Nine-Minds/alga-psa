@@ -19,6 +19,7 @@ import {
   IBillingResult,
   IBillingCharge,
   IClientContractLine,
+  ILateServicePeriodSource,
   IBucketUsage,
   IBucketCharge,
   IDiscount,
@@ -404,6 +405,24 @@ const isFixedLineUnpriceable = (
     }) === null
   );
 };
+
+interface ClosedServiceWindow {
+  startInclusive: ISO8601String;
+  endExclusive: ISO8601String;
+  source: ILateServicePeriodSource;
+}
+
+/** The closed window a late entry's start falls in, if any (UTC, matching the SQL bound). */
+function findClosedServiceWindow(
+  windows: ClosedServiceWindow[],
+  startTime: Date | string,
+): ClosedServiceWindow | undefined {
+  if (windows.length === 0) return undefined;
+  const instant = (startTime instanceof Date ? startTime : new Date(startTime)).toISOString();
+  return windows.find(
+    (window) => instant >= window.startInclusive && instant < window.endExclusive,
+  );
+}
 
 export class BillingEngine {
   private knex: Knex;
@@ -5287,6 +5306,18 @@ export class BillingEngine {
         servicePeriodEndExclusive,
       });
 
+    // Approved time dated inside a service period an earlier invoice already
+    // closed can never join that invoice (history is immutable) and falls
+    // outside every later window, so it would never bill. It carries forward
+    // onto this line's next invoice instead, exactly once via the invoiced flag.
+    const closedServiceWindows = projectTarget
+      ? []
+      : await this.loadClosedServiceWindowsBefore(
+          clientId,
+          clientContractLine,
+          servicePeriodStartExclusive,
+        );
+
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
     db.tenantJoin(
@@ -5357,9 +5388,18 @@ export class BillingEngine {
     if (projectTarget) {
       query.where("billing_work.project_id", projectTarget.projectId);
     } else {
-      query
-        .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
-        .where("time_entries.end_time", "<", servicePeriodEndExclusive);
+      query.where(function (this: Knex.QueryBuilder) {
+        this.where(function (this: Knex.QueryBuilder) {
+          this.where("time_entries.start_time", ">=", servicePeriodStartExclusive)
+            .where("time_entries.end_time", "<", servicePeriodEndExclusive);
+        });
+        for (const window of closedServiceWindows) {
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.where("time_entries.start_time", ">=", window.startInclusive)
+              .where("time_entries.start_time", "<", window.endExclusive);
+          });
+        }
+      });
     }
 
     const fixedPriceProjectIds =
@@ -5385,6 +5425,12 @@ export class BillingEngine {
     );
 
     const timeEntries = await query;
+    for (const entry of timeEntries) {
+      const window = findClosedServiceWindow(closedServiceWindows, entry.start_time);
+      if (window) {
+        entry.late_for_service_period = window.source;
+      }
+    }
 
     const obligation = {
       kind: "hourly",
@@ -5446,6 +5492,119 @@ export class BillingEngine {
       charge: obligation,
     });
     return;
+  }
+
+  /**
+   * Service windows of one contract line that an invoice has already closed
+   * and that begin before `before` (the current window's start), clipped to
+   * it so they never overlap the current window. Materialized lines read their
+   * claimed recurring service periods; a line with no materialized periods
+   * falls back to the client's invoiced billing cycles, resolved through the
+   * same timing rules that billed them.
+   */
+  private async loadClosedServiceWindowsBefore(
+    clientId: string,
+    clientContractLine: IClientContractLine,
+    before: ISO8601String,
+  ): Promise<ClosedServiceWindow[]> {
+    const db = tenantDb(this.knex, this.tenant!);
+    const lineIds = [
+      ...new Set(
+        [
+          clientContractLine.client_contract_line_id,
+          clientContractLine.contract_line_id,
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const toDay = (value: unknown) => toISODate(toPlainDate(value as string));
+    const windows: ClosedServiceWindow[] = [];
+    const push = (
+      start: ISO8601String,
+      endExclusive: ISO8601String,
+      recordId: string | null,
+      invoiceId: string | null,
+    ) => {
+      const clippedEnd = endExclusive < before ? endExclusive : before;
+      if (start >= clippedEnd) return;
+      windows.push({
+        startInclusive: start,
+        endExclusive: clippedEnd,
+        source: {
+          servicePeriodStart: start,
+          servicePeriodEnd: toISODate(toPlainDate(endExclusive).subtract({ days: 1 })),
+          servicePeriodRecordId: recordId,
+          closedByInvoiceId: invoiceId,
+        },
+      });
+    };
+
+    const materialized = await db
+      .table("recurring_service_periods")
+      .whereIn("obligation_id", lineIds)
+      .whereNotIn("lifecycle_state", ["superseded", "archived"])
+      .select(
+        "record_id",
+        "invoice_id",
+        "service_period_start",
+        "service_period_end",
+        "activity_window_start",
+        "activity_window_end",
+      );
+    if (materialized.length > 0) {
+      for (const row of materialized) {
+        if (!row.invoice_id) continue;
+        push(
+          toDay(row.activity_window_start ?? row.service_period_start),
+          toDay(row.activity_window_end ?? row.service_period_end),
+          row.record_id,
+          row.invoice_id,
+        );
+      }
+      return windows;
+    }
+
+    const invoicedCycles = await db
+      .table("invoices")
+      .where({ client_id: clientId })
+      .whereNotNull("billing_cycle_id")
+      .select("invoice_id", "billing_cycle_id");
+    if (invoicedCycles.length === 0) return windows;
+    const invoiceByCycle = new Map<string, string>(
+      invoicedCycles.map((row: any) => [row.billing_cycle_id, row.invoice_id]),
+    );
+    const cycles = await db
+      .table("client_billing_cycles")
+      .where({ client_id: clientId })
+      .whereIn("billing_cycle_id", [...invoiceByCycle.keys()])
+      .whereNotNull("period_start_date")
+      .whereNotNull("period_end_date")
+      .select("billing_cycle_id", "billing_cycle", "period_start_date", "period_end_date");
+    const lineStart = clientContractLine.start_date
+      ? toDay(clientContractLine.start_date)
+      : null;
+    for (const cycle of cycles) {
+      const timing = this.resolveServiceDrivenChargeTiming(
+        {
+          tenant: this.tenant!,
+          startDate: toDay(cycle.period_start_date),
+          endDate: toDay(cycle.period_end_date),
+        },
+        clientContractLine,
+        cycle.billing_cycle,
+      );
+      if (!timing) continue;
+      const start =
+        lineStart && lineStart > timing.servicePeriodStartExclusive
+          ? lineStart
+          : timing.servicePeriodStartExclusive;
+      push(
+        start,
+        timing.servicePeriodEndExclusive,
+        null,
+        invoiceByCycle.get(cycle.billing_cycle_id) ?? null,
+      );
+    }
+    return windows;
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
