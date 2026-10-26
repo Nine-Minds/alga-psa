@@ -1,0 +1,369 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Service Requests
+Surveys
+Projects
+Clients
+Co-managed IT
+Opportunities
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Inventory
+Reports
+Time Management
+Billing
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Extensions
+Settings
+Support
+v1.6.12
+Home
+Clients
+fa7f912f-6b62-463e-85cc-ffedab47ac44
+Quick Create
+6
+QT
+Back to Clients
+WR
+White Rabbit
+Active
+1 of 1 technician seat
+Manage access
+Print
+Merge
+Delete
++44 20 7946 0103
+42 Rabbit Hole Lane, Wonderland
+Opportunities
+Concerns
+1
+1 draft invoice — $425 unbilled · INV-000003
+Service
+Open
+0
+open tickets
+—
+oldest open
+0
+overdue
+
+No open tickets.
+
+New ticket
+Client record
+Edit
+Account manager
+not set
+Default contact
+not set
+Client since
+10/25/2026
+Additional info
+Money
+Open
+
+Nothing outstanding on finalized invoices.
+
+INV-000003
+draft
+$425
+Active contracts
+1
+Billing setup·Tax settings
+Install base
+Open
+0
+managed assets
+0
+sold units
+0
+open RMAs
+
+No delivered equipment yet.
+
+Managed assets
+People
+Open
+
+No contacts yet.
+
+Add contact
+Locations
+Manage
+Rabbit Hole ★
+42 Rabbit Hole Lane, Wonderland
++44 20 7946 0103
+Billing
+Documents
+Open
+
+No documents yet.
+
+Notes
+Add note
+
+No notes yet.
+
+No survey responses yet.
+
+Everything, in order
+All
+Service
+Money
+Inventory
+Interactions
+
+Nothing recorded yet for this client.
+
+Dialog Content
+Co-managed IT
+Details
+SERVICE
+Tickets
+Recurring tickets
+Interactions
+Co-managed IT
+MONEY
+Billing
+Billing Dashboard
+Tax Settings
+INSTALL BASE
+Assets
+Equipment
+RECORDS
+Contacts
+Documents
+Additional Info
+Notes
+MORE
+Opportunities
+Passwords
+
+Co-managed IT for White Rabbit
+
+Active
+Relationship
+White Rabbit IT
+Refresh workspaces
+Technician seats
+1 of 1 technician seat
+Customer workspace
+White Rabbit IT
+Administrator
+alice@whiterabbit.test
+Administrator invitation
+—
+Capacity
+Change seat allocation
+Co-managed access
+White Rabbit IT
+
+Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply.
+
+Delegated administrationCo-managed SLA priorities
+Customer-approved access
+
+Oversight of the initial service desk board
+
+Boards
+
+Service Desk: Collaborate
+
+Projects
+Staff
+QA Tester
+Access for QA Tester
+Collaborate
+Remove
+Search
+Select an item
+Select...
+Add
+Teams
+
+No access configured.
+
+Search
+Select an item
+Select...
+Add
+Save access
+Reload current access
+Co-managed SLA priorities
+
+Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets.
+
+Configure an MSP SLA policy before escalation.
+Manage SLA policies
+MSP priority for Low
+Not mapped
+MSP priority for Critical
+Not mapped
+MSP priority for Medium
+Not mapped
+MSP priority for High
+Not mapped
+MSP priority for Urgent
+Not mapped
+Save access
+Reload current access
+Delegated administration
+
+Customer-approved assistance with selected settings and user records.
+
+Refresh access
+Customer workspace: White Rabbit IT · MSP: Oz
+
+No administration tasks are currently approved.
+
+Shared tickets
+Filters
+View
+
+8 tickets · 8 open · 0 closed
+
+	
+Ticket
+	
+Status
+	
+Priority
+	
+Responsible organization
+	
+Updated
+↓
+
+
+	
+000023 · CM-REVIEW-20261026-08 final-b ticket 2
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/26/2026
+
+
+	
+000022 · CM-REVIEW-20261026-08 final-b ticket 1
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/26/2026
+
+
+	
+000019 · CM-REVIEW-20261026-08 final ticket 2
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+
+
+	
+000018 · CM-REVIEW-20261026-08 final ticket 1
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+
+
+	
+000015 · CM-REVIEW-20261026-08 a2 ticket 2
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+
+
+	
+000014 · CM-REVIEW-20261026-08 a2 ticket 1
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+
+
+	
+000013 · CM-REVIEW-20261026-08 a1 ticket 2
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+
+
+	
+000012 · CM-REVIEW-20261026-08 a1 ticket 1
+White Rabbit IT
+	
+Open
+	
+Medium
+	
+MSP
+	
+10/25/2026
+Open in Customer Tickets
+Work
+
+Client projects and shared task queues stay in the MSP shell with their qualified identities.
+
+Projects
+Project task queues
+End co-management
+
+Review what happens when this relationship ends.
+
+White Rabbit IT
+
+Live access between these organizations ends immediately when you confirm.
+
+The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.
+
+The MSP retains its own records and permitted historical evidence of shared work it participated in.
+
+Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.
+
+Review departureRefresh status

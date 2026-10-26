@@ -1,0 +1,36 @@
+Invoice Preview
+
+This is a preview of how the invoice will look when finalized.
+
+This selection will generate one combined invoice.
+Invoice 1
+Client Details
+
+White Rabbit
+
+42 Rabbit Hole Lane
+
+Invoice Details
+
+Invoice Number
+
+PREVIEW
+
+Date
+
+10/26/2026
+
+Due Date
+
+11/25/2026
+
+Line Items
+Description	Quantity	Rate	Amount
+Contract: CM-REVIEW-20261026-09 hourly contract
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)	0.5	$100.00	$50.00
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)	0.5	$100.00	$50.00
+Subtotal	$100.00
+Tax	$0.00
+Total	$100.00
+Close Preview
+Generate Invoice

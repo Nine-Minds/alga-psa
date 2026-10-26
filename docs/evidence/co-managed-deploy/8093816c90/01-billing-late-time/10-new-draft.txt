@@ -1,0 +1,90 @@
+Billing
+Invoicing
+Generate
+Drafts
+Finalized
+Project Billing
+3 columns hidden.
+Show all
+	
+Invoice Number
+	
+Client
+	
+Amount
+	
+Actions
+
+
+	
+INV-000003
+	
+White Rabbit
+	
+$425.00
+	
+
+
+	
+INV-000006
+	
+White Rabbit
+	
+$100.00
+	
+Invoice Details
+
+Edit draft invoice metadata before finalizing.
+
+Invoice Number
+Status
+Draft
+Invoice Date
+Due Date
+Client
+White Rabbit
+Amount
+$100.00
+Cancel
+Save
+Invoice Preview
+Tax: Internal
+Detailed Template (Standard)
+Finalize Invoice
+Download PDF
+Reverse Draft
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)
+
+Oz
+
+INVOICE
+
+Invoice #:
+INV-000006
+Issue Date:
+26/10/2026
+Due Date:
+25/11/2026
+PO #:
+-
+
+From
+
+Oz
+
+Bill To
+
+White Rabbit
+
+42 Rabbit Hole Lane, Underland Woods, Wonderland, WND, 1234, United Kingdom
+
+Description	Qty	Rate	Amount
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)	0.5	$100.00	$50.00
+Basic Support (late time, service period 2026-10-01 – 2026-10-31)	0.5	$100.00	$50.00
+Subtotal
+$100.00
+Tax
+$0.00
+Total
+$100.00

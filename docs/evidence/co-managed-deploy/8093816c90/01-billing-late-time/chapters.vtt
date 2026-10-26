@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:03.165 --> 00:00:09.198
+Restore the White Rabbit hourly contract and give the client a billing email (both reverted at the end)
+
+2
+00:00:09.198 --> 00:00:17.360
+Log 30 minutes of MSP time on shared White Rabbit ticket 000016, dated Oct 18 (inside the invoiced October period)
+
+3
+00:00:17.360 --> 00:00:56.380
+Create a native White Rabbit ticket and log 30 minutes of native time on it, also dated Oct 18
+
+4
+00:00:56.380 --> 00:01:17.331
+Approve through native timesheets: a disposable approver team led by QA, submit the Oct 12-18 sheet, approve it
+
+5
+00:01:17.331 --> 00:01:33.141
+Automatic Invoices: the November service period of the hourly line now carries the late October time
+
+6
+00:01:33.141 --> 00:01:38.594
+Open the disposable draft: both lines say which October period they belong to
+
+7
+00:01:38.594 --> 00:01:48.950
+Retry: nothing is offered twice, and the closed October window cannot be regenerated

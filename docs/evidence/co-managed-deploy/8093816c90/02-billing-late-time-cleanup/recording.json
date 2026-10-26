@@ -1,0 +1,250 @@
+{
+  "scenario": "02-billing-late-time-cleanup",
+  "recordedAt": "2026-10-26T13:56:38.478Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "draft-reversed-entries-and-november-period-released",
+      "passed": true,
+      "at": "2026-10-26T13:56:45.383Z",
+      "data": {
+        "entries": [
+          {
+            "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+            "work_item_type": "ticket",
+            "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+            "approval_status": "APPROVED",
+            "invoiced": false
+          },
+          {
+            "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+            "work_item_type": "co_managed",
+            "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+            "approval_status": "APPROVED",
+            "invoiced": false
+          }
+        ],
+        "disposable": []
+      }
+    },
+    {
+      "id": "entries-deleted",
+      "passed": true,
+      "at": "2026-10-26T13:57:01.502Z",
+      "data": {}
+    },
+    {
+      "id": "inv3-unchanged-425-17-sources",
+      "passed": true,
+      "at": "2026-10-26T13:57:16.660Z",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "total_amount": 42500,
+        "sources": 17
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:56:38.519Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:41.475Z",
+      "seconds": 2.997,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:41.475Z",
+      "seconds": 2.997,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Reverse the disposable draft INV-000005"
+    },
+    {
+      "at": "2026-10-26T13:56:43.552Z",
+      "seconds": 5.074,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/4e26e14f-de00-478f-871b-54829892d3cd"
+    },
+    {
+      "at": "2026-10-26T13:56:45.383Z",
+      "seconds": 6.905,
+      "actor": "qa",
+      "title": "draft-reversed-entries-and-november-period-released",
+      "data": {
+        "entries": [
+          {
+            "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+            "work_item_type": "ticket",
+            "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+            "approval_status": "APPROVED",
+            "invoiced": false
+          },
+          {
+            "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+            "work_item_type": "co_managed",
+            "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+            "approval_status": "APPROVED",
+            "invoiced": false
+          }
+        ],
+        "disposable": []
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:45.383Z",
+      "seconds": 6.905,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Reverse the timesheet approval"
+    },
+    {
+      "at": "2026-10-26T13:56:47.423Z",
+      "seconds": 8.945,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T13:56:51.188Z",
+      "seconds": 12.71,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Delete the two disposable entries from the timesheet"
+    },
+    {
+      "at": "2026-10-26T13:56:53.292Z",
+      "seconds": 14.815,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T13:56:58.314Z",
+      "seconds": 19.836,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T13:57:01.502Z",
+      "seconds": 23.024,
+      "actor": "qa",
+      "title": "entries-deleted",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:57:01.502Z",
+      "seconds": 23.024,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Delete the disposable native ticket and approver team"
+    },
+    {
+      "at": "2026-10-26T13:57:03.840Z",
+      "seconds": 25.362,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/7651112a-c7a0-45ed-9a52-47b5e7f8da03"
+    },
+    {
+      "at": "2026-10-26T13:57:09.553Z",
+      "seconds": 31.075,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T13:57:10.741Z",
+      "seconds": 32.263,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Terminate the contract again and clear the billing email"
+    },
+    {
+      "at": "2026-10-26T13:57:12.904Z",
+      "seconds": 34.426,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T13:57:15.269Z",
+      "seconds": 36.791,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T13:57:16.660Z",
+      "seconds": 38.182,
+      "actor": "qa",
+      "title": "inv3-unchanged-425-17-sources",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "total_amount": 42500,
+        "sources": 17
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.997,
+      "title": "Reverse the disposable draft INV-000005",
+      "end": 6.905
+    },
+    {
+      "start": 6.905,
+      "title": "Reverse the timesheet approval",
+      "end": 12.71
+    },
+    {
+      "start": 12.71,
+      "title": "Delete the two disposable entries from the timesheet",
+      "end": 23.024
+    },
+    {
+      "start": 23.024,
+      "title": "Delete the disposable native ticket and approver team",
+      "end": 32.263
+    },
+    {
+      "start": 32.263,
+      "title": "Terminate the contract again and clear the billing email",
+      "end": 37.790000000000006
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 37.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

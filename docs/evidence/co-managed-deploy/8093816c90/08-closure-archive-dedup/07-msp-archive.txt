@@ -1,0 +1,92 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Service Requests
+Surveys
+Projects
+Clients
+Co-managed IT
+Opportunities
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Inventory
+Reports
+Time Management
+Billing
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Extensions
+Settings
+Support
+v1.6.12
+Home
+Overview
+fa7f912f-6b62-463e-85cc-ffedab47ac44
+Quick Create
+6
+QT
+Shared work archive
+
+Retained history and files from work your organization participated in.
+
+Reload current access
+CM-REVIEW-20261026-10 864549 shared ticket
+CM-REVIEW-20261026-01 Accept-7
+CM-REVIEW-20261026-10 703235 shared ticket
+CM-REVIEW-20261026-01 Accept-7
+CM-REVIEW-20261026-10 818294 shared ticket
+CM-REVIEW-20261026-01 Accept-7
+CLOSE-022349 shared escalation
+CM-REVIEW-20261026-01 Accept-3
+CM-REVIEW-20261026-09-c toner audit task
+White Rabbit
+CM-REVIEW-20261026-09-d toner audit task
+White Rabbit
+CM-REVIEW-20261026-09-e toner audit task
+White Rabbit
+CM-REVIEW-20261026-09-f toner audit task
+White Rabbit
+CM-REVIEW-20261026-06 a4 Task A
+White Rabbit
+CM-REVIEW-20261026-07 final requester task
+White Rabbit
+CM-REVIEW-20261026-07 requester task
+White Rabbit
+CM-REVIEW-20261026-06 Task A
+White Rabbit
+CM-REVIEW-20261026-09-b toner audit task
+White Rabbit
+CM-REVIEW-20261026-06 final Task A
+White Rabbit
+CM-REVIEW-20261026-06 a6 Task A
+White Rabbit
+CM-REVIEW-20261026-08 a2 ticket 2
+White Rabbit
+CM-REVIEW-20261026-09-a printer spooler time ticket
+White Rabbit
+CM-REVIEW-20261026-08 a1 ticket 1
+White Rabbit
+CM-REVIEW-20261026-09-c printer spooler time ticket
+White Rabbit
+CM-REVIEW-20261026-08 a2 ticket 1
+White Rabbit
+CM-REVIEW-20261026-03 r4 escalated board ticket
+White Rabbit
+CM-REVIEW-20261026-00-a shared walkthrough ticket
+White Rabbit
+CM-REVIEW-20261026-03 escalated board ticket
+White Rabbit
+CM-REVIEW-20261026-05 bulk B
+White Rabbit
+CM-REVIEW-20261026-08 final-b ticket 2
+White Rabbit
+Previous
+Next
+
+Select retained work to view its history and files.

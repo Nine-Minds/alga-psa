@@ -1,0 +1,129 @@
+{
+  "scenario": "07-t009-onboarding-recovery",
+  "recordedAt": "2026-10-26T13:41:35.961Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "setup-shows-progress-with-a-reserved-seat",
+      "passed": true,
+      "at": "2026-10-26T13:41:41.912Z",
+      "data": {
+        "allocation": {
+          "seats": 1,
+          "state": "reserved"
+        },
+        "state": "pending_acceptance"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:41:36.012Z",
+      "seconds": 0.051,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:41:36.012Z",
+      "seconds": 0.051,
+      "title": "chapter",
+      "data": "QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail"
+    },
+    {
+      "at": "2026-10-26T13:41:37.912Z",
+      "seconds": 1.951,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:41:39.869Z",
+      "seconds": 3.908,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:41:41.912Z",
+      "seconds": 5.951,
+      "actor": "qa",
+      "title": "setup-shows-progress-with-a-reserved-seat",
+      "data": {
+        "allocation": {
+          "seats": 1,
+          "state": "reserved"
+        },
+        "state": "pending_acceptance"
+      }
+    },
+    {
+      "at": "2026-10-26T13:41:41.913Z",
+      "seconds": 5.952,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Provisioning runs; the invitation cannot be delivered"
+    },
+    {
+      "at": "2026-10-26T13:41:44.125Z",
+      "seconds": 8.164,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:41:47.197Z",
+      "seconds": 11.236,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Cancel the disposable setup and release its seat"
+    },
+    {
+      "at": "2026-10-26T13:41:49.173Z",
+      "seconds": 13.212,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.051,
+      "title": "QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail",
+      "end": 5.952
+    },
+    {
+      "start": 5.952,
+      "title": "Provisioning runs; the invitation cannot be delivered",
+      "end": 11.236
+    },
+    {
+      "start": 11.236,
+      "title": "Cancel the disposable setup and release its seat",
+      "end": 137.75
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "reload-reopens-the-same-setup-showing-delivery-failure-not-expiry {\"state\":\"pending_acceptance\"}",
+  "durationSeconds": 137.8,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

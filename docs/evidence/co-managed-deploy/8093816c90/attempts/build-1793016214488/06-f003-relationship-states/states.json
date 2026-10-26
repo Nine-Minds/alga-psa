@@ -1,0 +1,9 @@
+{
+  "single": "Active\n1 of 1 technician seat\nManage access",
+  "ended": "Back to Clients\nKF\nKansas Farms\nRelationship ended\nEnded Oct 25, 2026\nView history\nPrint\nMerge\nDelete\nOpportunities\nService\nOpen\n0\nopen tickets\n—\noldest open\n0\noverdue\n\nNo open tickets.\n\nNew ticket\nClient record\nEdit\nAccount manager\nnot set\nDefault contact\nnot set\nClient since\n10/25/2026\nAdditional info\nMoney\nOpen\n\nNothing outstanding on finalized invoices.\n\nActive contracts\n0\nBilling setup·Tax settings\nInstall base\nOpen\n0\nmanaged assets\n0\nsold units\n0\nopen RMAs\n\nNo delivered equipment yet.\n\nManaged assets\nPeople\nOpen\n\nNo contacts yet.\n\nAdd contact\nLocations\nManage\n\nNo locations yet.\n\nDocuments\nOpen\n\nNo documents yet.\n\nNotes\nAdd note\n\nNo notes yet.\n\nNo survey responses yet.\n\nEverything, in order\nAll\nService\nMoney\nInventory\nInteractions\n\nNothing recorded yet for this client.",
+  "absent": "Back to Clients\nEC\nEmerald City\nCo-managed IT not enabled\nEnable co-managed IT\nPrint\nMerge\nDelete\n+1 212 555 0100\ninfo@emeraldcity.oz\nhttps://emeraldcity.oz\n1010 Emerald Street, Emerald City\nOpportunities\nConcerns\n1\n1 unassigned ticket — #TIC001011\nService\nOpen\n4\nopen tickets\n30d\noldest open\n0\noverdue\nEnchanted Emergency\n#TIC1001 Missing White Rabbit\n0d\nTin Woodman\nEnchanted Emergency\n#TIC1006 Ruby Slippers Server Power Fluctuation\n0d\nScarecrow Brainless\nCurious Conundrum\n#TIC1003 Enhance Emerald City Gardens\n30d\nScarecrow Brainless\nNew ticket\nClient record\nEdit\nAccount manager\nnot set\nDefault contact\nnot set\nClient since\n10/25/2026\nAdditional info\nMoney\nOpen\n$225\ncurrent\n1–30d\n31–60d\n60d+\n\n$225 outstanding · recorded payments deducted\n\nUnbilled work\n14h\nActive contracts\n0\nBilling setup·Ta",
+  "absentClient": {
+    "client_id": "f2334ed4-1c31-4b4d-b771-80edb684b551",
+    "client_name": "Emerald City"
+  }
+}

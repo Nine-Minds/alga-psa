@@ -1,0 +1,151 @@
+AlgaPSA
+
+WORKSPACE
+
+Dashboard
+Tickets
+Service Requests
+Projects
+Appointments
+My devices
+
+RESOURCES
+
+Documents
+Knowledge Base
+
+MORE
+
+Profile
+Client Settings
+Tickets
+C0
+Back to Tickets
+#000009
+Created Oct 25, 2026 11:40 PM (about 10 hours ago)
+Last Updated Oct 25, 2026 11:40 PM (about 10 hours ago)
+CM-REVIEW-20261026-07 final conversation ticket
+Status
+Open
+Awaiting Your Response
+Created Internally
+Assigned To
+-
+Priority
+Low
+Due Date
+-
+Description
+
+
+
+
+Comments
+Add Comment
+All Comments (9)
+Resolution (0)
+Newest first
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 9:58 AM
+
+T09S096803REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:51 AM
+
+T09S058102REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:48 AM
+
+T09S883270REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:44 AM
+
+T09S655799REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:40 AM
+
+T09S436002REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:37 AM
+
+T09S264052REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:34 AM
+
+T09S043226REQUESTER
+
+React
+AL
+
+Alice Liddell
+
+alice@whiterabbit.test
+
+Oct 26, 2026, 8:33 AM
+
+T09S991396REQUESTER
+
+React
+QT
+
+QA Tester (Oz)
+
+Oct 25, 2026, 11:40 PM
+
+CM-REVIEW-20261026-07 requester 1792986016458
+
+Attachments
+cm-review-20261026-07-requester-1792986016458.txt
+React
+Documents
+Add document
+Upload file
+Link existing
+No documents found

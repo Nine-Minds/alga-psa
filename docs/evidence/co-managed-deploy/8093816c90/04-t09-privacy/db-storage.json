@@ -1,0 +1,36 @@
+{
+  "shared": {
+    "customerStore": [
+      {
+        "collaboration_audience": "shared_it",
+        "is_internal": true,
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    ],
+    "mspPrivateStore": 0
+  },
+  "orgPrivate": {
+    "customerStore": [
+      {
+        "collaboration_audience": "organization_private",
+        "is_internal": true,
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    ],
+    "mspPrivateStore": 0
+  },
+  "mspPrivate": {
+    "customerStore": [],
+    "mspPrivateStore": 1
+  },
+  "requester": {
+    "customerStore": [
+      {
+        "collaboration_audience": "requester",
+        "is_internal": false,
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    ],
+    "mspPrivateStore": 0
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "disposable": [],
+  "entries": [],
+  "sheet": "CHANGES_REQUESTED",
+  "contract": {
+    "is_active": false,
+    "status": "pending"
+  },
+  "billingEmail": "",
+  "inv3": {
+    "invoice_number": "INV-000003",
+    "status": "draft",
+    "subtotal": 42500,
+    "total_amount": 42500,
+    "sources": 17
+  }
+}

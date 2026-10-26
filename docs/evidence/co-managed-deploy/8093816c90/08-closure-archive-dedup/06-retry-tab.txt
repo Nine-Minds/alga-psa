@@ -1,0 +1,49 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Projects
+Clients
+Co-managed IT
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Reports
+Time Management
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Settings
+Support
+v1.6.12
+Home
+Co-managed access
+2953aec7-3e03-47d8-8637-171af6c6e5c0
+Quick Create
+RA
+End co-management
+
+Review what happens when this relationship ends.
+
+Unable to confirm departure. Retry the same request, or refresh to check whether it completed.
+
+Oz
+
+Live access between these organizations ends immediately when you confirm.
+
+The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.
+
+The MSP retains its own records and permitted historical evidence of shared work it participated in.
+
+Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.
+
+Upgrade to AlgaPSAExport workspaceReview departureRefresh status
+End this relationship?
+
+End co-management with Oz? Live collaboration stops immediately. Customer data and the MSP’s permitted historical archive are retained.
+
+Cancel
+End relationship

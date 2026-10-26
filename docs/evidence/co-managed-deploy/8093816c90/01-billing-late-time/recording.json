@@ -1,0 +1,816 @@
+{
+  "scenario": "01-billing-late-time",
+  "recordedAt": "2026-10-26T13:54:49.126Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "setup-inv3-is-the-425-reference-draft",
+      "passed": true,
+      "at": "2026-10-26T13:54:50.393Z",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500
+      }
+    },
+    {
+      "id": "setup-october-period-closed-by-inv3",
+      "passed": true,
+      "at": "2026-10-26T13:54:50.393Z",
+      "data": {
+        "oct": {
+          "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+          "lifecycle_state": "billed",
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+        },
+        "nov": {
+          "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+          "lifecycle_state": "locked",
+          "invoice_id": null
+        }
+      }
+    },
+    {
+      "id": "contract-active",
+      "passed": true,
+      "at": "2026-10-26T13:54:55.987Z",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending"
+      }
+    },
+    {
+      "id": "shared-entry-is-msp-commercial-time-on-the-contract-line-in-october",
+      "passed": true,
+      "at": "2026-10-26T13:55:06.485Z",
+      "data": {
+        "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false,
+        "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+        "notes": "LATE-5A82 shared MSP time"
+      }
+    },
+    {
+      "id": "native-ticket-is-for-white-rabbit",
+      "passed": true,
+      "at": "2026-10-26T13:55:39.714Z",
+      "data": {
+        "ticket_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+        "ticket_number": "TIC001013",
+        "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8"
+      }
+    },
+    {
+      "id": "native-entry-on-the-same-contract-line-in-october",
+      "passed": true,
+      "at": "2026-10-26T13:55:45.505Z",
+      "data": {
+        "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+        "work_item_type": "ticket",
+        "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false,
+        "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+        "notes": "LATE-5A82 native time"
+      }
+    },
+    {
+      "id": "team-led-by-qa",
+      "passed": true,
+      "at": "2026-10-26T13:55:52.329Z",
+      "data": {
+        "team_id": "cc16235d-b774-41a1-b734-8fbd680528c8",
+        "manager_id": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "id": "both-entries-approved-uninvoiced",
+      "passed": true,
+      "at": "2026-10-26T13:56:06.456Z",
+      "data": [
+        {
+          "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+          "work_item_type": "ticket",
+          "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "start_time": "2026-10-18T08:00:00+00:00",
+          "billable_duration": 30,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+          "notes": "LATE-5A82 native time"
+        },
+        {
+          "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+          "work_item_type": "co_managed",
+          "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "start_time": "2026-10-18T08:00:00+00:00",
+          "billable_duration": 30,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+          "notes": "LATE-5A82 shared MSP time"
+        }
+      ]
+    },
+    {
+      "id": "preview-labels-both-entries-as-late-october-time-at-the-contract-rate",
+      "passed": true,
+      "at": "2026-10-26T13:56:18.150Z",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nSubtotal\t$100.00\nTax\t$0.00\nTotal\t$100.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "id": "db-disposable-draft-bills-exactly-the-two-late-entries-at-100-per-hour",
+      "passed": true,
+      "at": "2026-10-26T13:56:20.330Z",
+      "data": {
+        "invoice": {
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+          "invoice_number": "INV-000006",
+          "status": "draft",
+          "subtotal": 10000,
+          "total_amount": 10000,
+          "created_at": "2026-10-26T13:56:18.273487+00:00"
+        },
+        "links": [
+          "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+          "9a773cfe-083c-4ee1-85b2-27a47c50aad7"
+        ]
+      }
+    },
+    {
+      "id": "db-lines-name-and-carry-the-october-service-period",
+      "passed": true,
+      "at": "2026-10-26T13:56:20.331Z",
+      "data": [
+        {
+          "item_id": "3a8245fb-6d85-4331-b355-0700d391e7df",
+          "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+          "quantity": 0.5,
+          "unit_price": 10000,
+          "net_amount": 5000,
+          "service_period_start": "2026-10-01",
+          "service_period_end": "2026-10-31"
+        },
+        {
+          "item_id": "b5b74fd3-dcfe-47d8-8bf8-4adf78edc399",
+          "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+          "quantity": 0.5,
+          "unit_price": 10000,
+          "net_amount": 5000,
+          "service_period_start": "2026-10-01",
+          "service_period_end": "2026-10-31"
+        }
+      ]
+    },
+    {
+      "id": "db-shared-line-keeps-qualified-co-managed-provenance",
+      "passed": true,
+      "at": "2026-10-26T13:56:20.332Z",
+      "data": [
+        {
+          "rate": 10000,
+          "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+          "version": 2,
+          "rateKind": "uniform",
+          "entryDate": "2026-10-18",
+          "netAmount": 5000,
+          "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+          "workItemId": "81245210-accc-40ad-afaa-6680a85a75b0",
+          "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+          "serviceName": "Basic Support",
+          "uniformRate": 10000,
+          "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "ticketNumber": "000016",
+          "workItemType": "ticket",
+          "billedMinutes": 30,
+          "relationshipId": "2be5cb32-91e8-491a-9ec4-16ab019c7d40",
+          "workReferenceId": "5ecc6805-82c3-43f6-b515-e0cfd796d742"
+        },
+        {
+          "rate": 10000,
+          "title": "LATE-5A82 native White Rabbit work (disposable)",
+          "version": 2,
+          "rateKind": "uniform",
+          "entryDate": "2026-10-18",
+          "netAmount": 5000,
+          "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+          "workItemId": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+          "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+          "serviceName": "Basic Support",
+          "uniformRate": 10000,
+          "ticketNumber": "TIC001013",
+          "workItemType": "ticket",
+          "billedMinutes": 30
+        }
+      ]
+    },
+    {
+      "id": "db-periods-october-stays-on-inv3-november-claimed-by-the-new-draft",
+      "passed": true,
+      "at": "2026-10-26T13:56:20.898Z",
+      "data": {
+        "oct": {
+          "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+          "lifecycle_state": "billed",
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+        },
+        "nov": {
+          "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+          "lifecycle_state": "billed",
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd"
+        }
+      }
+    },
+    {
+      "id": "db-inv3-unchanged",
+      "passed": true,
+      "at": "2026-10-26T13:56:21.708Z",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500
+      }
+    },
+    {
+      "id": "db-entries-invoiced-once",
+      "passed": true,
+      "at": "2026-10-26T13:56:22.266Z",
+      "data": {}
+    },
+    {
+      "id": "ui-draft-shows-late-lines-and-100",
+      "passed": true,
+      "at": "2026-10-26T13:56:27.719Z",
+      "data": {
+        "number": "INV-000006"
+      }
+    },
+    {
+      "id": "no-ready-november-row-after-generation",
+      "passed": true,
+      "at": "2026-10-26T13:56:37.188Z",
+      "data": {
+        "rows": "\t\nCLIENT / GROUP\n\t\nSTATUS\n\t\nSERVICE PERIOD\n\t\nAMOUNT\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nNot yet due\nOpens Feb 1, 2027\n\t\nJan 2027\n\t\nCalculated at generation\n\n\n\t\nCM-REVIEW-20261026-09 hourly contract\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\nClient schedule · Arrears\n\t\n\t\nJan 2027\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nReady\n\t\nDec 2026\n\t\nCalculated at generation\n\n\n\t\nCM-REVIEW-20261026-09 hourly contract\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\nClient schedule · Arrears\n\t\n\t\nDec 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M ×2\n2 line items\n\t\nCombine\n\t\nOct 2026\n\t\n$30.00\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$15.00\n\n"
+      }
+    },
+    {
+      "id": "db-still-one-new-draft-and-inv3-unchanged",
+      "passed": true,
+      "at": "2026-10-26T13:56:37.887Z",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft",
+          "subtotal": 42500,
+          "total_amount": 42500,
+          "created_at": "2026-10-26T08:28:39.664389+00:00"
+        },
+        {
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+          "invoice_number": "INV-000006",
+          "status": "draft",
+          "subtotal": 10000,
+          "total_amount": 10000,
+          "created_at": "2026-10-26T13:56:18.273487+00:00"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:54:49.168Z",
+      "seconds": 0.042,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:50.393Z",
+      "seconds": 1.267,
+      "title": "setup-inv3-is-the-425-reference-draft",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:50.393Z",
+      "seconds": 1.267,
+      "title": "setup-october-period-closed-by-inv3",
+      "data": {
+        "oct": {
+          "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+          "lifecycle_state": "billed",
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+        },
+        "nov": {
+          "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+          "lifecycle_state": "locked",
+          "invoice_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:52.291Z",
+      "seconds": 3.165,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:52.291Z",
+      "seconds": 3.165,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore the White Rabbit hourly contract and give the client a billing email (both reverted at the end)"
+    },
+    {
+      "at": "2026-10-26T13:54:54.444Z",
+      "seconds": 5.318,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T13:54:55.987Z",
+      "seconds": 6.861,
+      "actor": "qa",
+      "title": "contract-active",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending"
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:58.124Z",
+      "seconds": 8.998,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T13:54:58.324Z",
+      "seconds": 9.198,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Log 30 minutes of MSP time on shared White Rabbit ticket 000016, dated Oct 18 (inside the invoiced October period)"
+    },
+    {
+      "at": "2026-10-26T13:55:00.446Z",
+      "seconds": 11.32,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T13:55:06.485Z",
+      "seconds": 17.359,
+      "actor": "qa",
+      "title": "shared-entry-is-msp-commercial-time-on-the-contract-line-in-october",
+      "data": {
+        "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false,
+        "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+        "notes": "LATE-5A82 shared MSP time"
+      }
+    },
+    {
+      "at": "2026-10-26T13:55:06.486Z",
+      "seconds": 17.36,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Create a native White Rabbit ticket and log 30 minutes of native time on it, also dated Oct 18"
+    },
+    {
+      "at": "2026-10-26T13:55:08.587Z",
+      "seconds": 19.462,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/create-ticket"
+    },
+    {
+      "at": "2026-10-26T13:55:39.714Z",
+      "seconds": 50.588,
+      "actor": "qa",
+      "title": "native-ticket-is-for-white-rabbit",
+      "data": {
+        "ticket_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+        "ticket_number": "TIC001013",
+        "client_id": "e1d953b4-4f14-41fe-8f2c-828dd85a15b8"
+      }
+    },
+    {
+      "at": "2026-10-26T13:55:42.034Z",
+      "seconds": 52.908,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/7651112a-c7a0-45ed-9a52-47b5e7f8da03"
+    },
+    {
+      "at": "2026-10-26T13:55:45.505Z",
+      "seconds": 56.379,
+      "actor": "qa",
+      "title": "native-entry-on-the-same-contract-line-in-october",
+      "data": {
+        "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+        "work_item_type": "ticket",
+        "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false,
+        "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+        "notes": "LATE-5A82 native time"
+      }
+    },
+    {
+      "at": "2026-10-26T13:55:45.506Z",
+      "seconds": 56.38,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Approve through native timesheets: a disposable approver team led by QA, submit the Oct 12-18 sheet, approve it"
+    },
+    {
+      "at": "2026-10-26T13:55:47.721Z",
+      "seconds": 58.595,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T13:55:52.329Z",
+      "seconds": 63.203,
+      "actor": "qa",
+      "title": "team-led-by-qa",
+      "data": {
+        "team_id": "cc16235d-b774-41a1-b734-8fbd680528c8",
+        "manager_id": "86952555-610c-4737-be41-a9236cfa9cdb"
+      }
+    },
+    {
+      "at": "2026-10-26T13:55:54.479Z",
+      "seconds": 65.353,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T13:55:58.197Z",
+      "seconds": 69.071,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T13:56:06.456Z",
+      "seconds": 77.33,
+      "actor": "qa",
+      "title": "both-entries-approved-uninvoiced",
+      "data": [
+        {
+          "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+          "work_item_type": "ticket",
+          "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "start_time": "2026-10-18T08:00:00+00:00",
+          "billable_duration": 30,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+          "notes": "LATE-5A82 native time"
+        },
+        {
+          "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+          "work_item_type": "co_managed",
+          "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+          "start_time": "2026-10-18T08:00:00+00:00",
+          "billable_duration": 30,
+          "approval_status": "APPROVED",
+          "invoiced": false,
+          "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+          "notes": "LATE-5A82 shared MSP time"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T13:56:06.457Z",
+      "seconds": 77.331,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Automatic Invoices: the November service period of the hourly line now carries the late October time"
+    },
+    {
+      "at": "2026-10-26T13:56:08.491Z",
+      "seconds": 79.365,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T13:56:18.150Z",
+      "seconds": 89.024,
+      "actor": "qa",
+      "title": "preview-labels-both-entries-as-late-october-time-at-the-contract-rate",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nSubtotal\t$100.00\nTax\t$0.00\nTotal\t$100.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:20.330Z",
+      "seconds": 91.204,
+      "actor": "qa",
+      "title": "db-disposable-draft-bills-exactly-the-two-late-entries-at-100-per-hour",
+      "data": {
+        "invoice": {
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+          "invoice_number": "INV-000006",
+          "status": "draft",
+          "subtotal": 10000,
+          "total_amount": 10000,
+          "created_at": "2026-10-26T13:56:18.273487+00:00"
+        },
+        "links": [
+          "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+          "9a773cfe-083c-4ee1-85b2-27a47c50aad7"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:20.331Z",
+      "seconds": 91.205,
+      "actor": "qa",
+      "title": "db-lines-name-and-carry-the-october-service-period",
+      "data": [
+        {
+          "item_id": "3a8245fb-6d85-4331-b355-0700d391e7df",
+          "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+          "quantity": 0.5,
+          "unit_price": 10000,
+          "net_amount": 5000,
+          "service_period_start": "2026-10-01",
+          "service_period_end": "2026-10-31"
+        },
+        {
+          "item_id": "b5b74fd3-dcfe-47d8-8bf8-4adf78edc399",
+          "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+          "quantity": 0.5,
+          "unit_price": 10000,
+          "net_amount": 5000,
+          "service_period_start": "2026-10-01",
+          "service_period_end": "2026-10-31"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T13:56:20.332Z",
+      "seconds": 91.206,
+      "actor": "qa",
+      "title": "db-shared-line-keeps-qualified-co-managed-provenance",
+      "data": [
+        {
+          "rate": 10000,
+          "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+          "version": 2,
+          "rateKind": "uniform",
+          "entryDate": "2026-10-18",
+          "netAmount": 5000,
+          "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+          "workItemId": "81245210-accc-40ad-afaa-6680a85a75b0",
+          "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+          "serviceName": "Basic Support",
+          "uniformRate": 10000,
+          "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+          "ticketNumber": "000016",
+          "workItemType": "ticket",
+          "billedMinutes": 30,
+          "relationshipId": "2be5cb32-91e8-491a-9ec4-16ab019c7d40",
+          "workReferenceId": "5ecc6805-82c3-43f6-b515-e0cfd796d742"
+        },
+        {
+          "rate": 10000,
+          "title": "LATE-5A82 native White Rabbit work (disposable)",
+          "version": 2,
+          "rateKind": "uniform",
+          "entryDate": "2026-10-18",
+          "netAmount": 5000,
+          "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+          "workItemId": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+          "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+          "serviceName": "Basic Support",
+          "uniformRate": 10000,
+          "ticketNumber": "TIC001013",
+          "workItemType": "ticket",
+          "billedMinutes": 30
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T13:56:20.898Z",
+      "seconds": 91.772,
+      "actor": "qa",
+      "title": "db-periods-october-stays-on-inv3-november-claimed-by-the-new-draft",
+      "data": {
+        "oct": {
+          "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+          "lifecycle_state": "billed",
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+        },
+        "nov": {
+          "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+          "lifecycle_state": "billed",
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd"
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:21.708Z",
+      "seconds": 92.582,
+      "actor": "qa",
+      "title": "db-inv3-unchanged",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "tax": 0,
+        "total_amount": 42500
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:22.266Z",
+      "seconds": 93.14,
+      "actor": "qa",
+      "title": "db-entries-invoiced-once",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:56:22.267Z",
+      "seconds": 93.141,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Open the disposable draft: both lines say which October period they belong to"
+    },
+    {
+      "at": "2026-10-26T13:56:24.163Z",
+      "seconds": 95.037,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/invoices/4e26e14f-de00-478f-871b-54829892d3cd"
+    },
+    {
+      "at": "2026-10-26T13:56:27.719Z",
+      "seconds": 98.593,
+      "actor": "qa",
+      "title": "ui-draft-shows-late-lines-and-100",
+      "data": {
+        "number": "INV-000006"
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:27.720Z",
+      "seconds": 98.594,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Retry: nothing is offered twice, and the closed October window cannot be regenerated"
+    },
+    {
+      "at": "2026-10-26T13:56:29.768Z",
+      "seconds": 100.642,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T13:56:37.188Z",
+      "seconds": 108.062,
+      "actor": "qa",
+      "title": "no-ready-november-row-after-generation",
+      "data": {
+        "rows": "\t\nCLIENT / GROUP\n\t\nSTATUS\n\t\nSERVICE PERIOD\n\t\nAMOUNT\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nNot yet due\nOpens Feb 1, 2027\n\t\nJan 2027\n\t\nCalculated at generation\n\n\n\t\nCM-REVIEW-20261026-09 hourly contract\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\nClient schedule · Arrears\n\t\n\t\nJan 2027\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\n\t\nReady\n\t\nDec 2026\n\t\nCalculated at generation\n\n\n\t\nCM-REVIEW-20261026-09 hourly contract\nT&M\nCM-REVIEW-20261026-09 hourly contract - Hourly\nClient schedule · Arrears\n\t\n\t\nDec 2026\n\t\nCalculated at generation\n\n\n\t\nWhite Rabbit\nT&M ×2\n2 line items\n\t\nCombine\n\t\nOct 2026\n\t\n$30.00\n\n\n\t\nUnresolved work\nT&M\nUnresolved time entry\nUnresolved work\nClient schedule · Advance\n\t\n\t\nOct 2026\n\t\n$15.00\n\n"
+      }
+    },
+    {
+      "at": "2026-10-26T13:56:37.887Z",
+      "seconds": 108.761,
+      "actor": "qa",
+      "title": "db-still-one-new-draft-and-inv3-unchanged",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft",
+          "subtotal": 42500,
+          "total_amount": 42500,
+          "created_at": "2026-10-26T08:28:39.664389+00:00"
+        },
+        {
+          "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+          "invoice_number": "INV-000006",
+          "status": "draft",
+          "subtotal": 10000,
+          "total_amount": 10000,
+          "created_at": "2026-10-26T13:56:18.273487+00:00"
+        }
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "start": 3.165,
+      "title": "Restore the White Rabbit hourly contract and give the client a billing email (both reverted at the end)",
+      "end": 9.198
+    },
+    {
+      "start": 9.198,
+      "title": "Log 30 minutes of MSP time on shared White Rabbit ticket 000016, dated Oct 18 (inside the invoiced October period)",
+      "end": 17.36
+    },
+    {
+      "start": 17.36,
+      "title": "Create a native White Rabbit ticket and log 30 minutes of native time on it, also dated Oct 18",
+      "end": 56.38
+    },
+    {
+      "start": 56.38,
+      "title": "Approve through native timesheets: a disposable approver team led by QA, submit the Oct 12-18 sheet, approve it",
+      "end": 77.331
+    },
+    {
+      "start": 77.331,
+      "title": "Automatic Invoices: the November service period of the hourly line now carries the late October time",
+      "end": 93.141
+    },
+    {
+      "start": 93.141,
+      "title": "Open the disposable draft: both lines say which October period they belong to",
+      "end": 98.594
+    },
+    {
+      "start": 98.594,
+      "title": "Retry: nothing is offered twice, and the closed October window cannot be regenerated",
+      "end": 108.95
+    }
+  ],
+  "scenarioStatus": "partial",
+  "limitations": [
+    "cleanup not yet run"
+  ],
+  "durationSeconds": 109,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

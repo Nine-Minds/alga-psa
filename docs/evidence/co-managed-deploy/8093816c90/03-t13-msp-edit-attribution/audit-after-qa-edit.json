@@ -1,0 +1,21 @@
+[
+  {
+    "audit_id": "44a858ec-ef19-400c-a94d-54eb89df3ddf",
+    "event_type": "TICKET_PRIORITY_CHANGED",
+    "actor_type": "user",
+    "actor_user_id": null,
+    "actor_contact_id": null,
+    "actor_reference_id": "2e855561-3d7e-4138-aef0-f021f327422e",
+    "actor_display_name": "QA Tester",
+    "actor_organization_name": "Oz",
+    "source": "ui",
+    "changes": {
+      "priority_id": {
+        "new": "6fdf4c04-6d0b-441b-a9bd-368c202f7e72",
+        "old": "3410c999-0002-4044-828e-b707bd9b8705",
+        "newLabel": "Critical",
+        "oldLabel": "Urgent"
+      }
+    }
+  }
+]

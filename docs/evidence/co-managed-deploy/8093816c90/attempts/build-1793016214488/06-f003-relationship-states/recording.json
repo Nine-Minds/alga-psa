@@ -1,0 +1,466 @@
+{
+  "scenario": "06-f003-relationship-states",
+  "recordedAt": "2026-10-26T13:10:44.383Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-5a822cb4",
+    "revision": "5a822cb47e92aa765d73fee725fc80558249ff2f+da39a3ee5e6b",
+    "buildId": "build-1793016214488"
+  },
+  "assertions": [
+    {
+      "id": "viewer-co-management-fails-closed",
+      "passed": true,
+      "at": "2026-10-26T13:10:52.387Z",
+      "data": {
+        "text": "Co-managed access\n\nCould not load access settings. Reload to try again.\n\nReload current access"
+      }
+    },
+    {
+      "id": "viewer-co-management-message-names-the-permission-not-a-reload",
+      "passed": false,
+      "at": "2026-10-26T13:10:52.388Z",
+      "data": {
+        "text": "Co-managed access\n\nCould not load access settings. Reload to try again.\n\nReload current access"
+      }
+    },
+    {
+      "id": "viewer-client-tab-offers-no-management-writes",
+      "passed": true,
+      "at": "2026-10-26T13:10:52.388Z",
+      "data": {
+        "controls": 0
+      }
+    },
+    {
+      "id": "viewer-shared-ticket-fails-closed-without-content",
+      "passed": true,
+      "at": "2026-10-26T13:10:52.388Z",
+      "data": {
+        "text": "This ticket or access list could not be loaded. Your access may have changed.\n\nRestricted ticket"
+      }
+    },
+    {
+      "id": "mismatched-relationship-fails-closed",
+      "passed": true,
+      "at": "2026-10-26T13:10:58.133Z",
+      "data": {
+        "text": "This ticket or access list could not be loaded. Your access may have changed.\n\nRestricted ticket"
+      }
+    },
+    {
+      "id": "matching-relationship-control-opens",
+      "passed": true,
+      "at": "2026-10-26T13:10:58.133Z",
+      "data": {}
+    },
+    {
+      "id": "single-shows-active-and-manage",
+      "passed": true,
+      "at": "2026-10-26T13:11:04.243Z",
+      "data": {
+        "single": "Active\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "id": "ended-shows-history-no-setup",
+      "passed": true,
+      "at": "2026-10-26T13:11:04.244Z",
+      "data": {}
+    },
+    {
+      "id": "absent-offers-setup-to-the-manager",
+      "passed": true,
+      "at": "2026-10-26T13:11:04.244Z",
+      "data": {
+        "client": "Emerald City"
+      }
+    },
+    {
+      "id": "multiple-requires-explicit-selection-listing-both",
+      "passed": true,
+      "at": "2026-10-26T13:11:09.744Z",
+      "data": {
+        "options": [
+          "Select...",
+          "CM-REVIEW-20261026-01 Accept-3 IT",
+          "White Rabbit IT"
+        ],
+        "noWritesBeforeChoice": 0
+      }
+    },
+    {
+      "id": "explicit-selection-resolves-the-exact-relationship",
+      "passed": true,
+      "at": "2026-10-26T13:11:12.884Z",
+      "data": {}
+    },
+    {
+      "id": "inconsistent-relationship-is-not-adopted-by-the-other-client",
+      "passed": true,
+      "at": "2026-10-26T13:11:21.057Z",
+      "data": {}
+    },
+    {
+      "id": "inconsistent-client-offers-no-management-of-the-mismatched-relationship",
+      "passed": true,
+      "at": "2026-10-26T13:11:21.057Z",
+      "data": {
+        "offersSetup": true
+      }
+    },
+    {
+      "id": "stale-save-refused-and-db-unchanged",
+      "passed": true,
+      "at": "2026-10-26T13:12:00.983Z",
+      "data": {
+        "rev0": 90,
+        "rev1": 91,
+        "rev2": 91
+      }
+    },
+    {
+      "id": "access-restored",
+      "passed": true,
+      "at": "2026-10-26T13:12:04.019Z",
+      "data": {
+        "current": "Collaborate"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:10:44.422Z",
+      "seconds": 0.039,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-5a822cb4",
+        "revision": "5a822cb47e92aa765d73fee725fc80558249ff2f+da39a3ee5e6b",
+        "buildId": "build-1793016214488",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:44.572Z",
+      "seconds": 0.189,
+      "title": "chapter",
+      "data": "Forbidden: the Oz Technician viewer has no co-management management and cannot open shared work directly"
+    },
+    {
+      "at": "2026-10-26T13:10:46.469Z",
+      "seconds": 2.086,
+      "actor": "viewer",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:48.346Z",
+      "seconds": 3.963,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T13:10:50.344Z",
+      "seconds": 5.961,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:10:52.321Z",
+      "seconds": 7.938,
+      "actor": "viewer",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T13:10:52.387Z",
+      "seconds": 8.004,
+      "actor": "viewer",
+      "title": "viewer-co-management-fails-closed",
+      "data": {
+        "text": "Co-managed access\n\nCould not load access settings. Reload to try again.\n\nReload current access"
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:52.388Z",
+      "seconds": 8.005,
+      "actor": "viewer",
+      "title": "viewer-client-tab-offers-no-management-writes",
+      "data": {
+        "controls": 0
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:52.388Z",
+      "seconds": 8.005,
+      "actor": "viewer",
+      "title": "viewer-shared-ticket-fails-closed-without-content",
+      "data": {
+        "text": "This ticket or access list could not be loaded. Your access may have changed.\n\nRestricted ticket"
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:52.389Z",
+      "seconds": 8.006,
+      "actor": "viewer",
+      "title": "chapter",
+      "data": "Inconsistent identity: QA opens White Rabbit ticket 000009 under the ended Kansas relationship id"
+    },
+    {
+      "at": "2026-10-26T13:10:54.189Z",
+      "seconds": 9.806,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:56.116Z",
+      "seconds": 11.733,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/ad0808b5-25df-4e95-987a-aa650c8ba24f/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T13:10:58.124Z",
+      "seconds": 13.741,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T13:10:58.133Z",
+      "seconds": 13.75,
+      "actor": "qa",
+      "title": "mismatched-relationship-fails-closed",
+      "data": {
+        "text": "This ticket or access list could not be loaded. Your access may have changed.\n\nRestricted ticket"
+      }
+    },
+    {
+      "at": "2026-10-26T13:10:58.133Z",
+      "seconds": 13.75,
+      "actor": "qa",
+      "title": "matching-relationship-control-opens",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:10:58.133Z",
+      "seconds": 13.75,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "States on client tabs: single (White Rabbit), ended (Kansas), absent (a client never set up)"
+    },
+    {
+      "at": "2026-10-26T13:11:00.197Z",
+      "seconds": 15.814,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:02.179Z",
+      "seconds": 17.796,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/c1f52e41-5f29-46db-88a8-4341fbbe2868?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:04.190Z",
+      "seconds": 19.807,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/f2334ed4-1c31-4b4d-b771-80edb684b551?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:04.243Z",
+      "seconds": 19.86,
+      "actor": "qa",
+      "title": "single-shows-active-and-manage",
+      "data": {
+        "single": "Active\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "at": "2026-10-26T13:11:04.244Z",
+      "seconds": 19.861,
+      "actor": "qa",
+      "title": "ended-shows-history-no-setup",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:11:04.244Z",
+      "seconds": 19.861,
+      "actor": "qa",
+      "title": "absent-offers-setup-to-the-manager",
+      "data": {
+        "client": "Emerald City"
+      }
+    },
+    {
+      "at": "2026-10-26T13:11:04.244Z",
+      "seconds": 19.861,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Multiple: map disposable Accept-3 onto White Rabbit (fixture); the client tab requires an explicit choice"
+    },
+    {
+      "at": "2026-10-26T13:11:06.567Z",
+      "seconds": 22.184,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:09.744Z",
+      "seconds": 25.361,
+      "actor": "qa",
+      "title": "multiple-requires-explicit-selection-listing-both",
+      "data": {
+        "options": [
+          "Select...",
+          "CM-REVIEW-20261026-01 Accept-3 IT",
+          "White Rabbit IT"
+        ],
+        "noWritesBeforeChoice": 0
+      }
+    },
+    {
+      "at": "2026-10-26T13:11:12.884Z",
+      "seconds": 28.501,
+      "actor": "qa",
+      "title": "explicit-selection-resolves-the-exact-relationship",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:11:13.250Z",
+      "seconds": 28.867,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Inconsistent: Accept-4 relationship points at another sponsor client than its operation (fixture)"
+    },
+    {
+      "at": "2026-10-26T13:11:15.416Z",
+      "seconds": 31.033,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/4d392586-2f08-4fca-b8f9-1bd19135902c?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:19.406Z",
+      "seconds": 35.023,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:11:21.057Z",
+      "seconds": 36.674,
+      "actor": "qa",
+      "title": "inconsistent-relationship-is-not-adopted-by-the-other-client",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T13:11:21.057Z",
+      "seconds": 36.674,
+      "actor": "qa",
+      "title": "inconsistent-client-offers-no-management-of-the-mismatched-relationship",
+      "data": {
+        "offersSetup": true
+      }
+    },
+    {
+      "at": "2026-10-26T13:11:21.057Z",
+      "seconds": 36.674,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Stale write: two tabs on White Rabbit staff access; the stale save is refused"
+    },
+    {
+      "at": "2026-10-26T13:11:23.266Z",
+      "seconds": 38.883,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:12:00.983Z",
+      "seconds": 76.6,
+      "actor": "qa",
+      "title": "stale-save-refused-and-db-unchanged",
+      "data": {
+        "rev0": 90,
+        "rev1": 91,
+        "rev2": 91
+      }
+    },
+    {
+      "at": "2026-10-26T13:12:04.019Z",
+      "seconds": 79.636,
+      "actor": "qa",
+      "title": "access-restored",
+      "data": {
+        "current": "Collaborate"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.189,
+      "title": "Forbidden: the Oz Technician viewer has no co-management management and cannot open shared work directly",
+      "end": 8.006
+    },
+    {
+      "start": 8.006,
+      "title": "Inconsistent identity: QA opens White Rabbit ticket 000009 under the ended Kansas relationship id",
+      "end": 13.75
+    },
+    {
+      "start": 13.75,
+      "title": "States on client tabs: single (White Rabbit), ended (Kansas), absent (a client never set up)",
+      "end": 19.861
+    },
+    {
+      "start": 19.861,
+      "title": "Multiple: map disposable Accept-3 onto White Rabbit (fixture); the client tab requires an explicit choice",
+      "end": 28.867
+    },
+    {
+      "start": 28.867,
+      "title": "Inconsistent: Accept-4 relationship points at another sponsor client than its operation (fixture)",
+      "end": 36.674
+    },
+    {
+      "start": 36.674,
+      "title": "Stale write: two tabs on White Rabbit staff access; the stale save is refused",
+      "end": 80.35000000000001
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [
+    "multiple and inconsistent states were produced with reversible SQL fixtures on disposable workspaces: the product deliberately offers no path that creates them"
+  ],
+  "failedAssertions": [
+    "viewer-co-management-message-names-the-permission-not-a-reload"
+  ],
+  "durationSeconds": 80.4,
+  "actors": [
+    {
+      "name": "viewer",
+      "email": "cm-review-20261026-03-viewer@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

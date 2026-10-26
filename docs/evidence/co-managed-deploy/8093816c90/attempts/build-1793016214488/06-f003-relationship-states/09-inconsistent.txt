@@ -1,0 +1,169 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Service Requests
+Surveys
+Projects
+Clients
+Co-managed IT
+Opportunities
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Inventory
+Reports
+Time Management
+Billing
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Extensions
+Settings
+Support
+v1.6.12
+Home
+Clients
+fa7f912f-6b62-463e-85cc-ffedab47ac44
+Quick Create
+6
+QT
+Back to Clients
+CA
+CM-REVIEW-20261026-01 Accept-4
+Co-managed IT not enabled
+Enable co-managed IT
+Print
+Merge
+Delete
+Opportunities
+Service
+Open
+0
+open tickets
+—
+oldest open
+0
+overdue
+
+No open tickets.
+
+New ticket
+Client record
+Edit
+Account manager
+not set
+Default contact
+not set
+Client since
+10/25/2026
+Additional info
+Money
+Open
+
+Nothing outstanding on finalized invoices.
+
+Active contracts
+0
+Billing setup·Tax settings
+Install base
+Open
+0
+managed assets
+0
+sold units
+0
+open RMAs
+
+No delivered equipment yet.
+
+Managed assets
+People
+Open
+
+No contacts yet.
+
+Add contact
+Locations
+Manage
+
+No locations yet.
+
+Documents
+Open
+
+No documents yet.
+
+Notes
+Add note
+
+No notes yet.
+
+No survey responses yet.
+
+Everything, in order
+All
+Service
+Money
+Inventory
+Interactions
+
+Nothing recorded yet for this client.
+
+Dialog Content
+Co-managed IT
+Details
+SERVICE
+Tickets
+Recurring tickets
+Interactions
+Co-managed IT
+MONEY
+Billing
+Billing Dashboard
+Tax Settings
+INSTALL BASE
+Assets
+Equipment
+RECORDS
+Contacts
+Documents
+Additional Info
+Notes
+MORE
+Opportunities
+Passwords
+
+Co-managed IT for CM-REVIEW-20261026-01 Accept-4
+
+Co-managed IT not enabled
+Refresh workspaces
+Enable co-managed IT
+
+Enable co-managed IT from this client to reserve customer technicians and invite an administrator.
+
+Workspace name
+Administrator first name
+Administrator last name
+Administrator email
+Technician seats
+
+3 seats available. Include the initial administrator in this allocation.
+
+Proposed ticket access
+Oversight of the initial service desk board
+Select...
+Oversight of the initial service desk board
+Escalated tickets only
+MSP escalation queue*
+Select...
+Select...
+General Support
+ITIL Support
+Projects
+Technical Issues
+Urgent Matters
+Create workspace and invite administrator

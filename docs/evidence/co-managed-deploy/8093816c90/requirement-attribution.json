@@ -1,0 +1,134 @@
+{
+  "candidateRuntime": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+  "build": "build-1793021045283",
+  "stamp": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+  "baselineCensus": {
+    "source": "fact 71d62717 (current-source census at 64cb9c00bb with clientIntegration:F010 attributed on build-1793009958637)",
+    "counts": {
+      "verified": 1,
+      "implemented-unverified": 257,
+      "blocked-external": 2
+    }
+  },
+  "policy": "Only rows whose every clause was exercised on this build are promoted. Earlier builds' evidence is not relabelled as this build; F010's earlier promotion is re-proven here because 8093816c90 changed the client summary.",
+  "rows": [
+    {
+      "key": "clientIntegration:F003",
+      "from": "implemented-unverified",
+      "to": "verified",
+      "evidence": [
+        "06-f003-relationship-states/"
+      ],
+      "clauses": {
+        "absent": "pass: a never-set-up client (Emerald City) offers setup to the manager",
+        "single": "pass: White Rabbit Active, seats, Manage access",
+        "multiple": "pass: two live relationships on one client (SQL fixture) show 'Multiple co-managed relationships'; no management controls until an explicit choice; choosing resolves the exact relationship",
+        "ended": "pass: Kansas Farms 'Relationship ended' with history and no setup",
+        "inconsistent": "pass after 8093816c90: a setup whose relationship names another client (SQL fixture) reads 'Co-managed record needs attention' with neither setup nor management, and is not adopted by the other client",
+        "forbidden": "pass after 8093816c90: an Oz Technician sees the permission message on /msp/co-management, no client-tab writes, and the shared ticket fails closed",
+        "exact expected relationship identity for writes": "pass: a stale second-tab staff-access save is refused with the revision unchanged; a URL carrying another relationship id fails closed"
+      },
+      "note": "Multiple and inconsistent states require reversible SQL fixtures because the product offers no path that creates them; disclosed in the scenario limitations."
+    },
+    {
+      "key": "clientIntegration:F010",
+      "from": "implemented-unverified",
+      "to": "verified",
+      "evidence": [
+        "06-f003-relationship-states/"
+      ],
+      "clauses": {
+        "absent offers Enable to an authorized manager only": "pass: manager sees setup on an absent client; the Technician viewer is never offered Enable (no summary rendered)",
+        "active shows seat usage and Manage": "pass",
+        "ended shows end date and View history": "pass (Kansas Farms)",
+        "shared refresh between summary and client view": "pass: seats 1 -> 2 -> 1 updated the summary in the same document (performance.timeOrigin unchanged)"
+      }
+    },
+    {
+      "key": "clientIntegration:T009",
+      "from": "implemented-unverified",
+      "to": "verified",
+      "evidence": [
+        "07-t009-onboarding-recovery/",
+        "06-f003-relationship-states/"
+      ],
+      "clauses": {
+        "reserved progress then pending acceptance": "pass: reserved seat and progress, then awaiting acceptance",
+        "reopens the original operation after failure/reload": "pass: after reload the same operation shows delivery failure with Retry",
+        "distinguishes invitation expiry from delivery failure": "pass: 'Invitation delivery failed; retry to send it.' vs 'Invitation expired' + 'Resend administrator invitation' (expiry via recorded time fixture)",
+        "refreshes summary/usage after allocation or recovery": "pass: recovery cleared the failure in the same document; allocation refresh in 06",
+        "active settings use embeddable sections": "pass: White Rabbit tab embeds staff access, SLA link, capacity (06)",
+        "ended state uses retained history": "pass: Kansas Farms (06)"
+      },
+      "note": "Invitation expiry was produced by moving expires_at into the past; delivery failure used the local SMTP sink reject-mail fault. A reviewer may hold this row on the time fixture."
+    },
+    {
+      "key": "T13",
+      "status": "implemented-unverified",
+      "evidence": [
+        "01-billing-late-time/",
+        "02-billing-late-time-cleanup/",
+        "03-t13-msp-edit-attribution/"
+      ],
+      "progress": "This build: MSP commercial time on a shared ticket and native ticket time bill together through native Automatic Invoices at the contract rate; approved time dated in an already-invoiced period bills once on the next invoice with its service period named, INV-000003 untouched, no double billing on retry; a qualified MSP ticket edit is attributed 'QA Tester (Oz)' in the customer audit and history.",
+      "remaining": "MSP edit of a time entry itself; catalog-priced time with a real catalog price; customer operational time on this build."
+    },
+    {
+      "key": "T09",
+      "status": "implemented-unverified",
+      "evidence": [
+        "04-t09-privacy/",
+        "05-t09-export/"
+      ],
+      "progress": "This build: requester portal shows only requester-audience comments with matching counts; portal search, MSP full search and palette typeahead never surface hidden markers (positive controls live); customer portable export contains customer markers and no MSP-private notes.",
+      "remaining": "Task conversation audiences: requester task access, task disclosure, task notifications/email on this build."
+    },
+    {
+      "key": "clientIntegration:F015",
+      "status": "implemented-unverified",
+      "evidence": [
+        "07-t009-onboarding-recovery/"
+      ],
+      "progress": "Progress, delivery failure, durable automatic redelivery, expired invitation with Resend, and cancellation releasing the seat on this build.",
+      "remaining": "worker failure and acknowledged cleanup."
+    },
+    {
+      "key": "T18",
+      "status": "implemented-unverified",
+      "evidence": [
+        "08-closure-archive-dedup/",
+        "05-t09-export/"
+      ],
+      "progress": "Closure with participation and a retried closure produced exactly one closure, one sealed manifest, one archive file with no duplicates; MSP archive lists the ticket once; portable export excludes MSP-private notes.",
+      "remaining": "Restore of the portable export needs an isolated destination installation (external)."
+    },
+    {
+      "key": "clientIntegration:F018",
+      "status": "implemented-unverified",
+      "evidence": [
+        "08-closure-archive-dedup/",
+        "06-f003-relationship-states/"
+      ],
+      "progress": "Departure from the customer side and archive navigation on this build; ended client view without live usage.",
+      "remaining": "sponsor-side End co-management from the client tab was not re-run on this build."
+    },
+    {
+      "key": "T17",
+      "status": "implemented-unverified",
+      "evidence": [],
+      "progress": "Not exercised at runtime this round.",
+      "remaining": "Lifecycle grace expiring mid-operation (defer and roll back) needs runtime clock control; covered only by coManagedBootstrap PostgreSQL cases."
+    },
+    {
+      "key": "clientIntegration:T018",
+      "status": "blocked-external",
+      "missing": "real Stripe test account, price and checkout, and release-owner receipts"
+    },
+    {
+      "key": "clientIntegration:T019",
+      "status": "blocked-external",
+      "missing": "signed tenant-bound self-host licence and an isolated self-host installation"
+    }
+  ],
+  "otherExternalPrerequisites": "Approved Microsoft Entra application, directory provisioning (SCIM / Entra Direct), an inbound mailbox binding, a destination paid entitlement for restore/upgrade, and an isolated destination installation remain unavailable; rows that need them keep their named externalPrerequisite."
+}

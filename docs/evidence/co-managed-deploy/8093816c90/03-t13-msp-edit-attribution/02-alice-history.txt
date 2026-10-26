@@ -1,0 +1,733 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Projects
+Clients
+Co-managed IT
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Reports
+Time Management
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Settings
+Support
+v1.6.12
+Home
+All Tickets
+c64b2666-7dd6-4c61-8ced-4b233f628e61
+Quick Create
+AL
+← Back to
+Tickets
+17 / 32
+#000016
+Awaiting Client
+Created Internally
+Grid
+Entry
+Duplicate
+Delete
+CM-REVIEW-20261026-12-b requester mail ticket
+
+Created 10/25/2026, 11:54 PM (about 10 hours ago)
+
+Updated 10/26/2026, 9:57 AM (less than a minute ago)
+
+CM-REVIEW-20261026-12-b requester mail ticket
+Create Task
+Link to Task
+Quick invoice
+Resolve and close
+All fields
+STATUS
+Open
+PRIORITY
+Critical
+BOARD
+Service Desk
+CATEGORY
+Category
+ASSIGNED TO
+Not assigned
+DUE
+REPLY STATUS
+Waiting on client
+TAGS
+DESCRIPTION
+
+
+
+
+Opened by Alice Liddell · via web app
+
+Contact
+CR
+CM-REVIEW-20261026-12-b Requester
+cm-review-20261026-12-b.requester@whiterabbit.test
+WR
+Client
+White Rabbit IT
+Co-managed
+Responsible
+White Rabbit IT
+
+WHITE RABBIT IT SLA
+
+No SLA configured
+
+OZ SLA
+
+Starts at escalation
+
+MSP assignment
+Not assigned to the MSP
+Change
+Escalate to MSP
+Customer Feedback
+Assets
+Materials
+Scheduled work
+
+Nothing scheduled
+
+Schedule time
+Appointment requests
+
+No appointment requests
+
+Calls and emails
+
+No calls or emails logged
+
+Timeline
+Oldest first
+
+Replies, time, and system changes in one place
+
+Everything (73)
+Replies (32)
+Time (0)
+System (41)
+Alerts (0)
+Add Comment
+OCT 25
+
+Alice Liddell · created
+
+11:54 PM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 25, 11:54 PM
+
+CM-REVIEW-20261026-12-b shared-IT-only note
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+11:54 PM
+
+Alice Liddell · internal note added
+
+11:54 PM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 25, 11:54 PM
+
+CM-REVIEW-20261026-12-b private customer note
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+11:54 PM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 25, 11:54 PM
+
+CM-REVIEW-20261026-12-b requester-audience update
+
+Attachments
+Attach file
+React
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 25, 11:54 PM
+
+CM-REVIEW-20261026-12-b probe shared-IT audience 1792986887771
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+11:54 PM
+TODAY
+
+Alice Liddell · message added
+
+1:02 AM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 1:02 AM
+
+SMOKE-0453-SHARED-IT-NOT-FOR-REQUESTER
+
+Attachments
+Attach file
+React
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 2:41 AM
+
+DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1792996855729
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+2:41 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 2:41 AM
+
+DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1792996855729
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+2:41 AM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 2:41 AM
+
+DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1792996855729
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+2:41 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 2:41 AM
+
+DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1792996855729
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+2:41 AM
+
+Alice Liddell · message added
+
+2:41 AM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 2:41 AM
+
+DEPLOYFIX-REQUESTER-REPLY-FOR-REQUESTER 1792996855729
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+3:33 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 3:33 AM
+
+DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1792999980105
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+3:33 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 3:33 AM
+
+DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1792999980105
+
+Attachments
+Attach file
+React
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 3:33 AM
+
+DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1792999980105
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+3:33 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 3:33 AM
+
+DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1792999980105
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+3:33 AM
+
+Alice Liddell · message added
+
+3:33 AM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 3:33 AM
+
+DEPLOYFIX-REQUESTER-REPLY-FOR-REQUESTER 1792999980105
+
+Attachments
+Attach file
+React
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 4:25 AM
+
+DEPLOYFIX-SHARED-IT-DEFAULT-NOT-FOR-REQUESTER 1793003128343
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+4:25 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 4:25 AM
+
+DEPLOYFIX-SHARED-IT-RESELECTED-NOT-FOR-REQUESTER 1793003128343
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+4:25 AM
+
+Alice Liddell · internal note added
+
+4:25 AM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 4:25 AM
+
+DEPLOYFIX-PRIVATE-NOT-FOR-REQUESTER 1793003128343
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+4:25 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 4:25 AM
+
+DEPLOYFIX-SHARED-IT-GRID-NOT-FOR-REQUESTER 1793003128343
+
+Attachments
+Attach file
+React
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 4:25 AM
+
+DEPLOYFIX-REQUESTER-REPLY-FOR-REQUESTER 1793003128343
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+4:25 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 5:41 AM
+
+SMOKE-0939-DEFAULT-SHARED-NOT-REQUESTER
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+5:41 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 5:41 AM
+
+SMOKE-0939-RESELECT-SHARED-NOT-REQUESTER
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+5:41 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 5:42 AM
+
+SMOKE-0939-GRID-AUDIENCE
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+5:42 AM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 5:42 AM
+
+SMOKE-0939-PRIVATE-AUDIENCE
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+5:42 AM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 5:42 AM
+
+SMOKE-0939-REQUESTER-AUDIENCE
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+5:42 AM
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 6:40 AM
+
+DEPLOY-4E5F-ALICE-SHARED-IT
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+6:40 AM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 6:41 AM
+
+DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+6:41 AM
+AL
+
+Alice Liddell
+
+Requester and IT teams
+Requester and IT teams
+Oct 26, 6:41 AM
+
+DEPLOY-4E5F-ALICE-REQUESTER-CONTROL
+
+Attachments
+Attach file
+React
+
+Alice Liddell · message added
+
+6:41 AM
+
+QA Tester (Oz) · internal note added
+
+6:41 AM
+QT
+
+QA Tester (Oz) · Oz
+
+Shared IT teams
+Oct 26, 6:41 AM
+
+DEPLOY-4E5F-QA-SHARED-IT
+
+React
+AL
+
+Alice Liddell
+
+Shared IT teams
+Shared IT teams
+Oct 26, 6:44 AM
+
+DEPLOY-4E5F-ALICE-SHARED-IT-2
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+6:44 AM
+AL
+
+Alice Liddell
+
+Private to White Rabbit IT
+Private to White Rabbit IT
+Oct 26, 6:44 AM
+
+DEPLOY-4E5F-ALICE-CUSTOMER-PRIVATE-2
+
+Attachments
+Attach file
+React
+
+Alice Liddell · internal note added
+
+6:44 AM
+
+assignee set to Alice
+
+6:47 AM
+QT
+
+QA Tester (Oz) · Oz
+
+Shared IT teams
+Oct 26, 6:47 AM
+
+DEPLOY-4E5F-QA-SHARED-IT-2
+
+React
+
+QA Tester (Oz) · internal note added
+
+6:47 AM
+
+cleared assignee
+
+6:53 AM
+
+QA Tester (Oz) changed priority: Low → Urgent
+
+8:29 AM
+
+QA Tester (Oz) changed priority: Urgent → Low
+
+8:29 AM
+
+QA Tester (Oz) changed priority: Low → Urgent
+
+8:29 AM
+
+QA Tester (Oz) changed priority: Urgent → Low
+
+8:30 AM
+
+QA Tester (Oz) changed priority: Low → Urgent
+
+9:57 AM
+
+QA Tester (Oz) changed priority: Urgent → Critical
+
+9:57 AM
+Show all activity
+SLA clocks
+
+No SLA policy applies
+
+Checklist
+Time logged
+
+Recorded effort
+
+Customer
+0 hours
+MSP
+0 hours
+Combined
+0 hours
+Billing
+
+Nothing billable yet
+
+Team
+Add agents or a team…
+Watch List
+Documents
+
+No documents yet
+
+Add a document
+Passwords
+
+No passwords attached yet.
+
+Attach a password
+External links
+Dialog Content
+Shared IT handoff history
+
+No visible handoffs.

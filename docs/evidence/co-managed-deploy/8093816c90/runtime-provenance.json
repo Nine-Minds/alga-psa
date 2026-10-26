@@ -1,0 +1,47 @@
+{
+  "sourceRevision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4",
+  "app": {
+    "buildId": "build-1793021045283",
+    "stamp": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "dist": "server/.next-review-final-8093816c",
+    "served": "http://feature-co-managed-it.localhost:23374",
+    "launcher": "scripts/dev/run-card-service.sh review-app ... scripts/dev/run-co-managed-review-app.sh",
+    "boardAdmission": {
+      "ensure": "alga-dev workflow-ensure-service --name=review-app --readinessPort=23374 --readinessPath=/api/health",
+      "result": "created:true, status live",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+      "createdAt": "2026-10-26T13:23:34.079Z",
+      "laterBoardStatus": "suspended",
+      "suspendedAt": "2026-10-26T13:23:37.550Z",
+      "suspendedReason": "\"Draft Implementation\" does not use it",
+      "note": "The board marked the PTY suspended 3.5 s after admission because the current step does not list review-app; the detached card-service supervisor it launched kept serving this build for the whole run."
+    },
+    "nextServerPid": 3893983,
+    "nextServerStarted": "Mon Oct 26 09:37:06 2026",
+    "healthAtReceipt": "200"
+  },
+  "workers": {
+    "temporal-worker": {
+      "rebuiltWith": "~/.alga-dev/releases/202610232337-g5429853d2c/scripts/build-service.sh <worktree> ee/temporal-workflows",
+      "reason": "8093816c90 changed packages/co-managed/src/managementPolicy.ts, which the temporal worker compiles",
+      "coldRestart": "run-card-service.sh temporal-worker --stop, then alga-dev workflow-restart-service",
+      "childPid": 3848394,
+      "childStarted": "Mon Oct 26 09:24:56 2026",
+      "boardSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:temporal-worker:27",
+      "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+      "managementPolicyJsSha256": "ca67fedf23e53ba7eea04ef2e7397913799bfc776477f4d9c19f599e56bf5032"
+    },
+    "workflow-worker": {
+      "rebuilt": false,
+      "reason": "Neither 5a822cb47e nor 8093816c90 changes code it compiles (no packages/co-managed or billing engine in its dist; the billing interface type change emits no JS).",
+      "childPid": 3111766,
+      "childStarted": "Mon Oct 26 06:35:18 2026"
+    }
+  },
+  "firstPassBuild": {
+    "sourceRevision": "5a822cb47e92aa765d73fee725fc80558249ff2f",
+    "buildId": "build-1793016214488",
+    "dist": "server/.next-review-final-5a822cb4",
+    "note": "Task 1 build. The F003 run on it found the forbidden-message and inconsistent-state defects fixed in 8093816c90 (attempts/build-1793016214488). Every scenario in this directory was re-run on build-1793021045283."
+  }
+}

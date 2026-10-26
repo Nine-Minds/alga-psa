@@ -1,0 +1,14 @@
+{
+  "rev0": 94,
+  "rev1": 95,
+  "rev2": 95,
+  "current": "Collaborate",
+  "other": "View",
+  "message": [
+    "Refresh workspaces",
+    "Could not confirm the save. Retry the same changes, or reload current access before editing again.",
+    "Reload current access",
+    "Reload current access",
+    "Refresh access"
+  ]
+}

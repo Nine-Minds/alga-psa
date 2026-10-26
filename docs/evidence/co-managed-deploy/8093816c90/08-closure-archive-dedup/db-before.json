@@ -1,0 +1,14 @@
+{
+  "relationship": {
+    "state": "active",
+    "ended_at": null,
+    "revision": 4
+  },
+  "closures": [],
+  "manifests": [],
+  "files": [],
+  "allocation": {
+    "seats": 1,
+    "state": "active"
+  }
+}

@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:00.051 --> 00:00:05.952
+QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail
+
+2
+00:00:05.952 --> 00:00:11.236
+Provisioning runs; the invitation cannot be delivered
+
+3
+00:00:11.236 --> 00:02:17.750
+Cancel the disposable setup and release its seat

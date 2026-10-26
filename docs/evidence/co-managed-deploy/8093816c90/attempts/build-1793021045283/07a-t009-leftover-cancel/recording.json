@@ -1,0 +1,70 @@
+{
+  "scenario": "07a-t009-leftover-cancel",
+  "recordedAt": "2026-10-26T13:44:24.918Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "leftover-setup-cancelled",
+      "passed": true,
+      "at": "2026-10-26T13:44:35.015Z",
+      "data": {
+        "state": "cancelled"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:44:24.961Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:26.849Z",
+      "seconds": 1.931,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:28.803Z",
+      "seconds": 3.885,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:44:35.015Z",
+      "seconds": 10.097,
+      "actor": "qa",
+      "title": "leftover-setup-cancelled",
+      "data": {
+        "state": "cancelled"
+      }
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 10.76,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+{
+  "scenario": "03-t13-msp-edit-attribution",
+  "recordedAt": "2026-10-26T13:57:44.754Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "customer-audit-row-carries-qualified-msp-actor",
+      "passed": true,
+      "at": "2026-10-26T13:57:52.274Z",
+      "data": {
+        "audit_id": "44a858ec-ef19-400c-a94d-54eb89df3ddf",
+        "event_type": "TICKET_PRIORITY_CHANGED",
+        "actor_type": "user",
+        "actor_user_id": null,
+        "actor_contact_id": null,
+        "actor_reference_id": "2e855561-3d7e-4138-aef0-f021f327422e",
+        "actor_display_name": "QA Tester",
+        "actor_organization_name": "Oz",
+        "source": "ui",
+        "changes": {
+          "priority_id": {
+            "new": "6fdf4c04-6d0b-441b-a9bd-368c202f7e72",
+            "old": "3410c999-0002-4044-828e-b707bd9b8705",
+            "newLabel": "Critical",
+            "oldLabel": "Urgent"
+          }
+        }
+      }
+    },
+    {
+      "id": "alice-history-names-the-qualified-msp-actor-for-the-change",
+      "passed": true,
+      "at": "2026-10-26T13:58:01.690Z",
+      "data": {
+        "line": "QA Tester (Oz) changed priority: Urgent → Critical"
+      }
+    },
+    {
+      "id": "priority-restored",
+      "passed": true,
+      "at": "2026-10-26T13:58:08.680Z",
+      "data": {
+        "original": "Urgent"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:57:44.797Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:57:46.853Z",
+      "seconds": 2.099,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:57:46.853Z",
+      "seconds": 2.099,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "QA (Oz MSP) changes the priority of shared White Rabbit ticket 000016"
+    },
+    {
+      "at": "2026-10-26T13:57:49.028Z",
+      "seconds": 4.274,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T13:57:52.274Z",
+      "seconds": 7.52,
+      "actor": "qa",
+      "title": "customer-audit-row-carries-qualified-msp-actor",
+      "data": {
+        "audit_id": "44a858ec-ef19-400c-a94d-54eb89df3ddf",
+        "event_type": "TICKET_PRIORITY_CHANGED",
+        "actor_type": "user",
+        "actor_user_id": null,
+        "actor_contact_id": null,
+        "actor_reference_id": "2e855561-3d7e-4138-aef0-f021f327422e",
+        "actor_display_name": "QA Tester",
+        "actor_organization_name": "Oz",
+        "source": "ui",
+        "changes": {
+          "priority_id": {
+            "new": "6fdf4c04-6d0b-441b-a9bd-368c202f7e72",
+            "old": "3410c999-0002-4044-828e-b707bd9b8705",
+            "newLabel": "Critical",
+            "oldLabel": "Urgent"
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T13:57:52.274Z",
+      "seconds": 7.52,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Alice (White Rabbit IT) reads the ticket history in her own workspace"
+    },
+    {
+      "at": "2026-10-26T13:57:54.059Z",
+      "seconds": 9.305,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T13:57:56.044Z",
+      "seconds": 11.29,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T13:58:01.690Z",
+      "seconds": 16.936,
+      "actor": "alice",
+      "title": "alice-history-names-the-qualified-msp-actor-for-the-change",
+      "data": {
+        "line": "QA Tester (Oz) changed priority: Urgent → Critical"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:01.691Z",
+      "seconds": 16.937,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "QA restores the original priority"
+    },
+    {
+      "at": "2026-10-26T13:58:03.478Z",
+      "seconds": 18.724,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:05.622Z",
+      "seconds": 20.868,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T13:58:08.680Z",
+      "seconds": 23.926,
+      "actor": "qa",
+      "title": "priority-restored",
+      "data": {
+        "original": "Urgent"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 2.099,
+      "title": "QA (Oz MSP) changes the priority of shared White Rabbit ticket 000016",
+      "end": 7.52
+    },
+    {
+      "start": 7.52,
+      "title": "Alice (White Rabbit IT) reads the ticket history in her own workspace",
+      "end": 16.937
+    },
+    {
+      "start": 16.937,
+      "title": "QA restores the original priority",
+      "end": 25.029999999999998
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 25.08,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

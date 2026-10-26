@@ -1,0 +1,44 @@
+{
+  "disposable": [
+    {
+      "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+      "invoice_number": "INV-000006",
+      "status": "draft"
+    }
+  ],
+  "entries": [
+    {
+      "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+      "work_item_type": "ticket",
+      "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+      "approval_status": "APPROVED",
+      "invoiced": true
+    },
+    {
+      "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+      "work_item_type": "co_managed",
+      "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+      "approval_status": "APPROVED",
+      "invoiced": true
+    }
+  ],
+  "sheet": "APPROVED",
+  "team": {
+    "team_id": "cc16235d-b774-41a1-b734-8fbd680528c8"
+  },
+  "nativeTicket": {
+    "ticket_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03"
+  },
+  "contract": {
+    "is_active": true,
+    "status": "pending"
+  },
+  "billingEmail": "billing@whiterabbit.test",
+  "inv3": {
+    "invoice_number": "INV-000003",
+    "status": "draft",
+    "subtotal": 42500,
+    "total_amount": 42500,
+    "sources": 17
+  }
+}

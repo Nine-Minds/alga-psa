@@ -1,0 +1,31 @@
+{
+  "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+  "blobCount": 20,
+  "manifestBytes": 530404,
+  "tableKeys": [],
+  "shared": {
+    "manifestHits": 2,
+    "blobHits": 0
+  },
+  "orgPrivate": {
+    "manifestHits": 2,
+    "blobHits": 0
+  },
+  "mspPrivate": {
+    "manifestHits": 0,
+    "blobHits": 0
+  },
+  "requester": {
+    "manifestHits": 2,
+    "blobHits": 0
+  },
+  "legacyQaPrivate": {
+    "manifestHits": 0,
+    "blobHits": 0
+  },
+  "legacyAliceShared": {
+    "manifestHits": 2,
+    "blobHits": 0
+  },
+  "privateCommentTableKeys": []
+}

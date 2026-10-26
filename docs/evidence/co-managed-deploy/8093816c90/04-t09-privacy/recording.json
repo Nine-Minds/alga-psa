@@ -1,0 +1,404 @@
+{
+  "scenario": "04-t09-privacy",
+  "recordedAt": "2026-10-26T13:58:16.954Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "storage-audiences",
+      "passed": true,
+      "at": "2026-10-26T13:58:39.870Z",
+      "data": {
+        "shared": {
+          "customerStore": [
+            {
+              "collaboration_audience": "shared_it",
+              "is_internal": true,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        },
+        "orgPrivate": {
+          "customerStore": [
+            {
+              "collaboration_audience": "organization_private",
+              "is_internal": true,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        },
+        "mspPrivate": {
+          "customerStore": [],
+          "mspPrivateStore": 1
+        },
+        "requester": {
+          "customerStore": [
+            {
+              "collaboration_audience": "requester",
+              "is_internal": false,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        }
+      }
+    },
+    {
+      "id": "qa-search-positive-control-finds-native-oz-ticket",
+      "passed": true,
+      "at": "2026-10-26T13:58:59.839Z",
+      "data": {
+        "control": "Search\n\n2 results for \"switch closet\"\n\nAll\n2\nAssets\n0\nBoards\n0\nCategories\n0\nClient contracts\n0\nClients\n0\nContacts\n0\nContracts\n0\nDocuments\n0\nInteractions\n0\nInvoices\n0\nInvoice line items\n0\nInvoice annot"
+      }
+    },
+    {
+      "id": "qa-typeahead-and-full-search-hide-customer-private",
+      "passed": true,
+      "at": "2026-10-26T13:58:59.839Z",
+      "data": {
+        "otherFull": "Search\n\n0 results for \"T09S096803ALICEPRIVATE\"\n\nAll\n0\nAssets\n0\nBoards\n0\nCategories\n0\nClient contracts\n0\nClients\n0\nContacts\n0\nContracts\n0\nDocuments\n0\nInteractions\n0\nInvoices\n0\nInvoice line items\n0\nInvo"
+      }
+    },
+    {
+      "id": "alice-search-surface-is-live",
+      "passed": true,
+      "at": "2026-10-26T14:00:18.248Z",
+      "data": {
+        "ownFound": false,
+        "control": "White Rabbit printer queue stalled\nWhite Rabbit IT | 000001\nRECORD\nWhite Rabbit IT\nclient\nRECORD\nCM-REVIEW-20261026-03 board-only ticket\nWhite Rabbit IT | 000004\nRECORD\nCM-REVIEW-20261026-07 final con"
+      }
+    },
+    {
+      "id": "alice-typeahead-hides-msp-private-and-full-search-is-outside-the-product",
+      "passed": true,
+      "at": "2026-10-26T14:00:18.249Z",
+      "data": {
+        "typeahead": "",
+        "full": "Page not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+      }
+    },
+    {
+      "id": "portal-ticket-shows-requester-reply-only",
+      "passed": true,
+      "at": "2026-10-26T14:00:42.960Z",
+      "data": {}
+    },
+    {
+      "id": "portal-counts-never-reveal-hidden-comments",
+      "passed": true,
+      "at": "2026-10-26T14:00:43.223Z",
+      "data": {
+        "shownCounts": [
+          9,
+          0
+        ],
+        "visibleRequesterComments": 9,
+        "totalStored": 35
+      }
+    },
+    {
+      "id": "portal-search-never-matches-hidden-markers",
+      "passed": true,
+      "at": "2026-10-26T14:00:43.223Z",
+      "data": {}
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:58:16.990Z",
+      "seconds": 0.036,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:16.990Z",
+      "seconds": 0.036,
+      "title": "chapter",
+      "data": "Alice posts Shared IT, customer-private and requester-visible comments on ticket 000009"
+    },
+    {
+      "at": "2026-10-26T13:58:18.879Z",
+      "seconds": 1.925,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:21.051Z",
+      "seconds": 4.097,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T13:58:30.950Z",
+      "seconds": 13.996,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "QA posts an MSP-private note from the shared ticket"
+    },
+    {
+      "at": "2026-10-26T13:58:32.805Z",
+      "seconds": 15.851,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:34.874Z",
+      "seconds": 17.92,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T13:58:39.870Z",
+      "seconds": 22.916,
+      "actor": "qa",
+      "title": "storage-audiences",
+      "data": {
+        "shared": {
+          "customerStore": [
+            {
+              "collaboration_audience": "shared_it",
+              "is_internal": true,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        },
+        "orgPrivate": {
+          "customerStore": [
+            {
+              "collaboration_audience": "organization_private",
+              "is_internal": true,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        },
+        "mspPrivate": {
+          "customerStore": [],
+          "mspPrivateStore": 1
+        },
+        "requester": {
+          "customerStore": [
+            {
+              "collaboration_audience": "requester",
+              "is_internal": false,
+              "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+            }
+          ],
+          "mspPrivateStore": 0
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:39.871Z",
+      "seconds": 22.917,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "QA search: own MSP-private marker found (index live); Alice's customer-private marker never surfaces"
+    },
+    {
+      "at": "2026-10-26T13:58:41.772Z",
+      "seconds": 24.818,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/dashboard"
+    },
+    {
+      "at": "2026-10-26T13:58:48.318Z",
+      "seconds": 31.364,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/search?q=switch%20closet"
+    },
+    {
+      "at": "2026-10-26T13:58:57.283Z",
+      "seconds": 40.329,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/search?q=T09S096803ALICEPRIVATE"
+    },
+    {
+      "at": "2026-10-26T13:58:59.839Z",
+      "seconds": 42.885,
+      "actor": "qa",
+      "title": "qa-search-positive-control-finds-native-oz-ticket",
+      "data": {
+        "control": "Search\n\n2 results for \"switch closet\"\n\nAll\n2\nAssets\n0\nBoards\n0\nCategories\n0\nClient contracts\n0\nClients\n0\nContacts\n0\nContracts\n0\nDocuments\n0\nInteractions\n0\nInvoices\n0\nInvoice line items\n0\nInvoice annot"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:59.839Z",
+      "seconds": 42.885,
+      "actor": "qa",
+      "title": "qa-typeahead-and-full-search-hide-customer-private",
+      "data": {
+        "otherFull": "Search\n\n0 results for \"T09S096803ALICEPRIVATE\"\n\nAll\n0\nAssets\n0\nBoards\n0\nCategories\n0\nClient contracts\n0\nClients\n0\nContacts\n0\nContracts\n0\nDocuments\n0\nInteractions\n0\nInvoices\n0\nInvoice line items\n0\nInvo"
+      }
+    },
+    {
+      "at": "2026-10-26T13:58:59.841Z",
+      "seconds": 42.887,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Alice search: own customer-private marker found; QA's MSP-private marker never surfaces"
+    },
+    {
+      "at": "2026-10-26T13:59:01.641Z",
+      "seconds": 44.687,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T13:59:03.523Z",
+      "seconds": 46.569,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/dashboard"
+    },
+    {
+      "at": "2026-10-26T14:00:11.144Z",
+      "seconds": 114.19,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/search?q=T09S096803QAPRIVATE"
+    },
+    {
+      "at": "2026-10-26T14:00:18.248Z",
+      "seconds": 121.294,
+      "actor": "alice",
+      "title": "alice-search-surface-is-live",
+      "data": {
+        "ownFound": false,
+        "control": "White Rabbit printer queue stalled\nWhite Rabbit IT | 000001\nRECORD\nWhite Rabbit IT\nclient\nRECORD\nCM-REVIEW-20261026-03 board-only ticket\nWhite Rabbit IT | 000004\nRECORD\nCM-REVIEW-20261026-07 final con"
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:18.249Z",
+      "seconds": 121.295,
+      "actor": "alice",
+      "title": "alice-typeahead-hides-msp-private-and-full-search-is-outside-the-product",
+      "data": {
+        "typeahead": "",
+        "full": "Page not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:18.250Z",
+      "seconds": 121.296,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Requester 07 in the client portal: only the requester reply is visible, counts match, search finds no hidden marker"
+    },
+    {
+      "at": "2026-10-26T14:00:22.343Z",
+      "seconds": 125.389,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/client-portal/tickets"
+    },
+    {
+      "at": "2026-10-26T14:00:38.835Z",
+      "seconds": 141.881,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/client-portal/tickets/99a62c02-6235-408f-9755-959424089b76"
+    },
+    {
+      "at": "2026-10-26T14:00:42.960Z",
+      "seconds": 146.006,
+      "actor": "alice",
+      "title": "portal-ticket-shows-requester-reply-only",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T14:00:43.223Z",
+      "seconds": 146.269,
+      "actor": "alice",
+      "title": "portal-counts-never-reveal-hidden-comments",
+      "data": {
+        "shownCounts": [
+          9,
+          0
+        ],
+        "visibleRequesterComments": 9,
+        "totalStored": 35
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:43.223Z",
+      "seconds": 146.269,
+      "actor": "alice",
+      "title": "portal-search-never-matches-hidden-markers",
+      "data": {}
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.036,
+      "title": "Alice posts Shared IT, customer-private and requester-visible comments on ticket 000009",
+      "end": 13.996
+    },
+    {
+      "start": 13.996,
+      "title": "QA posts an MSP-private note from the shared ticket",
+      "end": 22.917
+    },
+    {
+      "start": 22.917,
+      "title": "QA search: own MSP-private marker found (index live); Alice's customer-private marker never surfaces",
+      "end": 42.887
+    },
+    {
+      "start": 42.887,
+      "title": "Alice search: own customer-private marker found; QA's MSP-private marker never surfaces",
+      "end": 121.296
+    },
+    {
+      "start": 121.296,
+      "title": "Requester 07 in the client portal: only the requester reply is visible, counts match, search finds no hidden marker",
+      "end": 146.91
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Requester portal search filters ticket fields; a hidden marker would only leak if it matched, which it did not."
+  ],
+  "durationSeconds": 146.96,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

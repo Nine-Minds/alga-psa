@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.054 --> 00:00:06.009
+QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail
+
+2
+00:00:06.009 --> 00:00:11.299
+Provisioning runs; the invitation cannot be delivered
+
+3
+00:00:11.299 --> 00:00:28.590
+The mail sink recovers; Retry delivers the original invitation once
+
+4
+00:00:28.590 --> 00:00:33.693
+Expiry (time fixture): the invitation is reported expired, distinct from delivery failure, with Resend
+
+5
+00:00:33.693 --> 00:00:42.270
+Cancel the disposable setup and release its seat

@@ -1,0 +1,21 @@
+WEBVTT
+
+1
+00:00:00.036 --> 00:00:13.996
+Alice posts Shared IT, customer-private and requester-visible comments on ticket 000009
+
+2
+00:00:13.996 --> 00:00:22.917
+QA posts an MSP-private note from the shared ticket
+
+3
+00:00:22.917 --> 00:00:42.887
+QA search: own MSP-private marker found (index live); Alice's customer-private marker never surfaces
+
+4
+00:00:42.887 --> 00:02:01.296
+Alice search: own customer-private marker found; QA's MSP-private marker never surfaces
+
+5
+00:02:01.296 --> 00:02:26.910
+Requester 07 in the client portal: only the requester reply is visible, counts match, search finds no hidden marker

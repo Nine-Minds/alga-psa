@@ -1,0 +1,95 @@
+	
+CLIENT / GROUP
+	
+STATUS
+	
+SERVICE PERIOD
+	
+AMOUNT
+
+
+	
+White Rabbit
+T&M
+CM-REVIEW-20261026-09 hourly contract - Hourly
+	
+Not yet due
+Opens Feb 1, 2027
+	
+Jan 2027
+	
+Calculated at generation
+
+
+	
+CM-REVIEW-20261026-09 hourly contract
+T&M
+CM-REVIEW-20261026-09 hourly contract - Hourly
+Client schedule · Arrears
+	
+	
+Jan 2027
+	
+Calculated at generation
+
+
+	
+White Rabbit
+T&M
+CM-REVIEW-20261026-09 hourly contract - Hourly
+	
+Ready
+	
+Dec 2026
+	
+Calculated at generation
+
+
+	
+CM-REVIEW-20261026-09 hourly contract
+T&M
+CM-REVIEW-20261026-09 hourly contract - Hourly
+Client schedule · Arrears
+	
+	
+Dec 2026
+	
+Calculated at generation
+
+
+	
+White Rabbit
+T&M ×2
+2 line items
+	
+Combine
+	
+Oct 2026
+	
+$30.00
+
+
+	
+Unresolved work
+T&M
+Unresolved time entry
+Unresolved work
+Client schedule · Advance
+	
+	
+Oct 2026
+	
+$15.00
+
+
+	
+Unresolved work
+T&M
+Unresolved time entry
+Unresolved work
+Client schedule · Advance
+	
+	
+Oct 2026
+	
+$15.00

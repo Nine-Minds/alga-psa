@@ -1,0 +1,111 @@
+{
+  "invoice": {
+    "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd",
+    "invoice_number": "INV-000006",
+    "status": "draft",
+    "subtotal": 10000,
+    "total_amount": 10000,
+    "created_at": "2026-10-26T13:56:18.273487+00:00"
+  },
+  "charges": [
+    {
+      "item_id": "3a8245fb-6d85-4331-b355-0700d391e7df",
+      "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+      "quantity": 0.5,
+      "unit_price": 10000,
+      "net_amount": 5000,
+      "service_period_start": "2026-10-01",
+      "service_period_end": "2026-10-31"
+    },
+    {
+      "item_id": "b5b74fd3-dcfe-47d8-8bf8-4adf78edc399",
+      "description": "Basic Support (late time, service period 2026-10-01 – 2026-10-31)",
+      "quantity": 0.5,
+      "unit_price": 10000,
+      "net_amount": 5000,
+      "service_period_start": "2026-10-01",
+      "service_period_end": "2026-10-31"
+    }
+  ],
+  "links": [
+    {
+      "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+      "work_item_snapshot": {
+        "rate": 10000,
+        "title": "CM-REVIEW-20261026-12-b requester mail ticket",
+        "version": 2,
+        "rateKind": "uniform",
+        "entryDate": "2026-10-18",
+        "netAmount": 5000,
+        "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+        "workItemId": "81245210-accc-40ad-afaa-6680a85a75b0",
+        "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+        "serviceName": "Basic Support",
+        "uniformRate": 10000,
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "ticketNumber": "000016",
+        "workItemType": "ticket",
+        "billedMinutes": 30,
+        "relationshipId": "2be5cb32-91e8-491a-9ec4-16ab019c7d40",
+        "workReferenceId": "5ecc6805-82c3-43f6-b515-e0cfd796d742"
+      }
+    },
+    {
+      "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+      "work_item_snapshot": {
+        "rate": 10000,
+        "title": "LATE-5A82 native White Rabbit work (disposable)",
+        "version": 2,
+        "rateKind": "uniform",
+        "entryDate": "2026-10-18",
+        "netAmount": 5000,
+        "serviceId": "3105a420-8aab-434e-a872-abd01ad26926",
+        "workItemId": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+        "description": "[{\"type\":\"paragraph\",\"props\":{\"textAlignment\":\"left\",\"backgroundColor\":\"default\",\"textColor\":\"default\"},\"content\":[{\"type\":\"text\",\"text\":\"\",\"styles\":{}}]}]",
+        "serviceName": "Basic Support",
+        "uniformRate": 10000,
+        "ticketNumber": "TIC001013",
+        "workItemType": "ticket",
+        "billedMinutes": 30
+      }
+    }
+  ],
+  "entries": [
+    {
+      "entry_id": "9a773cfe-083c-4ee1-85b2-27a47c50aad7",
+      "work_item_type": "ticket",
+      "work_item_id": "7651112a-c7a0-45ed-9a52-47b5e7f8da03",
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+      "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "start_time": "2026-10-18T08:00:00+00:00",
+      "billable_duration": 30,
+      "approval_status": "APPROVED",
+      "invoiced": true,
+      "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+      "notes": "LATE-5A82 native time"
+    },
+    {
+      "entry_id": "2f8e7c0c-0231-4d75-a758-6afad22fb59d",
+      "work_item_type": "co_managed",
+      "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+      "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+      "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+      "start_time": "2026-10-18T08:00:00+00:00",
+      "billable_duration": 30,
+      "approval_status": "APPROVED",
+      "invoiced": true,
+      "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa",
+      "notes": "LATE-5A82 shared MSP time"
+    }
+  ],
+  "octRsp": {
+    "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+    "lifecycle_state": "billed",
+    "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+  },
+  "novRsp": {
+    "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+    "lifecycle_state": "billed",
+    "invoice_id": "4e26e14f-de00-478f-871b-54829892d3cd"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "relationship": {
+    "state": "terminated",
+    "ended_at": "2026-10-26T13:54:07.795+00:00",
+    "revision": 7
+  },
+  "closures": [
+    {
+      "operation_id": "7a13e689-a931-476f-8dff-d2c9f263994b",
+      "applied_revision": 7,
+      "released_seats": 1,
+      "cutoff_at": "2026-10-26T13:54:07.778+00:00",
+      "closed_at": "2026-10-26T13:54:07.795+00:00"
+    }
+  ],
+  "manifests": [
+    {
+      "operation_id": "7a13e689-a931-476f-8dff-d2c9f263994b",
+      "sealed_at": "2026-10-26T13:54:07.795014+00:00",
+      "cutoff_at": "2026-10-26T13:54:07.778+00:00",
+      "content_hash": "00e40bf593ff4efe5d30db257ae0606e96200076c0c86b39f1fb1e4e408554fb"
+    }
+  ],
+  "files": [
+    {
+      "archive_file_id": "cef17916-4d57-4c78-9b31-062f26700fc2",
+      "attachment_id": "30d3fce5-ff93-4399-afd6-e71b3fd29e4d",
+      "comment_id": "72219a65-3f02-467c-bf42-0e311aee3a9c",
+      "ticket_id": "b3761e63-cc31-41e5-9264-add05506c22c",
+      "audience": "shared_it",
+      "file_name": "close-022349-evidence.txt",
+      "content_hash": "45d8723f24eb6ce6ba9831c1c44d61595f7e8fd208061180d9988ed8b5115409",
+      "status": "pending"
+    }
+  ],
+  "allocation": {
+    "seats": 1,
+    "state": "released"
+  }
+}

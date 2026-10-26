@@ -1,0 +1,17 @@
+{
+  "operation": {
+    "operation_id": "23a903f5-d2d6-4bec-9479-7c7955093031",
+    "state": "pending_acceptance",
+    "step": "administrator_invitation",
+    "error_code": null,
+    "invitation_sent_at": "2026-10-26T13:41:56.473221+00:00",
+    "invitation_delivery_error": null,
+    "customer_tenant": "4729b1e3-cff8-4ea2-b9f3-5dc3b5ad3af0",
+    "relationship_id": "851d4bef-9b44-48a7-b650-db9217352163",
+    "administrator_invitation_id": "96d6d96b-4a46-4aee-8ae2-dd808a78bb69"
+  },
+  "allocation": {
+    "seats": 1,
+    "state": "reserved"
+  }
+}

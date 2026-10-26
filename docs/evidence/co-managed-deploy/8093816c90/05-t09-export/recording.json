@@ -1,0 +1,242 @@
+{
+  "scenario": "05-t09-export",
+  "recordedAt": "2026-10-26T14:00:44.074Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "archive-is-white-rabbit",
+      "passed": true,
+      "at": "2026-10-26T14:00:49.626Z",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "id": "archive-contains-customer-owned-markers",
+      "passed": true,
+      "at": "2026-10-26T14:00:49.627Z",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "blobCount": 20,
+        "manifestBytes": 530404,
+        "tableKeys": [],
+        "shared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "orgPrivate": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "mspPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "requester": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "legacyQaPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "legacyAliceShared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "privateCommentTableKeys": []
+      }
+    },
+    {
+      "id": "archive-excludes-msp-private-notes",
+      "passed": true,
+      "at": "2026-10-26T14:00:49.627Z",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "blobCount": 20,
+        "manifestBytes": 530404,
+        "tableKeys": [],
+        "shared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "orgPrivate": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "mspPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "requester": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "legacyQaPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "legacyAliceShared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "privateCommentTableKeys": []
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:00:44.118Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:44.118Z",
+      "seconds": 0.044,
+      "title": "chapter",
+      "data": "Alice prepares and downloads the encrypted White Rabbit IT backup"
+    },
+    {
+      "at": "2026-10-26T14:00:46.009Z",
+      "seconds": 1.935,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:47.886Z",
+      "seconds": 3.812,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/export"
+    },
+    {
+      "at": "2026-10-26T14:00:49.234Z",
+      "seconds": 5.16,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Decrypt with the product reader and scan for markers"
+    },
+    {
+      "at": "2026-10-26T14:00:49.627Z",
+      "seconds": 5.553,
+      "actor": "alice",
+      "title": "archive-is-white-rabbit",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:49.627Z",
+      "seconds": 5.553,
+      "actor": "alice",
+      "title": "archive-contains-customer-owned-markers",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "blobCount": 20,
+        "manifestBytes": 530404,
+        "tableKeys": [],
+        "shared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "orgPrivate": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "mspPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "requester": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "legacyQaPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "legacyAliceShared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "privateCommentTableKeys": []
+      }
+    },
+    {
+      "at": "2026-10-26T14:00:49.627Z",
+      "seconds": 5.553,
+      "actor": "alice",
+      "title": "archive-excludes-msp-private-notes",
+      "data": {
+        "sourceTenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+        "blobCount": 20,
+        "manifestBytes": 530404,
+        "tableKeys": [],
+        "shared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "orgPrivate": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "mspPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "requester": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "legacyQaPrivate": {
+          "manifestHits": 0,
+          "blobHits": 0
+        },
+        "legacyAliceShared": {
+          "manifestHits": 2,
+          "blobHits": 0
+        },
+        "privateCommentTableKeys": []
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.044,
+      "title": "Alice prepares and downloads the encrypted White Rabbit IT backup",
+      "end": 5.16
+    },
+    {
+      "start": 5.16,
+      "title": "Decrypt with the product reader and scan for markers",
+      "end": 6.07
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Archive and passphrase are retained only in the private card directory; evidence keeps the hash and the marker-level scan."
+  ],
+  "durationSeconds": 6.12,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

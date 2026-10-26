@@ -1,0 +1,17 @@
+{
+  "operation": {
+    "operation_id": "6b54e579-bb84-44ba-8016-b8747a0c2aa1",
+    "state": "cancelled",
+    "step": "administrator_invitation",
+    "error_code": null,
+    "invitation_sent_at": "2026-10-26T13:45:01.573566+00:00",
+    "invitation_delivery_error": null,
+    "customer_tenant": "08c645f9-f309-4ce9-a584-e28d436b681a",
+    "relationship_id": "9db21461-a54d-4769-8c31-6f0ee9dcc64d",
+    "administrator_invitation_id": "d603094a-13a5-43fb-be5f-14d40272dbb5"
+  },
+  "allocation": {
+    "seats": 1,
+    "state": "released"
+  }
+}

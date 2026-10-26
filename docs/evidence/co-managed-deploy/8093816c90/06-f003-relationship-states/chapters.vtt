@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.200 --> 00:00:37.689
+Forbidden: the Oz Technician viewer has no co-management management and cannot open shared work directly
+
+2
+00:00:37.689 --> 00:00:43.463
+Inconsistent identity: QA opens White Rabbit ticket 000009 under the ended Kansas relationship id
+
+3
+00:00:43.463 --> 00:00:49.532
+States on client tabs: single (White Rabbit), ended (Kansas), absent (a client never set up)
+
+4
+00:00:49.532 --> 00:00:57.117
+F010: seat allocation 1 -> 2 -> 1 refreshes the summary in the same document
+
+5
+00:00:57.117 --> 00:01:06.084
+Multiple: map disposable Accept-3 onto White Rabbit (fixture); the client tab requires an explicit choice
+
+6
+00:01:06.084 --> 00:01:13.924
+Inconsistent: Accept-4 relationship points at another sponsor client than its operation (fixture)
+
+7
+00:01:13.924 --> 00:01:57.270
+Stale write: two tabs on White Rabbit staff access; the stale save is refused

@@ -1,0 +1,306 @@
+{
+  "scenario": "08-closure-archive-dedup",
+  "recordedAt": "2026-10-26T13:53:04.450Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "exactly-one-closure-and-one-sealed-manifest",
+      "passed": true,
+      "at": "2026-10-26T13:54:30.908Z",
+      "data": {
+        "closures": 1,
+        "manifests": 1
+      }
+    },
+    {
+      "id": "no-duplicated-archive-files",
+      "passed": true,
+      "at": "2026-10-26T13:54:30.908Z",
+      "data": {
+        "files": 1
+      }
+    },
+    {
+      "id": "seat-released-on-closure",
+      "passed": true,
+      "at": "2026-10-26T13:54:30.908Z",
+      "data": {
+        "seats": 1,
+        "state": "released"
+      }
+    },
+    {
+      "id": "retry-tab-changes-nothing",
+      "passed": true,
+      "at": "2026-10-26T13:54:30.909Z",
+      "data": {
+        "revisionAfterFirst": 7,
+        "revisionAfterRetry": 7,
+        "retryMessage": [
+          "Review what happens when this relationship ends.",
+          "End this relationship?",
+          "End relationship"
+        ]
+      }
+    },
+    {
+      "id": "msp-archive-lists-the-ticket-once",
+      "passed": true,
+      "at": "2026-10-26T13:54:37.770Z",
+      "data": {
+        "occurrences": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:53:04.501Z",
+      "seconds": 0.051,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:53:05.208Z",
+      "seconds": 0.758,
+      "title": "chapter",
+      "data": "QA maps Accept-3 priorities to Oz SLA priorities (escalation precondition)"
+    },
+    {
+      "at": "2026-10-26T13:53:07.095Z",
+      "seconds": 2.645,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:53:09.007Z",
+      "seconds": 4.557,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/sla?operationId=5b406971-1c66-4d33-94fe-b61dbeb4bf90"
+    },
+    {
+      "at": "2026-10-26T13:53:12.132Z",
+      "seconds": 7.682,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Accept-3 admin creates a ticket"
+    },
+    {
+      "at": "2026-10-26T13:53:13.936Z",
+      "seconds": 9.486,
+      "actor": "accept3-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-3@cmreview.test",
+        "tenant": "2953aec7-3e03-47d8-8637-171af6c6e5c0"
+      }
+    },
+    {
+      "at": "2026-10-26T13:53:16.178Z",
+      "seconds": 11.728,
+      "actor": "accept3-admin",
+      "title": "navigate",
+      "data": "/msp/tickets/b3761e63-cc31-41e5-9264-add05506c22c"
+    },
+    {
+      "at": "2026-10-26T13:53:42.173Z",
+      "seconds": 37.723,
+      "actor": "accept3-admin",
+      "title": "chapter",
+      "data": "QA assigns himself as collaborating staff on Accept-3 IT, then participates"
+    },
+    {
+      "at": "2026-10-26T13:53:43.973Z",
+      "seconds": 39.523,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:53:45.918Z",
+      "seconds": 41.468,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/eed8f432-dbf3-4836-adb8-3001bc185524?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:53:51.515Z",
+      "seconds": 47.065,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/2953aec7-3e03-47d8-8637-171af6c6e5c0/f45b6c1c-7cf3-4c3a-ba95-9e64bd03dd00/b3761e63-cc31-41e5-9264-add05506c22c"
+    },
+    {
+      "at": "2026-10-26T13:54:01.744Z",
+      "seconds": 57.294,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Accept-3 admin ends the relationship in tab A; tab B retries the same closure"
+    },
+    {
+      "at": "2026-10-26T13:54:03.558Z",
+      "seconds": 59.108,
+      "actor": "accept3-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "cm-review-20261026-01-accept-3@cmreview.test",
+        "tenant": "2953aec7-3e03-47d8-8637-171af6c6e5c0"
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:05.443Z",
+      "seconds": 60.993,
+      "actor": "accept3-admin",
+      "title": "navigate",
+      "data": "/msp/co-management/departure"
+    },
+    {
+      "at": "2026-10-26T13:54:14.320Z",
+      "seconds": 69.87,
+      "actor": "accept3-admin",
+      "title": "chapter",
+      "data": "The archive is sealed once"
+    },
+    {
+      "at": "2026-10-26T13:54:30.908Z",
+      "seconds": 86.458,
+      "actor": "accept3-admin",
+      "title": "exactly-one-closure-and-one-sealed-manifest",
+      "data": {
+        "closures": 1,
+        "manifests": 1
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:30.908Z",
+      "seconds": 86.458,
+      "actor": "accept3-admin",
+      "title": "no-duplicated-archive-files",
+      "data": {
+        "files": 1
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:30.908Z",
+      "seconds": 86.458,
+      "actor": "accept3-admin",
+      "title": "seat-released-on-closure",
+      "data": {
+        "seats": 1,
+        "state": "released"
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:30.909Z",
+      "seconds": 86.459,
+      "actor": "accept3-admin",
+      "title": "retry-tab-changes-nothing",
+      "data": {
+        "revisionAfterFirst": 7,
+        "revisionAfterRetry": 7,
+        "retryMessage": [
+          "Review what happens when this relationship ends.",
+          "End this relationship?",
+          "End relationship"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:30.909Z",
+      "seconds": 86.459,
+      "actor": "accept3-admin",
+      "title": "chapter",
+      "data": "QA opens the retained Shared work archive"
+    },
+    {
+      "at": "2026-10-26T13:54:32.707Z",
+      "seconds": 88.257,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:54:34.723Z",
+      "seconds": 90.273,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-managed/archive"
+    },
+    {
+      "at": "2026-10-26T13:54:37.770Z",
+      "seconds": 93.32,
+      "actor": "qa",
+      "title": "msp-archive-lists-the-ticket-once",
+      "data": {
+        "occurrences": 1
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.758,
+      "title": "QA maps Accept-3 priorities to Oz SLA priorities (escalation precondition)",
+      "end": 7.682
+    },
+    {
+      "start": 7.682,
+      "title": "Accept-3 admin creates a ticket",
+      "end": 37.723
+    },
+    {
+      "start": 37.723,
+      "title": "QA assigns himself as collaborating staff on Accept-3 IT, then participates",
+      "end": 57.294
+    },
+    {
+      "start": 57.294,
+      "title": "Accept-3 admin ends the relationship in tab A; tab B retries the same closure",
+      "end": 69.87
+    },
+    {
+      "start": 69.87,
+      "title": "The archive is sealed once",
+      "end": 86.459
+    },
+    {
+      "start": 86.459,
+      "title": "QA opens the retained Shared work archive",
+      "end": 94.15
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 94.2,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "accept3-admin",
+      "email": "cm-review-20261026-01-accept-3@cmreview.test",
+      "tenant": "2953aec7-3e03-47d8-8637-171af6c6e5c0"
+    }
+  ]
+}

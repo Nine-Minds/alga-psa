@@ -1,0 +1,240 @@
+{
+  "scenario": "07-t009-onboarding-recovery",
+  "recordedAt": "2026-10-26T13:44:41.219Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-8093816c",
+    "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+    "buildId": "build-1793021045283"
+  },
+  "assertions": [
+    {
+      "id": "setup-shows-progress-with-a-reserved-seat",
+      "passed": true,
+      "at": "2026-10-26T13:44:47.227Z",
+      "data": {
+        "allocation": {
+          "seats": 1,
+          "state": "reserved"
+        },
+        "state": "pending_acceptance"
+      }
+    },
+    {
+      "id": "reload-reopens-the-same-setup-showing-delivery-failure-not-expiry",
+      "passed": true,
+      "at": "2026-10-26T13:44:52.518Z",
+      "data": {
+        "state": "pending_acceptance"
+      }
+    },
+    {
+      "id": "recovery-refreshes-the-view-in-the-same-document",
+      "passed": true,
+      "at": "2026-10-26T13:45:04.799Z",
+      "data": {
+        "summaryBefore": "Awaiting customer acceptance\n1 of 1 technician seat\nManage access",
+        "summaryAfter": "Awaiting customer acceptance\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "id": "retry-recovers-one-operation-and-one-delivery",
+      "passed": true,
+      "at": "2026-10-26T13:45:09.809Z",
+      "data": {
+        "operationId": "6b54e579-bb84-44ba-8016-b8747a0c2aa1",
+        "mails": 1
+      }
+    },
+    {
+      "id": "expiry-is-named-and-offers-resend",
+      "passed": true,
+      "at": "2026-10-26T13:45:14.909Z",
+      "data": {
+        "resend": "Resend administrator invitation"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T13:44:41.273Z",
+      "seconds": 0.054,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-8093816c",
+        "revision": "8093816c907458c51dfbe9dfe77e0aa84fe1b8e4+da39a3ee5e6b",
+        "buildId": "build-1793021045283",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:41.273Z",
+      "seconds": 0.054,
+      "title": "chapter",
+      "data": "QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail"
+    },
+    {
+      "at": "2026-10-26T13:44:43.169Z",
+      "seconds": 1.95,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:45.125Z",
+      "seconds": 3.906,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:44:47.227Z",
+      "seconds": 6.008,
+      "actor": "qa",
+      "title": "setup-shows-progress-with-a-reserved-seat",
+      "data": {
+        "allocation": {
+          "seats": 1,
+          "state": "reserved"
+        },
+        "state": "pending_acceptance"
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:47.228Z",
+      "seconds": 6.009,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Provisioning runs; the invitation cannot be delivered"
+    },
+    {
+      "at": "2026-10-26T13:44:49.448Z",
+      "seconds": 8.229,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:44:52.518Z",
+      "seconds": 11.299,
+      "actor": "qa",
+      "title": "reload-reopens-the-same-setup-showing-delivery-failure-not-expiry",
+      "data": {
+        "state": "pending_acceptance"
+      }
+    },
+    {
+      "at": "2026-10-26T13:44:52.518Z",
+      "seconds": 11.299,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "The mail sink recovers; Retry delivers the original invitation once"
+    },
+    {
+      "at": "2026-10-26T13:45:04.799Z",
+      "seconds": 23.58,
+      "actor": "qa",
+      "title": "recovery-refreshes-the-view-in-the-same-document",
+      "data": {
+        "summaryBefore": "Awaiting customer acceptance\n1 of 1 technician seat\nManage access",
+        "summaryAfter": "Awaiting customer acceptance\n1 of 1 technician seat\nManage access"
+      }
+    },
+    {
+      "at": "2026-10-26T13:45:06.758Z",
+      "seconds": 25.539,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:45:09.809Z",
+      "seconds": 28.59,
+      "actor": "qa",
+      "title": "retry-recovers-one-operation-and-one-delivery",
+      "data": {
+        "operationId": "6b54e579-bb84-44ba-8016-b8747a0c2aa1",
+        "mails": 1
+      }
+    },
+    {
+      "at": "2026-10-26T13:45:09.809Z",
+      "seconds": 28.59,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Expiry (time fixture): the invitation is reported expired, distinct from delivery failure, with Resend"
+    },
+    {
+      "at": "2026-10-26T13:45:11.856Z",
+      "seconds": 30.637,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    },
+    {
+      "at": "2026-10-26T13:45:14.909Z",
+      "seconds": 33.69,
+      "actor": "qa",
+      "title": "expiry-is-named-and-offers-resend",
+      "data": {
+        "resend": "Resend administrator invitation"
+      }
+    },
+    {
+      "at": "2026-10-26T13:45:14.912Z",
+      "seconds": 33.693,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Cancel the disposable setup and release its seat"
+    },
+    {
+      "at": "2026-10-26T13:45:16.843Z",
+      "seconds": 35.624,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/9e24700a-3cf0-45d0-bc6c-4dfb15e9b52f?tab=co-managed"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.054,
+      "title": "QA opens a client whose only history is cancelled setups; the local mail sink is set to reject mail",
+      "end": 6.009
+    },
+    {
+      "start": 6.009,
+      "title": "Provisioning runs; the invitation cannot be delivered",
+      "end": 11.299
+    },
+    {
+      "start": 11.299,
+      "title": "The mail sink recovers; Retry delivers the original invitation once",
+      "end": 28.59
+    },
+    {
+      "start": 28.59,
+      "title": "Expiry (time fixture): the invitation is reported expired, distinct from delivery failure, with Resend",
+      "end": 33.693
+    },
+    {
+      "start": 33.693,
+      "title": "Cancel the disposable setup and release its seat",
+      "end": 42.27
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Invitation expiry was produced by moving expires_at into the past (recorded SQL time fixture); delivery failure used the local SMTP sink reject-mail fault."
+  ],
+  "durationSeconds": 42.32,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

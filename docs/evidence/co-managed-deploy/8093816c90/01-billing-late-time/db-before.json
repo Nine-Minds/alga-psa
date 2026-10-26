@@ -1,0 +1,178 @@
+{
+  "inv3": {
+    "invoice": {
+      "invoice_number": "INV-000003",
+      "status": "draft",
+      "subtotal": 42500,
+      "tax": 0,
+      "total_amount": 42500
+    },
+    "charges": [
+      {
+        "item_id": "16350289-0e7f-4d27-95e9-a3a769854ad4",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "28c5f4bc-f1c0-43d5-b839-be91ba148df6",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "450d549d-1aa4-44e4-a987-a731025a586e",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "54e3f79f-db6f-403e-82ee-70dce82a850c",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "6222021a-7381-4af5-a210-f9557de5efc9",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "6eb2c2b5-db7d-48e6-9c3f-66c2609080c7",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "75db024e-bfa9-4a04-8ffb-82d03836c2be",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "80a48184-9786-4a59-bc7b-40cb5e8ab247",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "91a60ee1-544e-44fd-83b7-83039e4b75ed",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "ab3bcca9-20d6-4184-ad04-166419a65943",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "abef3467-4b50-4897-b10c-616fe8965839",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "cbca1035-d830-4406-9fcc-57497180439e",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "f15a0f5c-175a-4633-9ffd-5ff3bd4fc61a",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "f4ab25e5-b92b-498a-a689-bb6bc8fef0ec",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "f9da4322-e665-4d75-8203-2b67974efde1",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "faf84dfa-5534-4238-a66e-c996dda6e558",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      },
+      {
+        "item_id": "ff1f0017-c1af-4d97-b16f-80d622f5cf1b",
+        "description": "Basic Support",
+        "quantity": 0.25,
+        "unit_price": 10000,
+        "net_amount": 2500
+      }
+    ],
+    "sources": [
+      "2888e49a-4670-416d-8536-0720b483204f",
+      "2e383d4d-e7e8-4100-ba5d-db78223eefd2",
+      "3b036f29-f91e-40dd-9774-a0788fd4aaa9",
+      "3b2deed8-b692-41d4-a8eb-211a6876189a",
+      "3b5dca26-fd03-44d0-a013-0ca2a9affb38",
+      "702f57e7-4040-44c6-af4b-14d7defff6ae",
+      "715aaae6-f601-410c-9503-53170b1ca849",
+      "802d1a8a-25e6-49a6-91c6-24052843e843",
+      "87568b45-b19d-48ae-bbf6-7762a07394d5",
+      "ab5eb485-e168-4174-8a2c-018ddcbc42b2",
+      "ab96527a-ebcd-4db3-b402-25f1adc2390a",
+      "c8a7659c-88de-4c61-a6ea-58e440d02175",
+      "d52924b9-b13e-4432-98c9-749ddef8870d",
+      "e78fbd1f-80c0-4630-a400-4f4a2bea0705",
+      "f11b7a89-4cbc-4393-a9da-5a6bef61f65c",
+      "f22d39e6-e5a3-4354-b41d-48d204a55286",
+      "f83ee0a8-7fbb-47f1-a45d-f6391951b517"
+    ]
+  },
+  "contract": {
+    "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+    "is_active": false,
+    "status": "pending"
+  },
+  "billingEmail": "",
+  "octRsp": {
+    "record_id": "b147a92b-5f45-4890-9422-bfbdd9650603",
+    "lifecycle_state": "billed",
+    "invoice_id": "492d46aa-b120-4bbd-973d-819427450461"
+  },
+  "novRsp": {
+    "record_id": "649e776e-cc8f-4d80-be20-1eb5fe35a40e",
+    "lifecycle_state": "locked",
+    "invoice_id": null
+  },
+  "invoices": [
+    {
+      "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+      "invoice_number": "INV-000003",
+      "status": "draft",
+      "subtotal": 42500,
+      "total_amount": 42500,
+      "created_at": "2026-10-26T08:28:39.664389+00:00"
+    }
+  ],
+  "entries": []
+}
