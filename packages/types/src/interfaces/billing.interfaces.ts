@@ -268,6 +268,30 @@ export interface IBillingCharge extends TenantEntity {
   lateForServicePeriod?: ILateServicePeriodSource | null;
 }
 
+/**
+ * Approved, uninvoiced hourly time dated inside a service period an earlier
+ * invoice already closed. `next_invoice`: the line has a later uninvoiced
+ * period and the time bills there automatically. `no_later_period`: nothing
+ * will ever bill it automatically; the operator must act.
+ */
+export interface ILateHourlyTimeNotice {
+  entryId: string;
+  clientId: string;
+  clientName: string | null;
+  contractLineId: string;
+  contractLineName: string | null;
+  serviceName: string | null;
+  workItemLabel: string | null;
+  technicianName: string | null;
+  workDate: ISO8601String;
+  billableMinutes: number;
+  closedPeriodStart: ISO8601String;
+  closedPeriodEnd: ISO8601String;
+  closedByInvoiceNumber: string | null;
+  closedByInvoiceStatus: string | null;
+  disposition: 'next_invoice' | 'no_later_period';
+}
+
 export interface ILateServicePeriodSource {
   /** Inclusive start of the closed service period the evidence is dated in. */
   servicePeriodStart: ISO8601String;

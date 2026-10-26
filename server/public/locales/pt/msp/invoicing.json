@@ -306,6 +306,15 @@
       "any": "qualquer",
       "clear": "Limpar",
       "countSummary": "Grupo(s) {{groups}} · Item(s) de linha {{obligations}}"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "O período de serviço {{start}} – {{end}} foi faturado em {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "uma fatura anterior",
+      "strandedTitle": "Tempo aprovado que nenhuma fatura cobrará ({{count}})",
+      "strandedDescription": "Este tempo foi aprovado depois de o seu período de serviço ter sido faturado, e a linha de contrato não tem um período posterior para o levar. Restaure ou prolongue a linha de contrato para que exista um período posterior onde seja faturado ou, se a fatura desse período ainda for um rascunho, reverta o rascunho e gere o período novamente para o incluir.",
+      "carriedTitle": "Tempo aprovado tarde faturado na próxima fatura ({{count}})",
+      "carriedDescription": "Este tempo foi aprovado depois de o seu período de serviço ter sido faturado. É faturado uma vez na próxima fatura da sua linha de contrato, com o seu próprio período de serviço; a fatura anterior não é alterada."
     }
   },
   "manualInvoices": {

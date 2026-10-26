@@ -41,7 +41,7 @@ import {
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, ILateHourlyTimeNotice, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
@@ -57,6 +57,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { findLateApprovedHourlyTime } from '../lib/billing/lateHourlyTime';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
 import {
@@ -2750,6 +2751,12 @@ export type RecurringGroupedPreviewSelectionInput = {
   selectorInputs: IRecurringDueSelectionInput[];
 };
 
+async function lateHourlyTimeFor(knex: Knex, tenant: string, clientId: string | null | undefined) {
+  if (!clientId) return {};
+  const lateHourlyTime = await findLateApprovedHourlyTime(knex, tenant, { clientId });
+  return lateHourlyTime.length ? { lateHourlyTime } : {};
+}
+
 export type RecurringGroupedPreviewResponse = {
   success: true;
   invoiceCount: number;
@@ -2763,6 +2770,12 @@ export type RecurringGroupedPreviewResponse = {
      * charges are never mistaken for "all usage billed".
      */
     usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+    /**
+     * Approved hourly time of this client dated in a service period an earlier
+     * invoice closed: what bills on its line's next invoice, and what nothing
+     * will bill automatically (no later period). Never silently omitted.
+     */
+    lateHourlyTime?: ILateHourlyTimeNotice[];
     /**
      * Full previewed identity of every period-total-backed usage charge, to
      * pass back through generation as expectedUsagePeriodTotals.
@@ -2832,6 +2845,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           previewGroupKey: group.previewGroupKey,
           selectorInputs: group.selectorInputs,
           data: preview.viewModel,
+          ...(await lateHourlyTimeFor(knex, tenant, group.selectorInputs[0]?.clientId)),
           ...(preview.usageServicePeriodStatuses
             ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
             : {}),
@@ -2908,6 +2922,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
     return {
       success: true,
       data: preview.viewModel,
+      ...(await lateHourlyTimeFor(knex, tenant, normalizedSelectorInput.clientId)),
       ...(preview.usageServicePeriodStatuses
         ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
         : {}),
@@ -2998,6 +3013,7 @@ export const previewInvoice = withAuth(async (
     return {
       success: true,
       data: preview.viewModel,
+      ...(await lateHourlyTimeFor(knex, tenant, client_id)),
       ...(preview.usageServicePeriodStatuses
         ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
         : {}),

@@ -306,6 +306,15 @@
       "any": "any",
       "clear": "Clear",
       "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Service period {{start}} – {{end}} was invoiced on {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "an earlier invoice",
+      "strandedTitle": "Approved time that no invoice will bill ({{count}})",
+      "strandedDescription": "This time was approved after its service period was invoiced, and its contract line has no later service period to carry it. Restore or extend the contract line so a later period exists and it bills there, or, if the invoice for that period is still a draft, reverse the draft and generate the period again to include it.",
+      "carriedTitle": "Late approved time billed on the next invoice ({{count}})",
+      "carriedDescription": "This time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed."
     }
   },
   "manualInvoices": {

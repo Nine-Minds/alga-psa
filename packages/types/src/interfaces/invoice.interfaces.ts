@@ -7,6 +7,7 @@ import type {
   InvoiceTimeEntrySnapshot,
   IRecurringPricingSource,
   IUsageServicePeriodStatus,
+  ILateHourlyTimeNotice,
 } from './billing.interfaces';
 
 // Tax source types for external tax delegation
@@ -442,6 +443,8 @@ export type PreviewInvoiceResponse = {
    * a preview with no charges at all fails with USAGE_RECORDS_MISSING instead.
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /** Late approved hourly time for the previewed client (see ILateHourlyTimeNotice). */
+  lateHourlyTime?: ILateHourlyTimeNotice[];
   /**
    * Full previewed identity of every period-total-backed usage charge, for the
    * caller to hand back to generation (expectedUsagePeriodTotals) so

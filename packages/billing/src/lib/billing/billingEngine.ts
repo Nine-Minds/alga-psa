@@ -1,5 +1,6 @@
 import { resolveInvoiceDiscounts } from './resolveInvoiceDiscounts';
 import { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } from './timeEntryWorkContext';
+import { closedWindow, findWindow, loadInvoicedClientCycles, loadMaterializedClosedWindows, type ClosedServiceWindow } from './lateHourlyTime';
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
 import { capAppliesToInvoiceCurrency, resolveInvoiceCurrency } from './compute/projectCapMath';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
@@ -19,7 +20,6 @@ import {
   IBillingResult,
   IBillingCharge,
   IClientContractLine,
-  ILateServicePeriodSource,
   IBucketUsage,
   IBucketCharge,
   IDiscount,
@@ -405,24 +405,6 @@ const isFixedLineUnpriceable = (
     }) === null
   );
 };
-
-interface ClosedServiceWindow {
-  startInclusive: ISO8601String;
-  endExclusive: ISO8601String;
-  source: ILateServicePeriodSource;
-}
-
-/** The closed window a late entry's start falls in, if any (UTC, matching the SQL bound). */
-function findClosedServiceWindow(
-  windows: ClosedServiceWindow[],
-  startTime: Date | string,
-): ClosedServiceWindow | undefined {
-  if (windows.length === 0) return undefined;
-  const instant = (startTime instanceof Date ? startTime : new Date(startTime)).toISOString();
-  return windows.find(
-    (window) => instant >= window.startInclusive && instant < window.endExclusive,
-  );
-}
 
 export class BillingEngine {
   private knex: Knex;
@@ -5426,7 +5408,7 @@ export class BillingEngine {
 
     const timeEntries = await query;
     for (const entry of timeEntries) {
-      const window = findClosedServiceWindow(closedServiceWindows, entry.start_time);
+      const window = findWindow(closedServiceWindows, entry.start_time);
       if (window) {
         entry.late_for_service_period = window.source;
       }
@@ -5496,18 +5478,18 @@ export class BillingEngine {
 
   /**
    * Service windows of one contract line that an invoice has already closed
-   * and that begin before `before` (the current window's start), clipped to
-   * it so they never overlap the current window. Materialized lines read their
-   * claimed recurring service periods; a line with no materialized periods
-   * falls back to the client's invoiced billing cycles, resolved through the
-   * same timing rules that billed them.
+   * (see lateHourlyTime.ts for what closes a window: any non-cancelled invoice,
+   * drafts included) and that begin before `before`, clipped to it so they never
+   * overlap the current window. Materialized lines read their claimed recurring
+   * service periods; a line with no materialized periods falls back to the
+   * client's invoiced billing cycles, resolved through the same timing rules
+   * that billed them.
    */
   private async loadClosedServiceWindowsBefore(
     clientId: string,
     clientContractLine: IClientContractLine,
     before: ISO8601String,
   ): Promise<ClosedServiceWindow[]> {
-    const db = tenantDb(this.knex, this.tenant!);
     const lineIds = [
       ...new Set(
         [
@@ -5516,95 +5498,30 @@ export class BillingEngine {
         ].filter((id): id is string => Boolean(id)),
       ),
     ];
-    const toDay = (value: unknown) => toISODate(toPlainDate(value as string));
-    const windows: ClosedServiceWindow[] = [];
-    const push = (
-      start: ISO8601String,
-      endExclusive: ISO8601String,
-      recordId: string | null,
-      invoiceId: string | null,
-    ) => {
-      const clippedEnd = endExclusive < before ? endExclusive : before;
-      if (start >= clippedEnd) return;
-      windows.push({
-        startInclusive: start,
-        endExclusive: clippedEnd,
-        source: {
-          servicePeriodStart: start,
-          servicePeriodEnd: toISODate(toPlainDate(endExclusive).subtract({ days: 1 })),
-          servicePeriodRecordId: recordId,
-          closedByInvoiceId: invoiceId,
-        },
-      });
+    const clip = (window: ClosedServiceWindow): ClosedServiceWindow | null => {
+      const end = window.endExclusive < before ? window.endExclusive : before;
+      return window.startInclusive >= end ? null : { ...window, endExclusive: end };
     };
-
-    const materialized = await db
-      .table("recurring_service_periods")
-      .whereIn("obligation_id", lineIds)
-      .whereNotIn("lifecycle_state", ["superseded", "archived"])
-      .select(
-        "record_id",
-        "invoice_id",
-        "service_period_start",
-        "service_period_end",
-        "activity_window_start",
-        "activity_window_end",
-      );
-    if (materialized.length > 0) {
-      for (const row of materialized) {
-        if (!row.invoice_id) continue;
-        push(
-          toDay(row.activity_window_start ?? row.service_period_start),
-          toDay(row.activity_window_end ?? row.service_period_end),
-          row.record_id,
-          row.invoice_id,
-        );
-      }
-      return windows;
+    const { materialized, windows } = await loadMaterializedClosedWindows(this.knex, this.tenant!, lineIds);
+    if (lineIds.some((id) => materialized.has(id))) {
+      return lineIds.flatMap((id) => windows.get(id) ?? []).map(clip).filter((w): w is ClosedServiceWindow => w !== null);
     }
 
-    const invoicedCycles = await db
-      .table("invoices")
-      .where({ client_id: clientId })
-      .whereNotNull("billing_cycle_id")
-      .select("invoice_id", "billing_cycle_id");
-    if (invoicedCycles.length === 0) return windows;
-    const invoiceByCycle = new Map<string, string>(
-      invoicedCycles.map((row: any) => [row.billing_cycle_id, row.invoice_id]),
-    );
-    const cycles = await db
-      .table("client_billing_cycles")
-      .where({ client_id: clientId })
-      .whereIn("billing_cycle_id", [...invoiceByCycle.keys()])
-      .whereNotNull("period_start_date")
-      .whereNotNull("period_end_date")
-      .select("billing_cycle_id", "billing_cycle", "period_start_date", "period_end_date");
-    const lineStart = clientContractLine.start_date
-      ? toDay(clientContractLine.start_date)
-      : null;
-    for (const cycle of cycles) {
+    const toDay = (value: unknown) => toISODate(toPlainDate(value as string));
+    const lineStart = clientContractLine.start_date ? toDay(clientContractLine.start_date) : null;
+    const result: ClosedServiceWindow[] = [];
+    for (const cycle of await loadInvoicedClientCycles(this.knex, this.tenant!, clientId)) {
       const timing = this.resolveServiceDrivenChargeTiming(
-        {
-          tenant: this.tenant!,
-          startDate: toDay(cycle.period_start_date),
-          endDate: toDay(cycle.period_end_date),
-        },
+        { tenant: this.tenant!, startDate: toDay(cycle.period_start_date), endDate: toDay(cycle.period_end_date) },
         clientContractLine,
         cycle.billing_cycle,
       );
       if (!timing) continue;
-      const start =
-        lineStart && lineStart > timing.servicePeriodStartExclusive
-          ? lineStart
-          : timing.servicePeriodStartExclusive;
-      push(
-        start,
-        timing.servicePeriodEndExclusive,
-        null,
-        invoiceByCycle.get(cycle.billing_cycle_id) ?? null,
-      );
+      const start = lineStart && lineStart > timing.servicePeriodStartExclusive ? lineStart : timing.servicePeriodStartExclusive;
+      const clipped = clip(closedWindow(start, timing.servicePeriodEndExclusive, null, cycle));
+      if (clipped) result.push(clipped);
     }
-    return windows;
+    return result;
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */

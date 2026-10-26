@@ -306,6 +306,15 @@
       "any": "alle",
       "clear": "Wissen",
       "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Serviceperiode {{start}} – {{end}} is gefactureerd op {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "een eerdere factuur",
+      "strandedTitle": "Goedgekeurde tijd die geen factuur zal factureren ({{count}})",
+      "strandedDescription": "Deze tijd is goedgekeurd nadat de serviceperiode was gefactureerd, en de contractregel heeft geen latere periode om hem mee te nemen. Herstel of verleng de contractregel zodat er een latere periode is waarin hij wordt gefactureerd, of, als de factuur voor die periode nog een concept is, draai het concept terug en genereer de periode opnieuw om hem op te nemen.",
+      "carriedTitle": "Laat goedgekeurde tijd op de volgende factuur ({{count}})",
+      "carriedDescription": "Deze tijd is goedgekeurd nadat de serviceperiode was gefactureerd. Hij wordt één keer gefactureerd op de volgende factuur van zijn contractregel, met zijn eigen serviceperiode; de eerdere factuur verandert niet."
     }
   },
   "manualInvoices": {

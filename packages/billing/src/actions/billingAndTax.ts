@@ -9,6 +9,8 @@ import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingCli
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { resolveInvoiceDueDate } from '../lib/billing/invoiceDueDate';
 import { joinTimeEntryBillingWorkContext } from '../lib/billing/timeEntryWorkContext';
+import { findLateApprovedHourlyTime } from '../lib/billing/lateHourlyTime';
+import type { ILateHourlyTimeNotice } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -2223,4 +2225,22 @@ export const getPaymentTermsList = withAuth(async (
     // Returning empty for now to avoid breaking UI if DB call fails
     return [];
   }
+});
+
+/**
+ * Approved hourly time dated inside a service period an earlier invoice already
+ * closed. Time on a line with a later period bills there automatically; time on
+ * a line with none would otherwise never bill, so Automatic Invoices and the
+ * invoice preview list every entry with what will happen to it.
+ */
+export const getLateApprovedHourlyTime = withAuth(async (
+    user,
+    { tenant },
+    options: { clientId?: string } = {},
+): Promise<ILateHourlyTimeNotice[] | ActionPermissionError> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+    }
+    const { knex } = await createTenantKnex();
+    return findLateApprovedHourlyTime(knex, tenant, { clientId: options?.clientId });
 });

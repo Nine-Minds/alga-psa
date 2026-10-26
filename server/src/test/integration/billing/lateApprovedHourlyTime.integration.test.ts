@@ -25,6 +25,9 @@ let tenantId: string;
 let currentUser: { user_id: string; user_type: string };
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
+let previewInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoice;
+let getLateApprovedHourlyTime: typeof import('@alga-psa/billing/actions/billingAndTax').getLateApprovedHourlyTime;
+let updateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').updateClientContractForBilling;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 
 function tenantTable<Row extends object = Record<string, unknown>>(
@@ -314,7 +317,9 @@ describe('late approved hourly time in an already-invoiced service period', () =
     currentUser = { user_id: uuidv4(), user_type: 'internal' };
     setupCommonMocks({ tenantId, userId: currentUser.user_id, permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ getLateApprovedHourlyTime } = await import('@alga-psa/billing/actions/billingAndTax'));
+    ({ updateClientContractForBilling } = await import('@alga-psa/billing/actions/billingClientsActions'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -393,6 +398,78 @@ describe('late approved hourly time in an already-invoiced service period', () =
     );
     const futureRow = await tenantTable(db, tenantId, 'time_entries').where({ entry_id: future.entry_id }).first();
     expect((futureRow as any)?.invoiced).toBe(false);
+  }, HOOK_TIMEOUT);
+
+  const late = async (clientId: string) => {
+    const result = await getLateApprovedHourlyTime({ clientId });
+    if (!Array.isArray(result)) throw new Error('permission error');
+    return result;
+  };
+
+  it('names late time in preview and Automatic Invoices; a draft closes its window and the time carries forward', async () => {
+    const fixture = await seedHourlyClient();
+    await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 60);
+    const january = await generateInvoice(fixture.cycleIds.january);
+    const lateEntry = await logApprovedHours(fixture, '2024-12-21T10:00:00Z', 60);
+    // Negative control: time in a period no invoice has closed is not late.
+    const openEntry = await logApprovedHours(fixture, '2025-02-03T10:00:00Z', 60);
+
+    const notices = await late(fixture.clientId);
+    expect(notices.map((n) => n.entryId)).toEqual([lateEntry.entry_id]);
+    expect(notices[0]).toMatchObject({
+      disposition: 'next_invoice', closedPeriodStart: '2024-12-01', closedPeriodEnd: '2024-12-31',
+      closedByInvoiceNumber: (january as any).invoice_number, closedByInvoiceStatus: 'draft', billableMinutes: 60,
+    });
+    expect(notices.map((n) => n.entryId)).not.toContain(openEntry.entry_id);
+
+    // The preview of the next window carries the same notice beside its late line.
+    const preview = await previewInvoice(fixture.cycleIds.february);
+    expect(preview.success).toBe(true);
+    expect((preview as any).lateHourlyTime?.map((n: any) => n.entryId)).toEqual([lateEntry.entry_id]);
+
+    // Decision: a draft closes its window (it cannot be regenerated in place), so the time carries forward.
+    await generateInvoice(fixture.cycleIds.february);
+    expect((await tenantTable(db, tenantId, 'time_entries').where({ entry_id: lateEntry.entry_id }).first() as any).invoiced).toBe(true);
+    expect(await late(fixture.clientId)).toEqual([]);
+  }, HOOK_TIMEOUT);
+
+  it('refuses silently omitting late time on a terminated contract: it is named as unbillable with the closed period', async () => {
+    const fixture = await seedHourlyClient();
+    await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 60);
+    const january = await generateInvoice(fixture.cycleIds.january);
+    const lateEntry = await logApprovedHours(fixture, '2024-12-22T10:00:00Z', 45);
+    expect((await late(fixture.clientId))[0]).toMatchObject({ entryId: lateEntry.entry_id, disposition: 'next_invoice' });
+
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts').where({ client_id: fixture.clientId }).first() as any;
+    const terminated = await updateClientContractForBilling(clientContract.client_contract_id, { is_active: false } as any);
+    expect((terminated as any)?.actionError ?? null).toBeNull();
+
+    const notices = await late(fixture.clientId);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({
+      entryId: lateEntry.entry_id, disposition: 'no_later_period', clientName: expect.stringContaining('Late Time Client'),
+      contractLineName: expect.any(String), serviceName: 'Late Remote Support', closedPeriodStart: '2024-12-01',
+      closedPeriodEnd: '2024-12-31', closedByInvoiceNumber: (january as any).invoice_number, billableMinutes: 45,
+    });
+    // Nothing billed it: the entry is still approved, uninvoiced, and named.
+    const row = await tenantTable(db, tenantId, 'time_entries').where({ entry_id: lateEntry.entry_id }).first() as any;
+    expect(row).toMatchObject({ invoiced: false, approval_status: 'APPROVED' });
+  }, HOOK_TIMEOUT);
+
+  it('a cancelled invoice does not close its window: time there is not carried forward as late time', async () => {
+    const fixture = await seedHourlyClient();
+    await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 60);
+    const january = await generateInvoice(fixture.cycleIds.january);
+    const dated = await logApprovedHours(fixture, '2024-12-23T10:00:00Z', 60);
+    await tenantTable(db, tenantId, 'invoices').where({ invoice_id: (january as any).invoice_id }).update({ status: 'cancelled' });
+
+    expect(await late(fixture.clientId)).toEqual([]);
+    const february = await generateInvoice(fixture.cycleIds.february);
+    const links = (february as any)?.invoice_id
+      ? await tenantTable(db, tenantId, 'invoice_time_entries').where({ invoice_id: (february as any).invoice_id }).select('entry_id')
+      : [];
+    expect(links.map((l: any) => l.entry_id)).not.toContain(dated.entry_id);
+    expect((await tenantTable(db, tenantId, 'time_entries').where({ entry_id: dated.entry_id }).first() as any).invoiced).toBe(false);
   }, HOOK_TIMEOUT);
 });
 

@@ -306,6 +306,15 @@
       "any": "alle",
       "clear": "Zurücksetzen",
       "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Der Leistungszeitraum {{start}} – {{end}} wurde mit {{invoice}} ({{status}}) abgerechnet.",
+      "unnumberedInvoice": "einer früheren Rechnung",
+      "strandedTitle": "Genehmigte Zeit, die keine Rechnung abrechnen wird ({{count}})",
+      "strandedDescription": "Diese Zeit wurde genehmigt, nachdem ihr Leistungszeitraum abgerechnet war, und ihre Vertragsposition hat keinen späteren Leistungszeitraum, der sie übernimmt. Stellen Sie die Vertragsposition wieder her oder verlängern Sie sie, damit ein späterer Zeitraum existiert und sie dort abgerechnet wird, oder – falls die Rechnung für diesen Zeitraum noch ein Entwurf ist – stornieren Sie den Entwurf und erstellen Sie den Zeitraum erneut.",
+      "carriedTitle": "Nachträglich genehmigte Zeit auf der nächsten Rechnung ({{count}})",
+      "carriedDescription": "Diese Zeit wurde genehmigt, nachdem ihr Leistungszeitraum abgerechnet war. Sie wird einmal auf der nächsten Rechnung ihrer Vertragsposition abgerechnet und mit ihrem eigenen Leistungszeitraum gekennzeichnet; die frühere Rechnung bleibt unverändert."
     }
   },
   "manualInvoices": {

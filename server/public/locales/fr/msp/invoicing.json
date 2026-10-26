@@ -306,6 +306,15 @@
       "any": "tout",
       "clear": "Effacer",
       "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "La période de service {{start}} – {{end}} a été facturée sur {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "une facture antérieure",
+      "strandedTitle": "Temps approuvé qu’aucune facture ne facturera ({{count}})",
+      "strandedDescription": "Ce temps a été approuvé après la facturation de sa période de service, et sa ligne de contrat n’a pas de période ultérieure pour le reporter. Restaurez ou prolongez la ligne de contrat pour qu’une période ultérieure existe et qu’il y soit facturé ou, si la facture de cette période est encore un brouillon, annulez le brouillon et générez à nouveau la période pour l’inclure.",
+      "carriedTitle": "Temps approuvé tardivement facturé sur la prochaine facture ({{count}})",
+      "carriedDescription": "Ce temps a été approuvé après la facturation de sa période de service. Il est facturé une fois sur la prochaine facture de sa ligne de contrat, avec sa propre période de service ; la facture antérieure n’est pas modifiée."
     }
   },
   "manualInvoices": {

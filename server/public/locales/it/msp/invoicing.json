@@ -306,6 +306,15 @@
       "any": "tutte",
       "clear": "Cancella",
       "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Il periodo di servizio {{start}} – {{end}} è stato fatturato con {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "una fattura precedente",
+      "strandedTitle": "Tempo approvato che nessuna fattura addebiterà ({{count}})",
+      "strandedDescription": "Questo tempo è stato approvato dopo la fatturazione del suo periodo di servizio e la sua riga di contratto non ha un periodo successivo che lo riporti. Ripristina o estendi la riga di contratto in modo che esista un periodo successivo in cui venga fatturato oppure, se la fattura di quel periodo è ancora una bozza, annulla la bozza e genera di nuovo il periodo per includerlo.",
+      "carriedTitle": "Tempo approvato in ritardo fatturato sulla prossima fattura ({{count}})",
+      "carriedDescription": "Questo tempo è stato approvato dopo la fatturazione del suo periodo di servizio. Viene fatturato una sola volta sulla prossima fattura della sua riga di contratto, con il proprio periodo di servizio; la fattura precedente non cambia."
     }
   },
   "manualInvoices": {

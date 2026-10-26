@@ -324,6 +324,15 @@
       "any": "dowolne",
       "clear": "Wyczyść",
       "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Okres usługi {{start}} – {{end}} został zafakturowany na {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "wcześniejszej fakturze",
+      "strandedTitle": "Zatwierdzony czas, którego żadna faktura nie obciąży ({{count}})",
+      "strandedDescription": "Ten czas zatwierdzono po zafakturowaniu jego okresu usługi, a jego pozycja umowy nie ma późniejszego okresu, który by go przejął. Przywróć lub przedłuż pozycję umowy, aby istniał późniejszy okres, w którym zostanie zafakturowany, albo — jeśli faktura za ten okres jest nadal wersją roboczą — wycofaj ją i wygeneruj okres ponownie.",
+      "carriedTitle": "Późno zatwierdzony czas na następnej fakturze ({{count}})",
+      "carriedDescription": "Ten czas zatwierdzono po zafakturowaniu jego okresu usługi. Zostanie zafakturowany raz na następnej fakturze jego pozycji umowy, z własnym okresem usługi; wcześniejsza faktura się nie zmienia."
     }
   },
   "manualInvoices": {

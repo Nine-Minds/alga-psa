@@ -306,6 +306,15 @@
       "any": "alla",
       "clear": "Rensa",
       "countSummary": "Grupper: {{groups}} · rader: {{obligations}}"
+    },
+    "lateTime": {
+      "entry": "{{date}} · {{minutes}} min {{service}}{{work}}{{technician}}",
+      "closedBy": "Serviceperioden {{start}} – {{end}} fakturerades på {{invoice}} ({{status}}).",
+      "unnumberedInvoice": "en tidigare faktura",
+      "strandedTitle": "Godkänd tid som ingen faktura kommer att fakturera ({{count}})",
+      "strandedDescription": "Den här tiden godkändes efter att dess serviceperiod fakturerats, och avtalsraden har ingen senare period som kan ta den. Återställ eller förläng avtalsraden så att en senare period finns där den faktureras, eller, om fakturan för perioden fortfarande är ett utkast, återför utkastet och generera perioden igen för att ta med den.",
+      "carriedTitle": "Sent godkänd tid på nästa faktura ({{count}})",
+      "carriedDescription": "Den här tiden godkändes efter att dess serviceperiod fakturerats. Den faktureras en gång på nästa faktura för avtalsraden, märkt med sin egen serviceperiod; den tidigare fakturan ändras inte."
     }
   },
   "manualInvoices": {

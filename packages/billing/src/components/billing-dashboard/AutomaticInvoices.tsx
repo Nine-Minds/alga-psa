@@ -33,15 +33,17 @@ import {
 } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { upsertUsagePeriodTotal } from '@alga-psa/billing/actions/usagePeriodTotalActions';
-import { WasmInvoiceViewModel, type PreviewInvoiceResponse, type IUsageServicePeriodStatus, type RecurringInvoiceFailureCode } from '@alga-psa/types';
+import { WasmInvoiceViewModel, type PreviewInvoiceResponse, type IUsageServicePeriodStatus, type ILateHourlyTimeNotice, type RecurringInvoiceFailureCode } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
   hardDeleteRecurringInvoice,
   type RecurringInvoiceHistoryRow,
 } from '@alga-psa/billing/actions/billingCycleActions';
+import { LateHourlyTimeNotices } from './LateHourlyTimeNotices';
 import {
   getAvailableRecurringDueWork,
+  getLateApprovedHourlyTime,
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
@@ -799,6 +801,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       data: WasmInvoiceViewModel;
       selectorInputs: IRecurringDueSelectionInput[];
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+      lateHourlyTime?: ILateHourlyTimeNotice[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
       expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
     }>;
@@ -903,6 +906,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
   const [materializationGaps, setMaterializationGaps] = useState<IRecurringDueWorkMaterializationGap[]>([]);
+  const [lateHourlyTime, setLateHourlyTime] = useState<ILateHourlyTimeNotice[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -1000,6 +1004,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         });
 
         if (!isMounted) return;
+
+        // Late approved time is tenant-wide state, not a page of due work:
+        // load it beside every due-work refresh so nothing is silently omitted.
+        void Promise.resolve().then(() => getLateApprovedHourlyTime()).then((late) => {
+          if (isMounted) setLateHourlyTime(isReturnedActionError(late) ? [] : late);
+        }).catch(() => { if (isMounted) setLateHourlyTime([]); });
 
         if (isReturnedActionError(result)) {
           setPeriods([]);
@@ -2599,6 +2609,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </Alert>
           )}
 
+          {lateHourlyTime.length > 0 ? (
+            <div className="mb-4">
+              <LateHourlyTimeNotices notices={lateHourlyTime} idPrefix="automatic-invoices-late-time" />
+            </div>
+          ) : null}
+
           {materializationGaps.length > 0 ? (
             <Alert className="mb-4 border-warning/40 bg-warning/5" data-testid="recurring-materialization-gap-panel">
               <AlertDescription>
@@ -3532,6 +3548,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  <LateHourlyTimeNotices notices={previewEntry.lateHourlyTime ?? []} idPrefix={`preview-late-time-${previewIndex}`} />
                   {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (() => {
                     const usageStatuses = previewEntry.usageServicePeriodStatuses ?? [];
                     const actionableStatuses = usageStatuses.filter(
