@@ -4,6 +4,7 @@ import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/tic
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 
 import { retainNativeConversationEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
@@ -2087,6 +2088,9 @@ export const addTicketComment = withAuth(async (
         isInternal,
       });
 
+      // This legacy writer names no audience, so in a co-managed workspace it can only add
+      // private notes: a requester-visible staff comment fails closed (see nativeThreadAudience).
+      const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal, authorType: 'internal' });
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: generatedIds.thread_id,
@@ -2094,6 +2098,7 @@ export const addTicketComment = withAuth(async (
         project_task_id: null,
         root_comment_id: generatedIds.comment_id,
         is_internal: isInternal,
+        ...threadAudience,
         reply_count: 0,
         last_activity_at: nowIso,
         created_at: nowIso,

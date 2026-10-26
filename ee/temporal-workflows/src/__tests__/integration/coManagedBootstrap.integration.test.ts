@@ -11058,8 +11058,12 @@ async function withNativeCommentFixture(work: (fixture: any) => Promise<void>) {
       const before = new Set((await customer.table('comments').select('comment_id')).map((row: any) => row.comment_id));
       if (writer === 'api') await service.addComment(resource.id, { comment_text: 'Native comment body', is_internal: internal }, context);
       else await run(async () => {
-        if (writer === 'generic') return actions.createComment({ ticket_id: resource.id, note: 'Native comment body', user_id: currentUser.user_id, is_internal: internal, is_resolution: false });
-        if (writer === 'optimized') return optimized.addTicketCommentWithCache(resource.id, 'Native comment body', internal, false);
+        // Browser writers name the audience the composer showed (requester for a public comment);
+        // a co-managed workspace refuses a requester-visible comment that names none.
+        if (writer === 'generic') return actions.createComment({ ticket_id: resource.id, note: 'Native comment body', user_id: currentUser.user_id, is_internal: internal, is_resolution: false,
+          ...(internal ? {} : { audienceId: 'requester' }) });
+        if (writer === 'optimized') return optimized.addTicketCommentWithCache(resource.id, 'Native comment body', internal, false, false, undefined, null, null,
+          internal ? null : { audienceId: 'requester' });
         return simple.addTicketComment(resource.id, 'Native comment body', internal);
       });
       const rows = await customer.table('comments').where('ticket_id', resource.id);
@@ -11072,7 +11076,7 @@ async function withNativeCommentFixture(work: (fixture: any) => Promise<void>) {
   });
 }
 
-it.each(['api', 'generic', 'optimized', 'simple'])('retains native %s comment delivery atomically and recovers the current body', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, legacy, create }: any) => {
+it.each(['api', 'generic', 'optimized'])('retains native %s comment delivery atomically and recovers the current body', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, legacy, create }: any) => {
   publish.mockRejectedValue(new Error('Redis unavailable')); workflow.mockRejectedValue(new Error('Redis unavailable'));
   const comment = await create(writer);
   const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_ADDED' }).first();
@@ -11084,6 +11088,23 @@ it.each(['api', 'generic', 'optimized', 'simple'])('retains native %s comment de
   const send = vi.fn();
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current native body' }) }) }), row.event_id]);
+}));
+
+// P0 privacy: the legacy native writer names no audience, so in a co-managed workspace it can add private
+// notes only; a requester-visible staff comment fails closed before anything is written.
+it.each(['generic', 'optimized', 'simple'])('refuses a native %s requester-visible comment that names no audience', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, actions, run }: any) => {
+  const optimized = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const simple = await import('../../../../../packages/tickets/src/actions/ticketActions');
+  const user = await customer.table('users').first('user_id');
+  const before = await customer.table('comment_threads').count('* as count').first();
+  publish.mockClear(); workflow.mockClear();
+  const result: any = await run(() => writer === 'generic'
+    ? actions.createComment({ ticket_id: resource.id, note: 'No audience', user_id: user.user_id, is_internal: false, is_resolution: false })
+    : writer === 'optimized' ? optimized.addTicketCommentWithCache(resource.id, 'No audience', false, false)
+      : simple.addTicketComment(resource.id, 'No audience', false));
+  expect(result).toMatchObject({ actionError: expect.stringContaining('Choose who can see this comment') });
+  expect(await customer.table('comment_threads').count('* as count').first()).toEqual(before);
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
 }));
 
 it.each(['api', 'generic', 'optimized', 'simple'])('keeps native %s internal roots organization-private and delivers only after commit', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
@@ -11107,7 +11128,7 @@ it.each(['api', 'generic', 'optimized', 'simple'])('keeps native %s internal roo
   }
 }));
 
-it.each(['api', 'generic', 'optimized', 'simple'])('rolls back native %s comments when durable event retention fails', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
+it.each(['api', 'generic', 'optimized'])('rolls back native %s comments when durable event retention fails', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
   const constraint = `test_event_retention_${randomUUID().replaceAll('-', '')}`;
   const tenant = (await customer.table('tenants').first()).tenant;
   await db.raw(db.raw('ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [constraint, tenant]).toQuery());
@@ -11167,7 +11188,7 @@ it('refuses a native deletion invalidation that neither removes its source nor c
   expect(publish).not.toHaveBeenCalled();
 }));
 
-it.each(['generic', 'optimized', 'simple'])('rolls back native %s comment and earlier intents if a later workflow intent fails', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, create }: any) => {
+it.each(['generic', 'optimized'])('rolls back native %s comment and earlier intents if a later workflow intent fails', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, create }: any) => {
   const constraint = `test_workflow_retention_${randomUUID().replaceAll('-', '')}`;
   await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type <> 'TICKET_MESSAGE_ADDED')", [constraint, resource.tenant]).toQuery());
   const before = await customer.table('comments'); publish.mockClear(); workflow.mockClear();
@@ -11591,7 +11612,7 @@ it.each([false, true])('admits new scheduled comments under the current browser 
   if (expired) await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
   const before = await customer.table('comments');
   const create = () => actions.createComment({ ticket_id: resource.id, note: 'New scheduled body', user_id: customerPrincipal.userId,
-    is_internal: false, is_resolution: false, scheduled_publish_at: at, scheduled_publish_tz: 'UTC' });
+    is_internal: false, is_resolution: false, scheduled_publish_at: at, scheduled_publish_tz: 'UTC', audienceId: 'requester' });
   if (expired) {
     await expect(create()).rejects.toThrow(); expect(await customer.table('comments')).toEqual(before); expect(schedule).not.toHaveBeenCalled();
   } else {
@@ -18652,7 +18673,7 @@ async function withBundleSlaFixture(work: (fixture: any) => Promise<void>) {
     await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-BUNDLE-CHILD', master_ticket_id: f.resource.id });
     await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'link_only', reopen_on_child_reply: true });
     const { addTicketCommentWithCache } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
-    const reply = (ticketId = childId) => f.run(() => addTicketCommentWithCache(ticketId, 'Customer technician has an update', false, false));
+    const reply = (ticketId = childId) => f.run(() => addTicketCommentWithCache(ticketId, 'Customer technician has an update', false, false, false, undefined, null, null, { audienceId: 'requester' }));
     await work({ ...f, childId, original, closed, reply });
   });
 }

@@ -129,7 +129,10 @@ const TICKET_MESSAGE_PREFIX_CODES: ReadonlyArray<readonly [string, TicketErrorCo
 ];
 
 function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
-  const code = errorCodeOf(error);
+  // Domain errors from packages that cannot depend on CodedError (for example
+  // shared/lib/commentAudience) carry the same contract as a plain `code`.
+  const ownCode = (error as { code?: unknown } | null)?.code;
+  const code = errorCodeOf(error) ?? (typeof ownCode === 'string' ? ownCode : undefined);
   if (code && code in TICKET_CODE_MESSAGES) {
     return code as TicketErrorCode;
   }
