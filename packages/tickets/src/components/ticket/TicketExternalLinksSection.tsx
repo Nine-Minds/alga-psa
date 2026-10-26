@@ -193,7 +193,9 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
         applyLinks(fetched);
       })
       .catch((err) => {
-        console.error('Error fetching external links:', err);
+        // An unmounted section has no reader for this failure (the ticket was left or re-keyed).
+        // LEVERAGE: pattern cancellable-mount-fetch — fetch on mount, drop state and error reporting once cancelled; 3 sites in ticket sections.
+        if (!cancelled) console.error('Error fetching external links:', err);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

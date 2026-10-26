@@ -291,6 +291,12 @@ vi.mock('../TicketInfo', () => ({ __esModule: true, default: () => <div data-tes
 vi.mock('../TicketProperties', () => ({ __esModule: true, default: () => <div data-testid="ticket-properties" /> }));
 vi.mock('../TicketDocumentsSection', () => ({ __esModule: true, default: () => <div data-testid="ticket-documents" /> }));
 vi.mock('../TicketEmailNotifications', () => ({ __esModule: true, default: () => <div data-testid="ticket-email" /> }));
+// The real section starts an external-links fetch that outlives the test and logs after the worker is torn down
+// ("Closing rpc while onUserConsoleLog was pending"); like its sibling sections it is not under test here.
+vi.mock('../TicketExternalLinksSection', () => {
+  const TicketExternalLinksSection = () => <div data-testid="ticket-external-links" />;
+  return { __esModule: true, TicketExternalLinksSection, default: TicketExternalLinksSection };
+});
 vi.mock('../AgentScheduleDrawer', () => ({ __esModule: true, default: () => <div data-testid="agent-schedule" /> }));
 vi.mock('../TicketNavigation', () => ({ __esModule: true, default: () => <div data-testid="ticket-navigation" /> }));
 vi.mock('../TicketResolutionDialog', () => ({ __esModule: true, default: () => null }));

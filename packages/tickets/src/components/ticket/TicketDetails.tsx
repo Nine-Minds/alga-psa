@@ -547,12 +547,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
         let cancelled = false;
         if (!capabilities.checklist || !ticket.ticket_id) return;
+        // LEVERAGE: pattern cancellable-mount-fetch — fetch on mount, drop state and error reporting once cancelled; 3 sites in ticket sections.
         getTicketChecklistItems(ticket.ticket_id)
             .then((items) => { if (!cancelled) setChecklistItems(items); })
-            .catch((err) => console.error('Failed to load ticket checklist:', err));
+            .catch((err) => { if (!cancelled) console.error('Failed to load ticket checklist:', err); });
         getTicketAutoCloseState(ticket.ticket_id)
             .then((state) => { if (!cancelled) setAutoCloseState(state); })
-            .catch((err) => console.error('Failed to load auto-close state:', err));
+            .catch((err) => { if (!cancelled) console.error('Failed to load auto-close state:', err); });
         return () => { cancelled = true; };
         // Re-check the pending auto-close whenever the status changes — a
         // status move usually cancels or reschedules it. Board, category,

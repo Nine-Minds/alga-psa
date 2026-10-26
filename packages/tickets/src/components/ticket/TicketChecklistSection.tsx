@@ -147,7 +147,8 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
         if (!cancelled) applyItems(fetched);
       })
       .catch((error) => {
-        console.error('Error fetching checklist items:', error);
+        // LEVERAGE: pattern cancellable-mount-fetch — fetch on mount, drop state and error reporting once cancelled; 3 sites in ticket sections.
+        if (!cancelled) console.error('Error fetching checklist items:', error);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
