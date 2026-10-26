@@ -952,7 +952,8 @@
     "assetStatuses": {
       "active": "〖Ȧƈŧīṽḗ ···〗",
       "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
-      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗",
+      "held_by_msp": "〖Ħḗŀḓ ƀẏ ḾŞƤ ·····〗"
     },
     "assetTypes": {
       "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ·····〗",
@@ -1812,6 +1813,7 @@
     "in_stock": "〖Īƞ şŧȯƈķ ····〗",
     "maintenance": "〖Īƞ ḿȧīƞŧḗƞȧƞƈḗ ······〗",
     "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+    "held_by_msp": "〖Ħḗŀḓ ƀẏ ḾŞƤ ·····〗",
     "retired": "〖Řḗŧīřḗḓ ···〗"
   },
   "assetStatusKinds": {
