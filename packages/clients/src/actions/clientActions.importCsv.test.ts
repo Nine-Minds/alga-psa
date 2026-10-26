@@ -46,6 +46,12 @@ vi.mock('@alga-psa/db', () => ({
   registerAfterCommit: vi.fn(),
 }));
 
+// The shared client-creation seam imports tenantDb from this subpath, not the
+// barrel above, so the client insert it does needs the same fake table too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: tenantDbMock,
+}));
+
 vi.mock('../lib/authHelpers', () => ({
   hasPermissionAsync: hasPermissionAsyncMock,
   isClientPortalUser: (user: any) => user?.user_type === 'client',
