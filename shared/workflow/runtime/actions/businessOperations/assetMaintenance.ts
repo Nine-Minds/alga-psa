@@ -168,6 +168,12 @@ export function registerAssetMaintenanceActions(): void {
       board_id: withWorkflowPicker(uuidSchema, 'Board id', 'board'),
       status_id: withWorkflowPicker(uuidSchema, 'Open ticket status id', 'ticket-status', ['board_id']),
       priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
+      category_id: withWorkflowPicker(
+        uuidSchema.optional(),
+        'Optional ticket category id (must belong to the selected board)',
+        'ticket-category',
+        ['board_id']
+      ),
     }),
     outputSchema: z.object({
       occurrence_id: uuidSchema, schedule_id: uuidSchema, asset_id: uuidSchema,
@@ -202,12 +208,19 @@ export function registerAssetMaintenanceActions(): void {
       if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'status_id must be an open ticket status on the selected board' });
       const priority = await db.table('priorities').where({ priority_id: input.priority_id, item_type: 'ticket' }).first();
       if (!priority) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid ticket priority_id' });
+      if (input.category_id) {
+        const category = await db.table('categories').where({ category_id: input.category_id }).first<{ board_id: string | null }>();
+        // Board-less categories are tenant-global; otherwise the category must live on the selected board.
+        if (!category || (category.board_id && category.board_id !== input.board_id)) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id must exist and belong to the selected board' });
+        }
+      }
       const ticket = await createTicketWithSideEffects(tx.trx, tx.tenantId, {
         actor: { type: 'workflow', userId: tx.actorUserId, runId: ctx.runId, workflowId: tx.workflowId, lineage: tx.lineage },
         ticket: {
           title: input.title ?? schedule.schedule_name, description: input.description,
           client_id: asset.client_id, board_id: input.board_id, status_id: input.status_id,
-          priority_id: input.priority_id, source: 'workflow',
+          priority_id: input.priority_id, category_id: input.category_id, source: 'workflow',
         },
         assetIds: [occurrence.asset_id],
         notificationSuppression: { suppressContactNotifications: true, suppressInternalNotifications: false },

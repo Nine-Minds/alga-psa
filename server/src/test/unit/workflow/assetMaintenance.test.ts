@@ -24,6 +24,9 @@ const ids = {
   status: '88888888-8888-4888-8888-888888888888',
   priority: '99999999-9999-4999-8999-999999999999',
   ticket: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  category: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  otherBoard: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  otherBoardCategory: 'eeeeeeee-dddd-4ddd-8ddd-dddddddddddd',
 };
 
 vi.mock('@alga-psa/db', () => ({
@@ -160,6 +163,10 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
       users: scoped([{ user_id: state.actor, user_type: 'internal' }]),
       statuses: scoped([{ status_id: ids.status, board_id: ids.board, status_type: 'ticket', is_closed: false }]),
       priorities: scoped([{ priority_id: ids.priority, item_type: 'ticket' }]),
+      categories: scoped([
+        { category_id: ids.category, category_name: 'Maintenance', board_id: ids.board, parent_category: null },
+        { category_id: ids.otherBoardCategory, category_name: 'Other board', board_id: ids.otherBoard, parent_category: null },
+      ]),
       tickets: [], asset_associations: [], user_roles: [], team_members: [],
     };
   });
@@ -230,6 +237,23 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     expect(await execute('create_maintenance_ticket', ticketInput)).toMatchObject({ ticket_id: ids.ticket, already_linked: true });
     expect(createTicketWithSideEffects).toHaveBeenCalledTimes(1);
     expect(writeRunAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes an optional category on to the created ticket', async () => {
+    const output = await execute('create_maintenance_ticket', { ...ticketInput, category_id: ids.category });
+    expect(output).toMatchObject({ occurrence_id: ids.occurrence, ticket_id: ids.ticket, already_linked: false });
+    expect(createTicketWithSideEffects).toHaveBeenCalledWith(expect.anything(), state.tenant, expect.objectContaining({
+      ticket: expect.objectContaining({ category_id: ids.category }),
+    }));
+  });
+
+  it.each([
+    ['unknown category', 'ffffffff-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['category on another board', ids.otherBoardCategory],
+  ])('rejects ticket creation with an %s', async (_label, categoryId) => {
+    await expect(execute('create_maintenance_ticket', { ...ticketInput, category_id: categoryId })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(createTicketWithSideEffects).not.toHaveBeenCalled();
+    expect(state.writes).toEqual([]);
   });
 
   it.each(['ticket:create', 'ticket:read', 'asset:read', 'asset:update'])('rejects ticket creation without %s', async (permission) => {

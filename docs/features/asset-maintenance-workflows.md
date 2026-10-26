@@ -9,7 +9,7 @@ these same records and use the same lifecycle operations as the Maintenance UI.
 | Action ID | Purpose |
 | --- | --- |
 | `assets.get_maintenance` | Get a plan and occurrence using exactly one of `schedule_id`, `occurrence_id`, or linked `ticket_id`. |
-| `assets.create_maintenance_ticket` | Create a ticket for an open occurrence and link it atomically. Requires `occurrence_id`, `board_id`, an open `status_id` on that board, and `priority_id`. |
+| `assets.create_maintenance_ticket` | Create a ticket for an open occurrence and link it atomically. Requires `occurrence_id`, `board_id`, an open `status_id` on that board, and `priority_id`. Optionally sets the ticket `category_id` (the category must exist and belong to the selected board). |
 | `assets.complete_maintenance` | Complete an occurrence, write history, and create the next occurrence. Accepts `performed_at`, `notes`, and structured `maintenance_data`. |
 | `assets.skip_maintenance` | Skip an occurrence with a required `reason` and create the next occurrence. |
 | `assets.set_maintenance_paused` | Pause (`paused: true`) or resume (`paused: false`) a plan using its `schedule_id`. |
