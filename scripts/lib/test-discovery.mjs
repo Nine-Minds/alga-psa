@@ -85,7 +85,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url|portal-domain-redirect-uri-gate)\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)
