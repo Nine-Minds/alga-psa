@@ -5,7 +5,7 @@ import { stageCoManagedPrivateConversationFiles } from './archiveFiles';
 import { tenantDb } from '@alga-psa/db';
 import type { CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
-import { appendParticipationEvidence } from './participationEvidenceStore';
+import { appendCommentSnapshotEvidence, appendParticipationEvidence } from './participationEvidenceStore';
 
 /** The actual MSP-private command receipt and comment establish owned work.
  * No private content is published to a customer event stream or copied into
@@ -58,7 +58,7 @@ export async function retainCoManagedPrivateHistoryAtClosure(context: CoManagedC
       .orderBy('captured_at', 'desc').first('payload');
     await capturePrivateComment(trx, { tenant: sponsorTenant, ...key, client_id: relationship.sponsor_client_id, operation_id: operationId,
       source_id: randomUUID(), event_type: 'private_comment_archived', occurred_at: new Date(cutoffAt),
-      resourceTitle: prior?.payload.resourceTitle ?? prior?.payload.title ?? null, ticketNumber: prior?.payload.ticketNumber ?? null },
+      resourceTitle: prior?.payload.resourceTitle ?? prior?.payload.title ?? null, ticketNumber: prior?.payload.ticketNumber ?? null, snapshot: true },
     { ...comment, parent_comment_id: comment.retained_parent_id });
   }
 }
@@ -66,9 +66,10 @@ export async function retainCoManagedPrivateHistoryAtClosure(context: CoManagedC
 async function capturePrivateComment(trx: Knex.Transaction, source: {
   tenant: string; customer_tenant: string; relationship_id: string; resource_type: 'ticket' | 'project_task'; resource_id: string;
   client_id: string; operation_id: string; source_id: string; event_type: string; occurred_at: Date | string; resourceTitle: string | null; ticketNumber: string | null;
+  snapshot?: boolean;
 }, comment: any): Promise<void> {
   const iso = (value: Date | string | null) => value ? new Date(value).toISOString() : null;
-  await appendParticipationEvidence(trx, { tenant: source.tenant, customer_tenant: source.customer_tenant, relationship_id: source.relationship_id,
+  await (source.snapshot ? appendCommentSnapshotEvidence : appendParticipationEvidence)(trx, { tenant: source.tenant, customer_tenant: source.customer_tenant, relationship_id: source.relationship_id,
     resource_type: source.resource_type, resource_id: source.resource_id, source_type: 'private_conversation', source_id: source.source_id },
   { client_id: source.client_id, operation_id: source.operation_id, event_type: source.event_type,
     actor_tenant: source.tenant, actor_user_id: comment.actor_user_id, actor_kind: 'user', actor_name: comment.actor_display_name, actor_organization: comment.actor_organization_name,

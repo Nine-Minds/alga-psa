@@ -109,8 +109,10 @@ export function registerCoManagedTaskDisclosureCases(getDb: () => Knex, fixture:
     const request=f.request(await f.review(f.customerPrincipal,root),'organization_private');await f.discloseSharedThread(f.db,f.customerPrincipal,f.resource,request);
     expect((await f.getCoManagedProjectTaskConversation(f.db,f.principal,f.resource)).items.filter((row:any)=>row.threadId===root.threadId)).toEqual([]);
     await expect(f.listCoManagedConversationAttachments(f.db,f.principal,f.resource,{storeTenant:root.storeTenant,threadId:root.threadId,commentId:root.commentId})).rejects.toMatchObject({code:'CO_MANAGED_SHARED_WORK_FORBIDDEN'});
-    const history=await f.sponsor.table('co_managed_participation_evidence').where({resource_type:'project_task',resource_id:f.resource.id,operation_id:request.operationId});
-    expect(history.some((row:any)=>row.payload.commentId===reply.commentId&&row.payload.note.includes('Retained joint response'))).toBe(true);
+    // The MSP reply was retained by its live capture; the disclosure snapshot must not list it a second time (guide 10).
+    const history=await f.sponsor.table('co_managed_participation_evidence').where({resource_type:'project_task',resource_id:f.resource.id});
+    const retained=history.filter((row:any)=>row.payload.commentId===reply.commentId);
+    expect(retained).toHaveLength(1);expect(retained[0].payload.note).toContain('Retained joint response');
     expect(await f.sponsor.table('co_managed_archive_files').where({project_task_id:f.resource.id,attachment_id:file.attachmentId}).first()).toBeTruthy();
   }));
   it('task thread private disclosure rechecks the session after transport before publishing any customer content',async()=>run(async f=>{

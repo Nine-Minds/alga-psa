@@ -20582,15 +20582,18 @@ it('sharing reduction snapshots project history only after MSP participation and
   const before = await f.sponsor.table('co_managed_participation_evidence');
   await expect(db.transaction(async trx => {
     await policy.replaceCoManagedCustomerScope(trx, f.actor, f.target, original.revision, reduced);
-    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(2);
+    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(1);
     throw new Error('scope transaction failed');
   })).rejects.toThrow('scope transaction failed');
   expect(await f.sponsor.table('co_managed_participation_evidence')).toEqual(before);
   expect((await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target)).revision).toBe(original.revision);
   await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
   const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED').orderBy('source_id');
-  const saved = await evidence(); expect(saved).toHaveLength(2);
-  expect(saved.map((row: any) => row.payload.markdown).sort()).toEqual(['Actual MSP contribution', 'Older shared customer history']);
+  // The MSP contribution was captured live; the snapshot adds only the history the archive lacked (guide 10).
+  const saved = await evidence(); expect(saved).toHaveLength(1);
+  expect(saved.map((row: any) => row.payload.markdown)).toEqual(['Older shared customer history']);
+  const retained = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'conversation', resource_id: f.resource.id });
+  expect(retained.map((row: any) => row.payload.markdown).sort()).toEqual(['Actual MSP contribution', 'Older shared customer history']);
   await f.add(f.customerPrincipal, 'shared_it', 'Newly private work after unsharing');
   await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
   expect(await evidence()).toEqual(saved);
@@ -20892,6 +20895,39 @@ it('archive finalizer composes legacy handoffs shared conversations private hist
   expect((await f.sponsor.table('co_managed_archive_manifests').first()).manifest.evidence).toHaveLength(saved.length);
   expect(await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive)).toEqual(receipt);
   expect(await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId })).toEqual(saved);
+}));
+
+// Guide 10 found every captured message listed twice in Retained history: once from its live capture and again
+// from the closure snapshot, with identical labels. A snapshot only records state the archive does not already hold.
+it('archive finalizer lists each live-captured message once and still snapshots state changed since capture', async () => withConversationFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
+  const { getCoManagedArchiveHistory } = await import('../../../../../packages/co-managed/src/archiveReads');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const shared = await createSharedTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'MSP shared diagnosis' });
+  const edited = await createSharedTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared note edited after capture' });
+  await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private diagnosis' });
+  const live = await f.sponsor.table('co_managed_participation_evidence').whereIn('source_type', ['conversation', 'private_conversation'])
+    .where('resource_id', f.resource.id);
+  expect(live).toHaveLength(3);
+  // A source change that bypassed live capture is still state the archive lacks, so the snapshot keeps it.
+  expect(await f.customer.table('comments').where('comment_id', edited.commentId)
+    .update({ note: 'Shared note as it stood at cutoff', markdown_content: 'Shared note as it stood at cutoff', updated_at: new Date() })).toBe(1);
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive);
+  const history = await getCoManagedArchiveHistory(db, f.principal, f.resource);
+  const listed = (markdown: string) => history.entries.filter(entry => entry.markdown === markdown);
+  expect(listed('MSP shared diagnosis')).toHaveLength(1);
+  expect(listed('MSP private diagnosis')).toHaveLength(1);
+  expect(listed('Shared note edited after capture')).toHaveLength(1);
+  expect(listed('Shared note as it stood at cutoff')).toEqual([expect.objectContaining({ event: 'TICKET_COMMENT_ARCHIVED' })]);
+  const snapshots = await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)
+    .whereIn('source_type', ['conversation', 'private_conversation']);
+  expect(snapshots.map((row: any) => row.payload.commentId)).not.toContain(shared.commentId);
+  expect(snapshots).toHaveLength(1);
 }));
 
 it.each([true, false])('archive finalizer discovers legacy MSP task audits while enforcing current sharing=%s', async shared => withTaskConversationFixture(async f => {

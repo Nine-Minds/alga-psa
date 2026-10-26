@@ -7,7 +7,7 @@ import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { projectTaskAudienceSql } from './projectTaskAudience';
 import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
-import { appendParticipationEvidence, participationEvidenceTable, type ParticipationEvidenceContent } from './participationEvidenceStore';
+import { appendCommentSnapshotEvidence, appendParticipationEvidence, participationEvidenceTable, type ParticipationEvidenceContent } from './participationEvidenceStore';
 import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity';
 
 const eventTypes = ['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED',
@@ -57,14 +57,14 @@ export async function retainCoManagedSharedConversationBeforeReduction(trx: Knex
   for (const comment of comments) {
     if (!comment.thread_id) continue;
     await captureSharedConversation(trx, resource, comment.id, comment.thread_id, { sourceId: randomUUID(), operationId,
-      eventType: task ? 'PROJECT_TASK_COMMENT_ARCHIVED' : 'TICKET_COMMENT_ARCHIVED', occurredAt });
+      eventType: task ? 'PROJECT_TASK_COMMENT_ARCHIVED' : 'TICKET_COMMENT_ARCHIVED', occurredAt, snapshot: true });
   }
   if (!scope.threadId) await retainCoManagedWorkSnapshot(trx, resource, operationId, new Date(occurredAt));
 }
 
 async function captureSharedConversation(trx: Knex.Transaction,
   input: { tenant: string; kind: 'ticket' | 'project_task' | 'project'; id: string; relationshipId?: string }, commentId: string, threadId: string,
-  capture: { sourceId: string; operationId: string; eventType: string; occurredAt: string | Date; precedesSourceRemoval?: boolean }): Promise<void> {
+  capture: { sourceId: string; operationId: string; eventType: string; occurredAt: string | Date; precedesSourceRemoval?: boolean; snapshot?: boolean }): Promise<void> {
   const { tenant } = input, task = input.kind === 'project_task', owner = tenantDb(trx, tenant);
   const relationship = await owner.table('co_management_relationships').where('state', 'active').whereNull('ended_at')
     .modify(q => { if (input.relationshipId) q.where('relationship_id', input.relationshipId); }).forShare()
@@ -132,6 +132,7 @@ async function captureSharedConversation(trx: Knex.Transaction,
       updatedAt: instant(comment.updated_at), deletedAt: instant(comment.deleted_at) ?? (removing ? instant(capture.occurredAt) : null), deleted,
       ...(deleted ? {} : { note: comment.note, markdown: comment.markdown_content }) },
   };
-  await appendParticipationEvidence(trx, { tenant: relationship.sponsor_tenant, ...workKey, source_type: 'conversation', source_id: capture.sourceId }, content);
+  await (capture.snapshot ? appendCommentSnapshotEvidence : appendParticipationEvidence)(trx,
+    { tenant: relationship.sponsor_tenant, ...workKey, source_type: 'conversation', source_id: capture.sourceId }, content);
   if (!deleted) await stageCoManagedCanonicalConversationFiles(trx, tenant, resource, commentId);
 }
