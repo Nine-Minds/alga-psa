@@ -291,7 +291,9 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-const coManagedWorkspaces = vi.hoisted(() => ({ count: vi.fn(async () => 0) }));
+const coManagedWorkspaces = vi.hoisted(() => ({
+  count: vi.fn(async (_trx: unknown, _options: { tenant: string; entityId: string }): Promise<number> => 0),
+}));
 vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
 
 import { ClientMergeBlockedError, executeClientMerge } from './clientMergeEngine';
