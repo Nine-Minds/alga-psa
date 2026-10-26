@@ -55,6 +55,14 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
+// The shared client-creation seam (shared/models/clientCreation.ts) imports
+// tenantDb from this subpath, not the barrel above, so it falls through to
+// the real tenantDb against the bare fake trx ({}) without this mock,
+// throwing "conn is not a function".
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: () => ({ table: (name: string) => fakeTable(name) }),
+}));
+
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
   publishEvent: vi.fn(async () => undefined),
