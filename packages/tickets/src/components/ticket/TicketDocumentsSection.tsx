@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
+import { runTicketRefresh, useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
@@ -46,6 +46,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   const router = useRouter();
   const dataSource = useTicketDataSource();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
+  const screenReadOnly = useTicketScreenReadOnly();
   const isBento = useContentCardVariant() === 'bento';
   const { t } = useTranslation('features/documents');
   const { data: session } = useSession();
@@ -128,6 +129,8 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             allowDocumentSharing,
             allowLinkExistingDocuments,
             allowBlockDocuments,
+            // A read-only ticket screen lists and opens documents but offers no add/upload/link/delete.
+            readOnly: screenReadOnly,
           })}
         </div>
       </div>

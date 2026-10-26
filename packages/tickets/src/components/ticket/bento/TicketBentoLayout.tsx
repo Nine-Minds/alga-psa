@@ -244,6 +244,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { t } = useTranslation('features/tickets');
   const dataSource = useTicketDataSource();
   const { capabilities } = dataSource;
+  // A read-only screen (for example an ended co-managed workspace) offers no add actions.
+  const screenReadOnly = dataSource.screen.readOnly === true;
   const frozenFieldSet = React.useMemo(() => new Set(props.liveFrozenFields ?? []), [props.liveFrozenFields]);
   const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
   const ticketId = ticket.ticket_id ?? '';
@@ -275,7 +277,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     openInteractionDetails,
   } = useQuickAddClient();
   const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
-  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId);
+  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId) && !screenReadOnly;
   const [contactEditOpen, setContactEditOpen] = React.useState(false);
   const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
   const [pickerContacts, setPickerContacts] = React.useState<IContact[]>(props.contacts ?? []);
@@ -304,8 +306,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
-  // A read-only screen (for example an ended co-managed workspace) offers no add actions.
-  const screenReadOnly = dataSource.screen.readOnly === true;
   const canLogInteraction = Boolean(effectiveClientId) && !screenReadOnly;
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);

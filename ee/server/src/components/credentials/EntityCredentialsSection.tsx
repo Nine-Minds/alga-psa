@@ -65,6 +65,8 @@ interface EntityCredentialsSectionProps {
   defaultClientId?: string | null;
   /** Override the section title locale key (asset keeps its own key). */
   titleKey?: string;
+  /** List attached credentials without attach/manage (for example an ended co-managed workspace). */
+  readOnly?: boolean;
 }
 
 type CredentialsListState = ReturnType<typeof useCredentialsList>;
@@ -200,11 +202,13 @@ function CredentialsTile({
   entityId,
   defaultClientId,
   title,
+  readOnly = false,
 }: {
   entityType: CredentialAssociationEntityType;
   entityId: string;
   defaultClientId?: string | null;
   title: string;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation('msp/credentials');
   const [managerOpen, setManagerOpen] = useState(false);
@@ -212,7 +216,8 @@ function CredentialsTile({
 
   const tileId = `${entityType}-credentials-section`;
   const rows = list.credentials ?? [];
-  const visible = rows.slice(0, MAX_TILE_ROWS);
+  // Read-only lists every attached credential; the manager (attach/create/detach) is not offered.
+  const visible = readOnly ? rows : rows.slice(0, MAX_TILE_ROWS);
   const overflow = rows.length - visible.length;
 
   const closeManager = () => {
@@ -242,9 +247,9 @@ function CredentialsTile({
     body = (
       <div>
         <BentoTileEmpty id={`${tileId}-empty`}>{t('credentials.section.empty')}</BentoTileEmpty>
-        <BentoTileEmptyAction id={`${tileId}-attach-link`} onClick={() => setManagerOpen(true)}>
+        {!readOnly && <BentoTileEmptyAction id={`${tileId}-attach-link`} onClick={() => setManagerOpen(true)}>
           {t('credentials.section.attach')}
-        </BentoTileEmptyAction>
+        </BentoTileEmptyAction>}
       </div>
     );
   } else {
@@ -275,7 +280,7 @@ function CredentialsTile({
         id={tileId}
         title={title}
         icon={<KeyRound className="h-4 w-4" />}
-        action={
+        action={readOnly ? undefined : (
           <Button
             id={`${tileId}-manage-btn`}
             variant="ghost"
@@ -287,14 +292,14 @@ function CredentialsTile({
           >
             <Plus className="h-4 w-4" />
           </Button>
-        }
+        )}
       >
         {body}
       </BentoTile>
 
       <Dialog
         id={`${tileId}-manager-dialog`}
-        isOpen={managerOpen}
+        isOpen={managerOpen && !readOnly}
         onClose={closeManager}
         title={title}
         // min-h matters: nested dialogs (attach picker, create form) render
@@ -321,6 +326,7 @@ export function EntityCredentialsSection({
   entityId,
   defaultClientId,
   titleKey = 'credentials.section.title',
+  readOnly = false,
 }: EntityCredentialsSectionProps) {
   const { t } = useTranslation('msp/credentials');
   const { hasFeature } = useTier();
@@ -366,13 +372,15 @@ export function EntityCredentialsSection({
     );
   }
 
-  if (isBento) {
+  // The full entity screen manages associations, so a read-only caller gets the list-only tile in both layouts.
+  if (isBento || readOnly) {
     return (
       <CredentialsTile
         entityType={entityType}
         entityId={entityId}
         defaultClientId={defaultClientId}
         title={t(titleKey)}
+        readOnly={readOnly}
       />
     );
   }

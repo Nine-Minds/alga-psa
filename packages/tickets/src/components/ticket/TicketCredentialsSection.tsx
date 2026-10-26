@@ -15,6 +15,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { useTicketScreenReadOnly } from './TicketDataSourceContext';
 
 interface TicketCredentialsSectionProps {
   ticketId: string;
@@ -34,8 +35,9 @@ const VaultEntityCredentialsSection = dynamic(
 );
 
 export function TicketCredentialsSection({ ticketId, clientId }: TicketCredentialsSectionProps) {
+  const readOnly = useTicketScreenReadOnly();
   return (
-    <VaultEntityCredentialsSection entityType="ticket" entityId={ticketId} defaultClientId={clientId} />
+    <VaultEntityCredentialsSection entityType="ticket" entityId={ticketId} defaultClientId={clientId} readOnly={readOnly} />
   );
 }
 

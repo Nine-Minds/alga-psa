@@ -4,6 +4,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import Documents from '@alga-psa/documents/components/Documents.tsx';
 import TicketDocumentsSection from '@alga-psa/tickets/components/ticket/TicketDocumentsSection.tsx';
+import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
+import { composeTicketDataSource } from '@alga-psa/tickets/lib/ticketDataSource';
+import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
 
 // Composition belongs in server: Documents must not depend on Tickets, even in tests.
 // Keep the section, Documents prop synchronization and storage cards real.
@@ -95,6 +98,27 @@ describe('Ticket document metadata composition', () => {
     rerender(<TicketDocumentsSection ticketId="ticket-1" initialDocuments={[document]} />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled());
     expect(screen.getByText('Internal')).toBeInTheDocument();
+  });
+
+  // Guide 10: an ended co-managed workspace's Entry layout lists documents without add/upload/link or card writes.
+  it('offers no document writes on a read-only ticket screen, and keeps them on a writable one', async () => {
+    const document = {
+      document_id: 'doc-ro', document_name: 'retained.pdf', file_id: 'file-1',
+      tenant: 'tenant-1', type_id: null, user_id: 'user-1', created_by: 'user-1',
+      order_number: 0, is_client_visible: true, comment_attachment_is_public: true,
+    };
+    const readOnly = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+    const { container, unmount } = render(<TicketDataSourceProvider dataSource={readOnly}>
+      <TicketDocumentsSection id="ro" ticketId="ticket-1" initialDocuments={[document]} />
+    </TicketDataSourceProvider>);
+    await waitFor(() => expect(screen.getByText('retained.pdf')).toBeInTheDocument());
+    for (const control of ['ro-documents-new-document-btn', 'ro-documents-upload-btn', 'ro-documents-link-documents-btn']) {
+      expect(container.querySelector('#' + control)).toBeNull();
+    }
+    expect(screen.queryByRole('button', { name: 'Visible to clients' })).toBeNull();
+    unmount();
+    const writable = render(<TicketDocumentsSection id="rw" ticketId="ticket-1" initialDocuments={[document]} />);
+    await waitFor(() => expect(writable.container.querySelector('#rw-documents-upload-btn')).not.toBeNull());
   });
 
 });
