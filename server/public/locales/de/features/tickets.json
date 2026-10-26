@@ -1819,7 +1819,8 @@
     "remoteFieldUpdated": "{{name}} hat {{field}} aktualisiert",
     "connection": {
       "reconnecting": "Live-Aktualisierungen offline - Verbindung wird wiederhergestellt...",
-      "unavailable": "Live-Aktualisierungen nicht verfügbar"
+      "unavailable": "Live-Aktualisierungen nicht verfügbar",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -2001,7 +2002,10 @@
       "openScheduleEntry": "Zeitplaneintrag öffnen",
       "acrossEntries_few": "über {{count}} Einträge",
       "acrossEntries_many": "über {{count}} Einträge",
-      "changeLocation": "Standort ändern"
+      "changeLocation": "Standort ändern",
+      "addDescriptionPrompt": "Beschreibung hinzufügen – worum geht es, und was braucht der Kunde?",
+      "projectTasks": "Projektaufgaben",
+      "timeAndBilling": "Zeit & Abrechnung"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -2097,6 +2101,17 @@
       "collapseActivity": "Ältere Aktivitäten einklappen",
       "replyingToComment": "Antwort an {{name}}",
       "createdFromTemplate": "{{actor}} hat dieses Ticket aus der Vorlage „{{name}}“ erstellt"
+    },
+    "board": {
+      "conversation": "Unterhaltung",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Kunde",
+      "work": "Arbeit",
+      "who": "Personen",
+      "linked": "Verknüpfte Elemente",
+      "empty": "Noch nichts vorhanden"
     }
   },
   "notifications": {
@@ -2528,7 +2543,9 @@
     "discard": "Stoppuhr verwerfen",
     "pausedHint": "Pausiert. Setzen Sie fort, um weiter zu erfassen, oder stoppen Sie, um die Zeit zu buchen.",
     "workDescription": "Arbeitsbeschreibung",
-    "whatAreYouWorkingOn": "Woran arbeiten Sie?"
+    "whatAreYouWorkingOn": "Woran arbeiten Sie?",
+    "chipElsewhere": "Stoppuhr auf {{label}}",
+    "title": "Stoppuhr"
   },
   "templates": {
     "loading": "Wird geladen …",

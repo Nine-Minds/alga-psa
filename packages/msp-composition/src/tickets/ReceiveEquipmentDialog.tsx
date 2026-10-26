@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { PackageOpen } from 'lucide-react';
@@ -23,7 +24,7 @@ import {
 } from '@alga-psa/assets/components/custody/CustodyFields';
 import { DialogShell, HolderPicker } from '@alga-psa/assets/components/custody/CustodyDialogs';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
-import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
+import { matchAssetCacheKeys, matchEntityAssetsCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { receiveEquipment, type ReceiveEquipmentActionData } from './receiveEquipmentActions';
 
@@ -161,23 +162,20 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
     setResult(outcome.data);
     void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id]));
     void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
+    // The ticket's Assets tile lists linked assets under this key.
+    void mutate(matchEntityAssetsCacheKeys('ticket', ticketId));
     return null;
   };
 
   const id = `receive-equipment-${ticketId}`;
   return (
     <>
-      <Button
+      <ActionTrigger
         id={`${id}-button`}
-        type="button"
-        variant="soft"
-        size="sm"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5"
-      >
-        <PackageOpen className="h-3.5 w-3.5" />
-        {t('custody.receiveEquipment.button', { defaultValue: 'Receive equipment' })}
-      </Button>
+        icon={<PackageOpen />}
+        label={t('custody.receiveEquipment.button', { defaultValue: 'Receive equipment' })}
+      />
 
       <DialogShell
         id={id}

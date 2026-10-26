@@ -952,7 +952,8 @@
     "assetStatuses": {
       "active": "Ativo",
       "inactive": "Inativo",
-      "maintenance": "Manutenção"
+      "maintenance": "Manutenção",
+      "held_by_msp": "Em posse do MSP"
     },
     "assetTypes": {
       "workstation": "Estação de trabalho",
@@ -1812,6 +1813,7 @@
     "in_stock": "Em estoque",
     "maintenance": "Em manutenção",
     "inactive": "Inativo",
+    "held_by_msp": "Em posse do MSP",
     "retired": "Desativado"
   },
   "assetStatusKinds": {

@@ -35,7 +35,7 @@ vi.mock('@alga-psa/ui/components/labels/LabelPrintDialog', () => ({ LabelPrintDi
 vi.mock('@alga-psa/assets/actions/assetCustodyActions', () => ({ listCustodyBins: vi.fn(), listCustodyLocations: vi.fn() }));
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({ listAssets: vi.fn() }));
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({ uploadDocument: vi.fn() }));
-vi.mock('@alga-psa/assets/lib/assetCacheKeys', () => ({ matchAssetCacheKeys: () => () => false }));
+vi.mock('@alga-psa/assets/lib/assetCacheKeys', () => ({ matchAssetCacheKeys: () => () => false, matchEntityAssetsCacheKeys: () => () => false }));
 vi.mock('@alga-psa/assets/components/shared/useAssetTypeOptions', () => ({
   useAssetTypeRegistry: () => [{ slug: 'docking_station', name: 'Docking Station', is_builtin: false }],
   buildAssetTypeOptions: (entries: any[], _t: unknown, opts: any) => [

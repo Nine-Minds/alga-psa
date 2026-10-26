@@ -952,7 +952,8 @@
     "assetStatuses": {
       "active": "Aktiv",
       "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
+      "maintenance": "Underhåll",
+      "held_by_msp": "Hålls av MSP"
     },
     "assetTypes": {
       "workstation": "Arbetsstation",
@@ -1812,6 +1813,7 @@
     "in_stock": "I lager",
     "maintenance": "Under underhåll",
     "inactive": "Inaktiv",
+    "held_by_msp": "Hålls av MSP",
     "retired": "Utfasad"
   },
   "assetStatusKinds": {

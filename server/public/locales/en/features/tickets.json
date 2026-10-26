@@ -1827,7 +1827,8 @@
     "remoteFieldUpdated": "{{name}} updated {{field}}",
     "connection": {
       "reconnecting": "Live updates offline - reconnecting...",
-      "unavailable": "Live updates unavailable"
+      "unavailable": "Live updates unavailable",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -2009,7 +2010,10 @@
       "openScheduleEntry": "Open schedule entry",
       "acrossEntries_few": "across {{count}} entries",
       "acrossEntries_many": "across {{count}} entries",
-      "changeLocation": "Change location"
+      "changeLocation": "Change location",
+      "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
+      "projectTasks": "Project tasks",
+      "timeAndBilling": "Time & billing"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -2105,6 +2109,17 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}",
       "createdFromTemplate": "{{actor}} created this ticket from template \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Customer",
+      "work": "Work",
+      "who": "People",
+      "linked": "Linked items",
+      "empty": "Nothing here yet"
     }
   },
   "externalLinks": {
@@ -2528,7 +2543,9 @@
     "discard": "Discard stopwatch",
     "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
     "workDescription": "Work description",
-    "whatAreYouWorkingOn": "What are you working on?"
+    "whatAreYouWorkingOn": "What are you working on?",
+    "chipElsewhere": "Timer on {{label}}",
+    "title": "Stopwatch"
   },
   "templates": {
     "loading": "Loading…",

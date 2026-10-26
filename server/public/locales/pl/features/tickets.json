@@ -1819,7 +1819,8 @@
     "remoteFieldUpdated": "{{name}} zaktualizował(a) {{field}}",
     "connection": {
       "reconnecting": "Aktualizacje na żywo offline - ponowne łączenie...",
-      "unavailable": "Aktualizacje na żywo niedostępne"
+      "unavailable": "Aktualizacje na żywo niedostępne",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -2001,7 +2002,10 @@
         "cancelled": "Anulowana"
       },
       "scheduleTime": "Zaplanuj czas",
-      "openScheduleEntry": "Otwórz wpis harmonogramu"
+      "openScheduleEntry": "Otwórz wpis harmonogramu",
+      "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
+      "projectTasks": "Zadania projektu",
+      "timeAndBilling": "Czas i rozliczenia"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -2097,6 +2101,17 @@
       "collapseActivity": "Zwiń starszą aktywność",
       "replyingToComment": "Odpowiedź dla {{name}}",
       "createdFromTemplate": "{{actor}} utworzył(a) to zgłoszenie z szablonu „{{name}}”"
+    },
+    "board": {
+      "conversation": "Rozmowa",
+      "details": "Szczegóły"
+    },
+    "groups": {
+      "customer": "Klient",
+      "work": "Praca",
+      "who": "Osoby",
+      "linked": "Powiązane elementy",
+      "empty": "Jeszcze nic tu nie ma"
     }
   },
   "notifications": {
@@ -2528,7 +2543,9 @@
     "discard": "Odrzuć stoper",
     "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
     "workDescription": "Opis pracy",
-    "whatAreYouWorkingOn": "Nad czym pracujesz?"
+    "whatAreYouWorkingOn": "Nad czym pracujesz?",
+    "chipElsewhere": "Stoper na {{label}}",
+    "title": "Stoper"
   },
   "templates": {
     "loading": "Ładowanie…",

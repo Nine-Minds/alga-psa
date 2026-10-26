@@ -1819,7 +1819,8 @@
     "remoteFieldUpdated": "{{name}} atualizado {{field}}",
     "connection": {
       "reconnecting": "Atualizações ao vivo off-line - reconectando...",
-      "unavailable": "Atualizações ao vivo indisponíveis"
+      "unavailable": "Atualizações ao vivo indisponíveis",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -2001,7 +2002,10 @@
       "openScheduleEntry": "Abrir entrada de agenda",
       "acrossEntries_few": "em {{count}} entradas",
       "acrossEntries_many": "em {{count}} entradas",
-      "changeLocation": "Alterar localização"
+      "changeLocation": "Alterar localização",
+      "addDescriptionPrompt": "Adicione uma descrição — qual é o problema e do que o cliente precisa?",
+      "projectTasks": "Tarefas do projeto",
+      "timeAndBilling": "Tempo e faturamento"
     },
     "timeline": {
       "subtitle": "Respostas, tempo e alterações do sistema em um só lugar",
@@ -2097,6 +2101,17 @@
       "collapseActivity": "Recolher atividade anterior",
       "replyingToComment": "Respondendo a {{name}}",
       "createdFromTemplate": "{{actor}} criou este ticket a partir do modelo \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversa",
+      "details": "Detalhes"
+    },
+    "groups": {
+      "customer": "Cliente",
+      "work": "Trabalho",
+      "who": "Pessoas",
+      "linked": "Itens vinculados",
+      "empty": "Nada aqui ainda"
     }
   },
   "notifications": {
@@ -2528,7 +2543,9 @@
     "discard": "Descartar cronômetro",
     "pausedHint": "Pausado. Retome para continuar registrando ou pare para registrar o tempo.",
     "workDescription": "Descrição do trabalho",
-    "whatAreYouWorkingOn": "No que você está trabalhando?"
+    "whatAreYouWorkingOn": "No que você está trabalhando?",
+    "chipElsewhere": "Cronômetro em {{label}}",
+    "title": "Cronômetro"
   },
   "templates": {
     "loading": "A carregar…",

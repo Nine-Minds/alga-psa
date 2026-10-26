@@ -12,6 +12,7 @@ import {
   BentoRowList,
   BentoTile,
   BentoTileEmpty,
+  BentoTileEmptyScope,
   TileSkeleton,
   useTileData,
 } from '@alga-psa/ui/components/bento';
@@ -439,16 +440,20 @@ function formatMinutes(minutes: number): string {
 }
 
 /** "Billing" tile — hours-only rollup for this ticket (v1: no dollar amounts). */
-export function BillingTile({
+/** Billing rollup body; rendered standalone (BillingTile) or inside the Time & billing tile. */
+export function BillingSummary({
   id,
   ticketId,
   refreshKey = 0,
   initialData,
+  footer,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   initialData?: Promise<TicketBillingRollup | null>;
+  /** Host-placed billing actions (e.g. Quick invoice), rendered under the rollup. */
+  footer?: React.ReactNode;
 }) {
   const { t } = useTranslation('features/tickets');
   const { data, error, loading } = useTileData(
@@ -460,12 +465,15 @@ export function BillingTile({
 
   const rollup: TicketBillingRollup | null = data;
 
+  if (error) {
+    return <p id={`${id}-error`} className="text-sm text-red-700">{error}</p>;
+  }
   return (
-    <BentoTile id={id} title={t('bento.tiles.billing', 'Billing')} icon={<CreditCard className="h-4 w-4" />} error={error}>
+    <div id={id}>
       {loading ? (
         <TileSkeleton id={`${id}-loading`} />
       ) : !rollup || rollup.entryCount === 0 ? (
-        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingBillable', 'Nothing billable yet')}</BentoTileEmpty>
+        <BentoTileEmptyScope><BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingBillable', 'Nothing billable yet')}</BentoTileEmpty></BentoTileEmptyScope>
       ) : (
         <div className="text-sm space-y-1.5">
           <div className="flex justify-between">
@@ -493,6 +501,16 @@ export function BillingTile({
           ) : null}
         </div>
       )}
+      {footer ? <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">{footer}</div> : null}
+    </div>
+  );
+}
+
+export function BillingTile(props: React.ComponentProps<typeof BillingSummary>) {
+  const { t } = useTranslation('features/tickets');
+  return (
+    <BentoTile id={`${props.id}-tile`} title={t('bento.tiles.billing', 'Billing')} icon={<CreditCard className="h-4 w-4" />}>
+      <BillingSummary {...props} />
     </BentoTile>
   );
 }

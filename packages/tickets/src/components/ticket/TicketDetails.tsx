@@ -90,7 +90,7 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
 import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
@@ -3690,7 +3690,7 @@ const handleClose = () => {
                                         {autoCloseState && (
                                             <div
                                                 id={`${id}-auto-close-banner`}
-                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
                                             >
                                                 {t('details.autoClose', "Will close automatically on {{date}} unless there's new activity.", {
                                                     date: formatDate(new Date(autoCloseState.scheduled_close_at), { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -3704,8 +3704,8 @@ const handleClose = () => {
                                                 id={`${id}-checklist-progress-chip`}
                                                 className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
                                                     checklistSummary.requiredDone === checklistSummary.requiredTotal
-                                                        ? 'border-green-300 bg-green-50 text-green-800'
-                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
+                                                        ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-300'
+                                                        : 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
                                                 }`}
                                                 onClick={() =>
                                                     document
@@ -3721,23 +3721,136 @@ const handleClose = () => {
         </>
     );
 
+    // Secondary ticket actions. Entry shows the menu in the page header; Grid
+    // puts it beside the hero's Resolve / All fields cluster.
+    const moreActionsMenu = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    id={`${id}-more-actions-button`}
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                    id={`${id}-print-work-tag-button`}
+                    onSelect={() => setIsPrintWorkTagOpen(true)}
+                >
+                    <Printer className="h-4 w-4 mr-2" />
+                    {t('actions.printWorkTag', 'Print work tag')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    id={`${id}-duplicate-ticket-button`}
+                    onSelect={() => router.push(buildCreateTicketHref({
+                        duplicateFromTicketId: ticket.ticket_id,
+                        isAlgaDeskMode,
+                    }))}
+                >
+                    <Copy className="h-4 w-4 mr-2" />
+                    {t('actions.duplicate', { defaultValue: 'Duplicate' })}
+                </DropdownMenuItem>
+                {templatePermissions.create ? (
+                    <DropdownMenuItem
+                        id={`${id}-create-template-menu-item`}
+                        onSelect={() => router.push(
+                            `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                        )}
+                    >
+                        <LayoutTemplate className="h-4 w-4 mr-2" />
+                        {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                    </DropdownMenuItem>
+                ) : null}
+                {canCreateWorkflowFromTicket ? (
+                    <DropdownMenuItem
+                        id="create-workflow-from-ticket-menu-item"
+                        onSelect={() => setCreateWorkflowOpen(true)}
+                    >
+                        <Workflow className="mr-2 h-4 w-4" />
+                        {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                    </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    id={`${id}-delete-ticket-button`}
+                    onSelect={handleDeleteTicket}
+                    className="text-red-600 focus:text-red-700"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('actions.delete', { defaultValue: 'Delete' })}
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
+    const ticketOriginBadge = (
+        <TicketOriginBadge
+            origin={ticketOrigin}
+            labels={ticketOriginLabels}
+            size="sm"
+            className="flex-shrink-0"
+            systemLabel={originExternalLink?.display.label ?? null}
+        />
+    );
+
+    // Created / Updated stamps. Entry shows them under the header; Grid folds
+    // them into the hero's single metadata line.
+    const ticketTimestamps = (
+        <>
+                    {ticket.entered_at && (
+                        <p>
+                            {t('fields.created', 'Created')} {createdRelativeTime || (() => {
+                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
+                            })()}
+                        </p>
+                    )}
+                    {ticket.updated_at && (() => {
+                        const updatedTime = updatedRelativeTime || (() => {
+                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
+                        })();
+                        const updatedByName = updatedByUser
+                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                            : '';
+                        return (
+                            <p data-testid="ticket-updated-at">
+                                {updatedByName
+                                    ? t('fields.updatedAtBy', {
+                                        defaultValue: 'Updated {{time}} by {{name}}',
+                                        time: updatedTime,
+                                        name: updatedByName,
+                                    })
+                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
+                            </p>
+                        );
+                    })()}
+        </>
+    );
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-[rgb(var(--color-app-ground))]">
-                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
+                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex items-start gap-2">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
-                            <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
+                            <BackNav href="/msp/tickets" variant="ghost" size="sm">← {t('navigation.tickets', 'Tickets')}</BackNav>
                         </div>
                     )}
                     <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-wrap">
                                 {!isInDrawer && ticket.ticket_id && (
                                     <TicketNavigation currentTicketId={ticket.ticket_id} initialAdjacent={bootstrap?.streams?.adjacentTickets} />
                                 )}
-                                <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                                {responseStateTrackingEnabled && ticket.response_state ? (
+                                {!useGridLayout ? (
+                                    <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                                ) : null}
+                                {/* Grid shows reply status as a hero field; don't repeat it here. */}
+                                {!useGridLayout && responseStateTrackingEnabled && ticket.response_state ? (
                                     <ResponseStateBadge
                                         responseState={ticket.response_state}
                                         size="sm"
@@ -3745,13 +3858,7 @@ const handleClose = () => {
                                         className="flex-shrink-0"
                                     />
                                 ) : null}
-                                <TicketOriginBadge
-                                    origin={ticketOrigin}
-                                    labels={ticketOriginLabels}
-                                    size="sm"
-                                    className="flex-shrink-0"
-                                    systemLabel={originExternalLink?.display.label ?? null}
-                                />
+                                {!useGridLayout ? ticketOriginBadge : null}
                                 {recurringSource ? (
                                     <Link
                                         id="ticket-recurring-source-link"
@@ -3803,9 +3910,24 @@ const handleClose = () => {
                                 {ticketLive.enabled && ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
                                     <PresenceBar users={livePresenceUsers} />
                                 ) : null}
-                                {ticketLive.enabled && connectionStatusLabel ? (
-                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
-                                        {connectionStatusLabel}
+                                {useGridLayout && ticketLive.enabled && connectionStatusLabel ? (
+                                    <span
+                                        className="inline-flex h-6 w-6 items-center justify-center"
+                                        data-testid="ticket-live-connection-status"
+                                        title={connectionStatusLabel}
+                                        aria-label={connectionStatusLabel}
+                                    >
+                                        <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                                    </span>
+                                ) : null}
+                                {!useGridLayout && ticketLive.enabled && connectionStatusLabel ? (
+                                    <span
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 whitespace-nowrap"
+                                        data-testid="ticket-live-connection-status"
+                                        title={connectionStatusLabel}
+                                    >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                                        {t('liveUpdates.connection.offlineShort', 'Offline')}
                                     </span>
                                 ) : null}
                                 {!isInDrawer ? (
@@ -3825,65 +3947,7 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
-                                <Button
-                                    id={`${id}-print-work-tag-button`}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setIsPrintWorkTagOpen(true)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Printer className="h-4 w-4" />
-                                    <span>{t('actions.printWorkTag', 'Print work tag')}</span>
-                                </Button>
-                                <Button
-                                    id={`${id}-duplicate-ticket-button`}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => router.push(buildCreateTicketHref({
-                                        duplicateFromTicketId: ticket.ticket_id,
-                                        isAlgaDeskMode,
-                                    }))}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                    <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
-                                </Button>
-                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                id={`${id}-more-actions-button`}
-                                                variant="outline"
-                                                size="sm"
-                                                aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
-                                            >
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            {templatePermissions.create ? (
-                                                <DropdownMenuItem
-                                                    id={`${id}-create-template-menu-item`}
-                                                    onClick={() => router.push(
-                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
-                                                    )}
-                                                >
-                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
-                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
-                                                </DropdownMenuItem>
-                                            ) : null}
-                                            {canCreateWorkflowFromTicket ? (
-                                                <DropdownMenuItem
-                                                    id="create-workflow-from-ticket-menu-item"
-                                                    onSelect={() => setCreateWorkflowOpen(true)}
-                                                >
-                                                    <Workflow className="mr-2 h-4 w-4" />
-                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
-                                                </DropdownMenuItem>
-                                            ) : null}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                ) : null}
+                                {!useGridLayout ? moreActionsMenu : null}
                                 {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
                                     ? renderCreateWorkflowFromTicket({
                                         ticketId: ticket.ticket_id as string,
@@ -3893,16 +3957,6 @@ const handleClose = () => {
                                         onOpenChange: setCreateWorkflowOpen,
                                     })
                                     : null}
-                                <Button
-                                    id={`${id}-delete-ticket-button`}
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleDeleteTicket}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>{t('actions.delete', { defaultValue: 'Delete' })}</span>
-                                </Button>
                             </div>
                         </div>
                         <h1
@@ -3913,36 +3967,11 @@ const handleClose = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
-                    {ticket.entered_at && (
-                        <p>
-                            {t('fields.created', 'Created')} {createdRelativeTime || (() => {
-                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
-                            })()}
-                        </p>
-                    )}
-                    {ticket.updated_at && (() => {
-                        const updatedTime = updatedRelativeTime || (() => {
-                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
-                        })();
-                        const updatedByName = updatedByUser
-                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
-                            : '';
-                        return (
-                            <p data-testid="ticket-updated-at">
-                                {updatedByName
-                                    ? t('fields.updatedAtBy', {
-                                        defaultValue: 'Updated {{time}} by {{name}}',
-                                        time: updatedTime,
-                                        name: updatedByName,
-                                    })
-                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
-                            </p>
-                        );
-                    })()}
-                </div>
+                {!useGridLayout ? (
+                    <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
+                        {ticketTimestamps}
+                    </div>
+                ) : null}
                 {/* Delete Ticket Dialog (with dependency validation) */}
                 <DeleteEntityDialog
                     id={`${id}-delete-ticket-dialog`}
@@ -4349,6 +4378,31 @@ const handleClose = () => {
                 {bundleAndCloseBanners}
                 {useGridLayout ? (
                 <TicketBentoLayout
+                    heroMeta={
+                        <>
+                            {ticketOriginBadge}
+                            {/* Relative stamps; the absolute time is the tooltip. */}
+                            {ticket.entered_at && hasHydrated ? (
+                                <p title={formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>
+                                    {t('fields.created', 'Created')} {formatTicketRelativeToNow(ticket.entered_at, locale)}
+                                </p>
+                            ) : null}
+                            {ticket.updated_at && hasHydrated ? (
+                                <p data-testid="ticket-updated-at" title={formatTicketDateTime(ticket.updated_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>
+                                    {(() => {
+                                        const time = formatTicketRelativeToNow(ticket.updated_at, locale);
+                                        const name = updatedByUser
+                                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                                            : '';
+                                        return name
+                                            ? t('fields.updatedAtBy', { defaultValue: 'Updated {{time}} by {{name}}', time, name })
+                                            : `${t('fields.updated', 'Updated')} ${time}`;
+                                    })()}
+                                </p>
+                            ) : null}
+                        </>
+                    }
+                    heroMoreActions={moreActionsMenu}
                     id={`${id}-bento`}
                     titleRef={cardTitleRef}
                     ticket={ticket as any}
