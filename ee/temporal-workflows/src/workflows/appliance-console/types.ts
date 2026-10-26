@@ -92,20 +92,22 @@ export interface ExtendProResult {
 }
 
 export type EntitlementChangeMode = 'comp' | 'billed';
-export type ProrationBehavior = 'create_prorations' | 'none';
+/** See planSeatChange in appliance-console-stripe-activities. */
+export type SeatChangeBilling = 'charged_now' | 'trial' | 'credited_next_invoice' | 'unchanged';
 
 export interface ChangeEntitlementArgs extends BaseArgs {
   tenantId: string;
   mode: EntitlementChangeMode;
   /** null = unlimited (comp mode only). */
   seats: number | null;
-  proration: ProrationBehavior;
 }
 
 export interface ChangeEntitlementResult {
   mode: EntitlementChangeMode;
   seats: number | null;
   stripe_updated: boolean;
+  /** Only set when Stripe was updated (billed mode). */
+  billing?: SeatChangeBilling;
 }
 
 export interface SetStatusArgs extends BaseArgs {
