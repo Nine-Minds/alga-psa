@@ -879,7 +879,7 @@ export function BentoHero({
         <div className="flex items-start gap-3 flex-wrap">
           <div className="min-w-0 flex-1" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
-              {isEditingTitle ? (
+              {isEditingTitle && !isFrozen('title') ? (
                 <Input
                   id={`${id}-title-input`}
                   value={titleDraft}
@@ -899,7 +899,8 @@ export function BentoHero({
               ) : (
                 <h2 ref={titleRef} className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
                   <span className="truncate">{displayedTitle}</span>
-                  <button
+                  {/* A frozen title (read-only screen or a field this source cannot write) offers no edit. */}
+                  {!isFrozen('title') && <button
                     id={`${id}-title-edit`}
                     type="button"
                     aria-label={t('bento.hero.editTitle', 'Edit title')}
@@ -907,7 +908,7 @@ export function BentoHero({
                     onClick={() => setIsEditingTitle(true)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  </button>}
                 </h2>
               )}
             </div>

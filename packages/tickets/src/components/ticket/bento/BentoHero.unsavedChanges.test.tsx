@@ -548,6 +548,15 @@ describe('BentoHero unsaved change model', () => {
     expect(screen.getByTestId('assignee-picker')).toHaveTextContent('Not assigned');
   });
 
+  // Guide 10 Grid audit: an ended (read-only) workspace freezes the title, so the hero offers no title edit.
+  it('offers no title edit when the title is frozen', () => {
+    renderHero({ liveFrozenFields: ['title'] });
+    expect(document.getElementById('bento-hero-title-edit')).toBeNull();
+    cleanup();
+    renderHero();
+    expect(document.getElementById('bento-hero-title-edit')).not.toBeNull();
+  });
+
   it('renders the ticket description inline with the opened-by caption', () => {
     renderHero({
       createdByUser: { first_name: 'Ada', last_name: 'Lovelace' } as any,

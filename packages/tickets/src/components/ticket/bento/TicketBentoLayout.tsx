@@ -277,7 +277,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     openInteractionDetails,
   } = useQuickAddClient();
   const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
-  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId) && !screenReadOnly;
+  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId) && !screenReadOnly && !frozenFieldSet.has('contact_name_id');
   const [contactEditOpen, setContactEditOpen] = React.useState(false);
   const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
   const [pickerContacts, setPickerContacts] = React.useState<IContact[]>(props.contacts ?? []);
@@ -286,7 +286,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Repoint the ticket to a different client. Mirrors the legacy Contact Info
   // card: an inline ClientPicker that, on save, resets contact + location
   // (handled by the wired onChangeClient handler in TicketDetails).
-  const canChangeClient = Boolean(props.onChangeClient);
+  // Frozen (read-only screen, or a field the source cannot write) means no change affordance.
+  const canChangeClient = Boolean(props.onChangeClient) && !frozenFieldSet.has('client_id');
   const [clientPickerOpen, setClientPickerOpen] = React.useState(false);
   const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
