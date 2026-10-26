@@ -1,0 +1,17 @@
+{
+  "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+  "work_item_type": "co_managed",
+  "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+  "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+  "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+  "contract_line_id": null,
+  "billing_mode": "commercial",
+  "billable_duration": 45,
+  "notes": "T13-2D00 corrected after review",
+  "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+  "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+  "created_at": "2026-10-26T14:58:35.66+00:00",
+  "updated_at": "2026-10-26T14:58:43.122+00:00",
+  "approval_status": "DRAFT",
+  "invoiced": false
+}

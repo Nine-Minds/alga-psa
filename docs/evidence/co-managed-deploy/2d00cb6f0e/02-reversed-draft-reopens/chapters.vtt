@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.866 --> 00:00:03.450
+QA creates a disposable hourly contract for Cancel-3 through the contract wizard (October start)
+
+2
+00:00:03.450 --> 00:00:04.425
+QA logs 30 minutes on Oct 18 and gets it approved; the October window is generated as a draft
+
+3
+00:00:04.425 --> 00:00:28.222
+Glinda logs 30 minutes inside the same October period after the draft exists; QA approves her sheet
+
+4
+00:00:28.222 --> 00:00:37.944
+Automatic Invoices names Glinda's entry as late time closed by the draft
+
+5
+00:00:37.944 --> 00:00:50.800
+Reverse the draft: the window reopens and the entry is no longer late
+
+6
+00:00:50.800 --> 00:01:03.449
+Regenerate October: both entries bill on the regenerated window, neither labelled late
+
+7
+00:01:03.449 --> 00:01:54.830
+Cleanup through the product

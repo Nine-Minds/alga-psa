@@ -1,0 +1,36 @@
+{
+  "sourceRevision": "2d00cb6f0efc440e7682435d364254e97c83ef83",
+  "app": {
+    "buildId": "build-1793025108142",
+    "stamp": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "dist": "server/.next-review-final-2d00cb6f",
+    "served": "http://feature-co-managed-it.localhost:23374",
+    "boardAdmission": {
+      "result": "created:true, status live",
+      "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:25",
+      "createdAt": "2026-10-26T14:31:23.251Z",
+      "laterBoardStatus": "suspended",
+      "suspendedAt": "2026-10-26T14:31:26.758Z",
+      "suspendedReason": "\"Design Session\" does not use it",
+      "note": "As in earlier rounds the board marked the PTY suspended seconds after admission because the current step does not list review-app; the detached card-service supervisor it launched kept serving."
+    },
+    "nextServerPid": 112762,
+    "nextServerStarted": "Mon Oct 26 10:44:52 2026",
+    "incident": "A Docker snap auto-refresh (snap change 879, ~14:54Z) restarted the Postgres/Redis/Temporal containers during scenario 04; the supervisor restarted next-server on the same dist. Scenario 04 was re-run from the start afterwards (first attempt kept in attempts/)."
+  },
+  "workers": {
+    "temporal-worker": {
+      "rebuilt": false,
+      "childPid": 3848394,
+      "childStarted": "Mon Oct 26 09:24:56 2026",
+      "reason": "Worker dist is from 8093816c90; 1166f31a1a and 2d00cb6f0e change only the billing engine/actions/UI and interface types, none of which the workers compile."
+    },
+    "workflow-worker": {
+      "rebuilt": false,
+      "reason": "No compiled input changed."
+    }
+  },
+  "superseded": {
+    "1166f31a1a": "Its review build was stopped before completion: the voided-window correction (2d00cb6f0e) had to land first."
+  }
+}

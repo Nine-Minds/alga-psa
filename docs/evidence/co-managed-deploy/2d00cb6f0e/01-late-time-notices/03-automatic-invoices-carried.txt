@@ -1,0 +1,7 @@
+Late approved time billed on the next invoice (1)
+
+This time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed.
+
+White Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly
+Oct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester
+Service period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft).

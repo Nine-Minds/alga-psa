@@ -1,0 +1,395 @@
+{
+  "scenario": "01-late-time-notices",
+  "recordedAt": "2026-10-26T14:45:04.127Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [
+    {
+      "id": "setup-inv3-is-the-425-reference-draft",
+      "passed": true,
+      "at": "2026-10-26T14:45:05.207Z",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "total_amount": 42500,
+        "sources": 17
+      }
+    },
+    {
+      "id": "contract-active",
+      "passed": true,
+      "at": "2026-10-26T14:45:13.573Z",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending"
+      }
+    },
+    {
+      "id": "entry-on-the-hourly-line-dated-oct-18",
+      "passed": true,
+      "at": "2026-10-26T14:45:51.599Z",
+      "data": {
+        "entry_id": "c53f0ba8-73c1-44f5-8e8f-fb987af9cd1f",
+        "work_item_type": "ticket",
+        "work_item_id": "2d7e88ab-ffaf-4045-8d02-221f5150e44e",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "entry-approved-uninvoiced",
+      "passed": true,
+      "at": "2026-10-26T14:46:11.985Z",
+      "data": {
+        "entry_id": "c53f0ba8-73c1-44f5-8e8f-fb987af9cd1f",
+        "work_item_type": "ticket",
+        "work_item_id": "2d7e88ab-ffaf-4045-8d02-221f5150e44e",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "APPROVED",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "ui-carried-panel-names-entry-period-and-inv3",
+      "passed": true,
+      "at": "2026-10-26T14:46:21.535Z",
+      "data": {
+        "text": "Late approved time billed on the next invoice (1)\n\nThis time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft)."
+      }
+    },
+    {
+      "id": "ui-no-stranded-panel-while-contract-active",
+      "passed": true,
+      "at": "2026-10-26T14:46:21.537Z",
+      "data": {}
+    },
+    {
+      "id": "ui-preview-names-carried-entry-and-bills-it-as-late-october-time",
+      "passed": true,
+      "at": "2026-10-26T14:46:23.522Z",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nLate approved time billed on the next invoice (1)\n\nThis time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft).\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nSubtotal\t$50.00\nTax\t$0.00\nTotal\t$50.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "id": "db-nothing-generated",
+      "passed": true,
+      "at": "2026-10-26T14:46:24.977Z",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "id": "ui-stranded-warning-names-entry-closed-period-invoice-and-options",
+      "passed": true,
+      "at": "2026-10-26T14:46:36.612Z",
+      "data": {
+        "text": "Approved time that no invoice will bill (1)\n\nThis time was approved after its service period was invoiced, and its contract line has no later service period to carry it. Restore or extend the contract line so a later period exists and it bills there, or, if the invoice for that period is still a draft, reverse the draft and generate the period again to include it.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft)."
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:45:04.276Z",
+      "seconds": 0.149,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:45:05.207Z",
+      "seconds": 1.08,
+      "title": "setup-inv3-is-the-425-reference-draft",
+      "data": {
+        "invoice_number": "INV-000003",
+        "status": "draft",
+        "subtotal": 42500,
+        "total_amount": 42500,
+        "sources": 17
+      }
+    },
+    {
+      "at": "2026-10-26T14:45:07.502Z",
+      "seconds": 3.375,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:45:07.502Z",
+      "seconds": 3.375,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Restore the White Rabbit hourly contract and set a billing email (reverted at the end)"
+    },
+    {
+      "at": "2026-10-26T14:45:09.722Z",
+      "seconds": 5.595,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T14:45:13.087Z",
+      "seconds": 8.96,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/e1d953b4-4f14-41fe-8f2c-828dd85a15b8?tab=billing"
+    },
+    {
+      "at": "2026-10-26T14:45:13.573Z",
+      "seconds": 9.446,
+      "actor": "qa",
+      "title": "contract-active",
+      "data": {
+        "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+        "is_active": true,
+        "status": "pending"
+      }
+    },
+    {
+      "at": "2026-10-26T14:45:13.573Z",
+      "seconds": 9.446,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Create a disposable native White Rabbit ticket and log 30 minutes dated Oct 18 (inside invoiced October)"
+    },
+    {
+      "at": "2026-10-26T14:45:15.599Z",
+      "seconds": 11.472,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/create-ticket"
+    },
+    {
+      "at": "2026-10-26T14:45:48.966Z",
+      "seconds": 44.839,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/2d7e88ab-ffaf-4045-8d02-221f5150e44e"
+    },
+    {
+      "at": "2026-10-26T14:45:51.599Z",
+      "seconds": 47.472,
+      "actor": "qa",
+      "title": "entry-on-the-hourly-line-dated-oct-18",
+      "data": {
+        "entry_id": "c53f0ba8-73c1-44f5-8e8f-fb987af9cd1f",
+        "work_item_type": "ticket",
+        "work_item_id": "2d7e88ab-ffaf-4045-8d02-221f5150e44e",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T14:45:51.600Z",
+      "seconds": 47.473,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Approve through native timesheets (disposable approver team led by QA)"
+    },
+    {
+      "at": "2026-10-26T14:45:53.853Z",
+      "seconds": 49.726,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T14:46:00.091Z",
+      "seconds": 55.964,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T14:46:03.815Z",
+      "seconds": 59.688,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T14:46:11.985Z",
+      "seconds": 67.858,
+      "actor": "qa",
+      "title": "entry-approved-uninvoiced",
+      "data": {
+        "entry_id": "c53f0ba8-73c1-44f5-8e8f-fb987af9cd1f",
+        "work_item_type": "ticket",
+        "work_item_id": "2d7e88ab-ffaf-4045-8d02-221f5150e44e",
+        "contract_line_id": "9e12f69d-62cb-4b76-b8a7-b27bf6f3f8db",
+        "start_time": "2026-10-18T08:00:00+00:00",
+        "billable_duration": 30,
+        "approval_status": "APPROVED",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T14:46:11.985Z",
+      "seconds": 67.858,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Automatic Invoices names the late entry as carried onto the next invoice"
+    },
+    {
+      "at": "2026-10-26T14:46:14.004Z",
+      "seconds": 69.877,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T14:46:21.535Z",
+      "seconds": 77.408,
+      "actor": "qa",
+      "title": "ui-carried-panel-names-entry-period-and-inv3",
+      "data": {
+        "text": "Late approved time billed on the next invoice (1)\n\nThis time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft)."
+      }
+    },
+    {
+      "at": "2026-10-26T14:46:21.537Z",
+      "seconds": 77.41,
+      "actor": "qa",
+      "title": "ui-no-stranded-panel-while-contract-active",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T14:46:21.537Z",
+      "seconds": 77.41,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "The November preview carries the same notice; nothing is generated"
+    },
+    {
+      "at": "2026-10-26T14:46:23.522Z",
+      "seconds": 79.395,
+      "actor": "qa",
+      "title": "ui-preview-names-carried-entry-and-bills-it-as-late-october-time",
+      "data": {
+        "preview": "Invoice Preview\n\nThis is a preview of how the invoice will look when finalized.\n\nThis selection will generate one combined invoice.\nInvoice 1\nLate approved time billed on the next invoice (1)\n\nThis time was approved after its service period was invoiced. It bills once on the next invoice for its contract line, labelled with its own service period; the earlier invoice is not changed.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft).\nClient Details\n\nWhite Rabbit\n\n42 Rabbit Hole Lane\n\nInvoice Details\n\nInvoice Number\n\nPREVIEW\n\nDate\n\n10/26/2026\n\nDue Date\n\n11/25/2026\n\nLine Items\nDescription\tQuantity\tRate\tAmount\nContract: CM-REVIEW-20261026-09 hourly contract\nBasic Support (late time, service period 2026-10-01 – 2026-10-31)\t0.5\t$100.00\t$50.00\nSubtotal\t$50.00\nTax\t$0.00\nTotal\t$50.00\nClose Preview\nGenerate Invoice"
+      }
+    },
+    {
+      "at": "2026-10-26T14:46:24.978Z",
+      "seconds": 80.851,
+      "actor": "qa",
+      "title": "db-nothing-generated",
+      "data": [
+        {
+          "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+          "invoice_number": "INV-000003",
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T14:46:24.978Z",
+      "seconds": 80.851,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Terminate the contract: the same entry is now named as time no invoice will bill"
+    },
+    {
+      "at": "2026-10-26T14:46:26.894Z",
+      "seconds": 82.767,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T14:46:29.114Z",
+      "seconds": 84.987,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T14:46:36.612Z",
+      "seconds": 92.485,
+      "actor": "qa",
+      "title": "ui-stranded-warning-names-entry-closed-period-invoice-and-options",
+      "data": {
+        "text": "Approved time that no invoice will bill (1)\n\nThis time was approved after its service period was invoiced, and its contract line has no later service period to carry it. Restore or extend the contract line so a later period exists and it bills there, or, if the invoice for that period is still a draft, reverse the draft and generate the period again to include it.\n\nWhite Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly\nOct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester\nService period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft)."
+      }
+    },
+    {
+      "at": "2026-10-26T14:46:36.615Z",
+      "seconds": 92.488,
+      "actor": "qa",
+      "title": "white-rabbit-ready-rows-while-terminated",
+      "data": {
+        "readyWr": 2
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 3.375,
+      "title": "Restore the White Rabbit hourly contract and set a billing email (reverted at the end)",
+      "end": 9.446
+    },
+    {
+      "start": 9.446,
+      "title": "Create a disposable native White Rabbit ticket and log 30 minutes dated Oct 18 (inside invoiced October)",
+      "end": 47.473
+    },
+    {
+      "start": 47.473,
+      "title": "Approve through native timesheets (disposable approver team led by QA)",
+      "end": 67.858
+    },
+    {
+      "start": 67.858,
+      "title": "Automatic Invoices names the late entry as carried onto the next invoice",
+      "end": 77.41
+    },
+    {
+      "start": 77.41,
+      "title": "The November preview carries the same notice; nothing is generated",
+      "end": 80.851
+    },
+    {
+      "start": 80.851,
+      "title": "Terminate the contract: the same entry is now named as time no invoice will bill",
+      "end": 116.23
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "ui-preview-names-stranded-entry {\"readyWr\":2,\"preview\":\"Invoice Preview\\n\\nThis is a preview of how the invoice will look when finalized.\\n\\nNo contract line is active for this billing period. Check the contract's start and end dates and make sure the contract is active.\\n\\nClose Preview\\nGenerate Invoice\"}",
+  "durationSeconds": 116.28,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

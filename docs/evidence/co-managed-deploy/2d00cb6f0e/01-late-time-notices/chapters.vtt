@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:02.823 --> 00:00:06.646
+Restore the White Rabbit hourly contract and set a billing email (reverted at the end)
+
+2
+00:00:06.646 --> 00:00:07.190
+Create a disposable native White Rabbit ticket and log 30 minutes dated Oct 18 (inside invoiced October)
+
+3
+00:00:07.190 --> 00:00:08.009
+Approve through native timesheets (disposable approver team led by QA)
+
+4
+00:00:08.009 --> 00:00:17.551
+Automatic Invoices names the late entry as carried onto the next invoice
+
+5
+00:00:17.551 --> 00:00:21.040
+The November preview carries the same notice; nothing is generated
+
+6
+00:00:21.040 --> 00:00:36.350
+Terminate the contract: the same entry is now named as time no invoice will bill
+
+7
+00:00:36.350 --> 00:00:59.670
+Cleanup through the product: reverse approval, delete entry, ticket and team, clear billing email

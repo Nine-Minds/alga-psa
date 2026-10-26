@@ -1,0 +1,18 @@
+{
+  "d2": {
+    "invoice_id": "7c260ce9-a961-483f-ae82-6993e9b6b14f",
+    "invoice_number": "INV-000008",
+    "status": "draft",
+    "subtotal": 10000
+  },
+  "lines": [
+    {
+      "entry_id": "c61a0b72-ebdb-4f1f-b432-efdb39507fdd",
+      "description": "Basic Support"
+    },
+    {
+      "entry_id": "5b22ffa0-8604-4649-ba75-61a90ea9562b",
+      "description": "Basic Support"
+    }
+  ]
+}

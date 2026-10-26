@@ -1,0 +1,221 @@
+{
+  "scenario": "02-reversed-draft-reopens",
+  "recordedAt": "2026-10-26T14:48:21.527Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [
+    {
+      "id": "contract-created-and-active",
+      "passed": true,
+      "at": "2026-10-26T14:49:01.871Z",
+      "data": {
+        "client_contract_id": "b822ab9d-6782-4a13-8dd8-96931d43e926",
+        "is_active": true,
+        "contract_line_id": "2b24101f-e7d4-4309-b8ba-ec525b6c59aa"
+      }
+    },
+    {
+      "id": "d1-draft-bills-qa-entry",
+      "passed": true,
+      "at": "2026-10-26T14:50:14.568Z",
+      "data": {
+        "d1": {
+          "invoice_id": "182e09ec-15e9-4f44-a544-9adfb70b3998",
+          "invoice_number": "INV-000007",
+          "status": "draft",
+          "subtotal": 5000
+        },
+        "lines": [
+          {
+            "entry_id": "5b22ffa0-8604-4649-ba75-61a90ea9562b",
+            "description": "Basic Support"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:48:21.568Z",
+      "seconds": 0.041,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:48:22.332Z",
+      "seconds": 0.805,
+      "title": "chapter",
+      "data": "QA creates a disposable hourly contract for Cancel-3 through the contract wizard (October start)"
+    },
+    {
+      "at": "2026-10-26T14:48:24.238Z",
+      "seconds": 2.711,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:48:26.346Z",
+      "seconds": 4.819,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T14:49:01.872Z",
+      "seconds": 40.345,
+      "actor": "qa",
+      "title": "contract-created-and-active",
+      "data": {
+        "client_contract_id": "b822ab9d-6782-4a13-8dd8-96931d43e926",
+        "is_active": true,
+        "contract_line_id": "2b24101f-e7d4-4309-b8ba-ec525b6c59aa"
+      }
+    },
+    {
+      "at": "2026-10-26T14:49:03.970Z",
+      "seconds": 42.443,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/a67a50b5-6689-479b-9ef8-9072e993c175?tab=billing"
+    },
+    {
+      "at": "2026-10-26T14:49:06.288Z",
+      "seconds": 44.761,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/create-ticket"
+    },
+    {
+      "at": "2026-10-26T14:49:37.174Z",
+      "seconds": 75.647,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "QA logs 30 minutes on Oct 18 and gets it approved; the October window is generated as a draft"
+    },
+    {
+      "at": "2026-10-26T14:49:39.548Z",
+      "seconds": 78.021,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/0c669358-239e-4460-b2b6-3d0afd884860"
+    },
+    {
+      "at": "2026-10-26T14:49:43.913Z",
+      "seconds": 82.386,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T14:49:50.282Z",
+      "seconds": 88.755,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T14:49:53.860Z",
+      "seconds": 92.333,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-sheet-approvals"
+    },
+    {
+      "at": "2026-10-26T14:50:03.587Z",
+      "seconds": 102.06,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=invoicing"
+    },
+    {
+      "at": "2026-10-26T14:50:14.568Z",
+      "seconds": 113.041,
+      "actor": "qa",
+      "title": "d1-draft-bills-qa-entry",
+      "data": {
+        "d1": {
+          "invoice_id": "182e09ec-15e9-4f44-a544-9adfb70b3998",
+          "invoice_number": "INV-000007",
+          "status": "draft",
+          "subtotal": 5000
+        },
+        "lines": [
+          {
+            "entry_id": "5b22ffa0-8604-4649-ba75-61a90ea9562b",
+            "description": "Basic Support"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T14:50:14.569Z",
+      "seconds": 113.042,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Glinda logs 30 minutes inside the same October period after the draft exists; QA approves her sheet"
+    },
+    {
+      "at": "2026-10-26T14:50:16.488Z",
+      "seconds": 114.961,
+      "actor": "glinda",
+      "title": "Fresh form login",
+      "data": {
+        "email": "glinda@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:50:18.609Z",
+      "seconds": 117.082,
+      "actor": "glinda",
+      "title": "navigate",
+      "data": "/msp/tickets/0c669358-239e-4460-b2b6-3d0afd884860"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.805,
+      "title": "QA creates a disposable hourly contract for Cancel-3 through the contract wizard (October start)",
+      "end": 75.647
+    },
+    {
+      "start": 75.647,
+      "title": "QA logs 30 minutes on Oct 18 and gets it approved; the October window is generated as a draft",
+      "end": 113.042
+    },
+    {
+      "start": 113.042,
+      "title": "Glinda logs 30 minutes inside the same October period after the draft exists; QA approves her sheet",
+      "end": 142.98999999999998
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "locator.click: Timeout 25000ms exceeded.\nCall log:\n  - waiting for locator('#ticket-details-properties-add-time-entry-btn')\n",
+  "durationSeconds": 143.04,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "glinda",
+      "email": "glinda@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

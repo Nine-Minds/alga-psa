@@ -1,0 +1,9 @@
+{
+  "contract": {
+    "is_active": false
+  },
+  "team": null,
+  "billingEmail": "",
+  "entries": [],
+  "invoices": []
+}

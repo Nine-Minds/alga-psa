@@ -1,0 +1,30 @@
+{
+  "contract": {
+    "client_contract_id": "b822ab9d-6782-4a13-8dd8-96931d43e926",
+    "is_active": true,
+    "contract_line_id": "2b24101f-e7d4-4309-b8ba-ec525b6c59aa"
+  },
+  "invoices": [
+    {
+      "invoice_id": "182e09ec-15e9-4f44-a544-9adfb70b3998",
+      "invoice_number": "INV-000007",
+      "status": "draft",
+      "subtotal": 5000
+    }
+  ],
+  "entries": [
+    {
+      "entry_id": "5b22ffa0-8604-4649-ba75-61a90ea9562b",
+      "user_id": "86952555-610c-4737-be41-a9236cfa9cdb",
+      "work_item_id": "0c669358-239e-4460-b2b6-3d0afd884860",
+      "contract_line_id": "2b24101f-e7d4-4309-b8ba-ec525b6c59aa",
+      "start_time": "2026-10-18T08:00:00+00:00",
+      "billable_duration": 30,
+      "approval_status": "APPROVED",
+      "invoiced": true,
+      "time_sheet_id": "206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    }
+  ],
+  "qaSheet": "APPROVED",
+  "billingEmail": "billing@cancel3.test"
+}

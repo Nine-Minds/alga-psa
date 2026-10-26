@@ -1,0 +1,30 @@
+{
+  "scenario": "04-t09-task-audiences",
+  "recordedAt": "2026-10-26T14:54:00.292Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [],
+  "steps": [
+    {
+      "at": "2026-10-26T14:54:00.330Z",
+      "seconds": 0.038,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    }
+  ],
+  "chapters": [],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Command failed: docker exec co-managed-it-postgres psql -X -t -A -U postgres -d server_co_managed -v ON_ERROR_STOP=1 -c select coalesce(json_agg(x),'[]') from (select project_id, can_collaborate from co_management_project_scopes where tenant='c64b2666-7dd6-4c61-8ced-4b233f628e61' and project_id='eefd8378-f6ff-4212-94bb-57a7a96b393b') x\nfailed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /var/run/docker.sock: connect: no such file or directory\n",
+  "durationSeconds": 0.96,
+  "actors": []
+}

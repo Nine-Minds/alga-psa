@@ -1,0 +1,8 @@
+Invoice Preview
+
+This is a preview of how the invoice will look when finalized.
+
+No contract line is active for this billing period. Check the contract's start and end dates and make sure the contract is active.
+
+Close Preview
+Generate Invoice

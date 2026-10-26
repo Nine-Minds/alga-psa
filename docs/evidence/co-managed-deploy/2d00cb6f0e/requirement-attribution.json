@@ -1,0 +1,67 @@
+{
+  "candidateRuntime": "2d00cb6f0efc440e7682435d364254e97c83ef83",
+  "build": "build-1793025108142",
+  "baselineCensus": {
+    "source": "docs/evidence/co-managed-completion/698cddfd4c/manifest.json",
+    "counts": {
+      "verified": 3,
+      "implemented-unverified": 255,
+      "blocked-external": 2
+    }
+  },
+  "policy": "Rows promote only when every clause ran on a served build; evidence from build-1793021045283 is carried with an explicit dependency analysis (only billing changed since).",
+  "rows": [
+    {
+      "key": "T09",
+      "status": "implemented-unverified",
+      "evidence": [
+        "04-t09-task-audiences/",
+        "../8093816c90/04-t09-privacy/",
+        "../8093816c90/05-t09-export/"
+      ],
+      "progress": "Task conversations on build-1793025108142: shared_it / organization_private (customer) / MSP-private / requester audiences are each visible only to their permitted readers (Alice, QA, client-portal requester), MSP-private stored only in the MSP store. Ticket portal, search/typeahead and export privacy passed on build-1793021045283 (no conversation code changed since).",
+      "remaining": "Explicit task disclosure (preview/confirmation/receipts) and task notification/email delivery on a current build."
+    },
+    {
+      "key": "T13",
+      "status": "implemented-unverified",
+      "evidence": [
+        "05-t13-time-entry-edit/",
+        "01-late-time-notices/",
+        "02-reversed-draft-reopens/",
+        "../8093816c90/01-billing-late-time/",
+        "../8093816c90/03-t13-msp-edit-attribution/"
+      ],
+      "progress": "MSP edit of a recorded time entry keeps the entry, its qualified reference and contract resolution, with QA as editor (this build); late approved time is carried and named, or named as unbillable when its line has no later period, in Automatic Invoices and previews; a reversed draft's window rebills its time unlabelled (this build); MSP and native time billed together and MSP ticket edits attributed (build-1793021045283).",
+      "remaining": "Catalog-priced time with a real catalog price; customer operational time on a current build."
+    },
+    {
+      "key": "clientIntegration:F003",
+      "status": "verified",
+      "carriedFrom": "../8093816c90/06-f003-relationship-states/",
+      "dependencyAnalysis": "Changes since 8093816c90 touch only billing (engine, actions, Automatic Invoices), interface types and invoicing locales; no co-managed client-management code."
+    },
+    {
+      "key": "clientIntegration:F010",
+      "status": "verified",
+      "carriedFrom": "../8093816c90/06-f003-relationship-states/",
+      "dependencyAnalysis": "Same as F003."
+    },
+    {
+      "key": "clientIntegration:T009",
+      "status": "verified",
+      "carriedFrom": "../8093816c90/07-t009-onboarding-recovery/",
+      "dependencyAnalysis": "Same as F003."
+    },
+    {
+      "key": "clientIntegration:T018",
+      "status": "blocked-external",
+      "missing": "real Stripe test account, price and checkout, and release-owner receipts"
+    },
+    {
+      "key": "clientIntegration:T019",
+      "status": "blocked-external",
+      "missing": "signed tenant-bound self-host licence and an isolated self-host installation"
+    }
+  ]
+}

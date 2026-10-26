@@ -1,0 +1,320 @@
+{
+  "scenario": "05-t13-time-entry-edit",
+  "recordedAt": "2026-10-26T14:58:28.045Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [
+    {
+      "id": "recorded-msp-commercial-time-on-the-shared-reference",
+      "passed": true,
+      "at": "2026-10-26T14:58:35.833Z",
+      "data": {
+        "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": null,
+        "billing_mode": "commercial",
+        "billable_duration": 30,
+        "notes": "T13-2D00 recorded",
+        "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "created_at": "2026-10-26T14:58:35.66+00:00",
+        "updated_at": "2026-10-26T14:58:35.659+00:00",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "edit-updates-the-same-entry-with-qa-as-editor",
+      "passed": true,
+      "at": "2026-10-26T14:58:43.435Z",
+      "data": {
+        "before": {
+          "updated_at": "2026-10-26T14:58:35.659+00:00"
+        },
+        "after": {
+          "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+          "work_item_type": "co_managed",
+          "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": null,
+          "billing_mode": "commercial",
+          "billable_duration": 45,
+          "notes": "T13-2D00 corrected after review",
+          "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "created_at": "2026-10-26T14:58:35.66+00:00",
+          "updated_at": "2026-10-26T14:58:43.122+00:00",
+          "approval_status": "DRAFT",
+          "invoiced": false
+        }
+      }
+    },
+    {
+      "id": "edit-keeps-the-qualified-work-reference-and-contract-resolution",
+      "passed": true,
+      "at": "2026-10-26T14:58:43.435Z",
+      "data": {
+        "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": null,
+        "billing_mode": "commercial",
+        "billable_duration": 45,
+        "notes": "T13-2D00 corrected after review",
+        "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "created_at": "2026-10-26T14:58:35.66+00:00",
+        "updated_at": "2026-10-26T14:58:43.122+00:00",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "id": "customer-never-sees-the-msp-time-note",
+      "passed": true,
+      "at": "2026-10-26T14:58:50.256Z",
+      "data": {}
+    },
+    {
+      "id": "entry-deleted",
+      "passed": true,
+      "at": "2026-10-26T14:59:00.680Z",
+      "data": {}
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:58:28.102Z",
+      "seconds": 0.057,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:28.103Z",
+      "seconds": 0.058,
+      "title": "chapter",
+      "data": "QA records 30 minutes of MSP time on shared ticket 000016"
+    },
+    {
+      "at": "2026-10-26T14:58:30.009Z",
+      "seconds": 1.964,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:32.329Z",
+      "seconds": 4.284,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tickets/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T14:58:35.833Z",
+      "seconds": 7.788,
+      "actor": "qa",
+      "title": "recorded-msp-commercial-time-on-the-shared-reference",
+      "data": {
+        "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": null,
+        "billing_mode": "commercial",
+        "billable_duration": 30,
+        "notes": "T13-2D00 recorded",
+        "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "created_at": "2026-10-26T14:58:35.66+00:00",
+        "updated_at": "2026-10-26T14:58:35.659+00:00",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:35.833Z",
+      "seconds": 7.788,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "QA edits the recorded entry from his timesheet: 45 minutes and a corrected note"
+    },
+    {
+      "at": "2026-10-26T14:58:37.793Z",
+      "seconds": 9.748,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T14:58:43.435Z",
+      "seconds": 15.39,
+      "actor": "qa",
+      "title": "edit-updates-the-same-entry-with-qa-as-editor",
+      "data": {
+        "before": {
+          "updated_at": "2026-10-26T14:58:35.659+00:00"
+        },
+        "after": {
+          "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+          "work_item_type": "co_managed",
+          "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+          "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+          "contract_line_id": null,
+          "billing_mode": "commercial",
+          "billable_duration": 45,
+          "notes": "T13-2D00 corrected after review",
+          "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+          "created_at": "2026-10-26T14:58:35.66+00:00",
+          "updated_at": "2026-10-26T14:58:43.122+00:00",
+          "approval_status": "DRAFT",
+          "invoiced": false
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:43.435Z",
+      "seconds": 15.39,
+      "actor": "qa",
+      "title": "edit-keeps-the-qualified-work-reference-and-contract-resolution",
+      "data": {
+        "entry_id": "197927f9-dc82-4752-9663-fa167fb0dd99",
+        "work_item_type": "co_managed",
+        "work_item_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "co_managed_work_reference_id": "5ecc6805-82c3-43f6-b515-e0cfd796d742",
+        "service_id": "3105a420-8aab-434e-a872-abd01ad26926",
+        "contract_line_id": null,
+        "billing_mode": "commercial",
+        "billable_duration": 45,
+        "notes": "T13-2D00 corrected after review",
+        "created_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "updated_by": "86952555-610c-4737-be41-a9236cfa9cdb",
+        "created_at": "2026-10-26T14:58:35.66+00:00",
+        "updated_at": "2026-10-26T14:58:43.122+00:00",
+        "approval_status": "DRAFT",
+        "invoiced": false
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:43.435Z",
+      "seconds": 15.39,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Alice (White Rabbit IT) sees the MSP effort on the shared ticket, never QA's note"
+    },
+    {
+      "at": "2026-10-26T14:58:45.217Z",
+      "seconds": 17.172,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:47.182Z",
+      "seconds": 19.137,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/81245210-accc-40ad-afaa-6680a85a75b0"
+    },
+    {
+      "at": "2026-10-26T14:58:50.256Z",
+      "seconds": 22.211,
+      "actor": "alice",
+      "title": "customer-never-sees-the-msp-time-note",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T14:58:50.257Z",
+      "seconds": 22.212,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "Cleanup: QA deletes the entry from the timesheet entry dialog"
+    },
+    {
+      "at": "2026-10-26T14:58:51.732Z",
+      "seconds": 23.687,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:58:53.699Z",
+      "seconds": 25.654,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/time-entry/timesheet/206e125c-5500-49ef-9b7f-d1b0e1de4afa"
+    },
+    {
+      "at": "2026-10-26T14:59:00.680Z",
+      "seconds": 32.635,
+      "actor": "qa",
+      "title": "entry-deleted",
+      "data": {}
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.058,
+      "title": "QA records 30 minutes of MSP time on shared ticket 000016",
+      "end": 7.788
+    },
+    {
+      "start": 7.788,
+      "title": "QA edits the recorded entry from his timesheet: 45 minutes and a corrected note",
+      "end": 15.39
+    },
+    {
+      "start": 15.39,
+      "title": "Alice (White Rabbit IT) sees the MSP effort on the shared ticket, never QA's note",
+      "end": 22.212
+    },
+    {
+      "start": 22.212,
+      "title": "Cleanup: QA deletes the entry from the timesheet entry dialog",
+      "end": 32.510000000000005
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Customer-side MSP effort totals are shown only to roles the effort policy admits; the check asserts the MSP note never reaches the customer view."
+  ],
+  "durationSeconds": 32.56,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

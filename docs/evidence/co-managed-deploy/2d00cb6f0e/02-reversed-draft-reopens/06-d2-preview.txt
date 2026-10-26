@@ -1,0 +1,36 @@
+Invoice Preview
+
+This is a preview of how the invoice will look when finalized.
+
+This selection will generate one combined invoice.
+Invoice 1
+Client Details
+
+CM-REVIEW-20261026-01 Cancel-3
+
+N/A
+
+Invoice Details
+
+Invoice Number
+
+PREVIEW
+
+Date
+
+10/26/2026
+
+Due Date
+
+11/25/2026
+
+Line Items
+Description	Quantity	Rate	Amount
+Contract: LATE-2D00 reopen contract (disposable)
+Basic Support	0.5	$100.00	$50.00
+Basic Support	0.5	$100.00	$50.00
+Subtotal	$100.00
+Tax	$0.00
+Total	$100.00
+Close Preview
+Generate Invoice

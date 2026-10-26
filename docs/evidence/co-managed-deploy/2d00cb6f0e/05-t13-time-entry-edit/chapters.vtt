@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:00.058 --> 00:00:07.788
+QA records 30 minutes of MSP time on shared ticket 000016
+
+2
+00:00:07.788 --> 00:00:15.390
+QA edits the recorded entry from his timesheet: 45 minutes and a corrected note
+
+3
+00:00:15.390 --> 00:00:22.212
+Alice (White Rabbit IT) sees the MSP effort on the shared ticket, never QA's note
+
+4
+00:00:22.212 --> 00:00:32.510
+Cleanup: QA deletes the entry from the timesheet entry dialog

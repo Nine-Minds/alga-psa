@@ -1,0 +1,109 @@
+{
+  "scenario": "02b-reversed-draft-cleanup",
+  "recordedAt": "2026-10-26T14:53:21.576Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [
+    {
+      "id": "cleanup-complete",
+      "passed": true,
+      "at": "2026-10-26T14:53:32.287Z",
+      "data": {
+        "contract": {
+          "is_active": false
+        },
+        "team": null,
+        "billingEmail": "",
+        "entries": [],
+        "invoices": []
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:53:21.623Z",
+      "seconds": 0.047,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:53:23.519Z",
+      "seconds": 1.943,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:53:23.519Z",
+      "seconds": 1.943,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Terminate the disposable contract, delete the team, clear the billing email"
+    },
+    {
+      "at": "2026-10-26T14:53:25.595Z",
+      "seconds": 4.019,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/billing?tab=client-contracts"
+    },
+    {
+      "at": "2026-10-26T14:53:28.035Z",
+      "seconds": 6.459,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/settings?tab=teams"
+    },
+    {
+      "at": "2026-10-26T14:53:31.315Z",
+      "seconds": 9.739,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/clients/a67a50b5-6689-479b-9ef8-9072e993c175?tab=billing"
+    },
+    {
+      "at": "2026-10-26T14:53:32.287Z",
+      "seconds": 10.711,
+      "actor": "qa",
+      "title": "cleanup-complete",
+      "data": {
+        "contract": {
+          "is_active": false
+        },
+        "team": null,
+        "billingEmail": "",
+        "entries": [],
+        "invoices": []
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "start": 1.943,
+      "title": "Terminate the disposable contract, delete the team, clear the billing email",
+      "end": 10.75
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 10.8,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

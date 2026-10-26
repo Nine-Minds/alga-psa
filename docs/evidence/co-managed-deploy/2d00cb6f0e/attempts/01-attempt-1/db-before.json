@@ -1,0 +1,24 @@
+{
+  "inv3": {
+    "invoice_number": "INV-000003",
+    "status": "draft",
+    "subtotal": 42500,
+    "total_amount": 42500,
+    "sources": 17
+  },
+  "contract": {
+    "client_contract_id": "c21828c9-7c86-418e-96ff-c0d047b9dd12",
+    "is_active": false,
+    "status": "pending"
+  },
+  "billingEmail": "",
+  "invoices": [
+    {
+      "invoice_id": "492d46aa-b120-4bbd-973d-819427450461",
+      "invoice_number": "INV-000003",
+      "status": "draft"
+    }
+  ],
+  "entries": [],
+  "sheet": "CHANGES_REQUESTED"
+}

@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:00.196 --> 00:00:05.708
+Alice shares the requester-visible project with the MSP (Collaborate)
+
+2
+00:00:05.708 --> 00:00:13.180
+QA posts Shared IT, MSP-private and Requester messages on the shared task
+
+3
+00:00:13.180 --> 00:00:19.877
+Alice reads the task: Shared IT and Requester visible, MSP-private absent; she posts a customer-private note
+
+4
+00:00:19.877 --> 00:00:25.802
+QA reloads: MSP-private visible, customer-private absent
+
+5
+00:00:25.802 --> 00:00:29.386
+The client-portal requester sees only the requester message
+
+6
+00:00:29.386 --> 00:00:29.864
+Stored audiences: canonical customer task comments and the MSP-owned private store
+
+7
+00:00:29.864 --> 00:00:34.230
+Cleanup: Alice removes the project grant

@@ -1,0 +1,42 @@
+Invoice Preview
+
+This is a preview of how the invoice will look when finalized.
+
+This selection will generate one combined invoice.
+Invoice 1
+Approved time that no invoice will bill (1)
+
+This time was approved after its service period was invoiced, and its contract line has no later service period to carry it. Restore or extend the contract line so a later period exists and it bills there, or, if the invoice for that period is still a draft, reverse the draft and generate the period again to include it.
+
+White Rabbit · CM-REVIEW-20261026-09 hourly contract - Hourly
+Oct 18, 2026 · 30 min Basic Support · #TIC001014 LATE-2D00 native White Rabbit work (disposable) · QA Tester
+Service period Oct 1, 2026 – Oct 31, 2026 was invoiced on INV-000003 (draft).
+Client Details
+
+White Rabbit
+
+42 Rabbit Hole Lane
+
+Invoice Details
+
+Invoice Number
+
+PREVIEW
+
+Date
+
+10/26/2026
+
+Due Date
+
+11/25/2026
+
+Line Items
+Description	Quantity	Rate	Amount
+Rabbit Tracking	0.2	$75.00	$15.00
+Rabbit Tracking	0.2	$75.00	$15.00
+Subtotal	$30.00
+Tax	$0.00
+Total	$30.00
+Close Preview
+Generate Invoice

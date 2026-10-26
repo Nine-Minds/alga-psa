@@ -1,0 +1,367 @@
+{
+  "scenario": "04-t09-task-audiences",
+  "recordedAt": "2026-10-26T14:55:57.098Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-2d00cb6f",
+    "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+    "buildId": "build-1793025108142"
+  },
+  "assertions": [
+    {
+      "id": "grant-collaborate-saved",
+      "passed": true,
+      "at": "2026-10-26T14:56:02.806Z",
+      "data": [
+        {
+          "project_id": "eefd8378-f6ff-4212-94bb-57a7a96b393b",
+          "can_collaborate": true
+        }
+      ]
+    },
+    {
+      "id": "alice-sees-shared-and-requester-not-msp-private",
+      "passed": true,
+      "at": "2026-10-26T14:56:16.481Z"
+    },
+    {
+      "id": "qa-sees-shared-requester-msp-private-not-customer-private",
+      "passed": true,
+      "at": "2026-10-26T14:56:22.862Z"
+    },
+    {
+      "id": "requester-sees-only-requester-message",
+      "passed": true,
+      "at": "2026-10-26T14:56:26.452Z"
+    },
+    {
+      "id": "db-msp-private-only-in-msp-store",
+      "passed": true,
+      "at": "2026-10-26T14:56:26.960Z",
+      "data": {
+        "canonicalCount": 3,
+        "mspStore": 1
+      }
+    },
+    {
+      "id": "db-three-customer-owned-comments",
+      "passed": true,
+      "at": "2026-10-26T14:56:26.960Z",
+      "data": [
+        {
+          "shared": true,
+          "requester": false,
+          "customer_private": false
+        },
+        {
+          "shared": false,
+          "requester": true,
+          "customer_private": false
+        },
+        {
+          "shared": false,
+          "requester": false,
+          "customer_private": true
+        }
+      ]
+    },
+    {
+      "id": "grant-removed",
+      "passed": true,
+      "at": "2026-10-26T14:56:30.878Z",
+      "data": []
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T14:55:57.138Z",
+      "seconds": 0.04,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-2d00cb6f",
+        "revision": "2d00cb6f0efc440e7682435d364254e97c83ef83+da39a3ee5e6b",
+        "buildId": "build-1793025108142",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T14:55:57.294Z",
+      "seconds": 0.196,
+      "title": "chapter",
+      "data": "Alice shares the requester-visible project with the MSP (Collaborate)"
+    },
+    {
+      "at": "2026-10-26T14:55:59.183Z",
+      "seconds": 2.085,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:01.069Z",
+      "seconds": 3.971,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T14:56:02.806Z",
+      "seconds": 5.708,
+      "actor": "alice",
+      "title": "grant-collaborate-saved",
+      "data": [
+        {
+          "project_id": "eefd8378-f6ff-4212-94bb-57a7a96b393b",
+          "can_collaborate": true
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T14:56:02.806Z",
+      "seconds": 5.708,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "QA posts Shared IT, MSP-private and Requester messages on the shared task"
+    },
+    {
+      "at": "2026-10-26T14:56:04.285Z",
+      "seconds": 7.187,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:06.179Z",
+      "seconds": 9.081,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T14:56:10.278Z",
+      "seconds": 13.181,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Alice reads the task: Shared IT and Requester visible, MSP-private absent; she posts a customer-private note"
+    },
+    {
+      "at": "2026-10-26T14:56:12.057Z",
+      "seconds": 14.959,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:13.968Z",
+      "seconds": 16.87,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T14:56:16.481Z",
+      "seconds": 19.383,
+      "actor": "alice",
+      "title": "alice-sees-shared-and-requester-not-msp-private"
+    },
+    {
+      "at": "2026-10-26T14:56:16.975Z",
+      "seconds": 19.877,
+      "actor": "alice",
+      "title": "chapter",
+      "data": "QA reloads: MSP-private visible, customer-private absent"
+    },
+    {
+      "at": "2026-10-26T14:56:18.447Z",
+      "seconds": 21.349,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:20.348Z",
+      "seconds": 23.25,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/co-management/tasks/c64b2666-7dd6-4c61-8ced-4b233f628e61/2be5cb32-91e8-491a-9ec4-16ab019c7d40/7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T14:56:22.862Z",
+      "seconds": 25.764,
+      "actor": "qa",
+      "title": "qa-sees-shared-requester-msp-private-not-customer-private"
+    },
+    {
+      "at": "2026-10-26T14:56:22.900Z",
+      "seconds": 25.802,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "The client-portal requester sees only the requester message"
+    },
+    {
+      "at": "2026-10-26T14:56:24.456Z",
+      "seconds": 27.358,
+      "actor": "qa",
+      "title": "Fresh client-portal form login",
+      "data": {
+        "email": "cm-review-20261026-07.requester@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:26.441Z",
+      "seconds": 29.343,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/client-portal/projects/eefd8378-f6ff-4212-94bb-57a7a96b393b?taskId=7965ad44-0715-4bb4-88f8-6e6557b1f2da"
+    },
+    {
+      "at": "2026-10-26T14:56:26.452Z",
+      "seconds": 29.354,
+      "actor": "qa",
+      "title": "requester-sees-only-requester-message"
+    },
+    {
+      "at": "2026-10-26T14:56:26.484Z",
+      "seconds": 29.386,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Stored audiences: canonical customer task comments and the MSP-owned private store"
+    },
+    {
+      "at": "2026-10-26T14:56:26.960Z",
+      "seconds": 29.862,
+      "actor": "qa",
+      "title": "db-msp-private-only-in-msp-store",
+      "data": {
+        "canonicalCount": 3,
+        "mspStore": 1
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:26.960Z",
+      "seconds": 29.862,
+      "actor": "qa",
+      "title": "db-three-customer-owned-comments",
+      "data": [
+        {
+          "shared": true,
+          "requester": false,
+          "customer_private": false
+        },
+        {
+          "shared": false,
+          "requester": true,
+          "customer_private": false
+        },
+        {
+          "shared": false,
+          "requester": false,
+          "customer_private": true
+        }
+      ]
+    },
+    {
+      "at": "2026-10-26T14:56:26.962Z",
+      "seconds": 29.864,
+      "actor": "qa",
+      "title": "chapter",
+      "data": "Cleanup: Alice removes the project grant"
+    },
+    {
+      "at": "2026-10-26T14:56:28.414Z",
+      "seconds": 31.316,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T14:56:30.301Z",
+      "seconds": 33.203,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/co-management"
+    },
+    {
+      "at": "2026-10-26T14:56:30.878Z",
+      "seconds": 33.78,
+      "actor": "alice",
+      "title": "grant-removed",
+      "data": []
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0.196,
+      "title": "Alice shares the requester-visible project with the MSP (Collaborate)",
+      "end": 5.708
+    },
+    {
+      "start": 5.708,
+      "title": "QA posts Shared IT, MSP-private and Requester messages on the shared task",
+      "end": 13.18
+    },
+    {
+      "start": 13.18,
+      "title": "Alice reads the task: Shared IT and Requester visible, MSP-private absent; she posts a customer-private note",
+      "end": 19.877
+    },
+    {
+      "start": 19.877,
+      "title": "QA reloads: MSP-private visible, customer-private absent",
+      "end": 25.802
+    },
+    {
+      "start": 25.802,
+      "title": "The client-portal requester sees only the requester message",
+      "end": 29.386
+    },
+    {
+      "start": 29.386,
+      "title": "Stored audiences: canonical customer task comments and the MSP-owned private store",
+      "end": 29.864
+    },
+    {
+      "start": 29.864,
+      "title": "Cleanup: Alice removes the project grant",
+      "end": 34.230000000000004
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Messages are left in place as conversation history; the project grant is removed."
+  ],
+  "durationSeconds": 34.28,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    },
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    },
+    {
+      "name": "requester",
+      "email": "cm-review-20261026-07.requester@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}
