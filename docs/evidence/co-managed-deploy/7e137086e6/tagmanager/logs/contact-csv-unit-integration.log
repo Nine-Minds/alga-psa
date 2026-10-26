@@ -1,0 +1,16 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792983304646"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/contacts/contactCsvImport.contract.test.ts (5 tests) 16ms 51 MB heap used
+ ✓ |node| src/test/unit/contacts/contactCsvEmailImportExport.contract.test.ts (2 tests) 2ms 64 MB heap used
+ ✓ |node| src/test/integration/contactCsvPhoneImportExport.integration.test.ts (7 tests) 587ms 86 MB heap used
+
+ Test Files  3 passed (3)
+      Tests  14 passed (14)
+   Start at  02:55:05
+   Duration  6.30s (transform 835ms, setup 68ms, collect 1.71s, tests 605ms, environment 0ms, prepare 28ms)
+
+exit 0

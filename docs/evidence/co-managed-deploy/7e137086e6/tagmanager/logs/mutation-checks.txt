@@ -1,0 +1,39 @@
+Mutation checks for 7e137086e6 (each mutation applied to packages/tags/src/components/useReconciledTags.ts, test run, file restored from backup; restored file is the committed one).
+
+M1: restore the old effect — useEffect(() => { if (initialTags.length > 0 || tags.length === 0) { base = initialTags; publish() } }, [initialTags.length])
+  TagManager.reconcile.test.tsx:
+         × clears the chip when initialTags goes from [A] to [] 25ms
+         × shows B, not A, when initialTags is replaced at the same length 6ms
+         × keeps an in-flight add through an initialTags refresh, then settles to the refreshed tags plus the add 5ms
+         × reverts a failed optimistic add to the authoritative tags 4ms
+    ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+     FAIL  src/components/TagManager.reconcile.test.tsx > TagManager — initialTags reconciliation > clears the chip when initialTags goes from [A] to []
+     FAIL  src/components/TagManager.reconcile.test.tsx > TagManager — initialTags reconciliation > shows B, not A, when initialTags is replaced at the same length
+     FAIL  src/components/TagManager.reconcile.test.tsx > TagManager — initialTags reconciliation > keeps an in-flight add through an initialTags refresh, then settles to the refreshed tags plus the add
+     FAIL  src/components/TagManager.reconcile.test.tsx > TagManager — initialTags reconciliation > reverts a failed optimistic add to the authoritative tags
+          Tests  4 failed | 3 passed (7)
+  Contacts.importTags.test.tsx:
+         × clears the chip when the import mapped Tags but left it blank 10068ms
+         × shows the replacement tag, not the old one, after the import 10021ms
+    ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+          Tests  2 failed (2)
+
+M2: publish() shows base only (pending ops not reapplied)
+         × keeps an in-flight add through an initialTags refresh, then settles to the refreshed tags plus the add 9ms
+         × keeps an in-flight remove through an initialTags refresh 4ms
+         × reverts a failed optimistic add to the authoritative tags 4ms
+    ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+          Tests  3 failed | 4 passed (7)
+
+M3: reconcile effect keyed on initialTags identity instead of content signature
+         × keeps local state when the parent re-renders a new array with the same content 16ms
+    ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+          Tests  1 failed | 6 passed (7)
+
+M4: pending marker cleared only on success
+         × reverts a failed optimistic add to the authoritative tags 8ms
+         × reverts a remove the server refused (action error) to the authoritative tags 4ms
+    ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+          Tests  2 failed | 5 passed (7)
+
+After restore: tags 17/17, clients contacts 73/73 (see sibling logs).

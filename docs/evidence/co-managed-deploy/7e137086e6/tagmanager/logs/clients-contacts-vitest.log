@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/clients
+
+
+ Test Files  13 passed (13)
+      Tests  73 passed (73)
+   Start at  22:55:01
+   Duration  2.20s (transform 5.11s, setup 1.15s, import 8.69s, tests 1.65s, environment 2.08s)
+
+exit 0
