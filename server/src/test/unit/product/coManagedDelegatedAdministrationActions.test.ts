@@ -4,7 +4,9 @@ const mocks=vi.hoisted(()=>({browser:vi.fn(),screen:vi.fn(),list:vi.fn(),grant:v
   user:{tenant:'00000000-0000-4000-8000-000000000001',user_id:'00000000-0000-4000-8000-000000000002'},rows:{} as Record<string,any[]>}));
 vi.mock('@alga-psa/auth',()=>({withAuth:(fn:any)=>(...args:any[])=>fn(mocks.user,{tenant:mocks.user.tenant},...args)}));
 vi.mock('../../../lib/co-managed/browserActor',()=>({coManagedBrowserActor:mocks.browser}));
-vi.mock('@alga-psa/co-managed',()=>({CoManagedSharedWorkError:class extends Error {constructor(){super('Forbidden');}},isCoManagedUuid:(value:any)=>typeof value==='string'&&/^[0-9a-f-]{36}$/.test(value),
+vi.mock('@alga-psa/licensing',()=>({isCoManagedLifecycleError:(error:any)=>error?.name==='CoManagedLifecycleError'}));
+vi.mock('@alga-psa/co-managed',()=>({CoManagedSharedWorkError:class extends Error {constructor(){super('Forbidden');}},
+  CoManagedDelegationError:class extends Error {constructor(public code:string){super(code);}},isCoManagedUuid:(value:any)=>typeof value==='string'&&/^[0-9a-f-]{36}$/.test(value),
   getCoManagedDelegatedScreen:mocks.screen,listCoManagedDelegatedWorkspaces:mocks.list,saveCoManagedDelegatedGrant:mocks.grant,revokeCoManagedDelegatedGrant:vi.fn(),searchCoManagedDelegatedOptions:vi.fn(),executeCoManagedDelegatedCommand:mocks.run}));
 vi.mock('@alga-psa/email',()=>({sendTeamInvitationEmail:mocks.send}));
 vi.mock('@alga-psa/db',()=>({createTenantKnex:async()=>({knex:mocks.db}),tenantDb:(_db:any,tenant:string)=>({table:(table:string)=>{
@@ -37,6 +39,20 @@ it('sends only the retained original invitation and keeps provider tokens out of
   mocks.run.mockImplementation(async(_db,_actor,_target,_command,send)=>{await send({customerTenant,email:'customer@example.test',name:'Customer Person',roleName:'Technician',workspaceName:'Customer workspace',
     invitedByName:'Customer administrator',token:'original-token',expiresAt:new Date(Date.now()+20*60000).toISOString()});return {completed:true};});
   const result=await runCoManagedDelegatedAdministration({operationId,command:{operationId:'command',grantId:'grant',expectedVersion:'version'}});
-  expect(result).toEqual({completed:true});expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({tenant:customerTenant,email:'customer@example.test',roleName:'Technician',
+  expect(result).toEqual({ok:true,completed:true});expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({tenant:customerTenant,email:'customer@example.test',roleName:'Technician',
     invitedByName:'Customer administrator',inviteLink:'https://alga.example.test/auth/team/setup?token=original-token',expirationTime:'20 minutes'}));vi.unstubAllEnvs();
+});
+it('returns the named refusal for a revoked approval instead of an unconfirmed outcome',async()=>{
+  const domain=await import('@alga-psa/co-managed') as any;
+  const command={operationId:'command',grantId:'grant',expectedVersion:'version'};
+  mocks.run.mockRejectedValueOnce(new domain.CoManagedDelegationError('CO_MANAGED_DELEGATION_REVOKED'));
+  expect(await runCoManagedDelegatedAdministration({operationId,command})).toEqual({ok:false,code:'revoked'});
+  mocks.run.mockRejectedValueOnce(new domain.CoManagedDelegationError('CO_MANAGED_DELEGATION_TARGET_CHANGED'));
+  expect(await runCoManagedDelegatedAdministration({operationId,command})).toEqual({ok:false,code:'targetChanged'});
+  mocks.run.mockRejectedValueOnce(Object.assign(new Error('read only'),{name:'CoManagedLifecycleError'}));
+  expect(await runCoManagedDelegatedAdministration({operationId,command})).toEqual({ok:false,code:'readOnly'});
+  mocks.run.mockRejectedValueOnce(new domain.CoManagedSharedWorkError());
+  expect(await runCoManagedDelegatedAdministration({operationId,command})).toEqual({ok:false,code:'forbidden'});
+  mocks.run.mockRejectedValueOnce(new Error('connection lost around COMMIT'));
+  expect(await runCoManagedDelegatedAdministration({operationId,command})).toEqual({ok:false,code:'unknownOutcome'});
 });

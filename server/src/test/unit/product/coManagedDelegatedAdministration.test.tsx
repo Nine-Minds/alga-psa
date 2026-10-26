@@ -15,7 +15,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect',()=>({default:({id,label,value,di
 vi.mock('@alga-psa/ui/lib/i18n/client',()=>({useTranslation:()=>({t:(key:string,args?:any)=>key==='banner'?`${args.customer} / ${args.sponsor}`:key}),useOptionalI18n:()=>null}));
 const sponsor=()=>({side:'sponsor',workspaceName:'Customer A',sponsorName:'MSP',revision:5,canWrite:true,grants:[{grantId:'grant',operation:'user_profile',label:'Approved person',principalName:'Support',available:true,
   values:{first_name:'Customer',last_name:'Person',timezone:'UTC'},version:'initial-version'}]});
-beforeEach(()=>{vi.resetAllMocks();mocks.flag.mockReturnValue({enabled:true,loading:false,error:null});mocks.load.mockResolvedValue(sponsor());mocks.search.mockResolvedValue({options:[],hasMore:false});mocks.run.mockResolvedValue({completed:true});});
+beforeEach(()=>{vi.resetAllMocks();mocks.flag.mockReturnValue({enabled:true,loading:false,error:null});mocks.load.mockResolvedValue(sponsor());mocks.search.mockResolvedValue({options:[],hasMore:false});mocks.run.mockResolvedValue({ok:true,completed:true});});
 afterEach(cleanup);
 const mount=(operationId='operation')=>render(<CoManagedFeatureBoundary><CoManagedDelegatedAdministration operationId={operationId}/></CoManagedFeatureBoundary>);
 it('does not load delegated UI or data when the release flag is disabled',()=>{
@@ -42,4 +42,12 @@ it('provides only the authorized workspace discovery links without administratio
   mocks.load.mockResolvedValue({side:'directory',workspaces:[{operationId:'allowed-operation',name:'Approved workspace'}]});mount(undefined);
   const link=await screen.findByRole('link',{name:'Approved workspace'});expect(link.getAttribute('href')).toBe('/msp/co-management/administration?operationId=allowed-operation');
   expect(screen.queryByText('approveTitle')).toBeNull();expect(screen.queryByLabelText('fields.first_name')).toBeNull();
+});
+it('names a revoked approval and stops offering a retry when the customer revoked it under an open editor',async()=>{
+  mocks.run.mockResolvedValueOnce({ok:false,code:'revoked'});mount();await screen.findByText('Customer A / MSP');
+  fireEvent.change(screen.getByLabelText('fields.first_name'),{target:{value:'Stale edit'}});fireEvent.click(screen.getByRole('button',{name:'save'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent('revokedError');
+  expect(screen.queryByText('saveError')).toBeNull();expect(screen.queryByRole('button',{name:'retry'})).toBeNull();
+  expect((screen.getByRole('button',{name:'save'}) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByLabelText('fields.first_name') as HTMLInputElement).disabled).toBe(true);expect(mocks.run).toHaveBeenCalledTimes(1);
 });

@@ -11,7 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedDelegatedOperation, CoManagedDelegatedCommand } from '@alga-psa/co-managed';
 import { getCoManagedDelegatedAdministration, searchCoManagedDelegatedAdministration, grantCoManagedDelegatedAdministration,
-  revokeCoManagedDelegatedAdministration, runCoManagedDelegatedAdministration } from '@/lib/actions/coManagedDelegatedAdministrationActions';
+  revokeCoManagedDelegatedAdministration, runCoManagedDelegatedAdministration, type CoManagedDelegatedRunResult } from '@/lib/actions/coManagedDelegatedAdministrationActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Option = { id: string; name: string; kind?: 'user' | 'team' };
@@ -72,22 +72,30 @@ function Approval({ revision, disabled, onSaved }: { revision: number; disabled:
     <Button id="co-delegation-approve" disabled={disabled || busy || !principal || !target} onClick={() => void save()}>{t(uncertain ? 'retry' : 'approve')}</Button>
   </CardContent></Card>;
 }
+type RunFailure = Extract<CoManagedDelegatedRunResult, { ok: false }>['code'];
+/** Only an unconfirmed outcome or a failed delivery may resend the same command; every other refusal is final for
+ * this editor and names its reason. */
+const retryable = (code: RunFailure) => code === 'unknownOutcome' || code === 'deliveryFailed';
+const failureMessage: Record<RunFailure, string> = { unknownOutcome: 'saveError', deliveryFailed: 'deliveryFailedError', revoked: 'revokedError',
+  targetChanged: 'targetChangedError', readOnly: 'readOnlyError', forbidden: 'forbiddenError' };
 function GrantedOperation({ grant, operationId, disabled, revision, customer, onSaved }: { grant: Grant; operationId?: string; disabled: boolean; revision: number; customer: boolean; onSaved: () => Promise<void> }) {
   const { t } = useTranslation('features/co-management-delegation');
-  const [values,setValues] = useState(grant.values ?? {}), [busy,setBusy] = useState(false), [error,setError] = useState(false), [uncertain,setUncertain] = useState(false);
+  const [values,setValues] = useState(grant.values ?? {}), [busy,setBusy] = useState(false), [failure,setFailure] = useState<RunFailure | null>(null);
+  const uncertain = failure !== null && retryable(failure), refused = failure !== null && !retryable(failure);
   const pending = useRef<CoManagedDelegatedCommand | null>(null);
   const save = async () => {
-    setBusy(true); setError(false);
+    setBusy(true); setFailure(null);
     try {
       if (customer) await revokeCoManagedDelegatedAdministration({ revision,grantId:grant.grantId });
       else {
         if (!operationId || !grant.version) return;
         pending.current ??= { operationId:newCoManagedOperationId(),grantId:grant.grantId,expectedVersion:grant.version,
           ...(grant.operation === 'invitation_resend' ? {} : { patch:Object.fromEntries(Object.entries(values).filter(([field,value]) => value !== grant.values?.[field])) }) };
-        await runCoManagedDelegatedAdministration({ operationId,command:pending.current });
+        const result = await runCoManagedDelegatedAdministration({ operationId,command:pending.current });
+        if (!result.ok) { setFailure(result.code); return; }
       }
       await onSaved();
-    } catch { setError(true); setUncertain(true); } finally { setBusy(false); }
+    } catch { setFailure('unknownOutcome'); } finally { setBusy(false); }
   };
   return <Card><CardHeader><CardTitle>{grant.label || t('unavailable')}</CardTitle></CardHeader><CardContent className="space-y-3">
     <p>{t(`operations.${grant.operation}`)}{grant.principalName ? ` · ${grant.principalName}` : ''}</p>
@@ -96,15 +104,15 @@ function GrantedOperation({ grant, operationId, disabled, revision, customer, on
       <p>{t('invitationHint')}</p><p>{t('invitationTerms',{ email:values.email,role:values.role,expires:values.expires_at })}</p>
     </>}
     {!customer && grant.available && grant.operation !== 'invitation_resend' && Object.entries(values).map(([field,value]) => <div key={field}>
-      {field === 'enable_live_ticket_timer' ? <Checkbox id={`co-delegation-${grant.grantId}-${field}`} label={t(`fields.${field}`)} checked={Boolean(value)} disabled={disabled || busy || uncertain}
+      {field === 'enable_live_ticket_timer' ? <Checkbox id={`co-delegation-${grant.grantId}-${field}`} label={t(`fields.${field}`)} checked={Boolean(value)} disabled={disabled || busy || failure !== null}
         onChange={event => setValues(current => ({ ...current,[field]:event.target.checked }))} /> : <>
         <Label htmlFor={`co-delegation-${grant.grantId}-${field}`}>{t(`fields.${field}`)}</Label>
-        <Input id={`co-delegation-${grant.grantId}-${field}`} value={String(value ?? '')} disabled={disabled || busy || uncertain}
+        <Input id={`co-delegation-${grant.grantId}-${field}`} value={String(value ?? '')} disabled={disabled || busy || failure !== null}
           onChange={event => setValues(current => ({ ...current,[field]:event.target.value }))} />
       </>}
     </div>)}
-    {error && <p role="alert" className="text-destructive">{t('saveError')}</p>}
-    <Button id={`co-delegation-${grant.grantId}-apply`} variant={customer ? 'outline' : 'default'} disabled={busy || !customer && (disabled || !grant.available || !uncertain && grant.operation !== 'invitation_resend' && !Object.entries(values).some(([field,value]) => value !== grant.values?.[field]))} onClick={() => void save()}>
+    {failure && <p role="alert" className="text-destructive">{t(failureMessage[failure])}</p>}
+    <Button id={`co-delegation-${grant.grantId}-apply`} variant={customer ? 'outline' : 'default'} disabled={busy || refused || !customer && (disabled || !grant.available || !uncertain && grant.operation !== 'invitation_resend' && !Object.entries(values).some(([field,value]) => value !== grant.values?.[field]))} onClick={() => void save()}>
       {t(uncertain ? 'retry' : customer ? 'revoke' : grant.operation === 'invitation_resend' ? 'resend' : 'save')}</Button>
   </CardContent></Card>;
 }

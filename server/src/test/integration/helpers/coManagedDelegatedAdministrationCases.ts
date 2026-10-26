@@ -138,7 +138,30 @@ export function registerCoManagedDelegatedAdministrationCases(getDb: () => Knex,
     const revoke = f.revokeCoManagedDelegatedGrant(f.db,f.customerPrincipal,f.target,await f.revision(),grant.grantId).then(()=>{revokeCompleted=true;});
     await new Promise(resolve=>setTimeout(resolve,30)); expect(revokeCompleted).toBe(false);
     releaseSecond(); await Promise.all([second,revoke]);
-    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,newRequest,send)).rejects.toMatchObject({code:'CO_MANAGED_SHARED_WORK_FORBIDDEN'});
+    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,newRequest,send)).rejects.toMatchObject({code:'CO_MANAGED_DELEGATION_REVOKED'});
+  });
+
+  // Guide 04: a delegate whose editor was open when the customer revoked the approval got the generic
+  // "could not be confirmed" refusal and a Retry. The grantee learns the approval was revoked; nobody else does.
+  it('delegated administration names a revoked approval to its grantee only and changes nothing', async () => {
+    const f = await setup(), board = await f.grant('board_settings',f.operation.customer_board_id);
+    const before = await f.customer.table('boards').where('board_id',board.targetId).first();
+    const stale = await f.command(board,{ description: 'Saved from a stale editor' });
+    await f.revokeCoManagedDelegatedGrant(f.db,f.customerPrincipal,f.target,await f.revision(),board.grantId);
+    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,stale)).rejects.toMatchObject({ code:'CO_MANAGED_DELEGATION_REVOKED' });
+    // The same command retried stays refused for the same reason; it never revives the approval.
+    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,stale)).rejects.toMatchObject({ code:'CO_MANAGED_DELEGATION_REVOKED' });
+    expect(await f.customer.table('boards').where('board_id',board.targetId).first()).toEqual(before);
+    expect(await f.customer.table('co_management_delegated_receipts')).toEqual([]);
+    // A principal the approval never named gets the generic refusal, not the approval's history.
+    const teamId = randomUUID();
+    await f.sponsor.table('teams').insert({ tenant:f.principal.tenant,team_id:teamId,manager_id:f.principal.userId,team_name:'Unrelated team' });
+    await f.sponsor.table('co_management_staff_assignments').insert({ tenant:f.principal.tenant,customer_tenant:f.actor.tenant,relationship_id:f.target.relationshipId,
+      principal_type:'team',principal_id:teamId,relationship_role:'technician' });
+    const teamGrant = await f.grant('board_settings',f.operation.customer_board_id,'team',teamId);
+    await f.revokeCoManagedDelegatedGrant(f.db,f.customerPrincipal,f.target,await f.revision(),teamGrant.grantId);
+    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,{ ...stale, operationId: randomUUID(), grantId: teamGrant.grantId }))
+      .rejects.toMatchObject({ code:'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
 
   it('delegated invitation pins role terms against concurrent permission expansion until delivery commits', async () => {
@@ -172,7 +195,8 @@ export function registerCoManagedDelegatedAdministrationCases(getDb: () => Knex,
     await expect(f.saveCoManagedDelegatedGrant(f.db,f.customerPrincipal,f.target,await f.revision(),{...grant,operation:'board_settings',targetId:f.operation.customer_board_id})).rejects.toMatchObject({code:'CO_MANAGED_SHARED_WORK_FORBIDDEN'});
     await f.revokeCoManagedDelegatedGrant(f.db,f.customerPrincipal,f.target,await f.revision(),grant.grantId);
     const replacement=await f.grant('user_profile');expect(replacement.grantId).not.toBe(grant.grantId);
-    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,request)).rejects.toMatchObject({code:'CO_MANAGED_SHARED_WORK_FORBIDDEN'});
+    // The stale command still names the revoked approval and is never redirected to its replacement.
+    await expect(f.executeCoManagedDelegatedCommand(f.db,f.principal,f.target,request)).rejects.toMatchObject({code:'CO_MANAGED_DELEGATION_REVOKED'});
     expect((await f.screen()).grants.map((row:any)=>row.grantId)).toEqual([replacement.grantId]);
   });
 

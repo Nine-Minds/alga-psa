@@ -18,6 +18,19 @@ const spec = {
   invitation_resend: { table: 'user_invitations', id: 'invitation_id', resource: 'user', action: 'invite', fields: [] },
 } as const;
 const deny: () => never = () => { throw new CoManagedSharedWorkError(); };
+/** Refusals the delegate is entitled to have named. Each concerns an approval the delegate already holds or held,
+ * so naming it discloses nothing beyond what that approval showed; every other refusal stays the generic
+ * CoManagedSharedWorkError. */
+export class CoManagedDelegationError extends Error {
+  constructor(public readonly code: 'CO_MANAGED_DELEGATION_REVOKED' | 'CO_MANAGED_DELEGATION_TARGET_CHANGED' | 'CO_MANAGED_DELEGATION_DELIVERY_FAILED') {
+    super({
+      CO_MANAGED_DELEGATION_REVOKED: 'The customer revoked this delegated approval.',
+      CO_MANAGED_DELEGATION_TARGET_CHANGED: 'The delegated record changed; refresh before saving.',
+      CO_MANAGED_DELEGATION_DELIVERY_FAILED: 'Invitation delivery failed.',
+    }[code]);
+    this.name = 'CoManagedDelegationError';
+  }
+}
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const validOperation = (value: unknown): value is CoManagedDelegatedOperation => operations.includes(value as CoManagedDelegatedOperation);
 function exact(value: unknown, fields: readonly string[]) {
@@ -144,6 +157,8 @@ export async function revokeCoManagedDelegatedGrant(db: Knex, actor: CoManagedSe
     return { revision: await recordGrantChange(context,grantId,'delegation_revoked',{}) };
   });
 }
+const isGrantee = (context: any, grant: any) => context.actor.tenant === context.relationship.sponsor_tenant &&
+  (grant.principal_type === 'user' ? grant.principal_id === context.actor.userId : Boolean(context.credential.subject.teamIds?.includes(grant.principal_id)));
 async function admitGrant(context: any, grant: any, write: boolean) {
   if (context.actor.tenant !== context.relationship.sponsor_tenant || grant.revoked_at || !validOperation(grant.operation)) deny();
   if (grant.principal_type === 'user' ? grant.principal_id !== context.actor.userId : !context.credential.subject.teamIds?.includes(grant.principal_id)) deny();
@@ -231,11 +246,13 @@ export async function executeCoManagedDelegatedCommand(db: Knex, actor: CoManage
     await assertCoManagedOperationalWrite(context.trx,target.customerTenant);
     const grant = await context.owner.table(GRANTS).where({ grant_id: command.grantId, relationship_id: target.relationshipId }).forShare().first();
     if (!grant) deny();
+    // A stale editor saving after the customer revoked its approval must learn why, not retry an unknown outcome.
+    if (grant.revoked_at && isGrantee(context, grant)) throw new CoManagedDelegationError('CO_MANAGED_DELEGATION_REVOKED');
     await context.trx.raw('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [`co-delegated:${target.customerTenant}:${command.operationId}`]);
     const selected = await admitGrant(context,grant,true), fingerprint = hash({ actor: [actor.tenant,actor.userId], target, command });
     const previous = await context.owner.table(RECEIPTS).where('operation_id',command.operationId).first();
     if (previous) { if (previous.request_fingerprint !== fingerprint) deny(); return { completed: true }; }
-    if (hash(selected.values) !== command.expectedVersion) throw new Error('Delegated target changed; refresh before saving');
+    if (hash(selected.values) !== command.expectedVersion) throw new CoManagedDelegationError('CO_MANAGED_DELEGATION_TARGET_CHANGED');
     const operation = grant.operation as CoManagedDelegatedOperation, definition = spec[operation], patch = command.patch ?? {};
     exact(patch,definition.fields);
     if (operation === 'invitation_resend') {
@@ -244,7 +261,7 @@ export async function executeCoManagedDelegatedCommand(db: Knex, actor: CoManage
       await context.credential.assertCurrent();
       if (!await sendInvitation({ customerTenant: target.customerTenant, email: selected.row.email,
         name: `${selected.row.first_name} ${selected.row.last_name}`.trim(), roleName: selected.roleName!, workspaceName: context.customer.client_name,
-        invitedByName: selected.row.metadata.invited_by_name || context.customer.client_name, token: selected.row.token, expiresAt: new Date(selected.row.expires_at).toISOString() })) throw new Error('Invitation delivery failed');
+        invitedByName: selected.row.metadata.invited_by_name || context.customer.client_name, token: selected.row.token, expiresAt: new Date(selected.row.expires_at).toISOString() })) throw new CoManagedDelegationError('CO_MANAGED_DELEGATION_DELIVERY_FAILED');
     } else {
       if (!Object.keys(patch).length) deny();
       for (const [key,value] of Object.entries(patch)) {

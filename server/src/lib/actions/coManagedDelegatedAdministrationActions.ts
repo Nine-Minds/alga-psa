@@ -2,7 +2,8 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
-import { CoManagedSharedWorkError, isCoManagedUuid, resolveCoManagedManagementTarget,
+import { isCoManagedLifecycleError } from '@alga-psa/licensing';
+import { CoManagedDelegationError, CoManagedSharedWorkError, isCoManagedUuid, resolveCoManagedManagementTarget,
   type CoManagedManagementSelector } from '@alga-psa/co-managed';
 import { getCoManagedDelegatedScreen, saveCoManagedDelegatedGrant, revokeCoManagedDelegatedGrant, searchCoManagedDelegatedOptions,
   executeCoManagedDelegatedCommand, listCoManagedDelegatedWorkspaces, type CoManagedDelegatedGrantInput, type CoManagedDelegatedCommand, type CoManagedDelegatedOperation } from '@alga-psa/co-managed';
@@ -52,9 +53,26 @@ export const revokeCoManagedDelegatedAdministration = withAuth(async (user,{ ten
   if (!input) throw new CoManagedSharedWorkError();
   return revokeCoManagedDelegatedGrant(knex,actor,await target(knex,actor,input.selector),input.revision,input.grantId);
 });
-export const runCoManagedDelegatedAdministration = withAuth(async (user,{ tenant }, input: { operationId: string; command: CoManagedDelegatedCommand; selector?: CoManagedManagementSelector }) => {
+/** Production server actions mask thrown messages, so every refusal the editor must name is returned as a code.
+ * Only an outcome the server cannot know (a lost response, a failure around COMMIT) stays `unknownOutcome`. */
+export type CoManagedDelegatedRunResult = { ok: true; completed: true } |
+  { ok: false; code: 'revoked' | 'targetChanged' | 'deliveryFailed' | 'readOnly' | 'forbidden' | 'unknownOutcome' };
+const delegationRefusals = { CO_MANAGED_DELEGATION_REVOKED: 'revoked', CO_MANAGED_DELEGATION_TARGET_CHANGED: 'targetChanged',
+  CO_MANAGED_DELEGATION_DELIVERY_FAILED: 'deliveryFailed' } as const;
+export const runCoManagedDelegatedAdministration = withAuth(async (user,{ tenant }, input: { operationId: string; command: CoManagedDelegatedCommand; selector?: CoManagedManagementSelector }): Promise<CoManagedDelegatedRunResult> => {
   const actor = await coManagedBrowserActor(user,tenant), { knex } = await createTenantKnex(tenant);
   if (!input) throw new CoManagedSharedWorkError();
+  try {
+    await runDelegatedCommand(knex, actor, input);
+    return { ok: true, completed: true };
+  } catch (error) {
+    if (error instanceof CoManagedDelegationError) return { ok: false, code: delegationRefusals[error.code] };
+    if (isCoManagedLifecycleError(error)) return { ok: false, code: 'readOnly' };
+    if (error instanceof CoManagedSharedWorkError) return { ok: false, code: 'forbidden' };
+    return { ok: false, code: 'unknownOutcome' };
+  }
+});
+async function runDelegatedCommand(knex: Knex, actor: CoManagedSessionActor, input: { operationId: string; command: CoManagedDelegatedCommand; selector?: CoManagedManagementSelector }) {
   return executeCoManagedDelegatedCommand(knex,actor,await target(knex,actor,input.selector ?? input.operationId),input.command,async invitation => {
     const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL;
     if (!base) throw new Error('Invitation URL is not configured');
@@ -63,4 +81,4 @@ export const runCoManagedDelegatedAdministration = withAuth(async (user,{ tenant
       tenantName: invitation.workspaceName, roleName: invitation.roleName, invitedByName: invitation.invitedByName, inviteLink: link.toString(),
       expirationTime: `${Math.max(1,Math.ceil((new Date(invitation.expiresAt).getTime()-Date.now())/60000))} minutes` });
   });
-});
+}
