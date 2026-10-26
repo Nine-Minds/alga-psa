@@ -21,6 +21,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepository';
 import { getHuduCompanyMappingRows } from '../../integrations/hudu/companyMapping';
 import { nativeCredentialSource } from '../../credentials/nativeSource';
@@ -47,6 +48,13 @@ import type {
 
 type CredentialActionPermission = 'create' | 'read' | 'update' | 'delete' | 'reveal';
 
+/** Vault writes from a pending or ended co-managed workspace are refused (reading and reveal stay available). */
+async function assertCredentialWriteAdmitted(tenant: string): Promise<void> {
+  const { knex } = await createTenantKnex(tenant);
+  const lifecycle = await getCoManagedOperationalState(knex, tenant);
+  if (!lifecycle.canWrite) throw new CoManagedLifecycleError(lifecycle);
+}
+
 function withCredentialAccess<TArgs extends unknown[], TResult>(
   requiredPermission: CredentialActionPermission,
   handler: (user: IUserWithRoles, context: { tenant: string }, ...args: TArgs) => Promise<TResult>
@@ -60,6 +68,9 @@ function withCredentialAccess<TArgs extends unknown[], TResult>(
       throw new Error(`Forbidden: insufficient permissions (credential ${requiredPermission})`);
     }
     await assertTierAccess(TIER_FEATURES.CREDENTIALS);
+    if (requiredPermission === 'create' || requiredPermission === 'update' || requiredPermission === 'delete') {
+      await assertCredentialWriteAdmitted((context as { tenant: string }).tenant);
+    }
     return handler(user, context as { tenant: string }, ...args);
   });
 }
@@ -315,6 +326,7 @@ function withCredentialSaveAccess<TArgs extends unknown[]>(
         throw new Error(`Forbidden: insufficient permissions (credential ${operation})`);
       }
       await assertTierAccess(TIER_FEATURES.CREDENTIALS);
+      await assertCredentialWriteAdmitted(tenant);
       return { ok: true, credential: await handler(user, { tenant }, ...args) };
     } catch (error) {
       return credentialSaveFailure(operation, error, safeDetails);

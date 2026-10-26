@@ -3523,6 +3523,8 @@ export async function addTicketCommentInTransaction(
   if (suppressInternalNotifications && !suppressContactNotifications) {
     throw new Error('suppressInternalNotifications requires suppressContactNotifications');
   }
+  // A pending or ended co-managed workspace refuses the comment before anything is written.
+  await assertCoManagedOperationalWrite(trx, tenant);
 
   const authorType: 'internal' | 'client' | 'unknown' =
     user.user_type === 'client' ? 'client' : 'internal';

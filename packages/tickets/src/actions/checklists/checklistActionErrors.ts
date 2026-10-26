@@ -1,3 +1,4 @@
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import {
   actionError,
   permissionError,
@@ -31,6 +32,10 @@ const EXPECTED_CHECKLIST_MESSAGES = new Set([
 ]);
 
 export function checklistActionErrorFrom(error: unknown): ChecklistActionError | null {
+  // A pending or ended co-managed workspace refuses checklist writes; that is an expected outcome.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);

@@ -1,5 +1,6 @@
 'use server';
 
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import {
@@ -3454,6 +3455,8 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
         const validatedData = validateData(createAssetAssociationSchema, data);
 
         const association = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            // A pending or ended co-managed workspace refuses the association before anything is written.
+            await assertCoManagedOperationalWrite(trx, tenant);
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
 
             // Create the association
@@ -3527,6 +3530,7 @@ export const removeAssetAssociation = withAuth(async (
 
     try {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await assertCoManagedOperationalWrite(trx, tenant);
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
             await tenantScopedTable(trx, 'asset_associations', tenant)

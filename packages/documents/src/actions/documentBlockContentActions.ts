@@ -1,5 +1,6 @@
 'use server';
 
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
@@ -92,6 +93,8 @@ export const createBlockDocument = withAuth(async (
 
     // Start transaction to ensure both document and block content are created atomically
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A pending or ended co-managed workspace refuses the new document before anything is written.
+      await assertCoManagedOperationalWrite(trx, tenant);
       const documentId = uuidv4();
 
       // Create the document directly in the transaction

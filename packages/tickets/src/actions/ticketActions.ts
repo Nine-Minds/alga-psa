@@ -557,6 +557,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       if (!await hasPermission(user, 'ticket', 'create', trx)) {
         throw new Error('Permission denied: Cannot create ticket');
       }
+      // A pending or ended co-managed workspace cannot create tickets (Duplicate and Quick Create land here).
+      await assertCoManagedOperationalWrite(trx, tenant);
 
       // Server-specific: Parse FormData
       const contact_name_id = data.get('contact_name_id');

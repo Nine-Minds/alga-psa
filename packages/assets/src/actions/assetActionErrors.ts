@@ -1,3 +1,4 @@
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -75,6 +76,10 @@ export function unwrapAssetActionResult<T>(value: T | AssetActionError): T {
 }
 
 export function assetActionErrorFrom(error: unknown): AssetActionError | null {
+  // A pending or ended co-managed workspace refuses asset writes; that is an expected outcome.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
+  }
   if (error && typeof error === 'object') {
     const candidate = error as { permissionError?: unknown; actionError?: unknown };
     if (typeof candidate.permissionError === 'string') {

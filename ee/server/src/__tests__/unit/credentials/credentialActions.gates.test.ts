@@ -81,6 +81,15 @@ vi.mock('@alga-psa/types', () => {
   return { TIER_FEATURES };
 });
 
+const lifecycleMock = vi.hoisted(() => ({ state: vi.fn(async () => ({ state: 'independent', canWrite: true, graceEndsAt: null })) }));
+vi.mock('@alga-psa/licensing', () => {
+  class CoManagedLifecycleError extends Error {
+    readonly code = 'CO_MANAGED_READ_ONLY';
+    constructor(readonly lifecycle: unknown) { super('This co-managed workspace is read-only.'); this.name = 'CoManagedLifecycleError'; }
+  }
+  return { CoManagedLifecycleError, getCoManagedOperationalState: lifecycleMock.state };
+});
+
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
 }));
@@ -644,5 +653,20 @@ describe('credentials actions — entity association CRUD is gated and delegates
     await setEntityCredentials('ticket', 'ticket-1', ['cred-1', 'cred-2']);
 
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'credential', 'update');
+  });
+});
+
+// Guide 10 Grid audit: an ended co-managed workspace hid "Attach a password", and the vault must refuse the write too.
+describe('credential writes in a read-only co-managed workspace', () => {
+  it('refuses attach, create and delete while reading stays available', async () => {
+    lifecycleMock.state.mockResolvedValue({ state: 'terminated', canWrite: false, graceEndsAt: null });
+    const { addCredentialToEntity, createCredential, deleteCredential, listCredentials } = await importActions();
+    await expect(addCredentialToEntity('ticket', 'ticket-1', 'credential-1')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(deleteCredential('credential-1')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    const created = await createCredential({ destination: 'alga', clientId: 'client-1', name: 'n', password: 'p', username: 'u', url: '', description: '' } as never);
+    expect(created).toMatchObject({ ok: false });
+    expect(nativeCreateMock).not.toHaveBeenCalled();
+    await expect(listCredentials({})).resolves.toBeDefined();
+    lifecycleMock.state.mockResolvedValue({ state: 'independent', canWrite: true, graceEndsAt: null });
   });
 });

@@ -11107,6 +11107,45 @@ it.each(['generic', 'optimized', 'simple'])('refuses a native %s requester-visib
   expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
 }));
 
+// Guide 10 Grid audit (final build): direct checklist, external-link and optimized-comment writes from an
+// ended workspace succeeded; ticket creation (Duplicate / Quick Create) had no admission either.
+it('refuses checklist, external-link, comment, ticket, asset and document writes in a read-only workspace', async () => withNativeCommentFixture(async ({ customer, resource, principal, customerPrincipal, run }: any) => {
+  const currentUserId = () => customerPrincipal.userId;
+  const checklist = await import('../../../../../packages/tickets/src/actions/checklists/ticketChecklistActions');
+  const links = await import('../../../../../packages/tickets/src/actions/externalLinks/externalLinkActions');
+  const optimized = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const simple = await import('../../../../../packages/tickets/src/actions/ticketActions');
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const counts = async () => ({ tickets: (await customer.table('tickets').count('* as n').first()).n, comments: (await customer.table('comments').count('* as n').first()).n,
+    checklist: (await customer.table('ticket_checklist_items').count('* as n').first()).n, links: (await customer.table('external_entity_links').count('* as n').first()).n });
+  await expireCoManagedEntitlement(principal.tenant);
+  const before = await counts();
+  const form = new FormData();
+  for (const [key, value] of Object.entries({ title: 'Duplicate after the workspace ended', board_id: ticket.board_id, client_id: ticket.client_id, status_id: ticket.status_id, priority_id: ticket.priority_id })) form.append(key, String(value));
+  const results: any[] = [
+    await run(() => optimized.addTicketCommentWithCache(resource.id, 'Private note after lapse', true, false, false, undefined, null, null, { audienceId: 'organization_private' })),
+    await run(() => checklist.addChecklistItem(resource.id, { item_name: 'Checklist item after lapse' })),
+    await run(() => links.addExternalLink({ ticket_id: resource.id, system: 'jira', external_id: 'AFTER-LAPSE-1', url: 'https://example.test/after-lapse' })),
+    await run(() => simple.addTicket(form)),
+  ];
+  for (const result of results) expect(String(result?.actionError ?? result?.message)).toContain('read-only');
+  expect(await counts()).toEqual(before);
+  // The remaining Grid add actions: asset association, link existing document, add (block) document.
+  const assets = await import('../../../../../packages/assets/src/actions/assetActions');
+  const documents = await import('../../../../../packages/documents/src/actions/documentActions');
+  const blocks = await import('../../../../../packages/documents/src/actions/documentBlockContentActions');
+  const more = async () => ({ assets: (await customer.table('asset_associations').count('* as n').first()).n,
+    associations: (await customer.table('document_associations').count('* as n').first()).n, documents: (await customer.table('documents').count('* as n').first()).n });
+  const moreBefore = await more();
+  const writes: any[] = [
+    await run(() => assets.createAssetAssociation({ asset_id: randomUUID(), entity_id: resource.id, entity_type: 'ticket', relationship_type: 'affected' } as any)),
+    await run(() => documents.createDocumentAssociations(resource.id, 'ticket', [randomUUID()])),
+    await run(() => blocks.createBlockDocument({ document_name: 'After lapse', user_id: currentUserId(), block_data: '[]', entityId: resource.id, entityType: 'ticket' } as any)),
+  ];
+  for (const result of writes) expect(String(result?.actionError ?? result?.message ?? result?.permissionError)).toContain('read-only');
+  expect(await more()).toEqual(moreBefore);
+}));
+
 // Guide 10 Grid audit: a direct deleteTicket POST from an ended workspace deleted the ticket (the browser
 // delete path skipped lifecycle admission). Every ticket delete path now admits the lifecycle first.
 it('refuses to delete a ticket in a read-only co-managed workspace and removes nothing', async () => withNativeCommentFixture(async ({ customer, resource, principal, run }: any) => {

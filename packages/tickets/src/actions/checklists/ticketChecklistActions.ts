@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -54,6 +55,15 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/** Every checklist mutation runs in a lifecycle-admitted transaction: a pending or ended co-managed
+ * workspace refuses it (CO_MANAGED_READ_ONLY / CO_MANAGED_NOT_ACTIVE) before anything is written. */
+function withChecklistWrite<T>(db: Knex, tenant: string, work: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
+    return work(trx);
+  });
+}
+
 async function requireTicket(trx: Knex.Transaction | Knex, tenant: string, ticketId: string) {
   const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
   if (!ticket) {
@@ -104,7 +114,7 @@ export const addChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await withChecklistWrite(db, tenant, async (trx: Knex.Transaction) => {
         await requireTicket(trx, tenant, ticketId);
 
         const maxOrder = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
@@ -145,7 +155,7 @@ export const updateChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await withChecklistWrite(db, tenant, async (trx: Knex.Transaction) => {
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();
@@ -186,7 +196,8 @@ export const deleteChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      const deleted = await tenantScopedTable(db, 'ticket_checklist_items', tenant).where({ checklist_item_id: itemId }).del();
+      const deleted = await withChecklistWrite(db, tenant, (trx) =>
+        tenantScopedTable(trx, 'ticket_checklist_items', tenant).where({ checklist_item_id: itemId }).del());
       if (!deleted) {
         throw new Error('Checklist item not found');
       }
@@ -208,7 +219,7 @@ export const reorderChecklistItems = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      await withTransaction(db, async (trx: Knex.Transaction) => {
+      await withChecklistWrite(db, tenant, async (trx: Knex.Transaction) => {
         await requireTicket(trx, tenant, ticketId);
         for (let i = 0; i < orderedItemIds.length; i++) {
           const updated = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
@@ -237,7 +248,7 @@ export const setChecklistItemCompleted = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await withChecklistWrite(db, tenant, async (trx: Knex.Transaction) => {
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();

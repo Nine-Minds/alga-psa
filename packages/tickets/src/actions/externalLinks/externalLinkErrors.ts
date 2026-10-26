@@ -1,4 +1,6 @@
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import {
+  actionError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -86,6 +88,10 @@ export function externalLinkActionError(
 }
 
 export function externalLinkActionErrorFrom(error: unknown): ExternalLinkActionError | null {
+  // A pending or ended co-managed workspace refuses link writes; that is an expected outcome.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
+  }
   if (error instanceof ExternalLinkValidationError) {
     return externalLinkActionError(error.code);
   }

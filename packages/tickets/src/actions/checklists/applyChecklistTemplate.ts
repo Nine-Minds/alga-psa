@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -31,6 +32,7 @@ export const applyChecklistTemplate = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertCoManagedOperationalWrite(trx, tenant);
         const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
         if (!ticket) throw new Error('Ticket not found');
 

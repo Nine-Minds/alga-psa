@@ -1,3 +1,4 @@
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { localizeActionError } from '@alga-psa/auth/localizeActionError';
 import {
   actionError,
@@ -17,6 +18,10 @@ export async function documentActionErrorMessage(error: unknown): Promise<string
 }
 
 export function documentActionErrorFrom(error: unknown): DocumentActionError | null {
+  // A pending or ended co-managed workspace refuses document writes; that is an expected outcome.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
+  }
   if (error && typeof error === 'object') {
     const candidate = error as { permissionError?: unknown; actionError?: unknown };
     if (typeof candidate.permissionError === 'string') {

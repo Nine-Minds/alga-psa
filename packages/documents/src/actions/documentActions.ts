@@ -1,5 +1,6 @@
 'use server'
 
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -2171,6 +2172,8 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // A pending or ended co-managed workspace refuses the link before anything is written.
+      await assertCoManagedOperationalWrite(trx, tenant);
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,

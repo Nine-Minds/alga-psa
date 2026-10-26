@@ -2,6 +2,7 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type {
   ExternalEntityLinkEntityType,
@@ -135,6 +136,8 @@ async function authorizeTicketAccess(
     });
     if (action === 'update') {
       await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action });
+      // Every link mutation authorizes 'update' first: a pending or ended co-managed workspace refuses it.
+      await assertCoManagedOperationalWrite(trx as Knex.Transaction, tenant);
     }
   } catch (error) {
     // Preserve the structured not-found result the action layer already exposes;
