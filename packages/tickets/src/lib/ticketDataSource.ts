@@ -234,6 +234,16 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
   categoryCreate: true,
 });
 
+/**
+ * Capabilities that are nothing but a write (they create, copy or delete), so a
+ * read-only screen never offers them. Sections that also display data (documents,
+ * checklist, materials, links) stay and read `screen.readOnly` for their own
+ * add/edit affordances via `useTicketScreenReadOnly`.
+ */
+export const TICKET_WRITE_ACTION_CAPABILITIES: readonly TicketCapabilityKey[] = Object.freeze([
+  'delete', 'duplicate', 'createTemplate', 'createWorkflow', 'createProjectTask', 'quickInvoice', 'categoryCreate',
+] as TicketCapabilityKey[]);
+
 /** Every capability off: a convenient starting point for a reduced data source. */
 export const NO_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.freeze(
   Object.fromEntries(
@@ -679,6 +689,13 @@ export function composeTicketDataSource(
       typeof value === 'object' && value !== null && !Array.isArray(value) &&
       typeof baseValue === 'object' && baseValue !== null;
     merged[key] = isGroup ? { ...(baseValue as object), ...(value as object) } : value;
+  }
+  // A read-only screen offers no pure-write action, whatever the base allowed.
+  if ((merged.screen as TicketScreenBehavior | undefined)?.readOnly) {
+    merged.capabilities = {
+      ...(merged.capabilities as TicketCapabilities),
+      ...Object.fromEntries(TICKET_WRITE_ACTION_CAPABILITIES.map((key) => [key, false])),
+    };
   }
   return merged as unknown as TicketDataSource;
 }

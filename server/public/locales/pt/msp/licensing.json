@@ -982,6 +982,7 @@
       "capacity": "Capacidade",
       "chooseRelationship": "Escolher relação",
       "endedHint": "Esta relação terminou. O histórico retido e os arquivos continuam disponíveis.",
+      "endedOn": "Encerrada em {{date}}",
       "failedHint": "A configuração não foi concluída. As vagas continuam reservadas; tente novamente para continuar ou cancele a configuração.",
       "forClient": "TI cogerida para {{name}}",
       "history": "Histórico da relação",
@@ -1000,6 +1001,7 @@
       "setupHint": "Ative a TI cogerida neste cliente para reservar técnicos do cliente e convidar um administrador.",
       "tab": "TI cogerida",
       "viewHistory": "Ver histórico",
+      "openArchive": "Abrir o arquivo de trabalho compartilhado",
       "work": "Trabalho",
       "workHint": "Os projetos do cliente e as filas de tarefas partilhadas permanecem na shell do MSP com as suas identidades qualificadas.",
       "workspace": "Espaço de trabalho do cliente",
@@ -1065,6 +1067,11 @@
       "awaitingReply_one": "{{count}} ticket aguardando sua resposta",
       "awaitingReply_other": "{{count}} tickets aguardando sua resposta",
       "dismiss": "Dispensar"
+    },
+    "ended": {
+      "title": "TI cogerenciada encerrada em {{date}}",
+      "descriptionWith": "{{name}} não tem mais acesso. O histórico do trabalho compartilhado é mantido somente para leitura.",
+      "description": "Seu MSP não tem mais acesso. O histórico do trabalho compartilhado é mantido somente para leitura."
     }
   },
   "actions": {

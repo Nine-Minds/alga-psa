@@ -76,9 +76,9 @@ vi.mock('./BentoHero', () => ({ BentoHero: () => <div data-testid="bento-hero" /
 vi.mock('./BentoTimelineTile', () => ({ BentoTimelineTile: () => <div data-testid="bento-timeline" /> }));
 vi.mock('./SlaClocksTile', () => ({ SlaClocksTile: () => <div data-testid="sla-clocks" /> }));
 vi.mock('./dataTiles', () => ({
-  ScheduledWorkTile: () => <div data-testid="s-scheduling" />,
+  ScheduledWorkTile: (props: { onSchedule?: () => void }) => <div data-testid="s-scheduling" data-can-schedule={String(Boolean(props.onSchedule))} />,
   AppointmentRequestsTile: () => <div data-testid="s-appointmentRequests" />,
-  CallsEmailsTile: () => null,
+  CallsEmailsTile: (props: { onLogInteraction?: () => void }) => <div data-testid="calls-emails" data-can-log={String(Boolean(props.onLogInteraction))} />,
   BillingTile: () => <div data-testid="s-billing" />,
 }));
 vi.mock('./TimeLoggedSummary', () => ({ TimeLoggedSummary: () => null }));
@@ -194,6 +194,17 @@ describe('T002 bento layout capability gating', () => {
       if (other === testId) expect(screen.getByTestId(other)).toBeTruthy();
       else expect(screen.queryByTestId(other)).toBeNull();
     }
+  });
+
+  // Guide 10 Grid audit: an ended (read-only) workspace offers no schedule or log-interaction add actions.
+  it('withholds the schedule and log-interaction add actions on a read-only screen', () => {
+    const readOnly = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+    const { unmount } = renderWith(readOnly, { onScheduleWork: vi.fn() } as Partial<TicketBentoLayoutProps>);
+    expect(screen.getByTestId('s-scheduling').getAttribute('data-can-schedule')).toBe('false');
+    expect(screen.getByTestId('calls-emails').getAttribute('data-can-log')).toBe('false');
+    unmount();
+    renderWith(composeTicketDataSource(nativeTicketDataSource, {}), { onScheduleWork: vi.fn() } as Partial<TicketBentoLayoutProps>);
+    expect(screen.getByTestId('s-scheduling').getAttribute('data-can-schedule')).toBe('true');
   });
 
   it('renders the coManagedSection slot node and works under the ticket-id guard source', () => {

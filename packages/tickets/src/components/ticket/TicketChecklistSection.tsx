@@ -36,7 +36,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDateTime, getUserTimeZone, utcToLocal } from '@alga-psa/core';
-import { useTicketDataSource } from './TicketDataSourceContext';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import type { IChecklistTemplate, ITicketChecklistItem } from '../../actions/checklists';
 
 const COMPLETED_AT_FORMAT = 'MMM d, yyyy h:mm a';
@@ -81,9 +81,12 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
   ticketId,
   initialItems,
   onItemsChanged,
-  disabled = false,
+  disabled: disabledProp = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen (for example an ended co-managed workspace) shows the section without edits.
+  const screenReadOnly = useTicketScreenReadOnly();
+  const disabled = disabledProp || screenReadOnly;
   const {
     addChecklistItem,
     applyChecklistTemplate,

@@ -976,6 +976,7 @@
       "capacity": "Capaciteit",
       "chooseRelationship": "Relatie kiezen",
       "endedHint": "Deze relatie is beëindigd. Bewaarde geschiedenis en archieven blijven beschikbaar.",
+      "endedOn": "Beëindigd op {{date}}",
       "failedHint": "De installatie is niet voltooid. De plaatsen blijven gereserveerd; probeer het opnieuw om verder te gaan, of annuleer de installatie.",
       "forClient": "Gezamenlijk beheerde IT voor {{name}}",
       "history": "Relatiegeschiedenis",
@@ -992,6 +993,7 @@
       "setupHint": "Schakel gezamenlijk beheerde IT in vanaf deze klant om klanttechnici te reserveren en een beheerder uit te nodigen.",
       "tab": "Gezamenlijk beheerde IT",
       "viewHistory": "Geschiedenis bekijken",
+      "openArchive": "Archief van gedeeld werk openen",
       "work": "Werk",
       "workHint": "Klantprojecten en gedeelde taakwachtrijen blijven in de MSP-shell met hun gekwalificeerde identiteiten.",
       "workspace": "Klantwerkruimte",
@@ -1056,6 +1058,11 @@
       "awaitingReply_one": "{{count}} ticket wacht op uw antwoord",
       "awaitingReply_other": "{{count}} tickets wachten op uw antwoord",
       "dismiss": "Sluiten"
+    },
+    "ended": {
+      "title": "Co-managed IT beëindigd op {{date}}",
+      "descriptionWith": "{{name}} heeft geen toegang meer. De geschiedenis van gedeeld werk blijft bewaard en is alleen-lezen.",
+      "description": "Uw MSP heeft geen toegang meer. De geschiedenis van gedeeld werk blijft bewaard en is alleen-lezen."
     }
   },
   "actions": {

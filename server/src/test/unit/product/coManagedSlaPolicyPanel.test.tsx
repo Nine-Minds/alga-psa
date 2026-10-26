@@ -12,7 +12,8 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, 
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
     {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label> }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string, options?: { name?: string }) => options?.name ? `${key}: ${options.name}` : key }), useOptionalI18n: () => null }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string, options?: { name?: string; date?: string }) => options?.name ? `${key}: ${options.name}` : options?.date ? `${key}: ${options.date}` : key }), useOptionalI18n: () => null,
+  useFormatters: () => ({ formatDate: (value: Date) => value.toISOString().slice(0, 10) }) }));
 const data = () => ({ revision: 4, canWrite: true, policyName: 'MSP support policy',
   customerPriorities: [{ priority_id: 'customer-high', priority_name: 'Urgent' }],
   mspPriorities: [{ priority_id: 'msp-p1', priority_name: 'MSP P1' }, { priority_id: 'msp-p2', priority_name: 'MSP P2' }],
@@ -49,4 +50,14 @@ it('shows missing policy setup and discards late data after changing customer', 
   await screen.findByText('coManaged.sla.missingPolicy');
   await act(async () => pending.resolve({ ...data(), policyName: 'Private old customer' })); expect(screen.queryByText('Private old customer')).toBeNull();
   expect(screen.getByRole('link', { name: 'coManaged.sla.settings' })).toHaveAttribute('href', '/msp/settings/sla');
+});
+
+// Guide 10: the ended customer workspace's SLA page is an ended state, not a load error.
+it('shows an ended customer workspace as ended rather than failing to load', async () => {
+  mocks.load.mockResolvedValue({ side: 'ended', endedAt: '2026-10-26T00:13:30.705Z', counterpartName: null });
+  const { container } = render(<CoManagedFeatureBoundary><CoManagedSlaPolicyPanel /></CoManagedFeatureBoundary>);
+  expect(await screen.findByText('coManaged.ended.title: 2026-10-26')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.ended.description')).toBeInTheDocument();
+  expect(container.querySelector('#co-sla-ended-archive')).not.toBeNull();
+  expect(screen.queryByText('coManaged.policy.loadError')).toBeNull();
 });

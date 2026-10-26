@@ -8,8 +8,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedSlaPolicyScreen, saveCoManagedSlaPriorityMappings } from '@/lib/actions/coManagedPolicyActions';
 import CoManagedWorkspaceDirectory, { type CoManagedWorkspaceChoice, workspaceChoices } from './CoManagedWorkspaceDirectory';
+import CoManagedEndedNotice, { endedScreen, type CoManagedEndedScreen } from './CoManagedEndedNotice';
 
-type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedSlaPolicyScreen>>, { side: 'directory' }>;
+type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedSlaPolicyScreen>>, { side: 'directory' } | { side: 'ended' }>;
 export default function CoManagedSlaPolicyPanel({ operationId }: { operationId?: string }) {
   return <SlaPolicyForm key={operationId || 'missing'} operationId={operationId} />;
 }
@@ -17,18 +18,21 @@ function SlaPolicyForm({ operationId }: { operationId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const [state, setState] = useState<Screen | null>(null), [values, setValues] = useState<Record<string, string>>({});
   const [directory, setDirectory] = useState<CoManagedWorkspaceChoice[] | null>(null);
+  const [ended, setEnded] = useState<CoManagedEndedScreen | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState<'loadError' | 'saveError' | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState<Parameters<typeof saveCoManagedSlaPriorityMappings>[0] | null>(null);
   const generation = useRef(0), inFlight = useRef(false);
   const load = useCallback(async () => {
     const current = ++generation.current;
-    setState(null); setDirectory(null); setError(null); setBusy(true); setPending(null);
+    setState(null); setDirectory(null); setEnded(null); setError(null); setBusy(true); setPending(null);
     try {
       const next = await getCoManagedSlaPolicyScreen(operationId);
       if (generation.current !== current) return;
       const choices = workspaceChoices(next);
       if (choices) { setDirectory(choices); return; }
+      const endedNext = endedScreen(next);
+      if (endedNext) { setEnded(endedNext); return; }
       const screen = next as Screen;
       setState(screen); setValues(Object.fromEntries(screen.mappings.map(row => [row.customerPriorityId, row.mspPriorityId])));
     } catch { if (generation.current === current) setError('loadError'); }
@@ -54,7 +58,8 @@ function SlaPolicyForm({ operationId }: { operationId?: string }) {
     {error && <p role="alert" className="text-destructive">{t(`coManaged.policy.${error}`)}</p>}
     {saved && <p role="status">{t('coManaged.policy.saved')}</p>}
     {directory && <CoManagedWorkspaceDirectory basePath="/msp/co-management/sla" idPrefix="co-sla-workspace" workspaces={directory} />}
-    {!state && !directory && busy && <p role="status">{t('coManaged.loading')}</p>}
+    {ended && <CoManagedEndedNotice ended={ended} idPrefix="co-sla" />}
+    {!state && !directory && !ended && busy && <p role="status">{t('coManaged.loading')}</p>}
     {state && <Card><CardHeader><CardTitle>{state.policyName || t('coManaged.sla.missingPolicy')}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <Link id="co-sla-settings" href="/msp/settings/sla" className="text-primary underline">{t('coManaged.sla.settings')}</Link>

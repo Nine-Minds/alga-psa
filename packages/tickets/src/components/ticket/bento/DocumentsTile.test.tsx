@@ -6,6 +6,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { IDocument } from '@alga-psa/types';
 import { DocumentsTile } from './DocumentsTile';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: { user: { id: 'user-1' } } }),
@@ -84,6 +87,29 @@ describe('DocumentsTile grid document cells', () => {
     expect(screen.queryByRole('dialog', { name: 'Runbook' })).not.toBeInTheDocument();
     fireEvent.click(internalDocument);
     expect(screen.getByRole('dialog', { name: 'Runbook' })).toBeInTheDocument();
+  });
+
+  // Guide 10 Grid audit: a read-only screen lists documents but offers no add/manage entry point.
+  it('offers no add or manage controls on a read-only screen', () => {
+    const readOnly = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+    const { container, unmount } = render(
+      <TicketDataSourceProvider dataSource={readOnly}>
+        <DocumentsTile id="docs-ro" ticketId="t1" documents={documents} onDocumentCreated={noop} />
+      </TicketDataSourceProvider>,
+    );
+    expect(container.querySelector('#docs-ro-manage-btn')).toBeNull();
+    expect(container.querySelector('#docs-ro-view-all')).toBeNull();
+    expect(screen.getByText('notes.pdf')).toBeInTheDocument();
+    unmount();
+    const empty = render(
+      <TicketDataSourceProvider dataSource={readOnly}>
+        <DocumentsTile id="docs-empty" ticketId="t1" documents={[]} onDocumentCreated={noop} />
+      </TicketDataSourceProvider>,
+    );
+    expect(empty.container.querySelector('#docs-empty-add-link')).toBeNull();
+    empty.unmount();
+    const writable = render(<DocumentsTile id="docs-rw" ticketId="t1" documents={documents} onDocumentCreated={noop} />);
+    expect(writable.container.querySelector('#docs-rw-manage-btn')).not.toBeNull();
   });
 
   it('honours a host resolver for file-backed documents only', () => {

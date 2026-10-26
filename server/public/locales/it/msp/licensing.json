@@ -982,6 +982,7 @@
       "capacity": "Capacità",
       "chooseRelationship": "Scegli relazione",
       "endedHint": "Questa relazione è terminata. La cronologia conservata e gli archivi restano disponibili.",
+      "endedOn": "Terminata il {{date}}",
       "failedHint": "La configurazione non è stata completata. I posti restano riservati; riprova per continuarla oppure annulla la configurazione.",
       "forClient": "IT cogestita per {{name}}",
       "history": "Cronologia della relazione",
@@ -1000,6 +1001,7 @@
       "setupHint": "Abilita l'IT cogestita da questo cliente per riservare tecnici del cliente e invitare un amministratore.",
       "tab": "IT cogestita",
       "viewHistory": "Visualizza cronologia",
+      "openArchive": "Apri l’archivio del lavoro condiviso",
       "work": "Lavoro",
       "workHint": "I progetti del cliente e le code di attività condivise restano nella shell MSP con le loro identità qualificate.",
       "workspace": "Area di lavoro del cliente",
@@ -1065,6 +1067,11 @@
       "awaitingReply_one": "{{count}} ticket in attesa della tua risposta",
       "awaitingReply_other": "{{count}} ticket in attesa della tua risposta",
       "dismiss": "Chiudi"
+    },
+    "ended": {
+      "title": "IT co-gestito terminato il {{date}}",
+      "descriptionWith": "{{name}} non ha più accesso. La cronologia del lavoro condiviso è conservata in sola lettura.",
+      "description": "Il tuo MSP non ha più accesso. La cronologia del lavoro condiviso è conservata in sola lettura."
     }
   },
   "actions": {

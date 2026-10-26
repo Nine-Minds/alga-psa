@@ -342,6 +342,10 @@ export async function getCoManagedOperationTarget(db: Knex, actor: CoManagedSess
 }
 
 export interface CoManagedClientRelationshipView extends CoManagedRelationshipOption {
+  /** When the relationship ended (ISO), null while it is live. */
+  endedAt: string | null;
+  /** An accepted workspace that has departed: its shared work is retained in the archive. */
+  retained: boolean;
   seats: number;
   usedSeats: number | null;
   administratorEmail: string | null;
@@ -389,7 +393,9 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
       const invitation = operation.state === 'pending_acceptance' && entry.relationship.state === 'pending_acceptance'
         ? await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id }).first('expires_at', 'email', 'used_at') : null;
       const invitationExpired = Boolean(invitation && !invitation.used_at && new Date(invitation.expires_at).getTime() <= Date.now());
-      relationships.push({ ...relationshipOption(context, entry),
+      const option = relationshipOption(context, entry);
+      const endedAt = entry.relationship.ended_at ? new Date(entry.relationship.ended_at as string | Date).toISOString() : null;
+      relationships.push({ ...option, endedAt, retained: entry.ended && option.state === 'terminated',
         seats: Number(allocation?.seats ?? operation.request.seats),
         // Aggregate seat usage is only reported to a relationship manager while
         // the relationship is live; an ended relationship never refreshes
@@ -408,8 +414,12 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
         cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED' });
     }
     const current = relationships.filter(entry => !entry.ended);
+    // With no current relationship, the client's state is its most recently ended retained one:
+    // that is what the client view shows (with its retained history), never "not enabled".
+    const latestRetained = relationships.filter(entry => entry.retained)
+      .sort((a, b) => (b.endedAt ?? '').localeCompare(a.endedAt ?? ''))[0];
     const selected = relationshipId ? relationships.find(entry => entry.relationshipId === relationshipId)
-      : current.length === 1 ? current[0] : undefined;
+      : current.length === 1 ? current[0] : current.length === 0 ? latestRetained : undefined;
     return { clientId, clientName: hidden(context, workspaceNames) ? null : client.client_name as string,
       selectionRequired: !selected && relationships.length > 0,
       selectedRelationshipId: selected?.relationshipId ?? null, canManage: context.canManage, relationships };

@@ -35,6 +35,11 @@ export function useTicketDataSource(): TicketDataSource {
   return useContext(TicketDataSourceContext);
 }
 
+/** The screen may be read but not written (for example an ended co-managed workspace). */
+export function useTicketScreenReadOnly(): boolean {
+  return useContext(TicketDataSourceContext).screen.readOnly === true;
+}
+
 export function useTicketCapabilities(): TicketCapabilities {
   return useContext(TicketDataSourceContext).capabilities;
 }

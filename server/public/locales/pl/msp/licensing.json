@@ -992,6 +992,7 @@
       "capacity": "Pojemność",
       "chooseRelationship": "Wybierz relację",
       "endedHint": "Ta relacja została zakończona. Zachowana historia i archiwa pozostają dostępne.",
+      "endedOn": "Zakończona {{date}}",
       "failedHint": "Konfiguracja nie została ukończona. Stanowiska pozostają zarezerwowane; spróbuj ponownie, aby ją kontynuować, lub anuluj konfigurację.",
       "forClient": "Współzarządzane IT dla {{name}}",
       "history": "Historia relacji",
@@ -1012,6 +1013,7 @@
       "setupHint": "Włącz współzarządzane IT dla tego klienta, aby zarezerwować techników klienta i zaprosić administratora.",
       "tab": "Współzarządzane IT",
       "viewHistory": "Zobacz historię",
+      "openArchive": "Otwórz archiwum wspólnej pracy",
       "work": "Praca",
       "workHint": "Projekty klienta i współdzielone kolejki zadań pozostają w powłoce MSP z ich kwalifikowanymi tożsamościami.",
       "workspace": "Obszar roboczy klienta",
@@ -1082,6 +1084,11 @@
       "awaitingReply_many": "{{count}} zgłoszeń czeka na Twoją odpowiedź",
       "awaitingReply_other": "{{count}} zgłoszenia czeka na Twoją odpowiedź",
       "dismiss": "Zamknij"
+    },
+    "ended": {
+      "title": "Współzarządzane IT zakończone {{date}}",
+      "descriptionWith": "{{name}} nie ma już dostępu. Historia wspólnej pracy jest zachowana w trybie tylko do odczytu.",
+      "description": "Twój MSP nie ma już dostępu. Historia wspólnej pracy jest zachowana w trybie tylko do odczytu."
     }
   },
   "actions": {

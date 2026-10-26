@@ -65,6 +65,20 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
     otherTenant: resolution.target.otherTenant };
 }
 
+/** The customer-home view of an ended relationship: when it ended and with whom. Null while
+ * a relationship is live (or none ever existed), so those paths keep their existing outcome. */
+async function endedCustomerHome(db: Knex, tenant: string) {
+  const home = tenantDb(db, tenant);
+  if ((await home.table('tenants').first('product_code'))?.product_code !== 'co_managed') return null;
+  if (await home.table('co_management_relationships').whereNull('ended_at').first('relationship_id')) return null;
+  const ended = await home.table('co_management_relationships').whereNotNull('ended_at').orderBy('ended_at', 'desc')
+    .first('ended_at', 'sponsor_tenant');
+  if (!ended) return null;
+  const sponsor = await tenantDb(db, ended.sponsor_tenant as string).table('tenants').first('client_name');
+  return { side: 'ended' as const, endedAt: new Date(ended.ended_at as string | Date).toISOString(),
+    counterpartName: (sponsor?.client_name as string | undefined) ?? null };
+}
+
 /** A sponsor that did not name a workspace has no customer home to resolve, so
  * `customer-home` would deny it. Offer the choice the overview already publishes
  * instead of collapsing a recoverable ambiguity into FORBIDDEN. */
@@ -99,6 +113,12 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, target
   const { knex } = await createTenantKnex(tenant);
   const qualified = await qualify(knex, actor, target);
   if (qualified.directory) return qualified.directory;
+  // A customer workspace whose relationship has ended has no live scope to edit; it is
+  // an ended state with retained history, not a load failure.
+  if (qualified.target === undefined || qualified.target === null) {
+    const ended = await endedCustomerHome(knex, tenant);
+    if (ended) return ended;
+  }
   return withTransaction(knex, async trx => {
     const resolved = await resolveTarget(trx, actor, policySelection(qualified.target));
     const policy = await getCoManagedCollaborationPolicy(trx, actor, resolved.target);
@@ -181,6 +201,12 @@ export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, tar
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   const qualified = await qualify(knex, actor, target);
   if (qualified.directory) return qualified.directory;
+  // A customer workspace whose relationship has ended has no live scope to edit; it is
+  // an ended state with retained history, not a load failure.
+  if (qualified.target === undefined || qualified.target === null) {
+    const ended = await endedCustomerHome(knex, tenant);
+    if (ended) return ended;
+  }
   return withTransaction(knex, async trx => {
     const resolved = await resolveTarget(trx, actor, policySelection(qualified.target));
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');

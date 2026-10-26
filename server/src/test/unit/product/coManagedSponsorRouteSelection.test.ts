@@ -53,6 +53,8 @@ vi.mock('@alga-psa/db', () => ({
       const query: any = {
         where: (key: any, value: any) => { rows = rows.filter(row => typeof key === 'string' ? row[key] === value : Object.entries(key).every(([k, v]) => row[k] === v)); return query; },
         whereNull: (key: string) => { rows = rows.filter(row => row[key] == null); return query; },
+        whereNotNull: (key: string) => { rows = rows.filter(row => row[key] != null); return query; },
+        orderBy: (key: string, direction?: string) => { rows = [...rows].sort((x, y) => (direction === 'desc' ? -1 : 1) * String(x[key]).localeCompare(String(y[key]))); return query; },
         first: async () => rows[0],
       };
       return query;
@@ -126,7 +128,8 @@ it('ignores ended relationships when counting live workspaces', async () => {
 });
 
 it('leaves a customer tenant on its own home resolution, with no choice to make', async () => {
-  mocks.rows = { [`${SPONSOR}:tenants`]: [{ product_code: 'co_managed' }] };
+  mocks.rows = { [`${SPONSOR}:tenants`]: [{ product_code: 'co_managed' }],
+    [`${SPONSOR}:co_management_relationships`]: [{ relationship_id: 'rel', ended_at: null, sponsor_tenant: 'sponsor' }] };
   mocks.resolve.mockResolvedValue({ kind: 'resolved', target: { side: 'customer', customerTenant: SPONSOR, relationshipId: 'rel', otherTenant: 'sponsor' } });
   mocks.policy.mockResolvedValue({ visibilityMode: 'board_scope', boards: [], projects: [], assignments: [], revision: 1 });
   mocks.lifecycle.mockResolvedValue({ canWrite: true });
@@ -134,4 +137,16 @@ it('leaves a customer tenant on its own home resolution, with no choice to make'
   expect(screen.side).toBe('customer');
   expect(mocks.overview).not.toHaveBeenCalled();
   expect(mocks.resolve).toHaveBeenCalledWith(mocks.db, expect.anything(), { kind: 'customer-home' });
+});
+
+// Guide 10: an ended customer workspace (Kansas Farms) has no live relationship to resolve. Its access and
+// SLA pages answer with the ended state (date, former MSP) instead of a FORBIDDEN load error.
+it('answers an ended customer workspace with its ended state on the access and SLA pages', async () => {
+  mocks.rows = { [`${SPONSOR}:tenants`]: [{ product_code: 'co_managed' }],
+    [`${SPONSOR}:co_management_relationships`]: [{ relationship_id: 'rel', ended_at: '2026-10-26T00:13:30.705Z', sponsor_tenant: 'oz' }],
+    ['oz:tenants']: [{ client_name: 'Oz' }] };
+  const expected = { side: 'ended', endedAt: '2026-10-26T00:13:30.705Z', counterpartName: 'Oz' };
+  expect(await getCoManagedPolicyScreen()).toEqual(expected);
+  expect(await getCoManagedSlaPolicyScreen()).toEqual(expected);
+  expect(mocks.resolve).not.toHaveBeenCalled();
 });

@@ -6,6 +6,7 @@ import CoManagedClientSetup from '../../../components/co-managed/CoManagedClient
 import CoManagedClientSeats from '../../../components/co-managed/CoManagedClientSeats';
 import CoManagedClientRecovery from '../../../components/co-managed/CoManagedClientRecovery';
 import CoManagedClientView from '../../../components/co-managed/CoManagedClientView';
+import CoManagedClientSummary from '../../../components/co-managed/CoManagedClientSummary';
 
 const mocks = vi.hoisted(() => ({
   options: vi.fn(), provision: vi.fn(), retry: vi.fn(), cancel: vi.fn(), resize: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   // Stable like the real hook's t, so effects keyed on t run once per mount.
   const t = (key: string, options?: Record<string, string>) => {
     if (key.endsWith('invitationExpired')) return 'Invitation expired';
-    return options?.defaultValue ?? key;
+    return (options?.defaultValue ?? key).replace(/{{(\w+)}}/g, (match, name) => options?.[name] ?? match);
   };
   return {
   useTranslation: () => ({ t }),
@@ -390,6 +391,36 @@ describe('client relationship view sections', () => {
     expect(document.getElementById('i-work-projects')).not.toBeNull();
     expect(document.getElementById('i-work-shared-tasks')).not.toBeNull();
     expect(screen.getByTestId('departure')).toBeInTheDocument();
+  });
+  // Guide 10 (clientIntegration F003/F010/F018/T009): a departed client is not "not enabled".
+  it('shows a departed client as ended with its end date and archive link, and offers no setup', () => {
+    render(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', canManage: true, relationships: [relationship({ state: 'terminated', ended: true, retained: true,
+      endedAt: '2026-10-26T00:13:30.705Z', usedSeats: null, canRetry: false, canCancel: false, canChangeSeats: false })] })}
+      clientId="client" clientName="Kansas Farms" idPrefix="i" />);
+    expect(document.getElementById('i-setup')).toBeNull();
+    expect(screen.queryByText('Co-managed IT not enabled')).toBeNull();
+    expect(screen.getByText('terminated')).toBeInTheDocument();
+    expect(document.getElementById('i-ended-on')?.textContent).toBe('Ended 2026-10-26T00:13:30.705Z');
+    expect(document.getElementById('i-history-link')).not.toBeNull();
+    expect(screen.getByText('Open Shared work archive').closest('a')?.getAttribute('href')).toBe('/msp/co-managed/archive');
+    expect(screen.getByText('Seats released')).toBeInTheDocument();
+    expect(screen.queryByTestId('departure')).toBeNull();
+  });
+  it('still offers setup when the only history is a cancelled setup (nothing retained)', () => {
+    render(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'cancelled', ended: true, retained: false,
+      endedAt: '2026-10-26T00:13:30.705Z', canRetry: false, canCancel: false, canChangeSeats: false })] })}
+      clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(document.getElementById('i-setup')).not.toBeNull();
+  });
+  it('summarizes a departed client as ended, with history rather than setup', () => {
+    const onOpenTab = vi.fn();
+    render(<CoManagedClientSummary view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'terminated', ended: true, retained: true,
+      endedAt: '2026-10-26T00:13:30.705Z' })] })} clientId="client" idPrefix="s" onOpenTab={onOpenTab} />);
+    expect(screen.queryByText('Co-managed IT not enabled')).toBeNull();
+    expect(screen.getByText('terminated')).toBeInTheDocument();
+    expect(screen.getByText('Ended 2026-10-26T00:13:30.705Z')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('View history'));
+    expect(onOpenTab).toHaveBeenCalledWith('co-managed');
   });
   it('shows retained history and no live settings for an ended relationship', () => {
     render(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'terminated', ended: true, canRetry: false, canCancel: false, canChangeSeats: false })] })}

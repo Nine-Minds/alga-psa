@@ -976,6 +976,7 @@
       "capacity": "Capacity",
       "chooseRelationship": "Choose relationship",
       "endedHint": "This relationship has ended. Retained history and archives remain available.",
+      "endedOn": "Ended {{date}}",
       "failedHint": "Setup did not finish. Seats stay reserved; retry to continue it, or cancel the setup.",
       "forClient": "Co-managed IT for {{name}}",
       "history": "Relationship history",
@@ -992,6 +993,7 @@
       "setupHint": "Enable co-managed IT from this client to reserve customer technicians and invite an administrator.",
       "tab": "Co-managed IT",
       "viewHistory": "View history",
+      "openArchive": "Open Shared work archive",
       "work": "Work",
       "workHint": "Client projects and shared task queues stay in the MSP shell with their qualified identities.",
       "workspace": "Customer workspace",
@@ -1056,6 +1058,11 @@
       "awaitingReply_one": "{{count}} ticket awaiting your reply",
       "awaitingReply_other": "{{count}} tickets awaiting your reply",
       "dismiss": "Dismiss"
+    },
+    "ended": {
+      "title": "Co-managed IT ended {{date}}",
+      "descriptionWith": "{{name}} no longer has access. Shared work history is retained and read-only.",
+      "description": "Your MSP no longer has access. Shared work history is retained and read-only."
     }
   },
   "actions": {

@@ -256,6 +256,13 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       // Only terminated history remains: an explicit history selection is required.
       await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId })).resolves
         .toMatchObject({ kind: 'selection-required' });
+      // Guide 10: the client view shows the most recently ended retained relationship with its end
+      // date, never "not enabled" (writes above still require the explicit selection).
+      await tenantDb(f.db, second.customer_tenant).table('co_management_relationships').update({ ended_at: new Date(Date.now() + 1000) });
+      const ended = await getCoManagedClientManagement(f.db, f.actor, clientId);
+      expect(ended).toMatchObject({ selectionRequired: false, selectedRelationshipId: second.relationship_id });
+      expect(ended.relationships.find(entry => entry.relationshipId === second.relationship_id))
+        .toMatchObject({ ended: true, retained: true, state: 'terminated', endedAt: expect.any(String), usedSeats: null });
     });
 
     it('returns an authorized, searchable cross-client overview without hidden candidate counts', async () => {

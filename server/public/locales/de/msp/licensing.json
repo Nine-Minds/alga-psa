@@ -976,6 +976,7 @@
       "capacity": "Kapazität",
       "chooseRelationship": "Beziehung auswählen",
       "endedHint": "Diese Beziehung wurde beendet. Aufbewahrter Verlauf und Archive bleiben verfügbar.",
+      "endedOn": "Beendet am {{date}}",
       "failedHint": "Die Einrichtung wurde nicht abgeschlossen. Die Plätze bleiben reserviert. Versuchen Sie es erneut, um fortzufahren, oder brechen Sie die Einrichtung ab.",
       "forClient": "Co-Managed IT für {{name}}",
       "history": "Beziehungsverlauf",
@@ -992,6 +993,7 @@
       "setupHint": "Aktivieren Sie Co-Managed IT für diesen Kunden, um Kundentechniker zu reservieren und einen Administrator einzuladen.",
       "tab": "Co-Managed IT",
       "viewHistory": "Verlauf anzeigen",
+      "openArchive": "Archiv der gemeinsamen Arbeit öffnen",
       "work": "Arbeit",
       "workHint": "Kundenprojekte und gemeinsame Aufgabenwarteschlangen bleiben in der MSP-Shell mit ihren qualifizierten Identitäten.",
       "workspace": "Kundenarbeitsbereich",
@@ -1056,6 +1058,11 @@
       "awaitingReply_one": "{{count}} Ticket wartet auf Ihre Antwort",
       "awaitingReply_other": "{{count}} Tickets warten auf Ihre Antwort",
       "dismiss": "Schließen"
+    },
+    "ended": {
+      "title": "Co-Managed IT beendet am {{date}}",
+      "descriptionWith": "{{name}} hat keinen Zugriff mehr. Der Verlauf der gemeinsamen Arbeit bleibt erhalten und ist schreibgeschützt.",
+      "description": "Ihr MSP hat keinen Zugriff mehr. Der Verlauf der gemeinsamen Arbeit bleibt erhalten und ist schreibgeschützt."
     }
   },
   "actions": {

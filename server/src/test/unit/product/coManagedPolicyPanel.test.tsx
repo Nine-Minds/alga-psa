@@ -13,8 +13,9 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, 
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
     <option value="">Choose</option>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label> }));
-const translate = (key: string, options?: { name?: string }) => options?.name ? `${key}: ${options.name}` : key;
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useOptionalI18n: () => null }));
+const translate = (key: string, options?: { name?: string; date?: string }) => options?.name ? `${key}: ${options.name}` : options?.date ? `${key}: ${options.date}` : key;
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useOptionalI18n: () => null,
+  useFormatters: () => ({ formatDate: (value: Date) => value.toISOString().slice(0, 10) }) }));
 const policy = { revision: 2, visibilityMode: 'board_scope', boards: [{ id: 'board', canCollaborate: true }], projects: [], assignments: [] };
 const customerScreen = () => ({ side: 'customer', counterpartName: 'Our MSP', canExpand: true, policy: structuredClone(policy),
   labels: { board: [{ id: 'board', name: 'Service desk' }], project: [], user: [], team: [] } });
@@ -107,5 +108,20 @@ describe('co-managed access editor', () => {
     expect(screen.queryByText('Customer A')).toBeNull(); expect(screen.getByText('Customer B')).toBeVisible();
     expect(screen.queryByText('coManaged.policy.saved')).toBeNull(); expect(button('save')).toBeEnabled();
     expect(mocks.load.mock.calls.at(-1)).toEqual(['operation-b']);
+  });
+});
+
+// Guide 10: an ended customer workspace (Kansas Farms) showed "Could not load access settings".
+// The access page now shows the ended relationship with its date and the retained archive.
+describe('ended customer workspace', () => {
+  it('shows the ended state with date, former MSP and archive link instead of a load error or editors', async () => {
+    mocks.load.mockResolvedValue({ side: 'ended', endedAt: '2026-10-26T00:13:30.705Z', counterpartName: 'Oz' });
+    const { container } = mount();
+    expect(await screen.findByText('coManaged.ended.title: 2026-10-26')).toBeInTheDocument();
+    expect(screen.getByText('coManaged.ended.descriptionWith: Oz')).toBeInTheDocument();
+    expect(container.querySelector('#co-policy-ended-archive')?.getAttribute('href')).toBe('/msp/co-managed/archive');
+    expect(screen.queryByText('coManaged.policy.loadError')).toBeNull();
+    expect(container.querySelector('#co-policy-visibility')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'coManaged.policy.save' })).toBeNull();
   });
 });

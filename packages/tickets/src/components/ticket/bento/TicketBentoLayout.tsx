@@ -304,7 +304,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
-  const canLogInteraction = Boolean(effectiveClientId);
+  // A read-only screen (for example an ended co-managed workspace) offers no add actions.
+  const screenReadOnly = dataSource.screen.readOnly === true;
+  const canLogInteraction = Boolean(effectiveClientId) && !screenReadOnly;
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
@@ -584,7 +586,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               ticketId={ticketId}
               refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
-              onSchedule={props.onScheduleWork}
+              onSchedule={screenReadOnly ? undefined : props.onScheduleWork}
               onOpenEntry={props.onOpenScheduleEntry}
             />
           </Suspense>

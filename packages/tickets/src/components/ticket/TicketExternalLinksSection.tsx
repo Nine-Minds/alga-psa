@@ -36,7 +36,7 @@ import type {
   ExternalSystemOption,
   ITicketExternalLinkView,
 } from '../../actions/externalLinks/externalLinkActions';
-import { useTicketDataSource } from './TicketDataSourceContext';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 
 /**
  * Ticket detail section listing structured external-system references.
@@ -128,9 +128,12 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
   ticketId,
   initialLinks,
   onLinksChanged,
-  disabled = false,
+  disabled: disabledProp = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen (for example an ended co-managed workspace) shows the section without edits.
+  const screenReadOnly = useTicketScreenReadOnly();
+  const disabled = disabledProp || screenReadOnly;
   const {
     addExternalLink,
     getTicketExternalLinks,

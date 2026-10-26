@@ -23,7 +23,7 @@ import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/component
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useTicketDataSource } from './TicketDataSourceContext';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import {
   getProductAvailability,
   type ProductAvailability,
@@ -63,6 +63,8 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen lists materials but offers no add or delete.
+  const readOnly = useTicketScreenReadOnly();
   const {
     listTicketMaterials,
     addTicketMaterial,
@@ -357,14 +359,14 @@ export default function TicketMaterialsCard({
         title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
-        addButton={clientId && !showAddForm ? {
+        addButton={clientId && !showAddForm && !readOnly ? {
           id: `${id}-add-btn`,
           label: t('materials.addMaterial', 'Add Material'),
           onClick: () => setShowAddForm(true),
         } : undefined}
       >
         {/* Add Form */}
-        {showAddForm && clientId && (
+        {showAddForm && clientId && !readOnly && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
@@ -593,7 +595,7 @@ export default function TicketMaterialsCard({
                         )}
                       </td>
                       <td className="py-2 text-right">
-                        {!material.is_billed && (
+                        {!material.is_billed && !readOnly && (
                           <Button
                             {...withDataAutomationId({ id: `${id}-delete-${material.ticket_material_id}` })}
                             variant="ghost"

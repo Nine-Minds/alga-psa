@@ -237,6 +237,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
             clientId={ticketData.ticket.client_id}
             defaultBoardId={ticketData.ticket.board_id}
             initialAssets={associatedAssetsStream}
+            readOnly={workspaceReadOnly}
           />
         </Suspense>
       ) : null;

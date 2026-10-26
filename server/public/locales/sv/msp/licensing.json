@@ -976,6 +976,7 @@
       "capacity": "Kapacitet",
       "chooseRelationship": "Välj relation",
       "endedHint": "Den här relationen har avslutats. Sparad historik och sparade arkiv finns kvar.",
+      "endedOn": "Avslutades {{date}}",
       "failedHint": "Konfigurationen slutfördes inte. Platserna förblir reserverade; försök igen för att fortsätta eller avbryt konfigurationen.",
       "forClient": "Samhanterad IT för {{name}}",
       "history": "Relationshistorik",
@@ -992,6 +993,7 @@
       "setupHint": "Aktivera samhanterad IT från den här kunden för att reservera kundens tekniker och bjuda in en administratör.",
       "tab": "Samhanterad IT",
       "viewHistory": "Visa historik",
+      "openArchive": "Öppna arkivet för delat arbete",
       "work": "Arbete",
       "workHint": "Kundens projekt och delade uppgiftsköer finns kvar i MSP-gränssnittet med sina kvalificerade identiteter.",
       "workspace": "Kundarbetsyta",
@@ -1056,6 +1058,11 @@
       "awaitingReply_one": "{{count}} ärende väntar på ditt svar",
       "awaitingReply_other": "{{count}} ärenden väntar på ditt svar",
       "dismiss": "Stäng"
+    },
+    "ended": {
+      "title": "Samförvaltad IT avslutades {{date}}",
+      "descriptionWith": "{{name}} har inte längre åtkomst. Historiken för delat arbete sparas och är skrivskyddad.",
+      "description": "Din MSP har inte längre åtkomst. Historiken för delat arbete sparas och är skrivskyddad."
     }
   },
   "actions": {

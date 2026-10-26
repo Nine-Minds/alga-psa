@@ -982,6 +982,7 @@
       "capacity": "Capacité",
       "chooseRelationship": "Choisir la relation",
       "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
+      "endedOn": "Terminée le {{date}}",
       "failedHint": "La configuration n'est pas terminée. Les postes restent réservés ; réessayez pour la poursuivre ou annulez la configuration.",
       "forClient": "Informatique cogérée pour {{name}}",
       "history": "Historique de la relation",
@@ -1000,6 +1001,7 @@
       "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
       "tab": "Informatique cogérée",
       "viewHistory": "Voir l'historique",
+      "openArchive": "Ouvrir l’archive du travail partagé",
       "work": "Travail",
       "workHint": "Les projets clients et les files de tâches partagées restent dans le shell MSP avec leurs identités qualifiées.",
       "workspace": "Espace de travail client",
@@ -1065,6 +1067,11 @@
       "awaitingReply_one": "{{count}} ticket en attente de votre réponse",
       "awaitingReply_other": "{{count}} tickets en attente de votre réponse",
       "dismiss": "Ignorer"
+    },
+    "ended": {
+      "title": "IT cogérée terminée le {{date}}",
+      "descriptionWith": "{{name}} n’a plus accès. L’historique du travail partagé est conservé en lecture seule.",
+      "description": "Votre MSP n’a plus accès. L’historique du travail partagé est conservé en lecture seule."
     }
   },
   "actions": {

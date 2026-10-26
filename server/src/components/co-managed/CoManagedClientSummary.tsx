@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@alga-psa/ui/components/Button';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedClientManagementView } from '@alga-psa/co-managed';
 
 /** Compact client-record summary. Its action opens the stable co-managed view
@@ -16,6 +16,7 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
   onOpenTab?: (tabId: string) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
+  const { formatDate } = useFormatters();
   const selected = view.relationships.find(
     (entry) => entry.relationshipId === (selectedRelationshipId ?? view.selectedRelationshipId)) ?? null;
   const action = (label: string, onClick: () => void) => (
@@ -50,6 +51,19 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
         {action(
           t('coManaged.provisioning.create', { defaultValue: 'Enable co-managed IT' }),
           () => onOpenTab?.('co-managed'))}
+      </span>
+    );
+  }
+  if (selected.ended) {
+    return (
+      <span id={`${idPrefix}-summary`} className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-600))]">
+        <span className="font-medium text-[rgb(var(--color-text-800))]">
+          {t(`coManaged.provisioning.states.${selected.state}`, { defaultValue: selected.state })}
+        </span>
+        {selected.endedAt && <span>{t('coManaged.client.endedOn', { defaultValue: 'Ended {{date}}', date: formatDate(new Date(selected.endedAt), { dateStyle: 'medium' }) })}</span>}
+        {action(
+          t('coManaged.client.viewHistory', { defaultValue: 'View history' }),
+          () => { onSelectRelationship?.(selected.relationshipId); onOpenTab?.('co-managed'); })}
       </span>
     );
   }

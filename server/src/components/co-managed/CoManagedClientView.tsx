@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedClientManagementView, CoManagedClientRelationshipView } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -31,15 +31,21 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
+  const { formatDate } = useFormatters();
   const selected: CoManagedClientRelationshipView | null = view.relationships.find(
     (entry) => entry.relationshipId === view.selectedRelationshipId) ?? null;
   // Selection stays in this view. Routing to the same page with a new query
   // re-renders the server tree and closes the focus view, so the integration
   // owns the selected relationship and syncs the URL shallowly.
   const openRelationship = (nextId: string) => onSelectRelationship?.(nextId);
-  // A cancelled or ended relationship stays listed as history; it does not
-  // stop the client from being set up again.
+  // A cancelled setup stays listed as history and does not stop the client from
+  // being set up again. A departed workspace's history is retained, so the client
+  // shows that ended relationship instead of offering setup.
   const hasLiveRelationship = view.relationships.some((entry) => !entry.ended);
+  const hasRetainedRelationship = view.relationships.some((entry) => entry.retained);
+  const endedOn = selected?.ended && selected.endedAt
+    ? t('coManaged.client.endedOn', { defaultValue: 'Ended {{date}}', date: formatDate(new Date(selected.endedAt), { dateStyle: 'medium' }) })
+    : null;
   const needsRecovery = Boolean(selected && !selected.ended &&
     (selected.canRetry || selected.canCancel || ['queued', 'provisioning', 'failed', 'cleanup_requested', 'pending_acceptance'].includes(selected.state)));
   return (
@@ -58,9 +64,10 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
                     : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' }))
                   : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
+            {endedOn && <p id={`${idPrefix}-ended-on`} className="text-sm text-[rgb(var(--color-text-600))]">{endedOn}</p>}
           </div>
           <div className="flex items-end gap-2">
-            {view.selectionRequired && view.relationships.length > 0 && (
+            {(view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
               <div className="min-w-64">
                 <CustomSelect
                   id={`${idPrefix}-relationship`}
@@ -120,7 +127,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </CardContent>
       </Card>
 
-      {!hasLiveRelationship && view.canManage && (
+      {!hasLiveRelationship && !hasRetainedRelationship && view.canManage && (
         <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
           onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />
       )}
@@ -212,7 +219,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
               {t('coManaged.client.endedHint', { defaultValue: 'This relationship has ended. Retained history and archives remain available.' })}
             </p>
             <Button id={`${idPrefix}-history-link`} variant="outline" size="sm" asChild>
-              <Link href="/msp/co-managed/archive">{t('coManaged.client.viewHistory', { defaultValue: 'View history' })}</Link>
+              <Link href="/msp/co-managed/archive">{t('coManaged.client.openArchive', { defaultValue: 'Open Shared work archive' })}</Link>
             </Button>
           </CardContent>
         </Card>
