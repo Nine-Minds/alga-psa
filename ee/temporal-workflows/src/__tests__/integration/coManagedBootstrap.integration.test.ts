@@ -3020,6 +3020,60 @@ describe('co-managed tag lifecycle admission', () => {
     // The activity is linked to the client, so its tag lands there.
     expect(await tagsOf(fixture.operation.customer_client_id, 'client')).toEqual(['Activity tag', 'Added client tag', 'Client tag']);
   }));
+
+  // Contact CSV import writes tag mappings in its own transaction, outside the tag actions.
+  const contactImportFixture = async (customer: ReturnType<typeof tenantDb>, operation: any, tenant: string) => {
+    const { importContactsFromCSV } = await import('../../../../../packages/clients/src/actions/contact-actions/contactActions');
+    const row = (email: string, tags?: string) => ({ full_name: `CSV ${email}`, email: `${email}@csv-tags.test`,
+      client_id: operation.customer_client_id, ...(tags === undefined ? {} : { tags }) });
+    const tagsOf = async (email: string) => {
+      const contact = await customer.table('contacts').where('email', `${email}@csv-tags.test`).first();
+      return (await customer.table('tag_mappings as tm')
+        .join('tag_definitions as td', function () { this.on('td.tag_id', 'tm.tag_id').andOn('td.tenant', 'tm.tenant'); })
+        .where({ 'tm.tenant': tenant, 'tm.tagged_id': contact.contact_name_id, 'tm.tagged_type': 'contact' }).pluck('td.tag_text')).sort();
+    };
+    const rows = async () => ({
+      contacts: await customer.table('contacts').orderBy('contact_name_id').select('*'),
+      definitions: await customer.table('tag_definitions').orderBy('tag_id').select('*'),
+      mappings: await customer.table('tag_mappings').orderBy('mapping_id').select('*'),
+    });
+    return { importContactsFromCSV, row, tagsOf, rows };
+  };
+
+  it('refuses a departed customer\'s contact CSV import rows that write tags without changing a row', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { importContactsFromCSV, row, tagsOf, rows } = await contactImportFixture(customer, operation, actor.tenant);
+    expect(await importContactsFromCSV([row('kept', 'Before departure')])).toEqual([expect.objectContaining({ success: true })]);
+    expect(await tagsOf('kept')).toEqual(['Before departure']);
+
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    const before = await rows();
+    const refused = { success: false, message: readOnlyMessage };
+    expect(await importContactsFromCSV([row('kept', 'After departure')], true)).toEqual([expect.objectContaining(refused)]);
+    expect(await importContactsFromCSV([row('kept', '')], true)).toEqual([expect.objectContaining(refused)]);
+    expect(await importContactsFromCSV([row('new', 'After departure')])).toEqual([expect.objectContaining(refused)]);
+    // A duplicate row skipped without updateExisting writes nothing and is reported as a duplicate, not refused.
+    expect(await importContactsFromCSV([row('kept', 'After departure')])).toEqual([expect.objectContaining({
+      success: false, message: expect.stringMatching(/already exists/) })]);
+    expect(await rows()).toEqual(before);
+    expect(await tagsOf('kept')).toEqual(['Before departure']);
+  }));
+
+  it.each(['active co-managed', 'native PSA'] as const)('keeps contact CSV import tag writes working for an %s tenant', async kind => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    if (kind === 'native PSA') await customer.table('tenants').update({ product_code: 'psa' });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe(kind === 'native PSA' ? 'independent' : 'active');
+    const { importContactsFromCSV, row, tagsOf } = await contactImportFixture(customer, operation, actor.tenant);
+    // Two tagged rows in one import: the second must not wait on the first row's admission.
+    expect(await importContactsFromCSV([row('first', 'Alpha, Beta, Alpha'), row('second', 'Beta')]))
+      .toEqual([expect.objectContaining({ success: true }), expect.objectContaining({ success: true })]);
+    expect(await tagsOf('first')).toEqual(['Alpha', 'Beta']);
+    expect(await tagsOf('second')).toEqual(['Beta']);
+    expect(await importContactsFromCSV([row('first', 'Gamma'), row('second', '')], true))
+      .toEqual([expect.objectContaining({ success: true }), expect.objectContaining({ success: true })]);
+    expect(await tagsOf('first')).toEqual(['Gamma']);
+    expect(await tagsOf('second')).toEqual([]);
+  }));
 });
 
 describe('co-managed KB import staging', () => {

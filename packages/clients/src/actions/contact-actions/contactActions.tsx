@@ -13,9 +13,9 @@ import { Knex } from 'knex';
 import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
-import { createTag } from '@alga-psa/tags/actions/tagActions';
-import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import {
   assertMspOrClientPortalOwnClientPermission,
   assertMspPermission,
@@ -278,6 +278,12 @@ function prefixedContactActionErrorFrom(error: unknown, fallback: string): strin
   const emailConflict = contactEmailConflictMessageFrom(error);
   if (emailConflict) {
     return `EMAIL_EXISTS: ${emailConflict}`;
+  }
+
+  // An ended or not-yet-accepted co-managed workspace refuses writes with a
+  // message for the user.
+  if (isCoManagedLifecycleError(error)) {
+    return error.message;
   }
 
   if (error instanceof Error) {
@@ -1325,6 +1331,17 @@ export const importContactsFromCSV = withAuth(async (
 
           let savedContact: IContact;
 
+          // A row that writes tags (an update with a tags column replaces them)
+          // admits lifecycle before the row is written, so an ended co-managed
+          // workspace refuses the row and neither the contact nor its tags change.
+          // Rows skipped above as duplicates never reach this point.
+          const writesTags = existingContact && updateExisting
+            ? contactData.tags !== undefined
+            : !existingContact && Boolean(contactData.tags);
+          if (writesTags) {
+            await assertCoManagedOperationalWrite(trx, tenant);
+          }
+
           if (existingContact && updateExisting) {
             const normalizedImportedPrimaryEmail = normalizeContactCsvEmailValue(contactData.email);
             if (
@@ -1391,28 +1408,7 @@ export const importContactsFromCSV = withAuth(async (
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
 
             if (contactData.tags !== undefined) {
-              try {
-                await tenantScopedTable(trx, 'tag_mappings', tenant)
-                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact' })
-                  .delete();
-
-                if (contactData.tags) {
-                  const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                  for (const tagText of tagTexts) {
-                    const tagResult = await createTag({
-                      tag_text: tagText,
-                      tagged_id: savedContact.contact_name_id,
-                      tagged_type: 'contact',
-                      created_by: user.user_id
-                    });
-                    if (isTagActionError(tagResult)) {
-                      console.warn('Failed to create tag during CSV import:', tagResult);
-                    }
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to update tags during CSV import:', tagError);
-              }
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, true);
             }
 
             results.push({
@@ -1438,22 +1434,7 @@ export const importContactsFromCSV = withAuth(async (
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
 
             if (contactData.tags) {
-              try {
-                const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                for (const tagText of tagTexts) {
-                  const tagResult = await createTag({
-                    tag_text: tagText,
-                    tagged_id: savedContact.contact_name_id,
-                    tagged_type: 'contact',
-                    created_by: user.user_id
-                  });
-                  if (isTagActionError(tagResult)) {
-                    console.warn('Failed to create tag during CSV import:', tagResult);
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to create tags during CSV import:', tagError);
-              }
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, false);
             }
 
             results.push({
@@ -1497,6 +1478,43 @@ export const importContactsFromCSV = withAuth(async (
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while importing contacts');
   }
 });
+
+/**
+ * Writes a CSV row's tags in the import transaction; `replace` first clears the
+ * contact's existing tags. The caller has already admitted lifecycle in that
+ * transaction, which holds the admission locks until the import commits, so the
+ * tags cannot be written on another connection. A savepoint keeps a failed tag
+ * write from aborting the rest of the import.
+ */
+async function writeImportedContactTags(
+  importTrx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  tagsColumn: string,
+  replace: boolean,
+): Promise<void> {
+  const tagTexts = [...new Set(tagsColumn.split(',').map((tag) => tag.trim()).filter(Boolean))];
+  try {
+    await importTrx.transaction(async (trx) => {
+      if (replace) {
+        await tenantScopedTable(trx, 'tag_mappings', tenant)
+          .where({ tagged_id: contactId, tagged_type: 'contact' })
+          .delete();
+      }
+      if (tagTexts.length > 0) {
+        await createTagsForEntityWithTransaction(
+          trx,
+          tenant,
+          contactId,
+          'contact',
+          tagTexts.map((tag_text) => ({ tag_text, isNew: false })),
+        );
+      }
+    });
+  } catch (tagError) {
+    console.error('Failed to write tags during CSV import:', tagError);
+  }
+}
 
 export const checkExistingEmails = withAuth(async (
   user,
