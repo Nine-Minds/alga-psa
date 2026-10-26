@@ -928,8 +928,9 @@ export const createContractTemplateFromWizard = withAuth(async (
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          // Same defaults as the line row above, so the two persisted copies never disagree.
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
           enable_overtime: false,
           overtime_rate: null,
           overtime_threshold: null,
@@ -1732,8 +1733,9 @@ export const createClientContractFromWizard = withAuth(async (
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
           hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          // Same defaults as the line row above, so the two persisted copies never disagree.
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
         });
 
         if (service.bucket_overlay) {
