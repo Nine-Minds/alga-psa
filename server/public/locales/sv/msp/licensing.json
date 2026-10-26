@@ -515,7 +515,8 @@
         "user": "Personal",
         "team": "Team"
       },
-      "ticketAccess": "Ärendeåtkomst"
+      "ticketAccess": "Ärendeåtkomst",
+      "forbidden": "Du har inte behörighet att hantera samförvaltad åtkomst. Be en administratör om åtkomst till samförvaltning."
     },
     "section": {
       "title": "Samförvaltning",
@@ -1001,7 +1002,9 @@
       "sharedTickets": "Delade ärenden",
       "openCustomerTickets": "Öppna i Kundärenden",
       "seatsReleased": "Platser frigjorda",
-      "viewDetails": "Visa detaljer"
+      "viewDetails": "Visa detaljer",
+      "inconsistent": "Samförvaltad post kräver åtgärd",
+      "inconsistentHint": "En samförvaltad konfiguration för den här kunden pekar på en arbetsytepost som tillhör en annan kund. Inget kan hanteras eller konfigureras här förrän supporten har rättat posten."
     },
     "overview": {
       "clients": "Samhanterade kunder",

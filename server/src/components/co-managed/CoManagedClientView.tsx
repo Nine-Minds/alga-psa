@@ -59,6 +59,8 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
             <h3 className="text-lg font-semibold">
               {selected
                 ? t(`coManaged.provisioning.states.${selected.state}`, { defaultValue: selected.state })
+                : view.inconsistent && !hasLiveRelationship
+                  ? t('coManaged.client.inconsistent', { defaultValue: 'Co-managed record needs attention' })
                 : view.selectionRequired
                   ? (hasLiveRelationship
                     ? t('coManaged.client.selectionRequired', { defaultValue: 'Select a co-managed relationship' })
@@ -66,6 +68,11 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
                   : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
             {endedOn && <p id={`${idPrefix}-ended-on`} className="text-sm text-[rgb(var(--color-text-600))]">{endedOn}</p>}
+            {!selected && view.inconsistent && !hasLiveRelationship && (
+              <p id={`${idPrefix}-inconsistent`} role="alert" className="text-sm text-[rgb(var(--color-text-600))]">
+                {t('coManaged.client.inconsistentHint', { defaultValue: 'A co-managed setup for this client points to a workspace record that belongs to a different client. Nothing can be managed or set up here until support corrects the record.' })}
+              </p>
+            )}
           </div>
           <div className="flex items-end gap-2">
             {(view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
@@ -128,7 +135,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </CardContent>
       </Card>
 
-      {!hasLiveRelationship && !hasRetainedRelationship && view.canManage && (
+      {!hasLiveRelationship && !hasRetainedRelationship && !view.inconsistent && view.canManage && (
         <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
           onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />
       )}

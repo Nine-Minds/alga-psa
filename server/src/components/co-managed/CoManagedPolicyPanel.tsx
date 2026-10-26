@@ -15,7 +15,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedPolicyScreen, searchCoManagedPolicyOptions, saveCustomerCoManagedScope, saveSponsorCoManagedAssignments,
   type CoManagedPolicyOption, type CoManagedPolicyOptionKind } from '@/lib/actions/coManagedPolicyActions';
 
-type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedPolicyScreen>>, { side: 'directory' } | { side: 'ended' }>;
+type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedPolicyScreen>>, { side: 'directory' } | { side: 'ended' } | { side: 'forbidden' }>;
 type Entry = { id: string; collaborate: boolean };
 type Submission = { side: Screen['side']; revision: number; scope: CoManagedCustomerScope; assignments: CoManagedStaffAssignment[] };
 
@@ -90,10 +90,11 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
   const [assignments, setAssignments] = useState<CoManagedStaffAssignment[]>([]);
   const [submitted, setSubmitted] = useState<Submission | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<'loadError' | 'saveError' | null>(null);
+  const [error, setError] = useState<'loadError' | 'saveError' | 'forbidden' | null>(null);
   const [saved, setSaved] = useState(false);
   const generation = useRef(0);
   const apply = useCallback((next: Awaited<ReturnType<typeof getCoManagedPolicyScreen>>) => {
+    if ('side' in next && next.side === 'forbidden') { setDirectory(null); setEnded(null); setState(null); setError('forbidden'); return; }
     const choices = workspaceChoices(next);
     if (choices) { setDirectory(choices); setState(null); setEnded(null); return; }
     const endedNext = endedScreen(next);

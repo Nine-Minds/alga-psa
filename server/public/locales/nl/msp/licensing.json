@@ -515,7 +515,8 @@
         "user": "Medewerkers",
         "team": "Teams"
       },
-      "ticketAccess": "Tickettoegang"
+      "ticketAccess": "Tickettoegang",
+      "forbidden": "U hebt geen toestemming om co-managed toegang te beheren. Vraag een beheerder om co-managementtoegang."
     },
     "section": {
       "title": "Gezamenlijk beheer",
@@ -1001,7 +1002,9 @@
       "sharedTickets": "Gedeelde tickets",
       "openCustomerTickets": "Openen in Klanttickets",
       "seatsReleased": "Plaatsen vrijgegeven",
-      "viewDetails": "Details bekijken"
+      "viewDetails": "Details bekijken",
+      "inconsistent": "Co-managed record vereist aandacht",
+      "inconsistentHint": "Een co-managed configuratie voor deze klant verwijst naar een werkruimterecord van een andere klant. Hier kan niets worden beheerd of ingesteld totdat support het record corrigeert."
     },
     "overview": {
       "clients": "Gezamenlijk beheerde klanten",

@@ -520,7 +520,8 @@
         "user": "Personale",
         "team": "Team"
       },
-      "ticketAccess": "Accesso ai ticket"
+      "ticketAccess": "Accesso ai ticket",
+      "forbidden": "Non hai l’autorizzazione per gestire l’accesso in co-gestione. Chiedi a un amministratore l’accesso alla co-gestione."
     },
     "section": {
       "title": "Cogestione",
@@ -1009,7 +1010,9 @@
       "sharedTickets": "Ticket condivisi",
       "openCustomerTickets": "Apri in Ticket dei clienti",
       "seatsReleased": "Posti liberati",
-      "viewDetails": "Visualizza dettagli"
+      "viewDetails": "Visualizza dettagli",
+      "inconsistent": "Il record in co-gestione richiede attenzione",
+      "inconsistentHint": "Una configurazione in co-gestione per questo cliente punta a un record di area di lavoro che appartiene a un altro cliente. Qui non è possibile gestire o configurare nulla finché l’assistenza non corregge il record."
     },
     "overview": {
       "clients": "Clienti cogestiti",

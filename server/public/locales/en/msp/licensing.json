@@ -515,7 +515,8 @@
         "user": "Staff",
         "team": "Teams"
       },
-      "ticketAccess": "Ticket access"
+      "ticketAccess": "Ticket access",
+      "forbidden": "You don't have permission to manage co-managed access. Ask an administrator for co-management access."
     },
     "section": {
       "title": "Co-managed",
@@ -1001,7 +1002,9 @@
       "sharedTickets": "Shared tickets",
       "openCustomerTickets": "Open in Customer Tickets",
       "seatsReleased": "Seats released",
-      "viewDetails": "View details"
+      "viewDetails": "View details",
+      "inconsistent": "Co-managed record needs attention",
+      "inconsistentHint": "A co-managed setup for this client points to a workspace record that belongs to a different client. Nothing can be managed or set up here until support corrects the record."
     },
     "overview": {
       "clients": "Co-managed clients",

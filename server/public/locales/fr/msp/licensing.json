@@ -520,7 +520,8 @@
         "user": "Personnel",
         "team": "Équipes"
       },
-      "ticketAccess": "Accès aux tickets"
+      "ticketAccess": "Accès aux tickets",
+      "forbidden": "Vous n’avez pas l’autorisation de gérer l’accès cogéré. Demandez un accès cogéré à un administrateur."
     },
     "section": {
       "title": "Cogestion",
@@ -1009,7 +1010,9 @@
       "sharedTickets": "Tickets partagés",
       "openCustomerTickets": "Ouvrir dans Tickets clients",
       "seatsReleased": "Places libérées",
-      "viewDetails": "Voir les détails"
+      "viewDetails": "Voir les détails",
+      "inconsistent": "L’enregistrement cogéré nécessite une attention",
+      "inconsistentHint": "Une configuration cogérée de ce client renvoie à un enregistrement d’espace de travail appartenant à un autre client. Rien ne peut être géré ni configuré ici tant que le support n’a pas corrigé l’enregistrement."
     },
     "overview": {
       "clients": "Clients cogérés",

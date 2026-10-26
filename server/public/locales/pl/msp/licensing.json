@@ -525,7 +525,8 @@
         "user": "Pracownicy",
         "team": "Zespoły"
       },
-      "ticketAccess": "Dostęp do zgłoszeń"
+      "ticketAccess": "Dostęp do zgłoszeń",
+      "forbidden": "Nie masz uprawnień do zarządzania dostępem współzarządzanym. Poproś administratora o dostęp do współzarządzania."
     },
     "section": {
       "title": "Współzarządzanie",
@@ -1021,7 +1022,9 @@
       "sharedTickets": "Wspólne zgłoszenia",
       "openCustomerTickets": "Otwórz w Zgłoszeniach klientów",
       "seatsReleased": "Miejsca zwolnione",
-      "viewDetails": "Zobacz szczegóły"
+      "viewDetails": "Zobacz szczegóły",
+      "inconsistent": "Rekord współzarządzania wymaga uwagi",
+      "inconsistentHint": "Konfiguracja współzarządzania dla tego klienta wskazuje rekord obszaru roboczego należący do innego klienta. Niczym nie można tu zarządzać ani niczego konfigurować, dopóki wsparcie nie poprawi rekordu."
     },
     "overview": {
       "clients": "Współzarządzani klienci",

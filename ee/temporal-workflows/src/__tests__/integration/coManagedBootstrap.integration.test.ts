@@ -3815,15 +3815,16 @@ describe('authenticated co-managed policy actions', () => {
       expect(boards.options.map(item => item.id).sort()).toEqual([operation.customer_board_id, unshared].sort());
       expect(await actions.searchCoManagedPolicyOptions({ kind: 'project' })).toEqual({ options: [{ id: projectId, name: 'Local project' }], hasMore: false });
       await expect(actions.searchCoManagedPolicyOptions({ kind: 'user' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
-      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      // Refusal is a typed screen state: production server actions redact thrown messages.
+      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).resolves.toEqual({ side: 'forbidden' });
       await expect(actions.saveSponsorCoManagedAssignments({ operationId: operation.operation_id, revision: 2, assignments: [] })).rejects.toMatchObject({ code: 'FORBIDDEN' });
       // Browser-supplied actor/target extras cannot switch the authenticated home.
       await actions.saveCustomerCoManagedScope({ revision: 2, scope: { visibilityMode: 'board_scope', boards: [], projects: [{ id: projectId, canCollaborate: false }] },
         tenant: other.actor.tenant, userId: other.actor.userId, customerTenant: other.actor.tenant } as any);
     });
     await asActor(sponsorActor, async () => {
-      await expect(actions.getCoManagedPolicyScreen()).rejects.toMatchObject({ code: 'FORBIDDEN' });
-      await expect(actions.getCoManagedPolicyScreen(other.operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.getCoManagedPolicyScreen()).resolves.toEqual({ side: 'forbidden' });
+      await expect(actions.getCoManagedPolicyScreen(other.operation.operation_id)).resolves.toEqual({ side: 'forbidden' });
       await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'board' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
       await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'project' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
       await expect(actions.saveCustomerCoManagedScope({ revision: 3, scope: { visibilityMode: 'escalation_only', boards: [], projects: [] } })).rejects.toMatchObject({ code: 'FORBIDDEN' });
@@ -3838,7 +3839,7 @@ describe('authenticated co-managed policy actions', () => {
         assignments: [{ kind: 'user', principalId: sponsorActor.userId, role: 'viewer' }], actor: other.sponsorActor } as any);
       expect((await actions.getCoManagedPolicyScreen(operation.operation_id)).labels.user.map(item => item.id)).toEqual([sponsorActor.userId]);
       await sponsor.table('role_permissions').where({ role_id: roleId, permission_id: permissionId }).del();
-      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).resolves.toEqual({ side: 'forbidden' });
       await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'user' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
     expect(await other.customer.table('co_management_board_scopes')).toHaveLength(1);

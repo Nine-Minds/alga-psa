@@ -22,7 +22,7 @@ vi.mock('../../../components/co-managed/CoManagedCalloutStrip', () => ({
 }));
 
 const view = (over: Record<string, unknown> = {}) => ({
-  clientId: 'client', clientName: 'Customer', selectionRequired: false, selectedRelationshipId: 'rel', canManage: true, canSetUp: false,
+  clientId: 'client', clientName: 'Customer', selectionRequired: false, inconsistent: false, selectedRelationshipId: 'rel', canManage: true, canSetUp: false,
   relationships: [{
     relationshipId: 'rel', operationId: 'operation', state: 'active', ended: false, seats: 2, usedSeats: 1,
     workspaceName: 'Customer IT', administratorEmail: 'admin@example.test', canManage: true, canChangeSeats: false,

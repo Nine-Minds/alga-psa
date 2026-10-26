@@ -238,20 +238,34 @@ interface ClientRelationshipEntry {
   operation: any; relationship: { state: string; ended_at?: unknown; revision?: number }; ended: boolean;
 }
 
+interface ClientRelationshipDiscovery {
+  entries: ClientRelationshipEntry[];
+  /** Operations mapped to this client whose relationship record names another
+   * sponsor or client. They are never adopted, and they keep the client from
+   * presenting as "not enabled". A relationship not yet written (queued setup)
+   * is not inconsistent. */
+  inconsistent: number;
+}
+
 /** Authorized discovery of every sponsor-owned operation mapped to a local client.
  * Policy-hidden mappings are intentionally omitted from the projection. */
-async function discoverClientRelationships(context: ManagementContext, clientId: string): Promise<ClientRelationshipEntry[]> {
+async function discoverClientRelationships(context: ManagementContext, clientId: string): Promise<ClientRelationshipDiscovery> {
   const query = operations(context).where('q.auth_client', clientId);
   const rows = await query.orderBy('q.created_at', 'desc').orderBy('q.operation_id');
   const entries: ClientRelationshipEntry[] = [];
+  let inconsistent = 0;
   for (const operation of rows) {
     const relationship = await tenantDb(context.trx, operation.customer_tenant).table('co_management_relationships')
-      .where({ relationship_id: operation.relationship_id, sponsor_tenant: context.actor.tenant, sponsor_client_id: operation.auth_client })
-      .first('state', 'ended_at', 'revision');
+      .where({ relationship_id: operation.relationship_id })
+      .first('state', 'ended_at', 'revision', 'sponsor_tenant', 'sponsor_client_id');
     if (!relationship) continue;
+    if (relationship.sponsor_tenant !== context.actor.tenant || relationship.sponsor_client_id !== operation.auth_client) {
+      inconsistent += 1;
+      continue;
+    }
     entries.push({ operation, relationship, ended: relationshipEnded(relationship) });
   }
-  return entries;
+  return { entries, inconsistent };
 }
 
 function relationshipOption(context: ManagementContext, entry: ClientRelationshipEntry): CoManagedRelationshipOption {
@@ -286,7 +300,7 @@ async function resolveSponsorClient(self: Knex, actor: CoManagedSessionActor,
   return withManagement(self, actor, 'read', async context => {
     if (hidden(context, ['client_id', 'clients.client_id'])) deny();
     if (!await setupChoices(context).where('q.client_id', clientId).first('q.client_id')) deny();
-    const entries = await discoverClientRelationships(context, clientId);
+    const { entries, inconsistent } = await discoverClientRelationships(context, clientId);
     if (selector.relationshipId) {
       const selected = entries.find(entry => entry.operation.relationship_id === selector.relationshipId);
       if (!selected) return deny();
@@ -294,7 +308,9 @@ async function resolveSponsorClient(self: Knex, actor: CoManagedSessionActor,
     }
     const current = entries.filter(entry => !entry.ended);
     if (current.length === 1) return resolvedTarget(context, clientId, current[0]);
-    if (current.length === 0 && entries.length === 0) return { kind: 'absent' };
+    // A contradicting relationship record is not a missing one: fail closed
+    // rather than let a write treat the client as never set up.
+    if (current.length === 0 && entries.length === 0) return inconsistent ? deny() : { kind: 'absent' };
     // Multiple current relationships, or only a terminated history, require an
     // explicit relationship selection rather than an implicit first/newest pick.
     return { kind: 'selection-required', relationships: entries.map(entry => relationshipOption(context, entry)) };
@@ -363,6 +379,9 @@ export interface CoManagedClientManagementView {
   clientId: string;
   clientName: string | null;
   selectionRequired: boolean;
+  /** A setup mapped to this client points at a relationship record naming another
+   * sponsor or client. Nothing is adopted and setup is not offered until corrected. */
+  inconsistent: boolean;
   selectedRelationshipId: string | null;
   canManage: boolean;
   /** Setup is open for this client (no live or retained relationship) and the
@@ -382,7 +401,7 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
     if (hidden(context, ['client_id', 'clients.client_id'])) deny();
     const client = await setupChoices(context).where('q.client_id', clientId).first('q.client_id', 'q.client_name');
     if (!client) deny();
-    const entries = await discoverClientRelationships(context, clientId);
+    const { entries, inconsistent } = await discoverClientRelationships(context, clientId);
     const relationships: CoManagedClientRelationshipView[] = [];
     for (const entry of entries) {
       const operation = entry.operation;
@@ -424,13 +443,14 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
     const selected = relationshipId ? relationships.find(entry => entry.relationshipId === relationshipId)
       : current.length === 1 ? current[0] : current.length === 0 ? latestRetained : undefined;
     return { clientId, clientName: hidden(context, workspaceNames) ? null : client.client_name as string,
+      inconsistent: inconsistent > 0,
       selectionRequired: !selected && relationships.length > 0,
       selectedRelationshipId: selected?.relationshipId ?? null, canManage: context.canManage, relationships };
   });
   // A cancelled setup does not block a new one; a live or retained (departed)
   // relationship does. Only then is the provisioning authority evaluated.
   // LEVERAGE: pattern co-managed-setup-open — "no live and no retained relationship" is also derived in CoManagedClientView and CoManagedClientSummary
-  const setupOpen = view.relationships.every(entry => entry.ended && !entry.retained);
+  const setupOpen = !view.inconsistent && view.relationships.every(entry => entry.ended && !entry.retained);
   return { ...view, canSetUp: setupOpen && view.canManage && await canManageCoManagedClient(db, actor, clientId) };
 }
 

@@ -28,7 +28,16 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
   // With nothing live or retained the client is not enabled (a cancelled setup
   // does not count), and only an actor the view authorizes for setup sees Enable.
   // LEVERAGE: pattern co-managed-setup-open — same derivation as getCoManagedClientManagement.canSetUp and CoManagedClientView
-  const setupOpen = view.relationships.every((entry) => entry.ended && !entry.retained);
+  const setupOpen = !view.inconsistent && view.relationships.every((entry) => entry.ended && !entry.retained);
+  // A setup whose relationship record names another sponsor or client is not
+  // "not enabled": say it needs attention and offer nothing that would add a second one.
+  if (!selected && view.inconsistent && !view.relationships.some((entry) => !entry.ended)) {
+    return (
+      <span id={`${idPrefix}-summary`} className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
+        {t('coManaged.client.inconsistent', { defaultValue: 'Co-managed record needs attention' })}
+      </span>
+    );
+  }
   if (!selected && setupOpen) {
     return (
       <span id={`${idPrefix}-summary`} className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">

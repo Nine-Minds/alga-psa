@@ -55,7 +55,7 @@ const relationship = (over: Record<string, unknown> = {}) => ({
 const ended = (over: Record<string, unknown> = {}) => relationship({ relationshipId: 'old', state: 'terminated', ended: true, retained: true,
   endedAt: '2026-10-26T00:13:30.705Z', usedSeats: null, ...over });
 const view = (over: Record<string, unknown> = {}) => ({
-  clientId: 'client-1', clientName: 'White Rabbit', selectionRequired: false, selectedRelationshipId: null,
+  clientId: 'client-1', clientName: 'White Rabbit', selectionRequired: false, inconsistent: false, selectedRelationshipId: null,
   canManage: true, canSetUp: false, relationships: [], ...over,
 });
 
@@ -118,6 +118,15 @@ describe('client header co-managed entry', () => {
     mocks.load.mockResolvedValue(view({ selectionRequired: true, relationships: [relationship(), relationship({ relationshipId: 'second' })] }));
     const header = await renderHeader();
     expect(actions(header)).toEqual(['Choose relationship']);
+  });
+
+  it('says an inconsistent setup needs attention and offers neither Enable nor Manage', async () => {
+    mocks.load.mockResolvedValue(view({ inconsistent: true, canSetUp: false, relationships: [] }));
+    mocks.legacyProbe.mockResolvedValue(false);
+    const header = await renderHeader();
+    expect(within(header).getByText('Co-managed record needs attention')).toBeInTheDocument();
+    expect(within(header).queryByText('Co-managed IT not enabled')).toBeNull();
+    expect(actions(header)).toEqual([]);
   });
 
   it('offers setup again when the only history is a cancelled setup', async () => {

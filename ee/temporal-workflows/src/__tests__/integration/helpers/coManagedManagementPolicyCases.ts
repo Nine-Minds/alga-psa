@@ -221,6 +221,23 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       expect((await getCoManagedClientManagement(f.db, f.actor, clientId)).canSetUp).toBe(false);
     });
 
+    it('treats a setup whose relationship names another client as inconsistent: never adopted, never absent, setup closed', async () => {
+      const f = await fixture();
+      const clientId = f.operation.request.clientId;
+      const relationships = () => tenantDb(f.db, f.operation.customer_tenant).table('co_management_relationships')
+        .where('relationship_id', f.operation.relationship_id);
+      await expect(getCoManagedClientManagement(f.db, f.actor, clientId)).resolves.toMatchObject({ inconsistent: false, canSetUp: false });
+      await relationships().update({ sponsor_client_id: f.otherClient });
+      const view = await getCoManagedClientManagement(f.db, f.actor, clientId);
+      expect(view).toMatchObject({ inconsistent: true, canSetUp: false, relationships: [], selectedRelationshipId: null });
+      // A write resolving this client must fail closed, not treat it as never set up.
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId })).rejects.toThrow();
+      // A setup whose relationship is not written yet (queued) is not inconsistent.
+      await relationships().delete();
+      await expect(getCoManagedClientManagement(f.db, f.actor, clientId)).resolves.toMatchObject({ inconsistent: false, relationships: [] });
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId })).resolves.toEqual({ kind: 'absent' });
+    });
+
     it('shows the setup state on the client view while acceptance is pending, including cleanup progress', async () => {
       // Until acceptance the relationship only says provisioning or pending
       // acceptance; a failed or cancelled setup must not read as either.

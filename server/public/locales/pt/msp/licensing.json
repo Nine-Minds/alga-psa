@@ -520,7 +520,8 @@
         "user": "Pessoal",
         "team": "Equipas"
       },
-      "ticketAccess": "Acesso aos tickets"
+      "ticketAccess": "Acesso aos tickets",
+      "forbidden": "Você não tem permissão para gerenciar o acesso cogerenciado. Peça a um administrador acesso de cogerenciamento."
     },
     "section": {
       "title": "Cogerenciamento",
@@ -1009,7 +1010,9 @@
       "sharedTickets": "Tickets compartilhados",
       "openCustomerTickets": "Abrir em Tickets de clientes",
       "seatsReleased": "Lugares libertados",
-      "viewDetails": "Ver detalhes"
+      "viewDetails": "Ver detalhes",
+      "inconsistent": "O registro cogerenciado precisa de atenção",
+      "inconsistentHint": "Uma configuração cogerenciada deste cliente aponta para um registro de espaço de trabalho que pertence a outro cliente. Nada pode ser gerenciado ou configurado aqui até que o suporte corrija o registro."
     },
     "overview": {
       "clients": "Clientes cogeridos",

@@ -71,7 +71,7 @@ const relationship = (over: Record<string, unknown> = {}) => ({
   canRetry: true, canCancel: true, invitationExpired: false, deliveryFailed: false, cleanupFailed: false, ...over,
 });
 const view = (over: Record<string, unknown> = {}) => ({
-  clientId: 'client', clientName: 'Acme', selectionRequired: false, selectedRelationshipId: null as string | null,
+  clientId: 'client', clientName: 'Acme', selectionRequired: false, inconsistent: false, selectedRelationshipId: null as string | null,
   canManage: true, canSetUp: true, relationships: [] as ReturnType<typeof relationship>[], ...over,
 });
 const billingState = (over: Record<string, unknown> = {}) => ({
@@ -374,6 +374,13 @@ describe('client relationship view sections', () => {
     expect(document.getElementById('i-setup')).not.toBeNull();
     expect(document.getElementById('i-relationship')).not.toBeNull();
     expect(screen.getByText('Co-managed IT not enabled')).toBeInTheDocument();
+  });
+  it('names an inconsistent setup and offers no setup or management in its place', () => {
+    render(<CoManagedClientView view={view({ inconsistent: true, relationships: [] })} clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(document.getElementById('i-setup')).toBeNull();
+    expect(document.getElementById('i-inconsistent')).not.toBeNull();
+    expect(screen.getByText('Co-managed record needs attention')).toBeInTheDocument();
+    expect(screen.queryByText('Co-managed IT not enabled')).toBeNull();
   });
   it('does not offer a second setup while a relationship is live', () => {
     render(<CoManagedClientView view={view({ selectionRequired: true, relationships: [

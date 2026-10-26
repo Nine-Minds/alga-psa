@@ -38,6 +38,13 @@ describe('co-managed access editor', () => {
     expect(mocks.flag).toHaveBeenCalledWith('release-v1-6-feature', { defaultValue: false });
   });
 
+  it('tells an actor without co-management access so instead of asking for a reload', async () => {
+    mocks.load.mockResolvedValue({ side: 'forbidden' }); mount();
+    expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.policy.forbidden');
+    expect(screen.queryByText('coManaged.policy.loadError')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'coManaged.policy.save' })).toBeNull();
+  });
+
   it('lets customers edit local scope and retries an immutable submission after response loss', async () => {
     const result = deferred<{ revision: number }>(); mocks.customer.mockReturnValueOnce(result.promise);
     mount(); await screen.findByText('Our MSP');

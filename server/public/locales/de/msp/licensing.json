@@ -515,7 +515,8 @@
         "user": "Mitarbeiter",
         "team": "Teams"
       },
-      "ticketAccess": "Ticketzugriff"
+      "ticketAccess": "Ticketzugriff",
+      "forbidden": "Sie haben keine Berechtigung, den Co-Managed-Zugriff zu verwalten. Bitten Sie einen Administrator um Co-Management-Zugriff."
     },
     "section": {
       "title": "Co-Managed",
@@ -1001,7 +1002,9 @@
       "sharedTickets": "Gemeinsame Tickets",
       "openCustomerTickets": "In Kundentickets öffnen",
       "seatsReleased": "Plätze freigegeben",
-      "viewDetails": "Details anzeigen"
+      "viewDetails": "Details anzeigen",
+      "inconsistent": "Co-Managed-Datensatz erfordert Aufmerksamkeit",
+      "inconsistentHint": "Eine Co-Managed-Einrichtung für diesen Kunden verweist auf einen Arbeitsbereich-Datensatz, der zu einem anderen Kunden gehört. Hier kann nichts verwaltet oder eingerichtet werden, bis der Support den Datensatz korrigiert."
     },
     "overview": {
       "clients": "Co-Managed-Kunden",

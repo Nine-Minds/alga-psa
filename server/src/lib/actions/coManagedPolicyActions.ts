@@ -107,7 +107,19 @@ function toOption(row: any): CoManagedPolicyOption {
     ...(row.is_inactive !== undefined ? { inactive: Boolean(row.is_inactive) } : {}) };
 }
 
+/** A refusal is a state of this screen, not a load failure: production server
+ * actions redact thrown messages, so a thrown FORBIDDEN reached the browser as a
+ * generic failure and the panel told an unauthorized user to reload. */
 export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, target?: string | CoManagedManagementSelector) => {
+  try { return await loadCoManagedPolicyScreen(user, tenant, target); }
+  catch (error) {
+    if (error instanceof CoManagedPolicyError && error.code === 'FORBIDDEN') return { side: 'forbidden' as const };
+    throw error;
+  }
+});
+
+async function loadCoManagedPolicyScreen(user: { user_type: string } & Parameters<typeof coManagedBrowserActor>[0],
+  tenant: string, target?: string | CoManagedManagementSelector) {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
@@ -143,7 +155,7 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, target
     }
     return { side: resolved.side, target: resolved.target, counterpartName: other?.client_name as string | undefined, policy, labels, canExpand: lifecycle.canWrite };
   });
-});
+}
 
 export const searchCoManagedPolicyOptions = withAuth(async (user, { tenant }, input: {
   operationId?: string; selector?: CoManagedManagementSelector; kind: CoManagedPolicyOptionKind; search?: string; page?: number;
