@@ -204,7 +204,11 @@ describe('client creation seam contract', () => {
         + "'@alga-psa/shared/models/clientCreation' instead so the client gets its default "
         + 'billing profile, default contract, tax settings and the tenant default currency.'
     ).toEqual([]);
-  });
+    // Reads every non-test source file under several repo roots (thousands of
+    // files). Under a loaded, highly parallel CI run (Nx fans this package's
+    // suite out alongside ~50 other projects) that I/O comfortably exceeds
+    // vitest's 5s default; it finishes in well under 1s on a quiet machine.
+  }, 30_000);
 
   it('keeps the seam itself as the single insert site', () => {
     const seamSource = normalize(readFileSync(path.join(REPO_ROOT, SEAM), 'utf8'));
