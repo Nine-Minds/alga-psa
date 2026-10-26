@@ -5,7 +5,10 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CallLinkProvider } from '@alga-psa/ui/components/CallLink';
-import { CallsEmailsTile } from './dataTiles';
+import { CallsEmailsTile, ScheduledWorkTile } from './dataTiles';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 const interactions = [
   {
@@ -67,5 +70,19 @@ describe('CallsEmailsTile ticket actions', () => {
     expect(interactionButton).not.toBeNull();
     if (interactionButton) fireEvent.click(interactionButton);
     await waitFor(() => expect(onInteractionClick).toHaveBeenCalledWith('interaction-1'));
+  });
+});
+
+// Guide 10 Grid audit: an ended (read-only) workspace offers no way to schedule work from the ticket,
+// not even the empty state's dispatch link.
+describe('ScheduledWorkTile on a read-only screen', () => {
+  it('shows nothing scheduled without a schedule link, and keeps the link on a writable screen', async () => {
+    const readOnly = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+    const ro = render(<TicketDataSourceProvider dataSource={readOnly}><ScheduledWorkTile id="sched-ro" ticketId="ticket-1" /></TicketDataSourceProvider>);
+    await waitFor(() => expect(screen.getByText('Nothing scheduled')).toBeTruthy());
+    expect(ro.container.querySelector('#sched-ro-schedule-link')).toBeNull();
+    ro.unmount();
+    const rw = render(<ScheduledWorkTile id="sched-rw" ticketId="ticket-1" />);
+    await waitFor(() => expect(rw.container.querySelector('#sched-rw-schedule-link')).not.toBeNull());
   });
 });

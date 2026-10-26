@@ -11107,6 +11107,20 @@ it.each(['generic', 'optimized', 'simple'])('refuses a native %s requester-visib
   expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
 }));
 
+// Guide 10 Grid audit: a direct deleteTicket POST from an ended workspace deleted the ticket (the browser
+// delete path skipped lifecycle admission). Every ticket delete path now admits the lifecycle first.
+it('refuses to delete a ticket in a read-only co-managed workspace and removes nothing', async () => withNativeCommentFixture(async ({ customer, resource, principal, run }: any) => {
+  const { deleteTicketChildRecords } = await import('../../../../../packages/tickets/src/lib/deleteTicketChildRecords');
+  const simple = await import('../../../../../packages/tickets/src/actions/ticketActions');
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(db.transaction(trx => deleteTicketChildRecords(trx, resource.id, resource.tenant, ticket))).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  const result: any = await run(() => simple.deleteTicket(resource.id));
+  expect(result).toMatchObject({ success: false });
+  expect(String(result.message)).toContain('read-only');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ ticket_id: resource.id, title: ticket.title });
+}));
+
 it.each(['api', 'generic', 'optimized', 'simple'])('keeps native %s internal roots organization-private and delivers only after commit', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
   const observed: any[] = [];
   publish.mockImplementation(async (event: any) => {

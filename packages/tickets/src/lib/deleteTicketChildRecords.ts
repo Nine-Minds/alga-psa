@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -29,6 +30,9 @@ export async function deleteTicketChildRecords(
   tenant: string,
   ticket: { ticket_number?: string | null }
 ): Promise<void> {
+  // Every ticket delete path runs this first, so the co-managed lifecycle is admitted here, before any row
+  // is removed: a pending or ended (read-only) workspace refuses with CO_MANAGED_READ_ONLY / _NOT_ACTIVE.
+  await assertCoManagedOperationalWrite(trx, tenant);
   await deleteEntityTags(trx, ticketId, 'ticket');
 
   // Delete comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)

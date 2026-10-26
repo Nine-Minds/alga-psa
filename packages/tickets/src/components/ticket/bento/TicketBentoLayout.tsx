@@ -588,7 +588,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
               onSchedule={screenReadOnly ? undefined : props.onScheduleWork}
-              onOpenEntry={props.onOpenScheduleEntry}
+              onOpenEntry={screenReadOnly ? undefined : props.onOpenScheduleEntry}
             />
           </Suspense>
           {capabilities.appointmentRequests ? (

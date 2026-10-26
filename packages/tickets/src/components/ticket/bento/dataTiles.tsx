@@ -21,7 +21,7 @@ import {
   type TicketBillingRollup,
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
-import { useTicketDataSource } from '../TicketDataSourceContext';
+import { useTicketDataSource, useTicketScreenReadOnly } from '../TicketDataSourceContext';
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -68,6 +68,8 @@ export function ScheduledWorkTile({
 }) {
   const { t } = useTranslation('features/tickets');
   const { getTicketScheduleEntries } = useTicketDataSource().tiles;
+  // A read-only screen lists scheduled work but offers no way to schedule more (not even the dispatch link).
+  const readOnly = useTicketScreenReadOnly();
   const { data, error, loading } = useTileData(
     () => getTicketScheduleEntries(ticketId),
     [ticketId, refreshKey],
@@ -103,7 +105,7 @@ export function ScheduledWorkTile({
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
-          {onSchedule ? (
+          {readOnly ? null : onSchedule ? (
             <button
               id={`${id}-schedule-link`}
               type="button"
