@@ -44,7 +44,9 @@ describe('co-managed access editor', () => {
     expect(screen.queryByText('coManaged.policy.kinds.user')).toBeNull();
     fireEvent.change(screen.getByLabelText('coManaged.policy.ticketAccess'), { target: { value: 'escalation_only' } });
     fireEvent.click(button('save'));
-    expect(mocks.customer).toHaveBeenCalledWith({ revision: 2, scope: { visibilityMode: 'escalation_only', boards: [], projects: [] } });
+    // Guide 03: escalation-only keeps the configured board grants (dormant) instead of submitting an empty list.
+    expect(screen.getByText('coManaged.policy.boardsRetained')).toBeInTheDocument();
+    expect(mocks.customer).toHaveBeenCalledWith({ revision: 2, scope: { visibilityMode: 'escalation_only', boards: [{ id: 'board', canCollaborate: true }], projects: [] } });
     expect(mocks.sponsor).not.toHaveBeenCalled();
     await act(async () => result.reject(new Error('Lost acknowledgement')));
     expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.policy.saveError');

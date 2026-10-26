@@ -512,6 +512,7 @@
       "sponsorDescription": "Przypisz pracowników do dostępu zatwierdzonego przez tego klienta. Obowiązują również uprawnienia klienta i każdego pracownika.",
       "readOnly": "Ten obszar roboczy jest tylko do odczytu. Możesz ograniczyć lub usunąć dostęp; rozszerzenie wymaga aktywnej licencji.",
       "visibilityHint": "Dostęp do tablic umożliwia nadzór. Tryb tylko eskalacji ogranicza widoczność do zgłoszeń jawnie eskalowanych do MSP. Dostęp do projektów jest konfigurowany osobno.",
+      "boardsRetained": "Lista dostępu do tablic jest zachowywana, gdy udostępniane są tylko eskalowane zgłoszenia, i obowiązuje ponownie po powrocie do dostępu do tablic.",
       "approvedScope": "Dostęp zatwierdzony przez klienta",
       "retry": "Ponów zapis",
       "save": "Zapisz dostęp",

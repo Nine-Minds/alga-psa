@@ -152,8 +152,10 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
           <CustomSelect id="co-policy-visibility" label={t('coManaged.policy.ticketAccess', { defaultValue: 'Ticket access' })} value={scope.visibilityMode} disabled={disabled}
             options={[...(state.canExpand || scope.visibilityMode === 'board_scope' ? [{ value: 'board_scope', label: t('coManaged.provisioning.board_scope') }] : []),
               { value: 'escalation_only', label: t('coManaged.provisioning.escalation_only') }]}
-            onValueChange={mode => setScope(current => ({ ...current, visibilityMode: mode as CoManagedCustomerScope['visibilityMode'], boards: mode === 'escalation_only' ? [] : current.boards }))} />
+            onValueChange={mode => setScope(current => ({ ...current, visibilityMode: mode as CoManagedCustomerScope['visibilityMode'] }))} />
           <p className="text-sm text-muted-foreground">{t('coManaged.policy.visibilityHint')}</p>
+          {scope.visibilityMode === 'escalation_only' && scope.boards.length > 0 &&
+            <p id="co-policy-boards-retained" className="text-sm text-muted-foreground">{t('coManaged.policy.boardsRetained')}</p>}
           {(['board', 'project'] as const).filter(kind => kind === 'project' || scope.visibilityMode === 'board_scope').map(kind => {
             const key = kind === 'board' ? 'boards' : 'projects';
             return <PolicyEntries key={kind} kind={kind} entries={scope[key].map(grant => ({ id: grant.id, collaborate: grant.canCollaborate }))}

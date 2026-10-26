@@ -502,6 +502,7 @@
       "sponsorDescription": "Tilldela din personal den åtkomst som kunden har godkänt. Kundens behörigheter och varje medarbetares egna behörigheter gäller också.",
       "readOnly": "Den här arbetsytan är skrivskyddad. Du kan minska eller ta bort åtkomst; för att utöka åtkomsten krävs en aktiv licens.",
       "visibilityHint": "Tavelåtkomst ger överblick. Åtkomst enbart vid eskalering begränsar ärendesynligheten till arbete som uttryckligen eskalerats till MSP:n. Projektåtkomst konfigureras separat.",
+      "boardsRetained": "Din lista med tavelåtkomst behålls medan endast eskalerade ärenden delas och gäller igen när du byter tillbaka till tavelåtkomst.",
       "approvedScope": "Åtkomst godkänd av kunden",
       "retry": "Försök spara igen",
       "save": "Spara åtkomst",

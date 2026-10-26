@@ -507,6 +507,7 @@
       "sponsorDescription": "Atribua o seu pessoal ao acesso aprovado por este cliente. Também se aplicam as permissões do cliente e de cada membro do pessoal.",
       "readOnly": "Este espaço de trabalho é só de leitura. Pode reduzir ou remover acessos; a expansão requer uma licença ativa.",
       "visibilityHint": "O acesso a quadros permite a supervisão. O modo apenas escalamento limita a visibilidade aos tickets explicitamente escalados para o MSP. O acesso a projetos é configurado separadamente.",
+      "boardsRetained": "Sua lista de acesso aos quadros é mantida enquanto apenas tickets escalados são compartilhados e volta a valer quando você retornar ao acesso por quadros.",
       "approvedScope": "Acesso aprovado pelo cliente",
       "retry": "Tentar guardar novamente",
       "save": "Guardar acesso",

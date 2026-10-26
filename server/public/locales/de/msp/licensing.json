@@ -502,6 +502,7 @@
       "sponsorDescription": "Weisen Sie Ihre Mitarbeiter dem vom Kunden genehmigten Zugriff zu. Die Berechtigungen des Kunden und der einzelnen Mitarbeiter gelten ebenfalls.",
       "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Sie können Zugriff einschränken oder entfernen; eine Erweiterung erfordert eine aktive Lizenz.",
       "visibilityHint": "Board-Zugriff ermöglicht einen Überblick. Bei ausschließlicher Eskalation sind nur ausdrücklich an den MSP eskalierte Tickets sichtbar. Projektzugriff wird separat konfiguriert.",
+      "boardsRetained": "Ihre Board-Zugriffsliste bleibt erhalten, solange nur eskalierte Tickets geteilt werden, und gilt wieder, wenn Sie zum Board-Zugriff zurückwechseln.",
       "approvedScope": "Vom Kunden genehmigter Zugriff",
       "retry": "Speichern wiederholen",
       "save": "Zugriff speichern",

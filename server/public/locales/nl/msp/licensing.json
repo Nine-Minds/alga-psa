@@ -502,6 +502,7 @@
       "sponsorDescription": "Wijs uw medewerkers toe aan de toegang die deze klant heeft goedgekeurd. De rechten van de klant en van elke medewerker blijven ook van toepassing.",
       "readOnly": "Deze werkruimte is alleen-lezen. U kunt toegang beperken of verwijderen; voor uitbreiding is een actieve licentie vereist.",
       "visibilityHint": "Toegang tot borden biedt overzicht. Alleen-escalatie beperkt de zichtbaarheid tot tickets die expliciet naar de MSP zijn geëscaleerd. Projecttoegang wordt afzonderlijk ingesteld.",
+      "boardsRetained": "Uw lijst met bordtoegang blijft bewaard zolang alleen geëscaleerde tickets worden gedeeld, en geldt weer wanneer u terugschakelt naar bordtoegang.",
       "approvedScope": "Door de klant goedgekeurde toegang",
       "retry": "Opslaan opnieuw proberen",
       "save": "Toegang opslaan",

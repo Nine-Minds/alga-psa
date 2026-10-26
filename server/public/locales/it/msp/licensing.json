@@ -507,6 +507,7 @@
       "sponsorDescription": "Assegna il tuo personale agli accessi approvati da questo cliente. Si applicano anche le autorizzazioni del cliente e di ciascun membro del personale.",
       "readOnly": "Questo spazio di lavoro è in sola lettura. Puoi ridurre o rimuovere gli accessi; per ampliarli serve una licenza attiva.",
       "visibilityHint": "L’accesso alle bacheche consente la supervisione. La modalità solo escalation limita la visibilità ai ticket inoltrati esplicitamente al MSP. L’accesso ai progetti si configura separatamente.",
+      "boardsRetained": "L’elenco di accesso alle bacheche viene mantenuto mentre sono condivisi solo i ticket escalati e torna a valere quando si ripristina l’accesso alle bacheche.",
       "approvedScope": "Accesso approvato dal cliente",
       "retry": "Riprova il salvataggio",
       "save": "Salva accesso",

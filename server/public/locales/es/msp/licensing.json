@@ -507,6 +507,7 @@
       "sponsorDescription": "Asigne a su personal al acceso aprobado por este cliente. También se aplican los permisos del cliente y los de cada miembro del personal.",
       "readOnly": "Este espacio de trabajo es de solo lectura. Puede reducir o eliminar el acceso; ampliarlo requiere una licencia activa.",
       "visibilityHint": "El acceso a tableros permite la supervisión. El acceso solo por escalación limita la visibilidad a los tickets escalados explícitamente al MSP. El acceso a proyectos se configura por separado.",
+      "boardsRetained": "Su lista de acceso a tableros se conserva mientras solo se comparten los tickets escalados y vuelve a aplicarse cuando regrese al acceso por tableros.",
       "approvedScope": "Acceso aprobado por el cliente",
       "retry": "Reintentar guardado",
       "save": "Guardar acceso",

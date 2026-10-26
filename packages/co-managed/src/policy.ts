@@ -13,6 +13,8 @@ export interface CoManagedPolicyTarget { customerTenant: string; relationshipId:
 export interface CoManagedResourceGrant { id: string; canCollaborate: boolean }
 export interface CoManagedCustomerScope {
   visibilityMode: 'board_scope' | 'escalation_only';
+  /** The customer's configured board grants. They are in effect only in board_scope: under escalation_only they
+   * are retained but dormant (every reader gates them on visibility_mode), so switching modes never discards them. */
   boards: CoManagedResourceGrant[];
   projects: CoManagedResourceGrant[];
 }
@@ -117,7 +119,10 @@ async function recordPolicyChange(trx: Knex.Transaction, actor: CoManagedHomeAct
 export async function getCoManagedCollaborationPolicy(db: Knex, actor: CoManagedHomeActor, target: CoManagedPolicyTarget): Promise<CoManagedCollaborationPolicy> {
   return withTransaction(db, async trx => {
     const { relationship } = await lockPolicy(trx, actor, target, false);
-    return { ...await readCustomerScope(trx, target, relationship.visibility_mode), revision: relationship.revision,
+    const scope = await readCustomerScope(trx, target, relationship.visibility_mode);
+    // The sponsor sees the scope in effect; dormant board grants stay the customer's own configuration.
+    if (actor.tenant !== target.customerTenant && scope.visibilityMode !== 'board_scope') scope.boards = [];
+    return { ...scope, revision: relationship.revision,
       assignments: await readAssignments(trx, relationship.sponsor_tenant, target) };
   });
 }
@@ -127,14 +132,15 @@ export async function replaceCoManagedCustomerScope(db: Knex, actor: CoManagedHo
   if (actor.tenant !== target.customerTenant) throw new CoManagedPolicyError('FORBIDDEN');
   if (!scope || !['board_scope', 'escalation_only'].includes(scope.visibilityMode)) throw new CoManagedPolicyError('INVALID_POLICY');
   const desired: CoManagedCustomerScope = { visibilityMode: scope.visibilityMode, boards: normalizeGrants(scope.boards), projects: normalizeGrants(scope.projects) };
-  if (desired.visibilityMode === 'escalation_only' && desired.boards.length) throw new CoManagedPolicyError('INVALID_POLICY');
   return withTransaction(db, async trx => {
     const { customer, relationship, lifecycle } = await lockCoManagedCustomerPolicy(trx, actor, target);
     if (await isReplay(trx, actor, target, expectedRevision, relationship.revision, 'customer_scope_changed', desired)) return relationship.revision;
     const previous = await readCustomerScope(trx, target, relationship.visibility_mode);
     if (hash(previous) === hash(desired)) return relationship.revision;
-    const reduction = (desired.visibilityMode === previous.visibilityMode || desired.visibilityMode === 'escalation_only') &&
-      grantsReduce(desired.boards, previous.boards) && grantsReduce(desired.projects, previous.projects);
+    // Dormant board grants confer nothing, so only the boards in effect after the change can expand access.
+    const boardsReduce = desired.visibilityMode === 'escalation_only' ||
+      (previous.visibilityMode === 'board_scope' && grantsReduce(desired.boards, previous.boards));
+    const reduction = boardsReduce && grantsReduce(desired.projects, previous.projects);
     if (!lifecycle.canWrite && !reduction) throw new CoManagedLifecycleError(lifecycle);
     for (const [table, idColumn, grants] of [['boards', 'board_id', desired.boards], ['projects', 'project_id', desired.projects]] as const) {
       const rows = await customer.table(table).whereIn(idColumn, grants.map(grant => grant.id)).forShare().select(idColumn);

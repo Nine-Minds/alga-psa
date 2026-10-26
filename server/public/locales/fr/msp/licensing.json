@@ -507,6 +507,7 @@
       "sponsorDescription": "Affectez votre personnel aux accès approuvés par ce client. Les autorisations du client et de chaque membre du personnel s’appliquent également.",
       "readOnly": "Cet espace de travail est en lecture seule. Vous pouvez réduire ou retirer des accès ; leur extension nécessite une licence active.",
       "visibilityHint": "L’accès aux tableaux permet la supervision. Le mode escalade seule limite la visibilité aux tickets explicitement escaladés au MSP. L’accès aux projets se configure séparément.",
+      "boardsRetained": "Votre liste d’accès aux tableaux est conservée tant que seuls les tickets escaladés sont partagés, et s’applique de nouveau lorsque vous revenez à l’accès aux tableaux.",
       "approvedScope": "Accès approuvé par le client",
       "retry": "Réessayer l’enregistrement",
       "save": "Enregistrer l’accès",

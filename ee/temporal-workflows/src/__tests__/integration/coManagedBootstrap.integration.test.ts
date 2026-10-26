@@ -3531,6 +3531,39 @@ describe('co-managed shared-work authorization boundary', () => {
     await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
 
+  // Guide 03 found that saving escalation-only wiped every board grant, so returning to board oversight left the
+  // relationship with no board access until the customer re-entered each board.
+  it('keeps board grants dormant under escalation-only and restores them unchanged on return to board oversight', async () => {
+    const { principal, resource, sponsorActor, actor, target, customer, operation } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
+    const command = vi.fn(async () => 'authorized');
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    const boards = [{ id: operation.customer_board_id, canCollaborate: true }];
+    expect(await work(db, principal, resource, 'read', command)).toBe('authorized');
+
+    // The editor submits the retained board list with the mode change.
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { visibilityMode: 'escalation_only', boards, projects: [] })).toBe(4);
+    expect(await customer.table('co_management_board_scopes').where('relationship_id', target.relationshipId)
+      .select('board_id', 'can_collaborate')).toEqual([{ board_id: operation.customer_board_id, can_collaborate: true }]);
+    expect(await policy.getCoManagedCollaborationPolicy(db, actor, target)).toMatchObject({ visibilityMode: 'escalation_only', boards });
+    // Dormant grants confer nothing and are not disclosed to the sponsor.
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await policy.getCoManagedCollaborationPolicy(db, sponsorActor, target)).toMatchObject({ visibilityMode: 'escalation_only', boards: [] });
+
+    // Returning to board oversight needs no re-entry: the same grant takes effect again.
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 4, { visibilityMode: 'board_scope', boards, projects: [] })).toBe(5);
+    expect(await policy.getCoManagedCollaborationPolicy(db, sponsorActor, target)).toMatchObject({ visibilityMode: 'board_scope', boards });
+    expect(await work(db, principal, resource, 'update', command)).toBe('authorized');
+
+    // While the entitlement is paused, reviving dormant grants is an expansion and is refused; parking them is not.
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 5, { visibilityMode: 'escalation_only', boards, projects: [] })).toBe(6);
+    await expect(policy.replaceCoManagedCustomerScope(db, actor, target, 6, { visibilityMode: 'board_scope', boards, projects: [] }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await policy.getCoManagedCollaborationPolicy(db, actor, target)).toMatchObject({ revision: 6, visibilityMode: 'escalation_only', boards });
+  });
+
   it('rejects revoked, expired, inactive, mismatched, foreign, and unsupported principals before executing a command', async () => {
     const { principal, resource, sponsorActor, target, sponsor, customer } = await sharedWorkFixture();
     const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');

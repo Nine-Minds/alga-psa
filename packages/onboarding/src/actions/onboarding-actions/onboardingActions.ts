@@ -1142,13 +1142,15 @@ export const getAvailableRoles = withAuth(async (
  * step's "Users: N" counter stuck at 0.
  */
 /** Boards this workspace shares with its MSP under a live co-management
- * relationship; empty outside co-managed workspaces. */
+ * relationship; empty outside co-managed workspaces. Board grants of an
+ * escalation-only relationship are dormant and share nothing. */
 export const getCoManagedSharedBoardIds = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<string[]> => {
   const { knex } = await createTenantKnex();
-  const live = await tenantDb(knex, tenant).table('co_management_relationships').whereNull('ended_at').pluck('relationship_id');
+  const live = await tenantDb(knex, tenant).table('co_management_relationships').whereNull('ended_at')
+    .where('visibility_mode', 'board_scope').pluck('relationship_id');
   if (!live.length) return [];
   return tenantDb(knex, tenant).table('co_management_board_scopes').whereIn('relationship_id', live).distinct().pluck('board_id');
 });
