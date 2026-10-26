@@ -12,6 +12,7 @@ import { getCoManagedProvisioningOptions, getCoManagedBillingState } from '@/lib
 import { provisionCoManagedWorkspaceAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
 import { provisioningRejectionMessage } from './coManagedProvisioningMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { useRecoverableRequest } from './useRecoverableRequest';
 
 type Draft = {
   workspaceName: string;
@@ -39,7 +40,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const operationId = useRef<string>(newCoManagedOperationId());
-  const submitted = useRef<(Draft & { clientId: string; operationId: string }) | null>(null);
+  const recovery = useRecoverableRequest<Draft, Draft & { clientId: string; operationId: string }>(form);
   const firstRender = useRef(true);
 
   // Any edit marks the tab dirty so the focus/tab dismissal guard protects it.
@@ -72,28 +73,24 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
   const poolFull = Boolean(capacity?.isPro && !capacity.isReadOnly && capacity.capacity > 0 && capacity.allocated === capacity.capacity);
 
   const submit = async () => {
-    if (!submitted.current && !valid) return;
-    const request = submitted.current ?? { ...form, clientId, operationId: operationId.current };
-    submitted.current = request; setBusy(true); setError(null);
+    if (!recovery.retrying && !valid) return;
+    setBusy(true); setError(null);
     try {
-      const result = await provisionCoManagedWorkspaceAction(request);
+      let result: Awaited<ReturnType<typeof provisionCoManagedWorkspaceAction>>;
+      // A lost response leaves the form editable and keeps the operation ID: unchanged details are retried as the
+      // identical request, and changed details get an explained conflict instead of a second workspace.
+      try { result = await recovery.send(() => ({ ...form, clientId, operationId: operationId.current }), provisionCoManagedWorkspaceAction); }
+      catch { setError(t('coManaged.provisioning.submitError')); return; }
       if ('rejected' in result) {
         // An acknowledged rejection is correctable; the operation ID is retained.
-        submitted.current = null;
         setError(provisioningRejectionMessage(result.errorCode, t));
         await reloadCapacity();
         return;
       }
-      submitted.current = null;
       operationId.current = newCoManagedOperationId();
       onDirtyChange?.(false);
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
       await onProvisioned();
-    } catch {
-      // Keep the operation ID so resending the same details stays idempotent, but
-      // unlock the form: a changed request now gets an explained conflict.
-      submitted.current = null;
-      setError(t('coManaged.provisioning.submitError'));
     }
     finally { setBusy(false); }
   };
@@ -108,7 +105,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
       <CardContent className="space-y-4">
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <fieldset disabled={busy || Boolean(submitted.current)} className="space-y-4">
+        <fieldset disabled={busy} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={`${idPrefix}-workspace-name`}>{t('coManaged.provisioning.workspace', { defaultValue: 'Workspace name' })}</Label>
             <Input id={`${idPrefix}-workspace-name`} required maxLength={200} value={form.workspaceName}
@@ -143,10 +140,10 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
             required value={form.escalationBoardId} options={boards.map((board) => ({ value: board.id, label: board.name }))}
             onValueChange={(escalationBoardId) => setForm({ ...form, escalationBoardId })} />
         </fieldset>
-        {submitted.current && <p>{t('coManaged.provisioning.recoverRequest', { defaultValue: 'The request was submitted. Retry recovers the same operation.' })}</p>}
-        <Button id={`${idPrefix}-setup-submit`} type="submit" disabled={busy || (!submitted.current && !valid)}>
-          {t(submitted.current ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit',
-            { defaultValue: submitted.current ? 'Retry' : 'Submit' })}
+        {recovery.retrying && <p>{t('coManaged.provisioning.recoverRequest', { defaultValue: 'The request was submitted. Retry recovers the same operation.' })}</p>}
+        <Button id={`${idPrefix}-setup-submit`} type="submit" disabled={busy || (!recovery.retrying && !valid)}>
+          {t(recovery.retrying ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit',
+            { defaultValue: recovery.retrying ? 'Retry' : 'Submit' })}
         </Button>
       </form>
       </CardContent>

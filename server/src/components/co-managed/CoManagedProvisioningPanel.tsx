@@ -16,6 +16,7 @@ import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, change
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
 import { provisioningRejectionMessage, seatChangeRejectionMessage } from './coManagedProvisioningMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { useRecoverableRequest } from './useRecoverableRequest';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
 const emptyForm = (): Omit<Request, 'operationId'> => ({ clientId: '', workspaceName: '', seats: 1,
@@ -39,7 +40,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState<Request | null>(null);
+  const recovery = useRecoverableRequest<Omit<Request, 'operationId'>, Request>(form);
   const [allocation, setAllocation] = useState<{ operationId: string; seats: number; workspaceName: string } | null>(null);
   const [cancellation, setCancellation] = useState<{ operationId: string; workspaceName: string } | null>(null);
   const [allocatedSeats, setAllocatedSeats] = useState(1);
@@ -49,16 +50,17 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   useEffect(() => { void reload().catch(() => setError(t('coManaged.provisioning.loadError'))); }, [reload, t]);
   const openForm = useCallback(() => {
     if (!operationId.current) {
-      setForm({ ...emptyForm(), clientId: initialClientId || '' }); setSubmitted(null); setError(null); setSearch('');
+      setForm({ ...emptyForm(), clientId: initialClientId || '' }); recovery.reset(); setError(null); setSearch('');
       operationId.current = newCoManagedOperationId();
     }
     setOpen(true);
-  }, [initialClientId]);
+  }, [initialClientId, recovery.reset]);
   useEffect(() => {
     if (initialClientId && status?.canCreate && canGrow && !autoOpened.current) { autoOpened.current = true; openForm(); }
   }, [initialClientId, status?.canCreate, canGrow, openForm]);
   useEffect(() => {
-    if (!open || submitted) return;
+    // Search and client are disabled while a request is in flight, so the options never move under it.
+    if (!open) return;
     let cancelled = false;
     const timer = setTimeout(() => {
       void getCoManagedProvisioningOptions(search, form.clientId || undefined).then(result => {
@@ -66,7 +68,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       }).catch(() => { if (!cancelled) setError(t('coManaged.provisioning.loadError')); });
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [open, search, form.clientId, submitted, t]);
+  }, [open, search, form.clientId, t]);
   const refresh = async () => {
     setBusy(true); setError(null);
     try { await reload(); await onChanged(); }
@@ -74,26 +76,24 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
     finally { setBusy(false); }
   };
   const submit = async () => {
-    const request = submitted || { ...form, operationId: operationId.current || (operationId.current = newCoManagedOperationId()) };
-    // The request is frozen while it is in flight.
-    setSubmitted(request); setBusy(true); setError(null);
+    // The fieldset freezes the request while it is in flight.
+    setBusy(true); setError(null);
     try {
-      const result = await provisionCoManagedWorkspaceAction(request);
+      let result: Awaited<ReturnType<typeof provisionCoManagedWorkspaceAction>>;
+      // A lost response leaves the form editable and keeps the operation ID: unchanged details are retried as the
+      // identical request, and changed details are refused as a conflict, so no second workspace can be created.
+      try {
+        result = await recovery.send(() => ({ ...form, operationId: operationId.current || (operationId.current = newCoManagedOperationId()) }),
+          provisionCoManagedWorkspaceAction);
+      } catch { setError(t('coManaged.provisioning.submitError')); return; }
       if ('rejected' in result) {
         // A domain rejection is an acknowledged response. The form can be
         // corrected, but keeps its operation ID so no prior success duplicates.
-        setSubmitted(null); setError(provisioningRejectionMessage(result.errorCode, t)); return;
+        setError(provisioningRejectionMessage(result.errorCode, t)); return;
       }
-      setOpen(false); setSubmitted(null); operationId.current = null;
+      setOpen(false); operationId.current = null;
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
       await reload(); await onChanged();
-    } catch {
-      // Unlock for correction but keep the operation ID: resending the same
-      // details recovers the original operation, and changed details are
-      // refused as a conflict, so no second workspace can be created. A frozen
-      // form could only resend a request the server keeps refusing.
-      setSubmitted(null);
-      setError(t('coManaged.provisioning.submitError'));
     }
     finally { setBusy(false); }
   };
@@ -177,11 +177,11 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       <form className="space-y-4" onSubmit={event => { event.preventDefault(); void submit(); }}>
         {error && <p role="alert" className="text-destructive">{error}</p>}
         <p>{t('coManaged.provisioning.description')}</p>
-        <fieldset disabled={busy || Boolean(submitted)} className="space-y-4">
+        <fieldset disabled={busy} className="space-y-4">
           <div className="space-y-2"><Label htmlFor="co-managed-client-search">{t('coManaged.provisioning.searchClients')}</Label>
             <Input id="co-managed-client-search" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} /></div>
           <CustomSelect id="co-managed-client" label={t('coManaged.provisioning.client')} required value={form.clientId}
-            disabled={busy || Boolean(submitted)} options={(options?.clients || []).map(client => ({ value: client.id, label: client.name }))}
+            disabled={busy} options={(options?.clients || []).map(client => ({ value: client.id, label: client.name }))}
             onValueChange={clientId => setForm(current => ({ ...current, clientId, escalationBoardId: '',
               workspaceName: current.workspaceName || options?.clients.find(client => client.id === clientId)?.name || '' }))} />
           <div className="space-y-2"><Label htmlFor="co-managed-workspace-name">{t('coManaged.provisioning.workspace')}</Label>
@@ -196,16 +196,16 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
             <Input id="co-managed-workspace-seats" required type="number" min={1} max={available} step={1} value={form.seats}
               onChange={event => setForm({ ...form, seats: Number(event.target.value) })} />
             <p className="text-sm text-muted-foreground">{t('coManaged.provisioning.capacity', { count: available })}</p></div>
-          <CustomSelect id="co-managed-visibility" label={t('coManaged.provisioning.visibility')} value={form.visibilityMode} disabled={busy || Boolean(submitted)}
+          <CustomSelect id="co-managed-visibility" label={t('coManaged.provisioning.visibility')} value={form.visibilityMode} disabled={busy}
             options={(['board_scope', 'escalation_only'] as const).map(mode => ({ value: mode, label: t(`coManaged.provisioning.${mode}`) }))}
             onValueChange={value => setForm({ ...form, visibilityMode: value as Request['visibilityMode'] })} />
           <CustomSelect id="co-managed-escalation-board" label={t('coManaged.provisioning.destination')} required value={form.escalationBoardId}
-            disabled={busy || Boolean(submitted)} options={(options?.boards || []).map(board => ({ value: board.id, label: board.name }))}
+            disabled={busy} options={(options?.boards || []).map(board => ({ value: board.id, label: board.name }))}
             onValueChange={escalationBoardId => setForm({ ...form, escalationBoardId })} />
         </fieldset>
-        {submitted && <p>{t('coManaged.provisioning.recoverRequest')}</p>}
-        <Button id="co-managed-submit-workspace" type="submit" disabled={busy || (!submitted && (!valid || !canGrow))}>
-          {t(submitted ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit')}
+        {recovery.retrying && <p>{t('coManaged.provisioning.recoverRequest')}</p>}
+        <Button id="co-managed-submit-workspace" type="submit" disabled={busy || (!recovery.retrying && (!valid || !canGrow))}>
+          {t(recovery.retrying ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit')}
         </Button>
       </form>
     </Dialog>

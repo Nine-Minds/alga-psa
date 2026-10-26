@@ -154,7 +154,7 @@ describe('client-fixed co-managed setup', () => {
   });
 
   it('prefills the client name, fixes the client, and reuses the operation ID when a submission fails', async () => {
-    mocks.provision.mockRejectedValueOnce(new Error('Lost acknowledgement'));
+    mocks.provision.mockRejectedValueOnce(new Error('Lost acknowledgement')).mockRejectedValueOnce(new Error('Lost acknowledgement again'));
     render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
     await screen.findByRole('option', { name: 'Escalations' });
     expect(screen.getByLabelText('Workspace name')).toHaveValue('Acme');
@@ -171,10 +171,18 @@ describe('client-fixed co-managed setup', () => {
     // identical resend stays idempotent; changed details get an explained conflict.
     await screen.findByText('coManaged.provisioning.submitError');
     expect(document.getElementById('i-admin-email')).not.toBeDisabled();
-    fireEvent.change(document.getElementById('i-admin-email')!, { target: { value: 'ada.corrected@example.test' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    // Guide 01: while the details are unchanged the unconfirmed request is offered as Retry and resent identically.
+    expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
-    expect(mocks.provision.mock.calls[1][0]).toMatchObject({ operationId: first.operationId,
+    expect(mocks.provision.mock.calls[1][0]).toEqual(first);
+    // The retry was lost too: still unconfirmed, still a Retry. Changing the details makes it a submission again.
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeEnabled();
+    fireEvent.change(document.getElementById('i-admin-email')!, { target: { value: 'ada.corrected@example.test' } });
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(3));
+    expect(mocks.provision.mock.calls[2][0]).toMatchObject({ operationId: first.operationId,
       administrator: { email: 'ada.corrected@example.test' } });
   });
 });

@@ -70,9 +70,23 @@ describe('co-managed provisioning UI', () => {
     // keeps refusing) but resending it unchanged recovers the same operation.
     await waitFor(() => expect(screen.getByLabelText('coManaged.provisioning.email')).not.toBeDisabled());
     const first = mocks.provision.mock.calls[0][0];
-    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    // Guide 01: an unconfirmed outcome is a Retry, and says so, while the details are unchanged.
+    expect(screen.getByText('coManaged.provisioning.recoverRequest')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'coManaged.provisioning.submit' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.retry' }));
     await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
     expect(mocks.provision.mock.calls[1][0]).toEqual(first);
+  });
+  it('turns an unconfirmed Retry back into a submission under the same operation when the details change', async () => {
+    mocks.provision.mockRejectedValueOnce(new Error('Connection lost')); panel(); await fillForm();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    await screen.findByRole('button', { name: 'coManaged.provisioning.retry' });
+    const first = mocks.provision.mock.calls[0][0];
+    fireEvent.change(screen.getByLabelText('coManaged.provisioning.email'), { target: { value: 'changed@example.test' } });
+    expect(screen.queryByRole('button', { name: 'coManaged.provisioning.retry' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
+    expect(mocks.provision.mock.calls[1][0]).toEqual({ ...first, administrator: { ...first.administrator, email: 'changed@example.test' } });
   });
   it('lets an acknowledged rejected request be corrected without changing its operation identity', async () => {
     mocks.provision.mockResolvedValueOnce({ operationId: 'operation', rejected: true, errorCode: 'INVALID_REQUEST' }); panel(); await fillForm();
