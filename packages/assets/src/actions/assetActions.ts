@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
 import {
     CreateAssetRequest,
@@ -2390,6 +2391,14 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             authorizedPage.data.map((asset: any) => asset.asset_id)
         );
 
+        // Logos only for the distinct clients on this page (one batched lookup).
+        const pageClientIds = Array.from(new Set(
+            authorizedPage.data.map((asset: any) => asset.client_id).filter(Boolean)
+        )) as string[];
+        const clientLogoUrls = pageClientIds.length > 0
+            ? await getClientLogoUrlsBatch(pageClientIds, tenant)
+            : new Map<string, string | null>();
+
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
             authorizedPage.data.map(async (asset: any): Promise<Asset> => {
@@ -2401,7 +2410,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ...asset,
                     client: {
                         client_id: asset.client_id,
-                        client_name: asset.client_name || ''
+                        client_name: asset.client_name || '',
+                        client_logo_url: clientLogoUrls.get(asset.client_id) ?? null,
                     },
                     group: groupSummaries.get(asset.asset_id) ?? null,
                     relationships: [],  // Initialize empty array for relationships

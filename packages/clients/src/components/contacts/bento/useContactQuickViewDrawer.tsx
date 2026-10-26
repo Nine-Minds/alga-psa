@@ -1,27 +1,25 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import type { IClient, IContact, IDocument } from '@alga-psa/types';
+import type { IContact, IDocument } from '@alga-psa/types';
 import { useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getContactByContactNameId, getAllClients } from '@alga-psa/clients/actions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getCurrentUserAsync } from '../../../lib/usersHelpers';
 import ContactQuickView from './ContactQuickView';
 
 /**
  * Documents load (and reload after upload) inside the drawer, so the quick
- * view never renders against a list captured before the drawer opened.
+ * view never renders against documents captured before the drawer opened.
  */
 function ContactQuickViewWithDocuments({
   contact,
-  clients,
   userId,
   onChangesSaved,
 }: {
   contact: IContact;
-  clients: IClient[];
   userId: string;
   onChangesSaved?: () => void;
 }) {
@@ -46,7 +44,6 @@ function ContactQuickViewWithDocuments({
   return (
     <ContactQuickView
       contact={contact}
-      clients={clients}
       documents={documents}
       userId={userId}
       onDocumentCreated={loadDocuments}
@@ -61,7 +58,6 @@ function ContactQuickViewWithDocuments({
  * (Contacts.tsx still inlines this shape with its own list-refresh
  * concerns; it's a candidate to converge on this hook.)
  */
-// LEVERAGE: pattern contact-drawer-loader — open loading drawer → load contact + getAllClients(true) → replaceDrawer
 export function useContactQuickViewDrawer(): (
   contactId: string,
   options?: { onChangesSaved?: () => void },
@@ -76,9 +72,8 @@ export function useContactQuickViewDrawer(): (
       </div>
     );
     try {
-      const [contact, clients, currentUser] = await Promise.all([
+      const [contact, currentUser] = await Promise.all([
         getContactByContactNameId(contactId),
-        getAllClients(true),
         getCurrentUserAsync(),
       ]);
 
@@ -94,8 +89,7 @@ export function useContactQuickViewDrawer(): (
       replaceDrawer(
         <ContactQuickViewWithDocuments
           contact={contact}
-          clients={clients}
-          userId={currentUser.user_id}
+              userId={currentUser.user_id}
           onChangesSaved={options?.onChangesSaved}
         />
       );

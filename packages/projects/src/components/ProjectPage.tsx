@@ -7,7 +7,7 @@ import { TaskShareActionsProvider } from './TaskShareActionsContext';
 import { TaskSelectionProvider } from './TaskSelectionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
+import type { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
 import {
   getErrorMessage,
   handleError,
@@ -23,7 +23,6 @@ interface ProjectMetadata {
   users: IUserWithRoles[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles | null;
-  clients: IClient[];
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
@@ -182,7 +181,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         contact={projectMetadata.contact}
         assignedUser={projectMetadata.assignedUser || undefined}
         users={projectMetadata.users}
-        clients={projectMetadata.clients}
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
@@ -196,7 +194,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         phases={projectMetadata.phases}
         statuses={projectMetadata.statuses}
         users={projectMetadata.users}
-        clients={projectMetadata.clients}
         onTagsUpdate={handleTagsUpdate}
         initialTaskId={taskIdFromUrl}
         initialPhaseId={phaseIdFromUrl}

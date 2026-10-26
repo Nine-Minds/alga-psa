@@ -6,7 +6,6 @@ import Link from 'next/link';
 import type {
   Asset,
   CreateAssetRequest,
-  IClient,
   IClientLocation,
   IContact,
   MobileDeviceAsset,
@@ -21,6 +20,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -42,7 +42,7 @@ import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/as
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
+import { getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -81,7 +81,6 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
   printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
 };
 
-type ClientOptionSummary = { id: string; name: string };
 
 
 const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
@@ -97,9 +96,8 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [clients, setClients] = useState<ClientOptionSummary[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(true);
-  const [clientsError, setClientsError] = useState<string | null>(null);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [locationsError, setLocationsError] = useState<string | null>(null);
@@ -339,42 +337,6 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   useEffect(() => {
     let isMounted = true;
 
-    const loadClients = async () => {
-      try {
-        setClientsLoading(true);
-        setClientsError(null);
-        const clientList = await getAllClientsForAssets(false);
-        if (!isMounted) return;
-        setClients(
-          clientList.map((client: IClient) => ({
-            id: client.client_id,
-            name: client.client_name,
-          }))
-        );
-      } catch (err) {
-        console.error('Error loading clients:', err);
-        if (isMounted) {
-          setClientsError(t('assetForm.errors.clientsLoadFailed', {
-            defaultValue: 'Unable to load clients'
-          }));
-        }
-      } finally {
-        if (isMounted) {
-          setClientsLoading(false);
-        }
-      }
-    };
-
-    void loadClients();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [t]);
-
-  useEffect(() => {
-    let isMounted = true;
-
     const loadVendors = async () => {
       try {
         const list = await getVendorOptionsForAssets(asset?.vendor_id ?? null);
@@ -545,14 +507,6 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     if (asset?.printer) return <PrinterIcon className={iconClass} />;
     return null;
   };
-
-  const clientOptions = useMemo(() => (
-    clients.map(client => ({ value: client.id, label: client.name }))
-  ), [clients]);
-
-  const selectedClient = useMemo(() => (
-    clients.find(client => client.id === formData.client_id) || null
-  ), [clients, formData.client_id]);
 
   const locationOptions = useMemo(() => {
     const options = clientLocations.map((location) => ({
@@ -1374,24 +1328,24 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                   <label htmlFor="asset-client-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.client', { defaultValue: 'Client' })}
                   </label>
-                  <CustomSelect
+                  <ClientPicker
                     id="asset-client-select"
-                    value={formData.client_id}
-                    onValueChange={handleClientChange}
-                    options={clientOptions}
-                    placeholder={clientsLoading
-                      ? t('assetForm.placeholders.loadingClients', { defaultValue: 'Loading clients…' })
-                      : t('assetForm.placeholders.selectClient', { defaultValue: 'Select client' })}
-                    disabled={clientsLoading || saving}
+                    selectedClientId={formData.client_id || null}
+                    onSelect={(id) => {
+                      // The picker can emit null (clear); an asset keeps its client.
+                      if (id) handleClientChange(id);
+                    }}
+                    filterState={clientFilterState}
+                    onFilterStateChange={setClientFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
+                    placeholder={t('assetForm.placeholders.selectClient', { defaultValue: 'Select client' })}
+                    disabled={saving}
                     className="mt-1"
                   />
-                  {clientsError && (
-                    <p className="mt-2 text-sm text-red-600">{clientsError}</p>
-                  )}
-                  {selectedClient && (
+                  {formData.client_id && (
                     <div className="mt-2 text-sm text-[rgb(var(--color-text-600))] flex flex-wrap items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary-500" />
-                      <span>{selectedClient.name}</span>
                       <button
                         type="button"
                         onClick={() => void handleOpenClientDrawer()}

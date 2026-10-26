@@ -149,12 +149,10 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
 }));
 
 const billingClients = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
   getClientByIdForBilling: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: billingClients.getAllClientsForBilling,
   getClientByIdForBilling: billingClients.getClientByIdForBilling,
 }));
 
@@ -185,9 +183,6 @@ describe('ContractWizard fixed lines', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    billingClients.getAllClientsForBilling.mockResolvedValue([
-      { client_id: 'client-cool', client_name: 'Cool Cars', default_currency_code: 'USD' },
-    ]);
     billingClients.getClientByIdForBilling.mockResolvedValue({ client_name: 'Cool Cars' });
   });
 

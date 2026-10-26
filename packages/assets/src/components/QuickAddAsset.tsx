@@ -15,9 +15,9 @@ import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainst
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { CreateAssetRequest, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
+import { getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -78,7 +78,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -174,25 +173,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       isMounted = false;
     };
   }, [open]);
-
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        if (!clientId) {
-          const clientsData = await getAllClientsForAssets(false);
-          setClients(clientsData);
-        }
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        setError(t('quickAddAsset.errors.fetchClientsFailed', {
-          defaultValue: 'Failed to fetch clients'
-        }));
-      }
-    };
-    if (open) {
-      fetchClients();
-    }
-  }, [open, clientId, t]);
 
   const effectiveClientId = clientId || selectedClientId;
 
@@ -721,7 +701,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 <div className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                   <ClientPicker
                     {...withDataAutomationId({ id: 'client-picker' })}
-                    clients={clients}
                     selectedClientId={selectedClientId}
                     onSelect={(id) => {
                       setSelectedClientId(id);
@@ -980,7 +959,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
           setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
         },

@@ -9,9 +9,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
@@ -152,7 +152,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [versions, setVersions] = useState<IQuote[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
@@ -189,9 +188,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const loadQuote = async () => {
     try {
       setIsLoading(true);
-      const [loadedQuote, loadedClients, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
+      const [loadedQuote, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
         getQuote(quoteId),
-        getAllClientsForBilling(false),
         getContactsForPicker('active'),
         getQuoteApprovalSettings(),
         getQuoteDocumentTemplates(),
@@ -207,12 +205,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       if (isActionPermissionError(loadedContacts) || isActionMessageError(loadedContacts)) {
         throw new Error(getErrorMessage(loadedContacts));
       }
-      if (isActionPermissionError(loadedClients) || isActionMessageError(loadedClients)) {
-        throw new Error(getErrorMessage(loadedClients));
-      }
 
       setQuote(loadedQuote);
-      setClients(loadedClients);
       setContacts(loadedContacts);
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
@@ -233,7 +227,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const client = useMemo(() => clients.find((entry) => entry.client_id === quote?.client_id) ?? null, [clients, quote?.client_id]);
+  const { client } = useBillingClient(quote?.client_id);
   const contact = useMemo(() => contacts.find((entry) => entry.contact_name_id === quote?.contact_id) ?? null, [contacts, quote?.contact_id]);
   const acceptedOptionalItems = useMemo(
     () => (quote?.quote_items || []).filter((item) => item.is_optional),

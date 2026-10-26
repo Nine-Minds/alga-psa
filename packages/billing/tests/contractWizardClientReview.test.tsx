@@ -30,12 +30,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 const mocks = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
   getClientByIdForBilling: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: mocks.getAllClientsForBilling,
   getClientByIdForBilling: mocks.getClientByIdForBilling,
 }));
 
@@ -92,13 +90,6 @@ const buildData = (overrides: Partial<ContractWizardData> = {}): ContractWizardD
 describe('contract wizard client projection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getAllClientsForBilling.mockResolvedValue([
-      {
-        client_id: 'client-cool',
-        client_name: 'Cool Cars',
-        default_currency_code: 'USD',
-      },
-    ]);
   });
 
   afterEach(() => {
@@ -107,6 +98,11 @@ describe('contract wizard client projection', () => {
 
   it('commits the canonical client id when the picker selects a client', async () => {
     const updateData = vi.fn();
+    mocks.getClientByIdForBilling.mockResolvedValue({
+      client_id: 'client-cool',
+      client_name: 'Cool Cars',
+      default_currency_code: 'EUR',
+    });
 
     render(
       <ContractBasicsStep
@@ -121,15 +117,16 @@ describe('contract wizard client projection', () => {
       />,
     );
 
-    await waitFor(() => expect(mocks.getAllClientsForBilling).toHaveBeenCalled());
     fireEvent.click(screen.getByTestId('client-picker-trigger'));
 
     expect(updateData).toHaveBeenCalledWith({
       client_id: 'client-cool',
-      currency_code: 'USD',
       // Changing the client clears any previously chosen billing profile.
       billing_profile_id: null,
     });
+    // The contract currency follows the picked client, read by id (no client list is loaded).
+    await waitFor(() => expect(updateData).toHaveBeenCalledWith({ currency_code: 'EUR' }));
+    expect(mocks.getClientByIdForBilling).toHaveBeenCalledWith('client-cool');
   });
 
   it('renders the chosen client name on review and never the unselected fallback', async () => {

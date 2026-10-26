@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
@@ -28,7 +28,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { updateContact, getInteractionsForEntity } from '@alga-psa/clients/actions';
+import { updateContact, getInteractionsForEntity, getClientById } from '@alga-psa/clients/actions';
 import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
@@ -59,7 +59,14 @@ const isReturnedActionError = (value: unknown) =>
 interface ContactBentoLayoutProps {
   id?: string;
   contact: IContact;
-  clients: IClient[];
+  /**
+   * @deprecated Ignored. The layout no longer needs a tenant client list: the hero name comes
+   * from `clientName` (or a by-id lookup) and the change-client picker searches on the server.
+   * Kept optional so ticket and interaction surfaces that still pass a list keep compiling.
+   */
+  clients?: IClient[];
+  /** Name of the contact's current client, when the caller already has it (saves a lookup). */
+  clientName?: string | null;
   documents?: IDocument[];
   /** AlgaDesk composes contact details without the PSA documents surface. */
   showDocuments?: boolean;
@@ -216,7 +223,7 @@ function Eyebrow({ children, first = false }: { children: React.ReactNode; first
 export function ContactBentoLayout({
   id = 'contact-bento',
   contact: initialContact,
-  clients,
+  clientName: initialClientName,
   documents = [],
   showDocuments = true,
   showRelatedWork = true,
@@ -291,10 +298,37 @@ export function ContactBentoLayout({
     );
   };
 
-  const clientName = useMemo(
-    () => clients.find((client) => client.client_id === contact.client_id)?.client_name ?? null,
-    [clients, contact.client_id],
+  // Hero client name. Seeded by the caller; re-resolved by id only when the contact's client
+  // changes (after an edit). Stale responses for a previously selected client are ignored.
+  const [resolvedClient, setResolvedClient] = useState<{ clientId: string | null; name: string | null }>(
+    () => ({ clientId: initialContact.client_id ?? null, name: initialClientName ?? null }),
   );
+  useEffect(() => {
+    const clientId = contact.client_id ?? null;
+    if (!clientId) {
+      setResolvedClient({ clientId: null, name: null });
+      return;
+    }
+    if (resolvedClient.clientId === clientId && resolvedClient.name) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const client = await getClientById(clientId);
+        if (cancelled) return;
+        setResolvedClient({
+          clientId,
+          name: client && !isReturnedActionError(client) ? client.client_name : null,
+        });
+      } catch (error) {
+        if (!cancelled) console.error('Error loading contact client name:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-resolve only when the client id changes
+  }, [contact.client_id]);
+  const clientName = resolvedClient.clientId === (contact.client_id ?? null) ? resolvedClient.name : null;
 
   const primaryPhone = contact.default_phone_number
     || contact.phone_numbers?.find((phone) => phone.is_default)?.phone_number
@@ -361,7 +395,6 @@ export function ContactBentoLayout({
       <ContactDetailsEdit
         id={`${id}-edit`}
         initialContact={contact}
-        clients={clients}
         isInDrawer
         onSave={(updated) => {
           setContact(updated);

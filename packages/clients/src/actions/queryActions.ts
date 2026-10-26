@@ -367,9 +367,13 @@ export const getContactsByClient = withAuth(async (
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
     const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
 
+    // Every row shares one client; resolve its logo once (D5).
+    const clientLogoUrl = (await getClientLogoUrlsBatch([clientId], tenant)).get(clientId) ?? null;
+
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+      client_logo_url: clientLogoUrl,
     }));
 
     return contactsWithAvatars;
@@ -505,9 +509,23 @@ export const getAllContacts = withAuth(async (
       console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
     }
 
+    // Logos only for the distinct clients referenced by these contacts (D5).
+    let clientLogoMap: Map<string, string | null> = new Map();
+    try {
+      const distinctClientIds = Array.from(
+        new Set(contacts.map((c) => c.client_id).filter(Boolean))
+      ) as string[];
+      if (distinctClientIds.length > 0) {
+        clientLogoMap = await getClientLogoUrlsBatch(distinctClientIds, tenant);
+      }
+    } catch (logoErr) {
+      console.warn('[getAllContacts] Failed to fetch client logos in batch:', logoErr);
+    }
+
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+      client_logo_url: contact.client_id ? clientLogoMap.get(contact.client_id) ?? null : null,
     }));
 
     return contactsWithAvatars;

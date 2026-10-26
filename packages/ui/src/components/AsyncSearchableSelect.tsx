@@ -339,7 +339,6 @@ export function AsyncSearchableSelect({
               {options.map((option) => (
                 <Command.Item
                   key={option.value}
-                  id={id ? `${id}-option-${option.value}` : undefined}
                   value={option.value}
                   title={option.title}
                   disabled={option.disabled}
@@ -357,7 +356,11 @@ export function AsyncSearchableSelect({
                     value === option.value && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
-                  <span className="flex-1 flex items-center gap-2 min-w-0">
+                  {/* cmdk overwrites `id` on Command.Item, so the stable option id lives on this child; clicks bubble to the item. */}
+                  <span
+                    id={id ? `${id}-option-${option.value}` : undefined}
+                    className="flex-1 flex items-center gap-2 min-w-0"
+                  >
                     {option.icon}
                     {option.badge && (
                       <span className={cn(

@@ -17,6 +17,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { ClientPickerSearchProvider } from '@alga-psa/ui/context';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -150,9 +151,9 @@ vi.mock('@alga-psa/billing/actions/usageActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: vi.fn(async () => [
-    { client_id: 'client-1', client_name: 'Solutions by Swift', is_inactive: false, client_type: 'company' },
-  ]),
+  getClientByIdForBilling: vi.fn(async () => (
+    { client_id: 'client-1', client_name: 'Solutions by Swift', is_inactive: false, client_type: 'company' }
+  )),
 }));
 
 vi.mock('@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits', () => ({
@@ -278,8 +279,17 @@ describe('usage tracking deep-link prefill', () => {
       } as never,
     ];
 
+    // The async client picker resolves the selected client's label through the shell's search.
+    const searchClients = vi.fn(async () => ({
+      clients: [{ client_id: 'client-1', client_name: 'Solutions by Swift' }],
+      total: 1,
+    }));
+    const withSearch = (ui: React.ReactElement) => (
+      <ClientPickerSearchProvider value={{ searchClients: searchClients as never }}>{ui}</ClientPickerSearchProvider>
+    );
+
     const { rerender } = render(
-      <UsageTracking initialServices={services} initialClientId={null} initialServiceId={null} />
+      withSearch(<UsageTracking initialServices={services} initialClientId={null} initialServiceId={null} />)
     );
 
     await waitFor(() => {
@@ -287,11 +297,13 @@ describe('usage tracking deep-link prefill', () => {
     });
 
     rerender(
-      <UsageTracking
-        initialServices={services}
-        initialClientId="client-1"
-        initialServiceId="svc-usage"
-      />
+      withSearch(
+        <UsageTracking
+          initialServices={services}
+          initialClientId="client-1"
+          initialServiceId="svc-usage"
+        />
+      )
     );
 
     // Both filters follow the hydrated props: the client select shows the

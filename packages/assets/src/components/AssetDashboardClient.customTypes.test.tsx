@@ -41,8 +41,8 @@ vi.mock('../actions/assetDrawerActions', () => ({
 
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
-  getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
+  getClientByIdForAssets: vi.fn(async () => null),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
@@ -67,7 +67,7 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
 // Named views have their own tests; here they only need to stay out of the way
 // (the real hook reaches the server actions and the auth stack).
 vi.mock('@alga-psa/list-views/hooks', () => ({
-  useListViews: () => ({}),
+  useListViews: () => ({ isLoading: false, views: [] }),
 }));
 vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }));
 vi.mock('./QuickAddAsset', () => ({ QuickAddAsset: () => null }));

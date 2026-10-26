@@ -9,7 +9,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
   getContractLinePresets: vi.fn(),
   getContractLinePresetServiceCounts: vi.fn(),
   getContractLinePresetServices: vi.fn(),
@@ -17,7 +17,7 @@ const actionMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: actionMocks.getAllClientsForBilling,
+  getClientByIdForBilling: actionMocks.getClientByIdForBilling,
   createClientContractForBilling: vi.fn(),
 }));
 
@@ -72,10 +72,15 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+const pickerClients = [
+  { client_id: 'client-eur', client_name: 'Euro Client', default_currency_code: 'EUR' },
+  { client_id: 'client-usd', client_name: 'Dollar Client', default_currency_code: 'USD' },
+];
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ clients, onSelect }: { clients: Array<{ client_id: string; client_name: string }>; onSelect: (id: string) => void }) => (
+  ClientPicker: ({ onSelect }: { onSelect: (id: string) => void }) => (
     <div data-testid="client-picker">
-      {clients.map((c) => (
+      {pickerClients.map((c) => (
         <button key={c.client_id} type="button" onClick={() => onSelect(c.client_id)}>
           {`pick ${c.client_name}`}
         </button>
@@ -110,10 +115,6 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
-const clients = [
-  { client_id: 'client-eur', client_name: 'Euro Client', default_currency_code: 'EUR' },
-  { client_id: 'client-usd', client_name: 'Dollar Client', default_currency_code: 'USD' },
-];
 
 const { ContractDialog } = await import('../src/components/billing-dashboard/contracts/ContractDialog');
 
@@ -129,7 +130,7 @@ const poAmountAdornment = () => {
 describe('ContractDialog PO amount currency', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue(clients);
+    actionMocks.getClientByIdForBilling.mockImplementation(async (id: string) => pickerClients.find((c) => c.client_id === id) ?? null);
     actionMocks.getContractLinePresets.mockResolvedValue([]);
     actionMocks.getContractLinePresetServiceCounts.mockResolvedValue({});
   });
