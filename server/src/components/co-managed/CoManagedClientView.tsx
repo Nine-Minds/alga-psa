@@ -41,6 +41,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   // A cancelled setup stays listed as history and does not stop the client from
   // being set up again. A departed workspace's history is retained, so the client
   // shows that ended relationship instead of offering setup.
+  // LEVERAGE: pattern co-managed-setup-open — same derivation as getCoManagedClientManagement.canSetUp and CoManagedClientSummary
   const hasLiveRelationship = view.relationships.some((entry) => !entry.ended);
   const hasRetainedRelationship = view.relationships.some((entry) => entry.retained);
   const endedOn = selected?.ended && selected.endedAt

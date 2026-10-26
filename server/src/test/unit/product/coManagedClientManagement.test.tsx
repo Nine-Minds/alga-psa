@@ -72,7 +72,7 @@ const relationship = (over: Record<string, unknown> = {}) => ({
 });
 const view = (over: Record<string, unknown> = {}) => ({
   clientId: 'client', clientName: 'Acme', selectionRequired: false, selectedRelationshipId: null as string | null,
-  canManage: true, relationships: [] as ReturnType<typeof relationship>[], ...over,
+  canManage: true, canSetUp: true, relationships: [] as ReturnType<typeof relationship>[], ...over,
 });
 const billingState = (over: Record<string, unknown> = {}) => ({
   capacity: 5, allocated: 2, available: 3, canGrow: true, isReadOnly: false, graceEndsAt: null,

@@ -4,9 +4,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedClientManagementView } from '@alga-psa/co-managed';
 
-/** Compact client-record summary. Its action opens the stable co-managed view
- * in place (setup for an unconfigured client, history or management for an
- * existing relationship) without navigating the client route. */
+/** Compact client-record summary and the client header's only co-managed
+ * entry. Its action opens the stable co-managed view in place: setup for an
+ * unconfigured client (offered only when the view grants setup authority),
+ * history or management for an existing relationship. */
 export default function CoManagedClientSummary({ view, idPrefix, selectedRelationshipId, onSelectRelationship, onOpenTab }: {
   view: CoManagedClientManagementView;
   clientId: string;
@@ -24,6 +25,20 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
       {label}
     </Button>
   );
+  // With nothing live or retained the client is not enabled (a cancelled setup
+  // does not count), and only an actor the view authorizes for setup sees Enable.
+  // LEVERAGE: pattern co-managed-setup-open — same derivation as getCoManagedClientManagement.canSetUp and CoManagedClientView
+  const setupOpen = view.relationships.every((entry) => entry.ended && !entry.retained);
+  if (!selected && setupOpen) {
+    return (
+      <span id={`${idPrefix}-summary`} className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
+        {t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
+        {view.canSetUp && action(
+          t('coManaged.provisioning.create', { defaultValue: 'Enable co-managed IT' }),
+          () => onOpenTab?.('co-managed'))}
+      </span>
+    );
+  }
   if (view.selectionRequired) {
     const live = view.relationships.filter((entry) => !entry.ended);
     const history = view.relationships[0];
@@ -44,16 +59,9 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
       </span>
     );
   }
-  if (!selected) {
-    return (
-      <span id={`${idPrefix}-summary`} className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
-        {t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
-        {action(
-          t('coManaged.provisioning.create', { defaultValue: 'Enable co-managed IT' }),
-          () => onOpenTab?.('co-managed'))}
-      </span>
-    );
-  }
+  // Without a selection the view requires one (handled above); this keeps the
+  // selected relationship non-null below.
+  if (!selected) return null;
   if (selected.ended) {
     return (
       <span id={`${idPrefix}-summary`} className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-600))]">

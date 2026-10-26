@@ -365,6 +365,9 @@ export interface CoManagedClientManagementView {
   selectionRequired: boolean;
   selectedRelationshipId: string | null;
   canManage: boolean;
+  /** Setup is open for this client (no live or retained relationship) and the
+   * actor holds the same entitlement-aware authority provisioning requires. */
+  canSetUp: boolean;
   relationships: CoManagedClientRelationshipView[];
 }
 
@@ -375,7 +378,7 @@ export interface CoManagedClientManagementView {
 export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSessionActor, clientId: string,
   relationshipId?: string): Promise<CoManagedClientManagementView> {
   if (!isCoManagedUuid(clientId) || (relationshipId !== undefined && !isCoManagedUuid(relationshipId))) deny();
-  return withManagement(db, actor, 'read', async context => {
+  const view = await withManagement(db, actor, 'read', async (context): Promise<Omit<CoManagedClientManagementView, 'canSetUp'>> => {
     if (hidden(context, ['client_id', 'clients.client_id'])) deny();
     const client = await setupChoices(context).where('q.client_id', clientId).first('q.client_id', 'q.client_name');
     if (!client) deny();
@@ -424,6 +427,11 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
       selectionRequired: !selected && relationships.length > 0,
       selectedRelationshipId: selected?.relationshipId ?? null, canManage: context.canManage, relationships };
   });
+  // A cancelled setup does not block a new one; a live or retained (departed)
+  // relationship does. Only then is the provisioning authority evaluated.
+  // LEVERAGE: pattern co-managed-setup-open — "no live and no retained relationship" is also derived in CoManagedClientView and CoManagedClientSummary
+  const setupOpen = view.relationships.every(entry => entry.ended && !entry.retained);
+  return { ...view, canSetUp: setupOpen && view.canManage && await canManageCoManagedClient(db, actor, clientId) };
 }
 
 export async function changeCoManagedAllocationForActor(db: Knex, actor: CoManagedSessionActor,

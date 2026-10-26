@@ -9,7 +9,6 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
-import CoManagedClientAction from '@/components/co-managed/CoManagedClientAction';
 
 const getCachedClient = cache((id: string) => getClientById(id));
 
@@ -73,7 +72,6 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             isInDrawer={false}
             surveySummary={surveySummary}
             isAlgaDeskMode={isAlgaDesk}
-            headerActions={product === 'psa' ? <CoManagedClientAction clientId={id} /> : undefined}
           />
         </div>
       </AIChatContextBoundary>

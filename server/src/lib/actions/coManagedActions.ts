@@ -5,21 +5,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, type CoManagedPurchaseOperation } from '@alga-psa/licensing';
 
-import { canManageCoManagedClient, getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
+import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement, resolveCoManagedManagementTarget,
   getCoManagedOperationTarget as readCoManagedOperationTarget, getCoManagedClientOverview as readCoManagedClientOverview,
   type CoManagedManagementSelector } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { isEnterpriseEdition } from '../features';
-
-export const canOpenCoManagedClientProvisioning = withAuth(async (user, { tenant }, clientId: string) => {
-  if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'read') ||
-      !await hasPermission(user, 'co_management', 'manage') || !await hasPermission(user, 'client', 'read') ||
-      !await hasPermission(user, 'ticket', 'read')) return false;
-  const actor = await coManagedBrowserActor(user, tenant);
-  const { knex } = await createTenantKnex(tenant);
-  return canManageCoManagedClient(knex, actor, clientId);
-});
 
 export interface CoManagedPurchaseAvailability {
   deployment: 'hosted' | 'self_host';

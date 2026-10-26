@@ -200,9 +200,25 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
         email: `pending-${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'Tech', token: `token-${randomUUID()}`,
         used_at: null, expires_at: new Date(Date.now() + 3600000), role_id: randomUUID(), metadata: {} });
       const view = await getCoManagedClientManagement(f.db, f.actor, f.operation.request.clientId);
-      expect(view).toMatchObject({ clientId: f.operation.request.clientId, selectionRequired: false,
+      expect(view).toMatchObject({ clientId: f.operation.request.clientId, selectionRequired: false, canSetUp: false,
         selectedRelationshipId: f.operation.relationship_id, relationships: [{ operationId: f.operation.operation_id,
           canManage: true, seats: 2, usedSeats: 2 }] });
+    });
+
+    it('opens setup on the client view only when nothing is live or retained and the actor may provision', async () => {
+      const f = await fixture();
+      const clientId = f.operation.request.clientId;
+      const relationships = () => tenantDb(f.db, f.operation.customer_tenant).table('co_management_relationships')
+        .where('relationship_id', f.operation.relationship_id);
+      expect((await getCoManagedClientManagement(f.db, f.actor, clientId)).canSetUp).toBe(false);
+      // A cancelled setup (ended before acceptance, never retained) does not block a new one.
+      await relationships().update({ state: 'terminated', ended_at: new Date() });
+      await f.home.table('co_managed_provisioning_operations').where('operation_id', f.operation.operation_id).update({ state: 'cancelled' });
+      expect((await getCoManagedClientManagement(f.db, f.actor, clientId)).canSetUp).toBe(true);
+      // Setup keeps the provisioning entitlement: a sponsor without Pro (or self-host capacity) gets no Enable.
+      await f.home.table('tenants').update({ plan: 'essentials' });
+      expect(await canManageCoManagedClient(f.db, f.actor, clientId)).toBe(false);
+      expect((await getCoManagedClientManagement(f.db, f.actor, clientId)).canSetUp).toBe(false);
     });
 
     it('shows the setup state on the client view while acceptance is pending, including cleanup progress', async () => {
@@ -260,7 +276,8 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       // date, never "not enabled" (writes above still require the explicit selection).
       await tenantDb(f.db, second.customer_tenant).table('co_management_relationships').update({ ended_at: new Date(Date.now() + 1000) });
       const ended = await getCoManagedClientManagement(f.db, f.actor, clientId);
-      expect(ended).toMatchObject({ selectionRequired: false, selectedRelationshipId: second.relationship_id });
+      // A retained (departed) relationship closes setup, so the client offers no Enable.
+      expect(ended).toMatchObject({ selectionRequired: false, selectedRelationshipId: second.relationship_id, canSetUp: false });
       expect(ended.relationships.find(entry => entry.relationshipId === second.relationship_id))
         .toMatchObject({ ended: true, retained: true, state: 'terminated', endedAt: expect.any(String), usedSeats: null });
     });
