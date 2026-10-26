@@ -1,0 +1,116 @@
+{
+  "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+  "contact": {
+    "full_name": "CSV Active 0238 Short",
+    "email": "csv.active.0238@example.test"
+  },
+  "tagA": "TM-A mvooucym",
+  "tagB": "TM-B mvooucym",
+  "steps": [
+    {
+      "step": "before",
+      "at": "2026-10-26T03:19:38.014Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T02:43:10.944+00:00"
+        }
+      ],
+      "tag_mappings": []
+    },
+    {
+      "step": "01-set-A",
+      "at": "2026-10-26T03:19:43.989Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:43.169+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "57ab0727-1f77-4569-b865-76ed44d9df67",
+          "tag_id": "0ca23aa4-25c0-4074-bc38-ad6dc53ae26a",
+          "tag_text": "TM-A mvooucym",
+          "tagged_id": "6293990b-7a7e-44cf-9335-7264e15b6644"
+        }
+      ]
+    },
+    {
+      "step": "02-blank-clears",
+      "at": "2026-10-26T03:19:46.045Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:45.248+00:00"
+        }
+      ],
+      "tag_mappings": []
+    },
+    {
+      "step": "03-set-A-again",
+      "at": "2026-10-26T03:19:48.224Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:47.438+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "ae75006b-3833-4548-9000-f0b84f63dc43",
+          "tag_id": "0ca23aa4-25c0-4074-bc38-ad6dc53ae26a",
+          "tag_text": "TM-A mvooucym",
+          "tagged_id": "6293990b-7a7e-44cf-9335-7264e15b6644"
+        }
+      ]
+    },
+    {
+      "step": "04-replace-with-B",
+      "at": "2026-10-26T03:19:50.342Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:49.637+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "c964b656-6afc-4778-8544-6cd8da3ee7d3",
+          "tag_id": "ab755b3d-3ba6-47c0-a36a-9c62df0caee6",
+          "tag_text": "TM-B mvooucym",
+          "tagged_id": "6293990b-7a7e-44cf-9335-7264e15b6644"
+        }
+      ]
+    },
+    {
+      "step": "06-restore-blank",
+      "at": "2026-10-26T03:19:55.623Z",
+      "contacts": [
+        {
+          "contact_name_id": "6293990b-7a7e-44cf-9335-7264e15b6644",
+          "full_name": "CSV Active 0238 Short",
+          "email": "csv.active.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:55.017+00:00"
+        }
+      ],
+      "tag_mappings": []
+    }
+  ]
+}

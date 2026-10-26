@@ -1,0 +1,123 @@
+{
+  "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+  "contact": {
+    "full_name": "CSV Native 0238 Updated",
+    "email": "csv.native.0238@example.test"
+  },
+  "tagA": "TM-A mvootcev",
+  "tagB": "TM-B mvootcev",
+  "steps": [
+    {
+      "step": "before",
+      "at": "2026-10-26T03:18:50.647Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:17:28.493+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "fdc164a0-5141-41db-993c-c81bd8f1839c",
+          "tag_id": "6d688f4f-713c-43e2-8c8a-5d4be4fd4d84",
+          "tag_text": "TM-A mvoorh4g",
+          "tagged_id": "ea37655c-b972-4db9-99b1-68601f24b650"
+        }
+      ]
+    },
+    {
+      "step": "01-set-A",
+      "at": "2026-10-26T03:18:56.528Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:18:55.688+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "5d1ecdfe-af4f-4bd5-9eab-a04afc35d481",
+          "tag_id": "06a5a697-fbb5-4265-8013-2616ac586b6f",
+          "tag_text": "TM-A mvootcev",
+          "tagged_id": "ea37655c-b972-4db9-99b1-68601f24b650"
+        }
+      ]
+    },
+    {
+      "step": "02-blank-clears",
+      "at": "2026-10-26T03:18:58.624Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:18:57.789+00:00"
+        }
+      ],
+      "tag_mappings": []
+    },
+    {
+      "step": "03-set-A-again",
+      "at": "2026-10-26T03:19:00.657Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:18:59.821+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "fe4b4c35-f476-4345-b8b9-5b435e302a09",
+          "tag_id": "06a5a697-fbb5-4265-8013-2616ac586b6f",
+          "tag_text": "TM-A mvootcev",
+          "tagged_id": "ea37655c-b972-4db9-99b1-68601f24b650"
+        }
+      ]
+    },
+    {
+      "step": "04-replace-with-B",
+      "at": "2026-10-26T03:19:02.642Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:01.803+00:00"
+        }
+      ],
+      "tag_mappings": [
+        {
+          "mapping_id": "0fdfccb1-fc6d-44e0-b7f9-468cc16f1cf7",
+          "tag_id": "7ff695ab-dc49-4758-a2cd-162f7d3f360a",
+          "tag_text": "TM-B mvootcev",
+          "tagged_id": "ea37655c-b972-4db9-99b1-68601f24b650"
+        }
+      ]
+    },
+    {
+      "step": "06-restore-blank",
+      "at": "2026-10-26T03:19:07.241Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T03:19:06.402+00:00"
+        }
+      ],
+      "tag_mappings": []
+    }
+  ]
+}

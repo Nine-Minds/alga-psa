@@ -1,0 +1,35 @@
+native-oz build-verified {"dist":".next-review-final-54e75edf","revision":"54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b","buildId":"build-1792983401994","health":200}
+native-oz contact-exists-once-before {"contacts":1}
+native-oz Fresh form login {"email":"qa@emeraldcity.oz","tenant":"fa7f912f-6b62-463e-85cc-ffedab47ac44"}
+native-oz navigate "/msp/contacts"
+native-oz csv import 01-set-A {"csv":"full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootcev\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+native-oz 01-set-A-import-complete {"complete":true,"updateExisting":true}
+native-oz 01-set-A-db-tags {"tags":["TM-A mvootcev"],"contacts":1}
+native-oz 01-set-A-ui-chips-without-reload {"chips":["TM-A mvootcev"]}
+native-oz 01-set-A-contact-listed-once {"rows":1}
+native-oz 01-set-A-same-document {"timeOrigin":1792984732866.6}
+native-oz csv import 02-blank-clears {"csv":"full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+native-oz 02-blank-clears-import-complete {"complete":true,"updateExisting":true}
+native-oz 02-blank-clears-db-tags {"tags":[],"contacts":1}
+native-oz 02-blank-clears-ui-chips-without-reload {"chips":[]}
+native-oz 02-blank-clears-contact-listed-once {"rows":1}
+native-oz 02-blank-clears-same-document {"timeOrigin":1792984732866.6}
+native-oz csv import 03-set-A-again {"csv":"full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootcev\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+native-oz 03-set-A-again-import-complete {"complete":true,"updateExisting":true}
+native-oz 03-set-A-again-db-tags {"tags":["TM-A mvootcev"],"contacts":1}
+native-oz 03-set-A-again-ui-chips-without-reload {"chips":["TM-A mvootcev"]}
+native-oz 03-set-A-again-contact-listed-once {"rows":1}
+native-oz 03-set-A-again-same-document {"timeOrigin":1792984732866.6}
+native-oz csv import 04-replace-with-B {"csv":"full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-B mvootcev\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+native-oz 04-replace-with-B-import-complete {"complete":true,"updateExisting":true}
+native-oz 04-replace-with-B-db-tags {"tags":["TM-B mvootcev"],"contacts":1}
+native-oz 04-replace-with-B-ui-chips-without-reload {"chips":["TM-B mvootcev"]}
+native-oz 04-replace-with-B-contact-listed-once {"rows":1}
+native-oz 04-replace-with-B-same-document {"timeOrigin":1792984732866.6}
+native-oz 05-reload-agrees {"chips":["TM-B mvootcev"]}
+native-oz csv import 06-restore-blank {"csv":"full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+native-oz 06-restore-blank-import-complete {"complete":true,"updateExisting":true}
+native-oz 06-restore-blank-db-tags {"tags":[],"contacts":1}
+native-oz 06-restore-blank-ui-chips-without-reload {"chips":[]}
+native-oz 06-restore-blank-contact-listed-once {"rows":1}
+native-oz FAILED 06-restore-blank-same-document {"timeOrigin":1792984732866.6}

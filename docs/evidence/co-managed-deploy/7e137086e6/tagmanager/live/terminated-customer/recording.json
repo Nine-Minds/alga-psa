@@ -1,0 +1,191 @@
+{
+  "scenario": "terminated-customer",
+  "recordedAt": "2026-10-26T03:19:56.756Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "relationship-terminated-before",
+      "passed": true,
+      "at": "2026-10-26T03:19:57.101Z",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "id": "import-refused-read-only",
+      "passed": true,
+      "at": "2026-10-26T03:20:04.137Z",
+      "data": {
+        "result": "Import Contacts\nImport Results\nDownload Failed Records\nStatus\n\t\nName\n\t\nEmail\n\t\nMessage\n\n\n\t\nMUST NOT SAVE mvoouvol\n\t\nadmin@kansasfarms.test\n\t\nThis co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\nClose"
+      }
+    },
+    {
+      "id": "contacts-tag-tables-byte-identical",
+      "passed": true,
+      "at": "2026-10-26T03:20:05.219Z",
+      "data": {
+        "counts": {
+          "contacts": 1,
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        }
+      }
+    },
+    {
+      "id": "relationship-still-terminated",
+      "passed": true,
+      "at": "2026-10-26T03:20:05.219Z",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "id": "contact-listed-once-unchanged-chips",
+      "passed": true,
+      "at": "2026-10-26T03:20:05.224Z",
+      "data": {
+        "chipsBefore": []
+      }
+    },
+    {
+      "id": "reload-name-unchanged",
+      "passed": true,
+      "at": "2026-10-26T03:20:08.801Z",
+      "data": {
+        "full_name": "Dorothy Gale"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:19:56.913Z",
+      "seconds": 0.157,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:57.101Z",
+      "seconds": 0.345,
+      "title": "relationship-terminated-before",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:59.977Z",
+      "seconds": 3.221,
+      "actor": "terminated-customer-admin",
+      "title": "Fresh form login",
+      "data": {
+        "email": "admin@kansasfarms.test",
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:02.179Z",
+      "seconds": 5.423,
+      "actor": "terminated-customer-admin",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    },
+    {
+      "at": "2026-10-26T03:20:04.137Z",
+      "seconds": 7.381,
+      "actor": "terminated-customer-admin",
+      "title": "csv import 02-blank-update",
+      "data": {
+        "csv": "full_name,email,tags\nMUST NOT SAVE mvoouvol,admin@kansasfarms.test,\n",
+        "updateExisting": true,
+        "complete": false,
+        "outcome": "results",
+        "mappingHasTags": true,
+        "result": "Import Contacts\nImport Results\nDownload Failed Records\nStatus\n\t\nName\n\t\nEmail\n\t\nMessage\n\n\n\t\nMUST NOT SAVE mvoouvol\n\t\nadmin@kansasfarms.test\n\t\nThis co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\nClose"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:04.137Z",
+      "seconds": 7.381,
+      "actor": "terminated-customer-admin",
+      "title": "import-refused-read-only",
+      "data": {
+        "result": "Import Contacts\nImport Results\nDownload Failed Records\nStatus\n\t\nName\n\t\nEmail\n\t\nMessage\n\n\n\t\nMUST NOT SAVE mvoouvol\n\t\nadmin@kansasfarms.test\n\t\nThis co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\nClose"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:05.219Z",
+      "seconds": 8.463,
+      "actor": "terminated-customer-admin",
+      "title": "contacts-tag-tables-byte-identical",
+      "data": {
+        "counts": {
+          "contacts": 1,
+          "tag_definitions": 1,
+          "tag_mappings": 1
+        }
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:05.219Z",
+      "seconds": 8.463,
+      "actor": "terminated-customer-admin",
+      "title": "relationship-still-terminated",
+      "data": {
+        "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+        "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+        "state": "terminated",
+        "ended_at": "2026-10-26T00:13:30.705+00:00",
+        "updated_at": "2026-10-26T00:13:30.705+00:00"
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:05.224Z",
+      "seconds": 8.468,
+      "actor": "terminated-customer-admin",
+      "title": "contact-listed-once-unchanged-chips",
+      "data": {
+        "chipsBefore": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:20:08.801Z",
+      "seconds": 12.045,
+      "actor": "terminated-customer-admin",
+      "title": "reload-name-unchanged",
+      "data": {
+        "full_name": "Dorothy Gale"
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 12.96,
+  "actors": [
+    {
+      "name": "terminated-customer-admin",
+      "email": "admin@kansasfarms.test",
+      "tenant": "3261f313-8e04-45df-94bc-0343e92ba454"
+    }
+  ]
+}

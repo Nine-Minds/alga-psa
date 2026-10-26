@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-26T03:16:58.597016Z",
+  "fixRevision": "7e137086e6da79e3d53570abf4d5ac836255f19a",
+  "servedSourceRevision": "54e75edfabfd814edb9ca0685a5e46d0e050a470",
+  "servedSourceNote": "54e75edfab is the evidence-only commit directly after the fix 7e137086e6 (adds test/typecheck/mutation logs only).",
+  "revisionStamp": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+  "buildId": "build-1792983401994",
+  "dist": ".next-review-final-54e75edf",
+  "port": 23374,
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "pid": 119585,
+  "NEXT_DIST_DIR": ".next-review-final-54e75edf",
+  "NODE_ENV": "production",
+  "health": 200,
+  "boardService": {
+    "name": "review-app",
+    "sessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:25",
+    "status": "suspended",
+    "createdAt": "2026-10-26T03:12:27.391Z",
+    "suspendedAt": "2026-10-26T03:12:30.796Z",
+    "suspendedReason": "\"Draft Implementation\" does not use it",
+    "readiness": {
+      "port": 23374,
+      "path": "/api/health"
+    }
+  },
+  "boardServiceNote": "The board admitted review-app:25 (created=true) and marked it suspended 3s later because the card step does not use it; the supervised process keeps serving, as in the 8c96987a round. No numeric admission ledger was emitted by workflow-ensure-service.",
+  "buildService": "review-build-prep-54e75edf (session :21, prepare-only, typecheck + next build, result 0, concluded)",
+  "workers": "Not rebuilt: the fix changes only packages/tags/src/components/{TagManager.tsx,useReconciledTags.ts}, two test files and packages/tags/vitest.config.ts; grep of services/workflow-worker/dist and ee/temporal-workflows/dist finds no TagManager/useReconciledTags code."
+}

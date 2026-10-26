@@ -1,0 +1,69 @@
+{
+  "scenario": "native-oz",
+  "recordedAt": "2026-10-26T03:17:23.390Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "contact-exists-once-before",
+      "passed": true,
+      "at": "2026-10-26T03:17:23.734Z",
+      "data": {
+        "contacts": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:17:23.439Z",
+      "seconds": 0.049,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:23.734Z",
+      "seconds": 0.344,
+      "title": "contact-exists-once-before",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:25.651Z",
+      "seconds": 2.261,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:17:27.588Z",
+      "seconds": 4.198,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out import finished false",
+  "durationSeconds": 66.48,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

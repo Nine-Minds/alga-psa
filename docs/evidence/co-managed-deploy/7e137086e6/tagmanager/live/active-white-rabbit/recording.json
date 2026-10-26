@@ -1,0 +1,628 @@
+{
+  "scenario": "active-white-rabbit",
+  "recordedAt": "2026-10-26T03:19:37.970Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "contact-exists-once-before",
+      "passed": true,
+      "at": "2026-10-26T03:19:38.302Z",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:43.989Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "01-set-A-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:44.282Z",
+      "data": {
+        "tags": [
+          "TM-A mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:44.292Z",
+      "data": {
+        "chips": [
+          "TM-A mvooucym"
+        ]
+      }
+    },
+    {
+      "id": "01-set-A-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:44.294Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "01-set-A-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:44.295Z",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "id": "02-blank-clears-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:46.045Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "02-blank-clears-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:46.332Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:46.336Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "02-blank-clears-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:46.338Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:46.339Z",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "id": "03-set-A-again-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:48.224Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "03-set-A-again-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:48.540Z",
+      "data": {
+        "tags": [
+          "TM-A mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:48.544Z",
+      "data": {
+        "chips": [
+          "TM-A mvooucym"
+        ]
+      }
+    },
+    {
+      "id": "03-set-A-again-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:48.548Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:48.550Z",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "id": "04-replace-with-B-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:50.342Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "04-replace-with-B-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:50.672Z",
+      "data": {
+        "tags": [
+          "TM-B mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:50.676Z",
+      "data": {
+        "chips": [
+          "TM-B mvooucym"
+        ]
+      }
+    },
+    {
+      "id": "04-replace-with-B-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:50.679Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:50.680Z",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "id": "05-reload-agrees",
+      "passed": true,
+      "at": "2026-10-26T03:19:53.943Z",
+      "data": {
+        "chips": [
+          "TM-B mvooucym"
+        ]
+      }
+    },
+    {
+      "id": "06-restore-blank-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.623Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "06-restore-blank-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.893Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "06-restore-blank-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.897Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "06-restore-blank-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.900Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "06-restore-blank-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:55.901Z",
+      "data": {
+        "timeOrigin": 1792984790732.8
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:19:38.013Z",
+      "seconds": 0.043,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:38.302Z",
+      "seconds": 0.332,
+      "title": "contact-exists-once-before",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:40.233Z",
+      "seconds": 2.263,
+      "actor": "alice",
+      "title": "Fresh form login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:42.257Z",
+      "seconds": 4.287,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    },
+    {
+      "at": "2026-10-26T03:19:43.988Z",
+      "seconds": 6.018,
+      "actor": "alice",
+      "title": "csv import 01-set-A",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-A mvooucym\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:43.989Z",
+      "seconds": 6.019,
+      "actor": "alice",
+      "title": "01-set-A-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.282Z",
+      "seconds": 6.312,
+      "actor": "alice",
+      "title": "01-set-A-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.292Z",
+      "seconds": 6.322,
+      "actor": "alice",
+      "title": "01-set-A-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvooucym"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.294Z",
+      "seconds": 6.324,
+      "actor": "alice",
+      "title": "01-set-A-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:44.295Z",
+      "seconds": 6.325,
+      "actor": "alice",
+      "title": "01-set-A-same-document",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.045Z",
+      "seconds": 8.075,
+      "actor": "alice",
+      "title": "csv import 02-blank-clears",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.045Z",
+      "seconds": 8.075,
+      "actor": "alice",
+      "title": "02-blank-clears-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.332Z",
+      "seconds": 8.362,
+      "actor": "alice",
+      "title": "02-blank-clears-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.336Z",
+      "seconds": 8.366,
+      "actor": "alice",
+      "title": "02-blank-clears-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.338Z",
+      "seconds": 8.368,
+      "actor": "alice",
+      "title": "02-blank-clears-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:46.339Z",
+      "seconds": 8.369,
+      "actor": "alice",
+      "title": "02-blank-clears-same-document",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.224Z",
+      "seconds": 10.254,
+      "actor": "alice",
+      "title": "csv import 03-set-A-again",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-A mvooucym\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.224Z",
+      "seconds": 10.254,
+      "actor": "alice",
+      "title": "03-set-A-again-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.540Z",
+      "seconds": 10.57,
+      "actor": "alice",
+      "title": "03-set-A-again-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.544Z",
+      "seconds": 10.574,
+      "actor": "alice",
+      "title": "03-set-A-again-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvooucym"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.548Z",
+      "seconds": 10.578,
+      "actor": "alice",
+      "title": "03-set-A-again-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:48.550Z",
+      "seconds": 10.58,
+      "actor": "alice",
+      "title": "03-set-A-again-same-document",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.341Z",
+      "seconds": 12.371,
+      "actor": "alice",
+      "title": "csv import 04-replace-with-B",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-B mvooucym\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.342Z",
+      "seconds": 12.372,
+      "actor": "alice",
+      "title": "04-replace-with-B-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.672Z",
+      "seconds": 12.702,
+      "actor": "alice",
+      "title": "04-replace-with-B-db-tags",
+      "data": {
+        "tags": [
+          "TM-B mvooucym"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.676Z",
+      "seconds": 12.706,
+      "actor": "alice",
+      "title": "04-replace-with-B-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-B mvooucym"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.679Z",
+      "seconds": 12.709,
+      "actor": "alice",
+      "title": "04-replace-with-B-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:50.680Z",
+      "seconds": 12.71,
+      "actor": "alice",
+      "title": "04-replace-with-B-same-document",
+      "data": {
+        "timeOrigin": 1792984780235
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:53.943Z",
+      "seconds": 15.973,
+      "actor": "alice",
+      "title": "05-reload-agrees",
+      "data": {
+        "chips": [
+          "TM-B mvooucym"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.622Z",
+      "seconds": 17.652,
+      "actor": "alice",
+      "title": "csv import 06-restore-blank",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.623Z",
+      "seconds": 17.653,
+      "actor": "alice",
+      "title": "06-restore-blank-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.893Z",
+      "seconds": 17.923,
+      "actor": "alice",
+      "title": "06-restore-blank-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.897Z",
+      "seconds": 17.927,
+      "actor": "alice",
+      "title": "06-restore-blank-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.900Z",
+      "seconds": 17.93,
+      "actor": "alice",
+      "title": "06-restore-blank-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:55.901Z",
+      "seconds": 17.931,
+      "actor": "alice",
+      "title": "06-restore-blank-same-document",
+      "data": {
+        "timeOrigin": 1792984790732.8
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 18.88,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

@@ -1,0 +1,612 @@
+{
+  "scenario": "native-oz",
+  "recordedAt": "2026-10-26T03:18:50.599Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "contact-exists-once-before",
+      "passed": true,
+      "at": "2026-10-26T03:18:50.941Z",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:18:56.528Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "01-set-A-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:18:56.852Z",
+      "data": {
+        "tags": [
+          "TM-A mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:56.862Z",
+      "data": {
+        "chips": [
+          "TM-A mvootcev"
+        ]
+      }
+    },
+    {
+      "id": "01-set-A-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:18:56.865Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "01-set-A-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:18:56.866Z",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "id": "02-blank-clears-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:18:58.624Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "02-blank-clears-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:18:58.944Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:18:58.948Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "02-blank-clears-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:18:58.950Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:18:58.951Z",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "id": "03-set-A-again-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:00.657Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "03-set-A-again-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:00.944Z",
+      "data": {
+        "tags": [
+          "TM-A mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:00.947Z",
+      "data": {
+        "chips": [
+          "TM-A mvootcev"
+        ]
+      }
+    },
+    {
+      "id": "03-set-A-again-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:00.950Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:00.950Z",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "id": "04-replace-with-B-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:02.641Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "04-replace-with-B-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:02.923Z",
+      "data": {
+        "tags": [
+          "TM-B mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:02.927Z",
+      "data": {
+        "chips": [
+          "TM-B mvootcev"
+        ]
+      }
+    },
+    {
+      "id": "04-replace-with-B-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:02.929Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:02.930Z",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "id": "05-reload-agrees",
+      "passed": true,
+      "at": "2026-10-26T03:19:05.529Z",
+      "data": {
+        "chips": [
+          "TM-B mvootcev"
+        ]
+      }
+    },
+    {
+      "id": "06-restore-blank-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:07.241Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "06-restore-blank-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:07.520Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "06-restore-blank-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:07.524Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "06-restore-blank-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:07.527Z",
+      "data": {
+        "rows": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:18:50.647Z",
+      "seconds": 0.048,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:50.941Z",
+      "seconds": 0.342,
+      "title": "contact-exists-once-before",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:52.864Z",
+      "seconds": 2.265,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:54.810Z",
+      "seconds": 4.211,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    },
+    {
+      "at": "2026-10-26T03:18:56.527Z",
+      "seconds": 5.928,
+      "actor": "qa",
+      "title": "csv import 01-set-A",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootcev\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:56.528Z",
+      "seconds": 5.929,
+      "actor": "qa",
+      "title": "01-set-A-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:56.852Z",
+      "seconds": 6.253,
+      "actor": "qa",
+      "title": "01-set-A-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:56.862Z",
+      "seconds": 6.263,
+      "actor": "qa",
+      "title": "01-set-A-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvootcev"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:56.865Z",
+      "seconds": 6.266,
+      "actor": "qa",
+      "title": "01-set-A-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:56.866Z",
+      "seconds": 6.267,
+      "actor": "qa",
+      "title": "01-set-A-same-document",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.623Z",
+      "seconds": 8.024,
+      "actor": "qa",
+      "title": "csv import 02-blank-clears",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.624Z",
+      "seconds": 8.025,
+      "actor": "qa",
+      "title": "02-blank-clears-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.944Z",
+      "seconds": 8.345,
+      "actor": "qa",
+      "title": "02-blank-clears-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.948Z",
+      "seconds": 8.349,
+      "actor": "qa",
+      "title": "02-blank-clears-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.950Z",
+      "seconds": 8.351,
+      "actor": "qa",
+      "title": "02-blank-clears-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:18:58.951Z",
+      "seconds": 8.352,
+      "actor": "qa",
+      "title": "02-blank-clears-same-document",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.657Z",
+      "seconds": 10.058,
+      "actor": "qa",
+      "title": "csv import 03-set-A-again",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootcev\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.657Z",
+      "seconds": 10.058,
+      "actor": "qa",
+      "title": "03-set-A-again-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.944Z",
+      "seconds": 10.345,
+      "actor": "qa",
+      "title": "03-set-A-again-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.947Z",
+      "seconds": 10.348,
+      "actor": "qa",
+      "title": "03-set-A-again-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvootcev"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.950Z",
+      "seconds": 10.351,
+      "actor": "qa",
+      "title": "03-set-A-again-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:00.950Z",
+      "seconds": 10.351,
+      "actor": "qa",
+      "title": "03-set-A-again-same-document",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.640Z",
+      "seconds": 12.041,
+      "actor": "qa",
+      "title": "csv import 04-replace-with-B",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-B mvootcev\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.641Z",
+      "seconds": 12.042,
+      "actor": "qa",
+      "title": "04-replace-with-B-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.923Z",
+      "seconds": 12.324,
+      "actor": "qa",
+      "title": "04-replace-with-B-db-tags",
+      "data": {
+        "tags": [
+          "TM-B mvootcev"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.927Z",
+      "seconds": 12.328,
+      "actor": "qa",
+      "title": "04-replace-with-B-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-B mvootcev"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.929Z",
+      "seconds": 12.33,
+      "actor": "qa",
+      "title": "04-replace-with-B-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:02.930Z",
+      "seconds": 12.331,
+      "actor": "qa",
+      "title": "04-replace-with-B-same-document",
+      "data": {
+        "timeOrigin": 1792984732866.6
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:05.529Z",
+      "seconds": 14.93,
+      "actor": "qa",
+      "title": "05-reload-agrees",
+      "data": {
+        "chips": [
+          "TM-B mvootcev"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:07.241Z",
+      "seconds": 16.642,
+      "actor": "qa",
+      "title": "csv import 06-restore-blank",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:07.241Z",
+      "seconds": 16.642,
+      "actor": "qa",
+      "title": "06-restore-blank-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:07.520Z",
+      "seconds": 16.921,
+      "actor": "qa",
+      "title": "06-restore-blank-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:07.524Z",
+      "seconds": 16.925,
+      "actor": "qa",
+      "title": "06-restore-blank-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:07.527Z",
+      "seconds": 16.928,
+      "actor": "qa",
+      "title": "06-restore-blank-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "06-restore-blank-same-document {\"timeOrigin\":1792984732866.6}",
+  "durationSeconds": 17.84,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

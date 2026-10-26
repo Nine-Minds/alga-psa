@@ -1,0 +1,101 @@
+[
+  {
+    "scenario": "native-oz",
+    "status": "passed",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "build": {
+      "dist": ".next-review-final-54e75edf",
+      "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+      "buildId": "build-1792983401994"
+    },
+    "durationSeconds": 18,
+    "assertions": [
+      "contact-exists-once-before",
+      "01-set-A-import-complete",
+      "01-set-A-db-tags",
+      "01-set-A-ui-chips-without-reload",
+      "01-set-A-contact-listed-once",
+      "01-set-A-same-document",
+      "02-blank-clears-import-complete",
+      "02-blank-clears-db-tags",
+      "02-blank-clears-ui-chips-without-reload",
+      "02-blank-clears-contact-listed-once",
+      "02-blank-clears-same-document",
+      "03-set-A-again-import-complete",
+      "03-set-A-again-db-tags",
+      "03-set-A-again-ui-chips-without-reload",
+      "03-set-A-again-contact-listed-once",
+      "03-set-A-again-same-document",
+      "04-replace-with-B-import-complete",
+      "04-replace-with-B-db-tags",
+      "04-replace-with-B-ui-chips-without-reload",
+      "04-replace-with-B-contact-listed-once",
+      "04-replace-with-B-same-document",
+      "05-reload-agrees",
+      "06-restore-blank-import-complete",
+      "06-restore-blank-db-tags",
+      "06-restore-blank-ui-chips-without-reload",
+      "06-restore-blank-contact-listed-once",
+      "06-restore-blank-same-document"
+    ]
+  },
+  {
+    "scenario": "active-white-rabbit",
+    "status": "passed",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "build": {
+      "dist": ".next-review-final-54e75edf",
+      "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+      "buildId": "build-1792983401994"
+    },
+    "durationSeconds": 18.88,
+    "assertions": [
+      "contact-exists-once-before",
+      "01-set-A-import-complete",
+      "01-set-A-db-tags",
+      "01-set-A-ui-chips-without-reload",
+      "01-set-A-contact-listed-once",
+      "01-set-A-same-document",
+      "02-blank-clears-import-complete",
+      "02-blank-clears-db-tags",
+      "02-blank-clears-ui-chips-without-reload",
+      "02-blank-clears-contact-listed-once",
+      "02-blank-clears-same-document",
+      "03-set-A-again-import-complete",
+      "03-set-A-again-db-tags",
+      "03-set-A-again-ui-chips-without-reload",
+      "03-set-A-again-contact-listed-once",
+      "03-set-A-again-same-document",
+      "04-replace-with-B-import-complete",
+      "04-replace-with-B-db-tags",
+      "04-replace-with-B-ui-chips-without-reload",
+      "04-replace-with-B-contact-listed-once",
+      "04-replace-with-B-same-document",
+      "05-reload-agrees",
+      "06-restore-blank-import-complete",
+      "06-restore-blank-db-tags",
+      "06-restore-blank-ui-chips-without-reload",
+      "06-restore-blank-contact-listed-once",
+      "06-restore-blank-same-document"
+    ]
+  },
+  {
+    "scenario": "terminated-customer",
+    "status": "passed",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "build": {
+      "dist": ".next-review-final-54e75edf",
+      "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+      "buildId": "build-1792983401994"
+    },
+    "durationSeconds": 12.96,
+    "assertions": [
+      "relationship-terminated-before",
+      "import-refused-read-only",
+      "contacts-tag-tables-byte-identical",
+      "relationship-still-terminated",
+      "contact-listed-once-unchanged-chips",
+      "reload-name-unchanged"
+    ]
+  }
+]

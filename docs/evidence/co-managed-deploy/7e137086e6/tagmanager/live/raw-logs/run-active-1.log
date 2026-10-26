@@ -1,0 +1,35 @@
+active-white-rabbit build-verified {"dist":".next-review-final-54e75edf","revision":"54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b","buildId":"build-1792983401994","health":200}
+active-white-rabbit contact-exists-once-before {"contacts":1}
+active-white-rabbit Fresh form login {"email":"alice@whiterabbit.test","tenant":"c64b2666-7dd6-4c61-8ced-4b233f628e61"}
+active-white-rabbit navigate "/msp/contacts"
+active-white-rabbit csv import 01-set-A {"csv":"full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-A mvooucym\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+active-white-rabbit 01-set-A-import-complete {"complete":true,"updateExisting":true}
+active-white-rabbit 01-set-A-db-tags {"tags":["TM-A mvooucym"],"contacts":1}
+active-white-rabbit 01-set-A-ui-chips-without-reload {"chips":["TM-A mvooucym"]}
+active-white-rabbit 01-set-A-contact-listed-once {"rows":1}
+active-white-rabbit 01-set-A-same-document {"timeOrigin":1792984780235}
+active-white-rabbit csv import 02-blank-clears {"csv":"full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+active-white-rabbit 02-blank-clears-import-complete {"complete":true,"updateExisting":true}
+active-white-rabbit 02-blank-clears-db-tags {"tags":[],"contacts":1}
+active-white-rabbit 02-blank-clears-ui-chips-without-reload {"chips":[]}
+active-white-rabbit 02-blank-clears-contact-listed-once {"rows":1}
+active-white-rabbit 02-blank-clears-same-document {"timeOrigin":1792984780235}
+active-white-rabbit csv import 03-set-A-again {"csv":"full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-A mvooucym\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+active-white-rabbit 03-set-A-again-import-complete {"complete":true,"updateExisting":true}
+active-white-rabbit 03-set-A-again-db-tags {"tags":["TM-A mvooucym"],"contacts":1}
+active-white-rabbit 03-set-A-again-ui-chips-without-reload {"chips":["TM-A mvooucym"]}
+active-white-rabbit 03-set-A-again-contact-listed-once {"rows":1}
+active-white-rabbit 03-set-A-again-same-document {"timeOrigin":1792984780235}
+active-white-rabbit csv import 04-replace-with-B {"csv":"full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,TM-B mvooucym\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+active-white-rabbit 04-replace-with-B-import-complete {"complete":true,"updateExisting":true}
+active-white-rabbit 04-replace-with-B-db-tags {"tags":["TM-B mvooucym"],"contacts":1}
+active-white-rabbit 04-replace-with-B-ui-chips-without-reload {"chips":["TM-B mvooucym"]}
+active-white-rabbit 04-replace-with-B-contact-listed-once {"rows":1}
+active-white-rabbit 04-replace-with-B-same-document {"timeOrigin":1792984780235}
+active-white-rabbit 05-reload-agrees {"chips":["TM-B mvooucym"]}
+active-white-rabbit csv import 06-restore-blank {"csv":"full_name,email,tags\nCSV Active 0238 Short,csv.active.0238@example.test,\n","updateExisting":true,"complete":true,"outcome":"closed","mappingHasTags":true,"result":""}
+active-white-rabbit 06-restore-blank-import-complete {"complete":true,"updateExisting":true}
+active-white-rabbit 06-restore-blank-db-tags {"tags":[],"contacts":1}
+active-white-rabbit 06-restore-blank-ui-chips-without-reload {"chips":[]}
+active-white-rabbit 06-restore-blank-contact-listed-once {"rows":1}
+active-white-rabbit 06-restore-blank-same-document {"timeOrigin":1792984790732.8}

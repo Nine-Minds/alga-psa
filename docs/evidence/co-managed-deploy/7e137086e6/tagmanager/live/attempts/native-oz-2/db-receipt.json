@@ -1,0 +1,25 @@
+{
+  "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+  "contact": {
+    "full_name": "CSV Native 0238 Updated",
+    "email": "csv.native.0238@example.test"
+  },
+  "tagA": "TM-A mvoorh4g",
+  "tagB": "TM-B mvoorh4g",
+  "steps": [
+    {
+      "step": "before",
+      "at": "2026-10-26T03:17:23.440Z",
+      "contacts": [
+        {
+          "contact_name_id": "ea37655c-b972-4db9-99b1-68601f24b650",
+          "full_name": "CSV Native 0238 Updated",
+          "email": "csv.native.0238@example.test",
+          "is_inactive": false,
+          "updated_at": "2026-10-26T02:40:07.215+00:00"
+        }
+      ],
+      "tag_mappings": []
+    }
+  ]
+}

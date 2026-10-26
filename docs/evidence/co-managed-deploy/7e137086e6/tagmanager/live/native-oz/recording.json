@@ -1,0 +1,628 @@
+{
+  "scenario": "native-oz",
+  "recordedAt": "2026-10-26T03:19:15.174Z",
+  "origin": "http://feature-co-managed-it.localhost:23374",
+  "build": {
+    "dist": ".next-review-final-54e75edf",
+    "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+    "buildId": "build-1792983401994"
+  },
+  "assertions": [
+    {
+      "id": "contact-exists-once-before",
+      "passed": true,
+      "at": "2026-10-26T03:19:15.517Z",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:21.176Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "01-set-A-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:21.461Z",
+      "data": {
+        "tags": [
+          "TM-A mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "01-set-A-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:21.470Z",
+      "data": {
+        "chips": [
+          "TM-A mvootvde"
+        ]
+      }
+    },
+    {
+      "id": "01-set-A-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:21.472Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "01-set-A-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:21.473Z",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "id": "02-blank-clears-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:23.224Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "02-blank-clears-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:23.495Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:23.498Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "02-blank-clears-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:23.500Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "02-blank-clears-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:23.501Z",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "id": "03-set-A-again-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:25.189Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "03-set-A-again-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:25.471Z",
+      "data": {
+        "tags": [
+          "TM-A mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:25.474Z",
+      "data": {
+        "chips": [
+          "TM-A mvootvde"
+        ]
+      }
+    },
+    {
+      "id": "03-set-A-again-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:25.477Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "03-set-A-again-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:25.477Z",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "id": "04-replace-with-B-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:27.191Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "04-replace-with-B-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:27.480Z",
+      "data": {
+        "tags": [
+          "TM-B mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:27.484Z",
+      "data": {
+        "chips": [
+          "TM-B mvootvde"
+        ]
+      }
+    },
+    {
+      "id": "04-replace-with-B-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:27.487Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "04-replace-with-B-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:27.488Z",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "id": "05-reload-agrees",
+      "passed": true,
+      "at": "2026-10-26T03:19:30.145Z",
+      "data": {
+        "chips": [
+          "TM-B mvootvde"
+        ]
+      }
+    },
+    {
+      "id": "06-restore-blank-import-complete",
+      "passed": true,
+      "at": "2026-10-26T03:19:31.878Z",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "id": "06-restore-blank-db-tags",
+      "passed": true,
+      "at": "2026-10-26T03:19:32.188Z",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "id": "06-restore-blank-ui-chips-without-reload",
+      "passed": true,
+      "at": "2026-10-26T03:19:32.192Z",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "id": "06-restore-blank-contact-listed-once",
+      "passed": true,
+      "at": "2026-10-26T03:19:32.196Z",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "id": "06-restore-blank-same-document",
+      "passed": true,
+      "at": "2026-10-26T03:19:32.196Z",
+      "data": {
+        "timeOrigin": 1792984767529.4
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T03:19:15.218Z",
+      "seconds": 0.044,
+      "title": "build-verified",
+      "data": {
+        "dist": ".next-review-final-54e75edf",
+        "revision": "54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b",
+        "buildId": "build-1792983401994",
+        "health": 200
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:15.517Z",
+      "seconds": 0.343,
+      "title": "contact-exists-once-before",
+      "data": {
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:17.445Z",
+      "seconds": 2.271,
+      "actor": "qa",
+      "title": "Fresh form login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:19.422Z",
+      "seconds": 4.249,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/contacts"
+    },
+    {
+      "at": "2026-10-26T03:19:21.175Z",
+      "seconds": 6.001,
+      "actor": "qa",
+      "title": "csv import 01-set-A",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootvde\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:21.176Z",
+      "seconds": 6.002,
+      "actor": "qa",
+      "title": "01-set-A-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:21.461Z",
+      "seconds": 6.287,
+      "actor": "qa",
+      "title": "01-set-A-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:21.470Z",
+      "seconds": 6.296,
+      "actor": "qa",
+      "title": "01-set-A-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvootvde"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:21.472Z",
+      "seconds": 6.298,
+      "actor": "qa",
+      "title": "01-set-A-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:21.473Z",
+      "seconds": 6.299,
+      "actor": "qa",
+      "title": "01-set-A-same-document",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.224Z",
+      "seconds": 8.05,
+      "actor": "qa",
+      "title": "csv import 02-blank-clears",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.224Z",
+      "seconds": 8.05,
+      "actor": "qa",
+      "title": "02-blank-clears-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.495Z",
+      "seconds": 8.321,
+      "actor": "qa",
+      "title": "02-blank-clears-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.498Z",
+      "seconds": 8.324,
+      "actor": "qa",
+      "title": "02-blank-clears-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.501Z",
+      "seconds": 8.327,
+      "actor": "qa",
+      "title": "02-blank-clears-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:23.501Z",
+      "seconds": 8.327,
+      "actor": "qa",
+      "title": "02-blank-clears-same-document",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.189Z",
+      "seconds": 10.015,
+      "actor": "qa",
+      "title": "csv import 03-set-A-again",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-A mvootvde\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.189Z",
+      "seconds": 10.015,
+      "actor": "qa",
+      "title": "03-set-A-again-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.471Z",
+      "seconds": 10.297,
+      "actor": "qa",
+      "title": "03-set-A-again-db-tags",
+      "data": {
+        "tags": [
+          "TM-A mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.474Z",
+      "seconds": 10.3,
+      "actor": "qa",
+      "title": "03-set-A-again-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-A mvootvde"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.477Z",
+      "seconds": 10.303,
+      "actor": "qa",
+      "title": "03-set-A-again-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:25.477Z",
+      "seconds": 10.303,
+      "actor": "qa",
+      "title": "03-set-A-again-same-document",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.190Z",
+      "seconds": 12.016,
+      "actor": "qa",
+      "title": "csv import 04-replace-with-B",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,TM-B mvootvde\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.191Z",
+      "seconds": 12.017,
+      "actor": "qa",
+      "title": "04-replace-with-B-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.480Z",
+      "seconds": 12.306,
+      "actor": "qa",
+      "title": "04-replace-with-B-db-tags",
+      "data": {
+        "tags": [
+          "TM-B mvootvde"
+        ],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.484Z",
+      "seconds": 12.31,
+      "actor": "qa",
+      "title": "04-replace-with-B-ui-chips-without-reload",
+      "data": {
+        "chips": [
+          "TM-B mvootvde"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.487Z",
+      "seconds": 12.313,
+      "actor": "qa",
+      "title": "04-replace-with-B-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:27.488Z",
+      "seconds": 12.314,
+      "actor": "qa",
+      "title": "04-replace-with-B-same-document",
+      "data": {
+        "timeOrigin": 1792984757447.2
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:30.145Z",
+      "seconds": 14.971,
+      "actor": "qa",
+      "title": "05-reload-agrees",
+      "data": {
+        "chips": [
+          "TM-B mvootvde"
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:31.878Z",
+      "seconds": 16.704,
+      "actor": "qa",
+      "title": "csv import 06-restore-blank",
+      "data": {
+        "csv": "full_name,email,tags\nCSV Native 0238 Updated,csv.native.0238@example.test,\n",
+        "updateExisting": true,
+        "complete": true,
+        "outcome": "closed",
+        "mappingHasTags": true,
+        "result": ""
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:31.878Z",
+      "seconds": 16.704,
+      "actor": "qa",
+      "title": "06-restore-blank-import-complete",
+      "data": {
+        "complete": true,
+        "updateExisting": true
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:32.188Z",
+      "seconds": 17.014,
+      "actor": "qa",
+      "title": "06-restore-blank-db-tags",
+      "data": {
+        "tags": [],
+        "contacts": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:32.192Z",
+      "seconds": 17.018,
+      "actor": "qa",
+      "title": "06-restore-blank-ui-chips-without-reload",
+      "data": {
+        "chips": []
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:32.196Z",
+      "seconds": 17.022,
+      "actor": "qa",
+      "title": "06-restore-blank-contact-listed-once",
+      "data": {
+        "rows": 1
+      }
+    },
+    {
+      "at": "2026-10-26T03:19:32.196Z",
+      "seconds": 17.022,
+      "actor": "qa",
+      "title": "06-restore-blank-same-document",
+      "data": {
+        "timeOrigin": 1792984767529.4
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 18,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

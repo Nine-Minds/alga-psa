@@ -1,0 +1,158 @@
+{
+  "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+  "relationshipBefore": {
+    "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+    "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+    "state": "terminated",
+    "ended_at": "2026-10-26T00:13:30.705+00:00",
+    "updated_at": "2026-10-26T00:13:30.705+00:00"
+  },
+  "relationshipAfter": {
+    "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+    "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+    "state": "terminated",
+    "ended_at": "2026-10-26T00:13:30.705+00:00",
+    "updated_at": "2026-10-26T00:13:30.705+00:00"
+  },
+  "contactBefore": [
+    {
+      "contact_name_id": "a066bdce-5c8a-43f5-b3c3-c17d615bc3f3",
+      "full_name": "Dorothy Gale",
+      "email": "admin@kansasfarms.test",
+      "is_inactive": false,
+      "updated_at": "2026-10-26T00:09:43.965626+00:00"
+    }
+  ],
+  "contactAfter": [
+    {
+      "contact_name_id": "a066bdce-5c8a-43f5-b3c3-c17d615bc3f3",
+      "full_name": "Dorothy Gale",
+      "email": "admin@kansasfarms.test",
+      "is_inactive": false,
+      "updated_at": "2026-10-26T00:09:43.965626+00:00"
+    }
+  ],
+  "tagsBefore": [],
+  "tagsAfter": [],
+  "countsBefore": {
+    "contacts": 1,
+    "tag_definitions": 1,
+    "tag_mappings": 1
+  },
+  "countsAfter": {
+    "contacts": 1,
+    "tag_definitions": 1,
+    "tag_mappings": 1
+  },
+  "identical": true,
+  "before": {
+    "contacts": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "contact_name_id": "a066bdce-5c8a-43f5-b3c3-c17d615bc3f3",
+        "full_name": "Dorothy Gale",
+        "email": "admin@kansasfarms.test",
+        "role": "IT Administrator",
+        "approver": null,
+        "created_at": "2026-10-26T00:09:43.965626+00:00",
+        "updated_at": "2026-10-26T00:09:43.965626+00:00",
+        "is_inactive": false,
+        "notes": null,
+        "is_client_admin": false,
+        "client_id": "75dda991-66ad-4ecd-8329-7f7dd9f75c25",
+        "notes_document_id": null,
+        "entra_object_id": null,
+        "entra_sync_source": null,
+        "last_entra_sync_at": null,
+        "entra_user_principal_name": null,
+        "entra_account_enabled": null,
+        "entra_sync_status": null,
+        "entra_sync_status_reason": null,
+        "inbound_ticket_defaults_id": null,
+        "portal_visibility_group_id": null,
+        "primary_email_canonical_type": null,
+        "primary_email_custom_type_id": null,
+        "contact_kind": "person",
+        "manager_contact_id": null
+      }
+    ],
+    "tag_definitions": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+        "tag_text": "Barn network",
+        "tagged_type": "ticket",
+        "background_color": "#d9ddfc",
+        "text_color": "#061479",
+        "created_at": "2026-10-26T00:12:03.634382+00:00",
+        "board_id": null
+      }
+    ],
+    "tag_mappings": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "mapping_id": "04f57bd8-f312-4d7d-a4cc-8673ecd6a775",
+        "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+        "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "tagged_type": "ticket",
+        "created_at": "2026-10-26T00:12:03.634382+00:00",
+        "created_by": "6d4bb919-9ac4-470a-8928-314043d1a613"
+      }
+    ]
+  },
+  "after": {
+    "contacts": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "contact_name_id": "a066bdce-5c8a-43f5-b3c3-c17d615bc3f3",
+        "full_name": "Dorothy Gale",
+        "email": "admin@kansasfarms.test",
+        "role": "IT Administrator",
+        "approver": null,
+        "created_at": "2026-10-26T00:09:43.965626+00:00",
+        "updated_at": "2026-10-26T00:09:43.965626+00:00",
+        "is_inactive": false,
+        "notes": null,
+        "is_client_admin": false,
+        "client_id": "75dda991-66ad-4ecd-8329-7f7dd9f75c25",
+        "notes_document_id": null,
+        "entra_object_id": null,
+        "entra_sync_source": null,
+        "last_entra_sync_at": null,
+        "entra_user_principal_name": null,
+        "entra_account_enabled": null,
+        "entra_sync_status": null,
+        "entra_sync_status_reason": null,
+        "inbound_ticket_defaults_id": null,
+        "portal_visibility_group_id": null,
+        "primary_email_canonical_type": null,
+        "primary_email_custom_type_id": null,
+        "contact_kind": "person",
+        "manager_contact_id": null
+      }
+    ],
+    "tag_definitions": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+        "tag_text": "Barn network",
+        "tagged_type": "ticket",
+        "background_color": "#d9ddfc",
+        "text_color": "#061479",
+        "created_at": "2026-10-26T00:12:03.634382+00:00",
+        "board_id": null
+      }
+    ],
+    "tag_mappings": [
+      {
+        "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+        "mapping_id": "04f57bd8-f312-4d7d-a4cc-8673ecd6a775",
+        "tag_id": "89821814-ea4d-4568-a152-ccccf909dbe4",
+        "tagged_id": "0a767ca1-0f61-4817-a1af-e8d4183ff402",
+        "tagged_type": "ticket",
+        "created_at": "2026-10-26T00:12:03.634382+00:00",
+        "created_by": "6d4bb919-9ac4-470a-8928-314043d1a613"
+      }
+    ]
+  }
+}

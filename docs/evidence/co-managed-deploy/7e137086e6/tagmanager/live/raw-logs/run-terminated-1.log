@@ -1,0 +1,10 @@
+terminated-customer build-verified {"dist":".next-review-final-54e75edf","revision":"54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b","buildId":"build-1792983401994","health":200}
+terminated-customer relationship-terminated-before {"relationship_id":"ad0808b5-25df-4e95-987a-aa650c8ba24f","sponsor_tenant":"fa7f912f-6b62-463e-85cc-ffedab47ac44","state":"terminated","ended_at":"2026-10-26T00:13:30.705+00:00","updated_at":"2026-10-26T00:13:30.705+00:00"}
+terminated-customer Fresh form login {"email":"admin@kansasfarms.test","tenant":"3261f313-8e04-45df-94bc-0343e92ba454"}
+terminated-customer navigate "/msp/contacts"
+terminated-customer csv import 02-blank-update {"csv":"full_name,email,tags\nMUST NOT SAVE mvoouvol,admin@kansasfarms.test,\n","updateExisting":true,"complete":false,"outcome":"results","mappingHasTags":true,"result":"Import Contacts\nImport Results\nDownload Failed Records\nStatus\n\t\nName\n\t\nEmail\n\t\nMessage\n\n\n\t\nMUST NOT SAVE mvoouvol\n\t\nadmin@kansasfarms.test\n\t\nThis co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\nClose"}
+terminated-customer import-refused-read-only {"result":"Import Contacts\nImport Results\nDownload Failed Records\nStatus\n\t\nName\n\t\nEmail\n\t\nMessage\n\n\n\t\nMUST NOT SAVE mvoouvol\n\t\nadmin@kansasfarms.test\n\t\nThis co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\nClose"}
+terminated-customer contacts-tag-tables-byte-identical {"counts":{"contacts":1,"tag_definitions":1,"tag_mappings":1}}
+terminated-customer relationship-still-terminated {"relationship_id":"ad0808b5-25df-4e95-987a-aa650c8ba24f","sponsor_tenant":"fa7f912f-6b62-463e-85cc-ffedab47ac44","state":"terminated","ended_at":"2026-10-26T00:13:30.705+00:00","updated_at":"2026-10-26T00:13:30.705+00:00"}
+terminated-customer contact-listed-once-unchanged-chips {"chipsBefore":[]}
+terminated-customer reload-name-unchanged {"full_name":"Dorothy Gale"}

@@ -1,0 +1,11 @@
+native-oz build-verified {"dist":".next-review-final-54e75edf","revision":"54e75edfabfd814edb9ca0685a5e46d0e050a470+da39a3ee5e6b","buildId":"build-1792983401994","health":200}
+native-oz contact-exists-once-before {"contacts":1}
+native-oz Fresh form login {"email":"qa@emeraldcity.oz","tenant":"fa7f912f-6b62-463e-85cc-ffedab47ac44"}
+native-oz navigate "/msp/contacts"
+native-oz FAILED locator.waitFor: Error: strict mode violation: locator('tr').filter({ hasText: 'csv.native.0238@example.test' }) resolved to 2 elements:
+    1) <tr class="↵                    bg-[rgb(var(--color-card))]↵                    cursor-default↵                    transition-colors duration-150↵                    ↵                  ">…</tr> aka getByRole('row', { name: 'CU CSV Native 0238 Updated' })
+    2) <tr>…</tr> aka getByText('CSV Native 0238 UpdatedOct 25, 2026csv.native.0238@example.test-No Client-Active')
+
+Call log:
+  - waiting for locator('tr').filter({ hasText: 'csv.native.0238@example.test' }) to be visible
+
