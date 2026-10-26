@@ -18,6 +18,14 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (tableName: string) => conn(tableName) }),
 }));
 
+// clientCreation.ts imports tenantDb from this subpath, not the barrel above,
+// to dodge a turbopack shim — mock it the same way or it falls through to the
+// real tenantDb, which calls `.where(...)` on the fake trx's bare table
+// helpers above and throws "conn(...).where is not a function".
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: (conn: any) => ({ table: (tableName: string) => conn(tableName) }),
+}));
+
 vi.mock('../../billingClients/billingProfiles', () => ({
   ensureClientDefaultBillingProfile: h.ensureClientDefaultBillingProfile,
 }));
