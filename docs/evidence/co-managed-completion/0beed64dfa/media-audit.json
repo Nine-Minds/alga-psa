@@ -1,0 +1,72 @@
+[
+  {
+    "evidence": "rt2-late-time-notices",
+    "webm": "../../co-managed-deploy/2d00cb6f0e/01-late-time-notices/walkthrough.webm",
+    "sha256": "da264c766c5e82a8d2b555f62077cef06d83f1c5cdf658f939d58a8b11bb9f3c",
+    "durationSeconds": 59.72,
+    "chapters": 7
+  },
+  {
+    "evidence": "rt2-reversed-draft",
+    "webm": "../../co-managed-deploy/2d00cb6f0e/02-reversed-draft-reopens/walkthrough.webm",
+    "sha256": "b5f8446b83df33e29aec44a560e7bb732232bfe9f26963e15528da68701c3e3e",
+    "durationSeconds": 114.88,
+    "chapters": 7
+  },
+  {
+    "evidence": "rt2-t09-task-audiences",
+    "webm": "../../co-managed-deploy/2d00cb6f0e/04-t09-task-audiences/walkthrough.webm",
+    "sha256": "2e1209ada114b8b799e76a515fa33b5f2689e8a19742e9ba0c404de0c05d1797",
+    "durationSeconds": 34.28,
+    "chapters": 7
+  },
+  {
+    "evidence": "rt2-t13-time-edit",
+    "webm": "../../co-managed-deploy/2d00cb6f0e/05-t13-time-entry-edit/walkthrough.webm",
+    "sha256": "3afaf1c1382b0e08e3ec5e490623607fd22122cce69501d9a405983fe5e89188",
+    "durationSeconds": 32.56,
+    "chapters": 4
+  },
+  {
+    "evidence": "rt1-f003-states",
+    "webm": "../../co-managed-deploy/8093816c90/06-f003-relationship-states/walkthrough.webm",
+    "sha256": "9d90fc027b1d707579c90e704f1fe2b6573d4050f4b64e436a9a27164ae9f30f",
+    "durationSeconds": 117.32,
+    "chapters": 7
+  },
+  {
+    "evidence": "rt1-t009-onboarding",
+    "webm": "../../co-managed-deploy/8093816c90/07-t009-onboarding-recovery/walkthrough.webm",
+    "sha256": "e0ca8034157c2469bb62f2ad2e402def8e74e0a6afd72646db1b1a34e61384eb",
+    "durationSeconds": 42.32,
+    "chapters": 5
+  },
+  {
+    "evidence": "rt1-t09-privacy",
+    "webm": "../../co-managed-deploy/8093816c90/04-t09-privacy/walkthrough.webm",
+    "sha256": "f80c977eaf8abc966079899cf07425714873b54069264320222b559ba7291a66",
+    "durationSeconds": 146.96,
+    "chapters": 5
+  },
+  {
+    "evidence": "rt1-t09-export",
+    "webm": "../../co-managed-deploy/8093816c90/05-t09-export/walkthrough.webm",
+    "sha256": "852000c832f8f8aaf488fdca31a470c925e7a58d9ec950d300a6feea101c7959",
+    "durationSeconds": 6.12,
+    "chapters": 2
+  },
+  {
+    "evidence": "rt1-billing-late-time",
+    "webm": "../../co-managed-deploy/8093816c90/01-billing-late-time/walkthrough.webm",
+    "sha256": "e8a27c3c0a857372d9eec2b7beae83687d4c83123c643dcbf37c4d8eadcd04c5",
+    "durationSeconds": 109,
+    "chapters": 7
+  },
+  {
+    "evidence": "rt1-t13-msp-edit",
+    "webm": "../../co-managed-deploy/8093816c90/03-t13-msp-edit-attribution/walkthrough.webm",
+    "sha256": "32b7f70c8014b160bb333cb9b7a8a28f1a69f019a5d7aaf962ac16c78748fc1c",
+    "durationSeconds": 25.08,
+    "chapters": 3
+  }
+]

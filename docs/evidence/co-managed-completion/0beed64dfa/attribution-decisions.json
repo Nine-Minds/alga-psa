@@ -1,0 +1,101 @@
+{
+  "candidate": "0beed64dfaeec3a2f85dafe9e8f10fccc1e9ede3",
+  "runtime": "2d00cb6f0efc440e7682435d364254e97c83ef83",
+  "buildId": "build-1793025108142",
+  "baseline": {
+    "source": "docs/evidence/co-managed-completion/698cddfd4c/manifest.json",
+    "counts": {
+      "verified": 3,
+      "implemented-unverified": 255,
+      "blocked-external": 2
+    }
+  },
+  "after": {
+    "implemented-unverified": 255,
+    "verified": 3,
+    "blocked-external": 2
+  },
+  "policy": "Rows promote only when every clause ran on a served build; evidence from build-1793021045283 is carried with an explicit dependency analysis (only billing changed since).",
+  "decisions": {
+    "T09": {
+      "status": "implemented-unverified",
+      "evidence": [
+        "rt2-t09-task-audiences",
+        "rt1-t09-privacy",
+        "rt1-t09-export"
+      ],
+      "justification": "Progress: Task conversations on build-1793025108142: shared_it / organization_private (customer) / MSP-private / requester audiences are each visible only to their permitted readers (Alice, QA, client-portal requester), MSP-private stored only in the MSP store. Ticket portal, search/typeahead and export privacy passed on build-1793021045283 (no conversation code changed since). Remaining: Explicit task disclosure (preview/confirmation/receipts) and task notification/email delivery on a current build."
+    },
+    "T13": {
+      "status": "implemented-unverified",
+      "evidence": [
+        "rt2-t13-time-edit",
+        "rt2-late-time-notices",
+        "rt2-reversed-draft",
+        "rt1-billing-late-time",
+        "rt1-t13-msp-edit"
+      ],
+      "justification": "Progress: MSP edit of a recorded time entry keeps the entry, its qualified reference and contract resolution, with QA as editor (this build); late approved time is carried and named, or named as unbillable when its line has no later period, in Automatic Invoices and previews; a reversed draft's window rebills its time unlabelled (this build); MSP and native time billed together and MSP ticket edits attributed (build-1793021045283). Remaining: Catalog-priced time with a real catalog price; customer operational time on a current build."
+    },
+    "clientIntegration:F003": {
+      "status": "verified",
+      "evidence": [
+        "rt1-f003-states"
+      ],
+      "justification": "Every clause exercised on build-1793021045283: absent: pass: a never-set-up client (Emerald City) offers setup to the manager; single: pass: White Rabbit Active, seats, Manage access; multiple: pass: two live relationships on one client (SQL fixture) show 'Multiple co-managed relationships'; no management controls until an explicit choice; choosing resolves the exact relationship; ended: pass: Kansas Farms 'Relationship ended' with history and no setup; inconsistent: pass after 8093816c90: a setup whose relationship names another client (SQL fixture) reads 'Co-managed record needs attention' with neither setup nor management, and is not adopted by the other client; forbidden: pass after 8093816c90: an Oz Technician sees the permission message on /msp/co-management, no client-tab writes, and the shared ticket fails closed; exact expected relationship identity for writes: pass: a stale second-tab staff-access save is refused with the revision unchanged; a URL carrying another relationship id fails closed. Multiple and inconsistent states require reversible SQL fixtures because the product offers no path that creates them; disclosed in the scenario limitations. [Carried to 0beed64dfa: Changes since 8093816c90 touch only billing (engine, actions, Automatic Invoices), interface types and invoicing locales; no co-managed client-management code.]"
+    },
+    "clientIntegration:F010": {
+      "status": "verified",
+      "evidence": [
+        "rt1-f003-states"
+      ],
+      "justification": "Every clause exercised on build-1793021045283: absent offers Enable to an authorized manager only: pass: manager sees setup on an absent client; the Technician viewer is never offered Enable (no summary rendered); active shows seat usage and Manage: pass; ended shows end date and View history: pass (Kansas Farms); shared refresh between summary and client view: pass: seats 1 -> 2 -> 1 updated the summary in the same document (performance.timeOrigin unchanged) [Carried to 0beed64dfa: Same as F003.]"
+    },
+    "clientIntegration:T009": {
+      "status": "verified",
+      "evidence": [
+        "rt1-t009-onboarding",
+        "rt1-f003-states"
+      ],
+      "justification": "Every clause exercised on build-1793021045283: reserved progress then pending acceptance: pass: reserved seat and progress, then awaiting acceptance; reopens the original operation after failure/reload: pass: after reload the same operation shows delivery failure with Retry; distinguishes invitation expiry from delivery failure: pass: 'Invitation delivery failed; retry to send it.' vs 'Invitation expired' + 'Resend administrator invitation' (expiry via recorded time fixture); refreshes summary/usage after allocation or recovery: pass: recovery cleared the failure in the same document; allocation refresh in 06; active settings use embeddable sections: pass: White Rabbit tab embeds staff access, SLA link, capacity (06); ended state uses retained history: pass: Kansas Farms (06). Invitation expiry was produced by moving expires_at into the past; delivery failure used the local SMTP sink reject-mail fault. A reviewer may hold this row on the time fixture. [Carried to 0beed64dfa: Same as F003.]"
+    },
+    "clientIntegration:T018": {
+      "status": "blocked-external",
+      "evidence": [],
+      "justification": "Blocked on an external resource: real Stripe test account, price and checkout, and release-owner receipts. Not faked.",
+      "external": "real Stripe test account, price and checkout, and release-owner receipts"
+    },
+    "clientIntegration:T019": {
+      "status": "blocked-external",
+      "evidence": [],
+      "justification": "Blocked on an external resource: signed tenant-bound self-host licence and an isolated self-host installation. Not faked.",
+      "external": "signed tenant-bound self-host licence and an isolated self-host installation"
+    },
+    "T17": {
+      "status": "implemented-unverified",
+      "evidence": [],
+      "justification": "Progress on build-1793021045283: Not exercised at runtime this round. Remaining: Lifecycle grace expiring mid-operation (defer and roll back) needs runtime clock control; covered only by coManagedBootstrap PostgreSQL cases. [carried from the 698cddfd4c packet]"
+    },
+    "T18": {
+      "status": "implemented-unverified",
+      "evidence": [
+        "rt1-t09-export"
+      ],
+      "justification": "Progress on build-1793021045283: Closure with participation and a retried closure produced exactly one closure, one sealed manifest, one archive file with no duplicates; MSP archive lists the ticket once; portable export excludes MSP-private notes. Remaining: Restore of the portable export needs an isolated destination installation (external). [carried from the 698cddfd4c packet]"
+    },
+    "clientIntegration:F015": {
+      "status": "implemented-unverified",
+      "evidence": [
+        "rt1-t009-onboarding"
+      ],
+      "justification": "Progress on build-1793021045283: Progress, delivery failure, durable automatic redelivery, expired invitation with Resend, and cancellation releasing the seat on this build. Remaining: worker failure and acknowledged cleanup. [carried from the 698cddfd4c packet]"
+    },
+    "clientIntegration:F018": {
+      "status": "implemented-unverified",
+      "evidence": [
+        "rt1-f003-states"
+      ],
+      "justification": "Progress on build-1793021045283: Departure from the customer side and archive navigation on this build; ended client view without live usage. Remaining: sponsor-side End co-management from the client tab was not re-run on this build. [carried from the 698cddfd4c packet]"
+    }
+  }
+}

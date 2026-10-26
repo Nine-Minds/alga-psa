@@ -1,0 +1,70 @@
+co-managed completion gate — docs/evidence/co-managed-completion/0beed64dfa/manifest.json
+candidate: 0beed64dfaeec3a2f85dafe9e8f10fccc1e9ede3
+requirements: blocked-external=2 implemented-unverified=255 verified=3
+
+implementationReady: false
+  - T01: implemented-unverified — not accepted on this candidate
+  - T02: implemented-unverified — not accepted on this candidate
+  - T03: implemented-unverified — not accepted on this candidate
+  - T04: implemented-unverified — not accepted on this candidate
+  - T05: implemented-unverified — not accepted on this candidate
+  - T06: implemented-unverified — not accepted on this candidate
+  - T07: implemented-unverified — not accepted on this candidate
+  - T08: implemented-unverified — not accepted on this candidate
+  - T09: implemented-unverified — not accepted on this candidate
+  - T10: implemented-unverified — not accepted on this candidate
+  - T11: implemented-unverified — not accepted on this candidate
+  - T12: implemented-unverified — not accepted on this candidate
+  - T13: implemented-unverified — not accepted on this candidate
+  - T14: implemented-unverified — not accepted on this candidate
+  - T15: implemented-unverified — not accepted on this candidate
+  - T16: implemented-unverified — not accepted on this candidate
+  - T17: implemented-unverified — not accepted on this candidate
+  - T18: implemented-unverified — not accepted on this candidate
+  - T19: implemented-unverified — not accepted on this candidate
+  - T20: implemented-unverified — not accepted on this candidate
+  - T21: implemented-unverified — not accepted on this candidate
+  - T22: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F001: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F002: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F004: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F005: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F006: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F007: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F008: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F009: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F011: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F012: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F013: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F014: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F015: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F016: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F017: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F018: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F019: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F020: implemented-unverified — not accepted on this candidate
+  … and 215 more
+
+humanReviewReady: false
+  - implementationReady is false
+  - PR head missing is not the candidate
+  - running app revision 2d00cb6f0efc440e7682435d364254e97c83ef83 is not the candidate
+  - running worker revision 8093816c907458c51dfbe9dfe77e0aa84fe1b8e4 is not the candidate
+  - manifest.provenance.migrations fingerprint is missing
+  - manifest.provenance.config fingerprint is missing
+  - manifest.provenance.simulator fingerprint is missing
+  - delivered worktree is not clean
+  - mergeable is unknown
+  - mergeStateStatus is missing
+  - mergeability was not re-checked at the candidate
+  - manifest.ci.checks is missing or empty
+  - review environment is not recorded stable
+  - review environment observation is shorter than the required 30 minutes
+  - review environment healed an unrecorded number of times
+
+productionReady: false
+  - humanReviewReady is false
+  - stripe-recurring-1149: not accepted by the release owner
+  - external-license-issuance: not accepted by the release owner
+  - microsoft-real-application: not accepted by the release owner
+  - deployed-storage-and-migrations: not accepted by the release owner
