@@ -3074,6 +3074,75 @@ describe('co-managed tag lifecycle admission', () => {
     expect(await tagsOf('first')).toEqual(['Gamma']);
     expect(await tagsOf('second')).toEqual([]);
   }));
+
+  // Rows the import dialog would send for these CSV cells, built by the dialog's
+  // own transformation: a mapped blank Tags cell becomes `tags: ''`, and an
+  // unmapped Tags column sends no `tags` key. The action must honour both.
+  const dialogRows = async (operation: any, cells: Array<{ email: string; full_name: string; tags?: string }>, tagsMapped: boolean) => {
+    const { buildContactCsvImportRows } = await import('../../../../../packages/clients/src/lib/contactCsvImportPayload');
+    const fields = ['full_name', 'email', 'client', ...(tagsMapped ? ['tags'] : [])] as const;
+    return buildContactCsvImportRows(
+      cells.map(({ email, full_name, tags }) => ({ full_name, email: `${email}@csv-tags.test`, client: 'Customer IT',
+        ...(tagsMapped ? { tags } : {}) })),
+      fields.map((field) => ({ csvHeader: field, contactField: field })),
+      [{ client_id: operation.customer_client_id, client_name: 'Customer IT' }],
+    );
+  };
+
+  it('refuses a departed customer\'s renamed contact row with an explicit blank Tags cell and writes nothing', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { importContactsFromCSV, row, tagsOf, rows } = await contactImportFixture(customer, operation, actor.tenant);
+    expect(await importContactsFromCSV([row('renamed', 'Kept tag')])).toEqual([expect.objectContaining({ success: true })]);
+    const contactBefore = await customer.table('contacts').where('email', 'renamed@csv-tags.test').first();
+    expect(contactBefore.full_name).toBe('CSV renamed');
+
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    const before = await rows();
+    const relationshipsBefore = await customer.table('co_management_relationships').orderBy('relationship_id').select('*');
+
+    const blankTagsRow = await dialogRows(operation, [{ email: 'renamed', full_name: 'Renamed after departure', tags: '' }], true);
+    expect(blankTagsRow).toEqual([expect.objectContaining({ full_name: 'Renamed after departure', tags: '' })]);
+    expect(await importContactsFromCSV(blankTagsRow, true))
+      .toEqual([expect.objectContaining({ success: false, message: readOnlyMessage })]);
+
+    // No partial write: the contact keeps its name and every tag row is untouched.
+    expect((await customer.table('contacts').where('email', 'renamed@csv-tags.test').first()).full_name).toBe('CSV renamed');
+    expect(await rows()).toEqual(before);
+    expect(await tagsOf('renamed')).toEqual(['Kept tag']);
+    expect(await customer.table('co_management_relationships').orderBy('relationship_id').select('*')).toEqual(relationshipsBefore);
+    expect(relationshipsBefore.map((relationship: any) => relationship.state)).toContain('terminated');
+    expect((await getCoManagedOperationalState(db, actor.tenant)).canWrite).toBe(false);
+  }));
+
+  it.each(['active co-managed', 'native PSA'] as const)('clears tags on an explicit blank, keeps them when Tags is absent, and skips duplicates untouched for an %s tenant', async kind => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    if (kind === 'native PSA') await customer.table('tenants').update({ product_code: 'psa' });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe(kind === 'native PSA' ? 'independent' : 'active');
+    const { importContactsFromCSV, row, tagsOf, rows } = await contactImportFixture(customer, operation, actor.tenant);
+    expect(await importContactsFromCSV([row('cleared', 'Old tag'), row('absent', 'Old tag'), row('duplicate', 'Old tag')]))
+      .toEqual([0, 1, 2].map(() => expect.objectContaining({ success: true })));
+
+    // Explicit blank with update-existing clears the contact's tag mappings.
+    expect(await importContactsFromCSV(await dialogRows(operation, [{ email: 'cleared', full_name: 'CSV cleared', tags: '' }], true), true))
+      .toEqual([expect.objectContaining({ success: true })]);
+    expect(await tagsOf('cleared')).toEqual([]);
+
+    // No Tags column: the update changes the contact and leaves its tags alone.
+    const absentTagsRow = await dialogRows(operation, [{ email: 'absent', full_name: 'Absent renamed' }], false);
+    expect(Object.prototype.hasOwnProperty.call(absentTagsRow[0], 'tags')).toBe(false);
+    expect(await importContactsFromCSV(absentTagsRow, true)).toEqual([expect.objectContaining({ success: true })]);
+    expect((await customer.table('contacts').where('email', 'absent@csv-tags.test').first()).full_name).toBe('Absent renamed');
+    expect(await tagsOf('absent')).toEqual(['Old tag']);
+
+    // Without update-existing a duplicate is skipped and nothing changes, tags included.
+    const before = await rows();
+    for (const tags of ['', 'New tag']) {
+      expect(await importContactsFromCSV([{ ...row('duplicate', tags), full_name: 'Duplicate renamed' }]))
+        .toEqual([expect.objectContaining({ success: false, message: expect.stringMatching(/already exists/) })]);
+    }
+    expect(await rows()).toEqual(before);
+    expect(await tagsOf('duplicate')).toEqual(['Old tag']);
+  }));
 });
 
 describe('co-managed KB import staging', () => {

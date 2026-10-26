@@ -45,6 +45,13 @@ vi.mock('@alga-psa/tags/actions', () => ({
   createTag: testState.createTagMock,
 }));
 
+// The suite's actor is not a seeded user; grant the tag:create gate so imported
+// tags mint their definitions (the co-managed suite covers real permissions).
+vi.mock('../../../../packages/tags/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  hasPermissionAsync: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: testState.publishWorkflowEventMock,
   publishEvent: vi.fn(async () => undefined),
@@ -60,6 +67,7 @@ import {
   generateContactCSVTemplate,
   importContactsFromCSV,
 } from '../../../../packages/clients/src/actions/contact-actions/contactActions';
+import { buildContactCsvImportRows } from '../../../../packages/clients/src/lib/contactCsvImportPayload';
 
 async function createTenant(db: Knex, tenantId: string) {
   await db('tenants').insert({
@@ -151,6 +159,84 @@ describe('contact CSV hybrid email import/export integration', () => {
       canonical_type: 'work',
       is_default: true,
       display_order: 0,
+    });
+  });
+
+  describe('Tags presence on a native PSA tenant', () => {
+    const tagsOf = async (tenantId: string, contactId: string) => (await db('tag_mappings as tm')
+      .join('tag_definitions as td', function () { this.on('td.tag_id', 'tm.tag_id').andOn('td.tenant', 'tm.tenant'); })
+      .where({ 'tm.tenant': tenantId, 'tm.tagged_id': contactId, 'tm.tagged_type': 'contact' })
+      .pluck('td.tag_text')).sort();
+
+    const seedTaggedContact = async () => {
+      const tenantId = uuidv4();
+      const clientId = uuidv4();
+      testState.tenant = tenantId;
+      // Tag mappings record their creator, so the actor must be a real user.
+      testState.userId = uuidv4();
+      await createTenant(db, tenantId);
+      await db('users').insert({ tenant: tenantId, user_id: testState.userId, username: testState.userId,
+        email: `${testState.userId}@example.test`, first_name: 'CSV', last_name: 'Importer', user_type: 'internal',
+        hashed_password: 'unused' });
+      await createClient(db, tenantId, clientId);
+      const email = `tagged-${tenantId}@acme.com`;
+      const [created] = await importContactsFromCSV([
+        { full_name: 'Tagged CSV Contact', email, client_id: clientId, tags: 'VIP, Board' } as any,
+      ], false);
+      expect(created?.success).toBe(true);
+      const contactId = created!.contact!.contact_name_id;
+      expect(await tagsOf(tenantId, contactId)).toEqual(['Board', 'VIP']);
+      return { tenantId, clientId, email, contactId };
+    };
+
+    it('clears an existing contact\'s tags when update-existing re-imports an explicit blank Tags cell', async () => {
+      const { tenantId, clientId, email, contactId } = await seedTaggedContact();
+
+      // Built by the dialog's transformation from a mapped Tags column with a blank cell.
+      const rows = buildContactCsvImportRows(
+        [{ full_name: 'Tagged CSV Contact', email, client: 'Tagged Client', tags: '' }],
+        ['full_name', 'email', 'client', 'tags'].map((field) => ({ csvHeader: field, contactField: field as any })),
+        [{ client_id: clientId, client_name: 'Tagged Client' }],
+      );
+      expect(rows).toEqual([expect.objectContaining({ tags: '' })]);
+
+      const results = await importContactsFromCSV(rows, true);
+
+      expect(results).toEqual([expect.objectContaining({ success: true, message: 'Contact updated successfully' })]);
+      expect(await tagsOf(tenantId, contactId)).toEqual([]);
+    });
+
+    it('leaves existing tags in place when the import carries no Tags column', async () => {
+      const { tenantId, clientId, email, contactId } = await seedTaggedContact();
+
+      const results = await importContactsFromCSV([
+        { full_name: 'Renamed CSV Contact', email, client_id: clientId } as any,
+      ], true);
+
+      expect(results).toEqual([expect.objectContaining({ success: true })]);
+      expect(await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).first())
+        .toMatchObject({ full_name: 'Renamed CSV Contact' });
+      expect(await tagsOf(tenantId, contactId)).toEqual(['Board', 'VIP']);
+    });
+
+    it('skips a duplicate row without update-existing and changes nothing, tags included', async () => {
+      const { tenantId, clientId, email, contactId } = await seedTaggedContact();
+      const contactBefore = await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).first();
+      const mappingsBefore = await db('tag_mappings').where({ tenant: tenantId }).orderBy('mapping_id');
+
+      for (const tags of ['', 'Replaced']) {
+        const results = await importContactsFromCSV([
+          { full_name: 'Duplicate CSV Contact', email, client_id: clientId, tags } as any,
+        ], false);
+        expect(results).toEqual([expect.objectContaining({
+          success: false,
+          message: expect.stringMatching(/already exists/),
+        })]);
+      }
+
+      expect(await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).first()).toEqual(contactBefore);
+      expect(await db('tag_mappings').where({ tenant: tenantId }).orderBy('mapping_id')).toEqual(mappingsBefore);
+      expect(await tagsOf(tenantId, contactId)).toEqual(['Board', 'VIP']);
     });
   });
 

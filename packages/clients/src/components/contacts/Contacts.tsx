@@ -69,6 +69,22 @@ import {
 } from '../../lib/clientListViewAdapters';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+
+/**
+ * Folds contacts returned by a CSV import into the list: a contact the import
+ * updated replaces its row in place, and only contacts with new ids are appended.
+ */
+function mergeContactsById(current: IContact[], imported: IContact[]): IContact[] {
+  const importedById = new Map(imported.map((contact) => [contact.contact_name_id, contact]));
+  const merged = current.map((contact) => {
+    const replacement = importedById.get(contact.contact_name_id);
+    if (!replacement) return contact;
+    importedById.delete(contact.contact_name_id);
+    return replacement;
+  });
+  return [...merged, ...importedById.values()];
+}
+
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -633,8 +649,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     }
   };
 
-  const handleImportComplete = (newContacts: IContact[]) => {
-    setContacts(prev => [...prev, ...newContacts]);
+  const handleImportComplete = (importedContacts: IContact[]) => {
+    setContacts(prev => mergeContactsById(prev, importedContacts));
     setIsImportDialogOpen(false);
   };
 
