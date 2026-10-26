@@ -1,0 +1,46 @@
+{
+  "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61",
+  "ticket": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+  "tag": "SMOKE csvtag control 1792979490588",
+  "added": [
+    {
+      "mapping_id": "b12855d5-fecc-44eb-9782-4423582dd5d2",
+      "tag_id": "8996836a-589d-4045-9c3a-2411de46b154",
+      "tag_text": "SMOKE csvtag control 1792979490588",
+      "tagged_id": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+      "tagged_type": "ticket"
+    }
+  ],
+  "afterRemoval": {
+    "mappings": [],
+    "definitions": 0
+  },
+  "csv": {
+    "contact": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+    "csvTag": "SMOKE csvtag contact 1792979490588",
+    "set": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\",\"role\":\"IT Administrator\",\"approver\":null,\"created_at\":\"$D2026-10-26T00:07:39.555Z\",\"updated_at\":\"$D2026-10-26T01:51:40.673Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"75e50fc5-b2bc-4d80-8ca2-67755cd82dea\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_sync_at\":null,\"entra_user_principal_name\":null,\"entra_account_enabled\":null,\"entra_sync_status\":null,\"entra_sync_status_reason\":null,\"inbound_ticket_defaults_id\":null,\"portal_visibility_group_id\":null,\"primary_email_canonical_type\":null,\"primary_email_custom_type_id\":null,\"contact_kind\":\"person\",\"manager_contact_id\":null,\"phone_numbers\":[],\"default_phone_number\":null,\"default_phone_type\":null,\"additional_email_addresses\":[],\"primary_email_type\":null},\"originalData\":\"$T0:0:0\"}]\n"
+    },
+    "withTag": [
+      {
+        "mapping_id": "3fb46606-6caf-4ed4-ab72-4c0a3e679d20",
+        "tag_id": "fb00454c-ec62-4968-9650-69af6f7e914a",
+        "tag_text": "SMOKE csvtag contact 1792979490588",
+        "tagged_id": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+        "tagged_type": "contact"
+      }
+    ],
+    "clear": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\",\"role\":\"IT Administrator\",\"approver\":null,\"created_at\":\"$D2026-10-26T00:07:39.555Z\",\"updated_at\":\"$D2026-10-26T01:51:40.864Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"75e50fc5-b2bc-4d80-8ca2-67755cd82dea\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_sync_at\":null,\"entra_user_principal_name\":null,\"entra_account_enabled\":null,\"entra_sync_status\":null,\"entra_sync_status_reason\":null,\"inbound_ticket_defaults_id\":null,\"portal_visibility_group_id\":null,\"primary_email_canonical_type\":null,\"primary_email_custom_type_id\":null,\"contact_kind\":\"person\",\"manager_contact_id\":null,\"phone_numbers\":[],\"default_phone_number\":null,\"default_phone_type\":null,\"additional_email_addresses\":[],\"primary_email_type\":null},\"originalData\":\"$T0:0:0\"}]\n"
+    },
+    "afterClear": [],
+    "tidy": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:{\"deleted_count\":0}\n"
+    },
+    "definitionsLeft": 0,
+    "contactFieldsUnchanged": true
+  }
+}

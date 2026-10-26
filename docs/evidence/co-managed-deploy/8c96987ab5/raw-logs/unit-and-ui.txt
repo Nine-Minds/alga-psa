@@ -1,0 +1,17 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792977962333"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/contacts/contactCsvImport.contract.test.ts (5 tests) 17ms 50 MB heap used
+ ✓ |node| ../packages/clients/src/actions/contact-actions/contactActionsTenantScoped.contract.test.ts (5 tests) 3ms 53 MB heap used
+ ✓ |jsdom| ../packages/tickets/src/components/ticket/__tests__/ticketTags.readOnly.test.tsx (4 tests) 120ms 75 MB heap used
+ ✓ |jsdom| ../packages/tickets/src/lib/ticket-columns.tagsReadOnly.test.tsx (2 tests) 27ms 75 MB heap used
+
+ Test Files  4 passed (4)
+      Tests  16 passed (16)
+   Start at  01:26:02
+   Duration  7.50s (transform 1.38s, setup 200ms, collect 2.99s, tests 166ms, environment 175ms, prepare 64ms)
+

@@ -1,0 +1,20 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1481 tests | 1469 skipped) 40861ms 224 MB heap used
+   ✓ co-managed tag lifecycle admission > refuses every tag write of a departed customer without changing a row, while reads still return its tags  986ms
+   ✓ co-managed tag lifecycle admission > keeps tag create, update, bulk apply and delete working for an active co-managed tenant  309ms
+   ✓ co-managed tag lifecycle admission > keeps tag create, update, bulk apply and delete working for an native PSA tenant  3743ms
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an active co-managed tenant  2608ms
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an native PSA tenant  536ms
+   ✓ co-managed tag lifecycle admission > keeps workflow and session-free ticket-creation tag writes working for an native PSA tenant  10312ms
+   ✓ co-managed tag lifecycle admission > refuses a departed customer's contact CSV import rows that write tags without changing a row  13648ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed | 1469 skipped (1481)
+   Start at  01:18:14
+   Duration  49.75s (transform 4.45s, setup 70ms, collect 4.69s, tests 40.86s, environment 0ms, prepare 30ms)
+

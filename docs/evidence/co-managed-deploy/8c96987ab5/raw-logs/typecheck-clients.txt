@@ -1,0 +1,4 @@
+src/lib/clientMergeEngine.test.ts(769,50): error TS2345: Argument of type '(_trx: unknown, { entityId }: { entityId: string; }) => Promise<1 | 0>' is not assignable to parameter of type '() => Promise<number>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 0.
+exit=2
+Pre-existing at 4ea4664182 (same single error with this change stashed); file untouched by this round.

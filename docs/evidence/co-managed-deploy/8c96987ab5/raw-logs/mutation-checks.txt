@@ -1,0 +1,23 @@
+MUTATION importContactsFromCSV admission removed -> RED
+   × co-managed tag lifecycle admission > refuses a departed customer's contact CSV import rows that write tags without changing a row 1333ms
+     → expected [ { success: true, …(3) } ] to deeply equal [ ObjectContaining{…} ]
+   ✓ co-managed tag lifecycle admission > keeps contact CSV import tag writes working for an active co-managed tenant 169ms
+   ✓ co-managed tag lifecycle admission > keeps contact CSV import tag writes working for an native PSA tenant 131ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 2 passed | 1478 skipped (1481)
+
+PRE-FIX HEAD 4ea4664182 contactActions.tsx against the new tests -> denial RED
+   × co-managed tag lifecycle admission > refuses a departed customer's contact CSV import rows that write tags without changing a row 1150ms
+     → expected [ { success: true, …(3) } ] to deeply equal [ ObjectContaining{…} ]
+   ✓ co-managed tag lifecycle admission > keeps contact CSV import tag writes working for an active co-managed tenant 149ms
+   ✓ co-managed tag lifecycle admission > keeps contact CSV import tag writes working for an native PSA tenant 105ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 2 passed | 1478 skipped (1481)
+
+VARIANT admission in import trx + createTag on its own connection -> active co-managed control hangs
+   × co-managed tag lifecycle admission > keeps contact CSV import tag writes working for an active co-managed tenant 60063ms
+     → Test timed out in 60000ms.
+Error: Hook timed out in 120000ms.
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+Error: Test timed out in 60000ms.
+      Tests  1 failed | 1480 skipped (1481)

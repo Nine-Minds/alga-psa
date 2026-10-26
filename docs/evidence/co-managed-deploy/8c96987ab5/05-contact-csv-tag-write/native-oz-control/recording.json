@@ -1,0 +1,165 @@
+{
+  "scenario": "native-oz-control",
+  "recordedAt": "2026-10-26T01:51:07.408Z",
+  "runtime": {
+    "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+    "buildId": "build-1792978025330"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-26T01:51:14.719Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "03f44759-37ca-41b6-a014-234c9ddf1703",
+            "tag_id": "f8bb5ba1-539a-46fb-af3f-3482d7165fc1",
+            "tag_text": "SMOKE csvtag control 1792979467436",
+            "tagged_id": "14619f1e-dd21-4f7e-902f-32fb983766df",
+            "tagged_type": "ticket"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-no-leftovers",
+      "passed": true,
+      "at": "2026-10-26T01:51:18.002Z",
+      "data": {}
+    },
+    {
+      "id": "csv-import-tag-persisted",
+      "passed": true,
+      "at": "2026-10-26T01:51:18.317Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":n",
+        "withTag": [
+          {
+            "mapping_id": "1ed8c34e-a0c2-42ff-b958-5d26dc0051f6",
+            "tag_id": "c95942cf-ac0c-4b9a-bb7a-ed5280daaa41",
+            "tag_text": "SMOKE csvtag contact 1792979467436",
+            "tagged_id": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+            "tagged_type": "contact"
+          }
+        ]
+      }
+    },
+    {
+      "id": "csv-import-tags-cleared",
+      "passed": true,
+      "at": "2026-10-26T01:51:18.490Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":n"
+      }
+    },
+    {
+      "id": "csv-import-no-leftovers",
+      "passed": true,
+      "at": "2026-10-26T01:51:19.349Z",
+      "data": {
+        "definitionsLeft": 0,
+        "contactFieldsUnchanged": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T01:51:09.528Z",
+      "seconds": 2.12,
+      "actor": "qa",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:11.598Z",
+      "seconds": 4.19,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/14619f1e-dd21-4f7e-902f-32fb983766df"
+    },
+    {
+      "at": "2026-10-26T01:51:14.719Z",
+      "seconds": 7.311,
+      "actor": "qa",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "03f44759-37ca-41b6-a014-234c9ddf1703",
+            "tag_id": "f8bb5ba1-539a-46fb-af3f-3482d7165fc1",
+            "tag_text": "SMOKE csvtag control 1792979467436",
+            "tagged_id": "14619f1e-dd21-4f7e-902f-32fb983766df",
+            "tagged_type": "ticket"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:18.002Z",
+      "seconds": 10.594,
+      "actor": "qa",
+      "title": "tag-removed-and-no-leftovers",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T01:51:18.317Z",
+      "seconds": 10.909,
+      "actor": "qa",
+      "title": "csv-import-tag-persisted",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":n",
+        "withTag": [
+          {
+            "mapping_id": "1ed8c34e-a0c2-42ff-b958-5d26dc0051f6",
+            "tag_id": "c95942cf-ac0c-4b9a-bb7a-ed5280daaa41",
+            "tag_text": "SMOKE csvtag contact 1792979467436",
+            "tagged_id": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+            "tagged_type": "contact"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:18.490Z",
+      "seconds": 11.082,
+      "actor": "qa",
+      "title": "csv-import-tags-cleared",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":n"
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:19.349Z",
+      "seconds": 11.941,
+      "actor": "qa",
+      "title": "csv-import-no-leftovers",
+      "data": {
+        "definitionsLeft": 0,
+        "contactFieldsUnchanged": true
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 11.76,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44"
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "scenario": "active-customer-control",
+  "recordedAt": "2026-10-26T01:51:30.550Z",
+  "runtime": {
+    "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+    "buildId": "build-1792978025330"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-26T01:51:37.274Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "b12855d5-fecc-44eb-9782-4423582dd5d2",
+            "tag_id": "8996836a-589d-4045-9c3a-2411de46b154",
+            "tag_text": "SMOKE csvtag control 1792979490588",
+            "tagged_id": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+            "tagged_type": "ticket"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-no-leftovers",
+      "passed": true,
+      "at": "2026-10-26T01:51:40.501Z",
+      "data": {}
+    },
+    {
+      "id": "csv-import-tag-persisted",
+      "passed": true,
+      "at": "2026-10-26T01:51:40.846Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\"",
+        "withTag": [
+          {
+            "mapping_id": "3fb46606-6caf-4ed4-ab72-4c0a3e679d20",
+            "tag_id": "fb00454c-ec62-4968-9650-69af6f7e914a",
+            "tag_text": "SMOKE csvtag contact 1792979490588",
+            "tagged_id": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+            "tagged_type": "contact"
+          }
+        ]
+      }
+    },
+    {
+      "id": "csv-import-tags-cleared",
+      "passed": true,
+      "at": "2026-10-26T01:51:41.015Z",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\""
+      }
+    },
+    {
+      "id": "csv-import-no-leftovers",
+      "passed": true,
+      "at": "2026-10-26T01:51:41.905Z",
+      "data": {
+        "definitionsLeft": 0,
+        "contactFieldsUnchanged": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-26T01:51:32.696Z",
+      "seconds": 2.146,
+      "actor": "alice",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:34.730Z",
+      "seconds": 4.18,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cbe64b12-08a7-4b31-b9b9-01afe26094e5"
+    },
+    {
+      "at": "2026-10-26T01:51:37.274Z",
+      "seconds": 6.724,
+      "actor": "alice",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "b12855d5-fecc-44eb-9782-4423582dd5d2",
+            "tag_id": "8996836a-589d-4045-9c3a-2411de46b154",
+            "tag_text": "SMOKE csvtag control 1792979490588",
+            "tagged_id": "cbe64b12-08a7-4b31-b9b9-01afe26094e5",
+            "tagged_type": "ticket"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:40.501Z",
+      "seconds": 9.951,
+      "actor": "alice",
+      "title": "tag-removed-and-no-leftovers",
+      "data": {}
+    },
+    {
+      "at": "2026-10-26T01:51:40.846Z",
+      "seconds": 10.296,
+      "actor": "alice",
+      "title": "csv-import-tag-persisted",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\"",
+        "withTag": [
+          {
+            "mapping_id": "3fb46606-6caf-4ed4-ab72-4c0a3e679d20",
+            "tag_id": "fb00454c-ec62-4968-9650-69af6f7e914a",
+            "tag_text": "SMOKE csvtag contact 1792979490588",
+            "tagged_id": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+            "tagged_type": "contact"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:41.015Z",
+      "seconds": 10.465,
+      "actor": "alice",
+      "title": "csv-import-tags-cleared",
+      "data": {
+        "status": 200,
+        "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\""
+      }
+    },
+    {
+      "at": "2026-10-26T01:51:41.905Z",
+      "seconds": 11.355,
+      "actor": "alice",
+      "title": "csv-import-no-leftovers",
+      "data": {
+        "definitionsLeft": 0,
+        "contactFieldsUnchanged": true
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 11.16,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "c64b2666-7dd6-4c61-8ced-4b233f628e61"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "scenario": "terminated-customer",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-8c96987a",
+      "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+      "buildId": "build-1792978025330"
+    },
+    "assertions": [
+      "relationship-terminated-before",
+      "ticket-has-existing-tag",
+      "entry-existing-tag-displayed",
+      "entry-no-tag-add-or-remove-control",
+      "grid-existing-tag-displayed",
+      "grid-no-tag-add-or-remove-control",
+      "ticket-list-no-tag-mutation-controls",
+      "direct-createTag-refused",
+      "direct-updateTagColor-refused",
+      "direct-updateTagText-refused",
+      "direct-deleteTag-refused",
+      "direct-deleteAllTagsByText-refused",
+      "direct-importContactsFromCSV-refused",
+      "direct-importContactsFromCSV-refused",
+      "tag-and-contact-tables-unchanged",
+      "relationship-still-terminated"
+    ]
+  },
+  {
+    "scenario": "active-customer-control",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-8c96987a",
+      "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+      "buildId": "build-1792978025330"
+    },
+    "assertions": [
+      "tag-persisted",
+      "tag-removed-and-no-leftovers",
+      "csv-import-tag-persisted",
+      "csv-import-tags-cleared",
+      "csv-import-no-leftovers"
+    ],
+    "note": "First attempt failed at login with a superseded shared password (raw-logs/live-run-1.txt). Re-run with the reprovisioned active-admin credential (raw-logs/live-run-2-active-control.txt)."
+  },
+  {
+    "scenario": "native-oz-control",
+    "status": "passed",
+    "build": {
+      "dist": ".next-review-final-8c96987a",
+      "sourceRevision": "8c96987ab5df4c68d76558521b1e76563f019818",
+      "buildId": "build-1792978025330"
+    },
+    "assertions": [
+      "tag-persisted",
+      "tag-removed-and-no-leftovers",
+      "csv-import-tag-persisted",
+      "csv-import-tags-cleared",
+      "csv-import-no-leftovers"
+    ]
+  }
+]

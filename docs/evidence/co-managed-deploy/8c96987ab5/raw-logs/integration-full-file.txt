@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+
+ Test Files  1 passed (1)
+      Tests  1481 passed (1481)
+   Start at  01:19:37
+   Duration  327.64s (transform 8.38s, setup 73ms, collect 3.92s, tests 319.49s, environment 0ms, prepare 35ms)
+

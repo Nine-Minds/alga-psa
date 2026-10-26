@@ -1,0 +1,46 @@
+{
+  "tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+  "ticket": "14619f1e-dd21-4f7e-902f-32fb983766df",
+  "tag": "SMOKE csvtag control 1792979467436",
+  "added": [
+    {
+      "mapping_id": "03f44759-37ca-41b6-a014-234c9ddf1703",
+      "tag_id": "f8bb5ba1-539a-46fb-af3f-3482d7165fc1",
+      "tag_text": "SMOKE csvtag control 1792979467436",
+      "tagged_id": "14619f1e-dd21-4f7e-902f-32fb983766df",
+      "tagged_type": "ticket"
+    }
+  ],
+  "afterRemoval": {
+    "mappings": [],
+    "definitions": 0
+  },
+  "csv": {
+    "contact": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+    "csvTag": "SMOKE csvtag contact 1792979467436",
+    "set": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":null,\"approver\":null,\"created_at\":\"$D2026-10-25T23:52:15.853Z\",\"updated_at\":\"$D2026-10-26T01:51:18.159Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"f2334ed4-1c31-4b4d-b771-80edb684b551\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_sync_at\":null,\"entra_user_principal_name\":null,\"entra_account_enabled\":null,\"entra_sync_status\":null,\"entra_sync_status_reason\":null,\"inbound_ticket_defaults_id\":null,\"portal_visibility_group_id\":null,\"primary_email_canonical_type\":\"work\",\"primary_email_custom_type_id\":null,\"contact_kind\":\"person\",\"manager_contact_id\":null,\"phone_numbers\":[{\"contact_phone_number_id\":\"24f97877-d1cf-4b0f-84d5-4bf159ff8154\",\"phone_number\":\"+1 212-555-0104\",\"extension\":null,\"normalized_phone_number\":\"12125550104\",\"canonical_type\":\"work\",\"custom_phone_type_id\":null,\"custom_type\":null,\"is_default\":true,\"display_order\":0,\"created_at\":\"$D2026-10-26T01:51:18.159Z\",\"updated_at\":\"$D2026-10-26T01:51:18.159Z\"}],\"default_phone_number\":\"+1 212-555-0104\",\"default_phone_type\":\"work\",\"additional_email_addresses\":[{\"contact_additional_email_address_id\":\"6aaa9d98-5c7e-47d7-bccd-5607383af888\",\"email_address\":\"dorothy.billing@oz.com\",\"normalized_email_address\":\"dorothy.billing@oz.com\",\"canonical_type\":\"billing\",\"custom_email_type_id\":null,\"custom_type\":null,\"display_order\":0,\"created_at\":\"$D2026-10-25T23:52:15.856Z\",\"updated_at\":\"$D2026-10-25T23:52:15.856Z\"}],\"primary_email_type\":\"work\"},\"originalData\":\"$T0:0:0\"}]\n"
+    },
+    "withTag": [
+      {
+        "mapping_id": "1ed8c34e-a0c2-42ff-b958-5d26dc0051f6",
+        "tag_id": "c95942cf-ac0c-4b9a-bb7a-ed5280daaa41",
+        "tag_text": "SMOKE csvtag contact 1792979467436",
+        "tagged_id": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+        "tagged_type": "contact"
+      }
+    ],
+    "clear": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":null,\"approver\":null,\"created_at\":\"$D2026-10-25T23:52:15.853Z\",\"updated_at\":\"$D2026-10-26T01:51:18.337Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"f2334ed4-1c31-4b4d-b771-80edb684b551\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_sync_at\":null,\"entra_user_principal_name\":null,\"entra_account_enabled\":null,\"entra_sync_status\":null,\"entra_sync_status_reason\":null,\"inbound_ticket_defaults_id\":null,\"portal_visibility_group_id\":null,\"primary_email_canonical_type\":\"work\",\"primary_email_custom_type_id\":null,\"contact_kind\":\"person\",\"manager_contact_id\":null,\"phone_numbers\":[{\"contact_phone_number_id\":\"24f97877-d1cf-4b0f-84d5-4bf159ff8154\",\"phone_number\":\"+1 212-555-0104\",\"extension\":null,\"normalized_phone_number\":\"12125550104\",\"canonical_type\":\"work\",\"custom_phone_type_id\":null,\"custom_type\":null,\"is_default\":true,\"display_order\":0,\"created_at\":\"$D2026-10-26T01:51:18.337Z\",\"updated_at\":\"$D2026-10-26T01:51:18.337Z\"}],\"default_phone_number\":\"+1 212-555-0104\",\"default_phone_type\":\"work\",\"additional_email_addresses\":[{\"contact_additional_email_address_id\":\"6aaa9d98-5c7e-47d7-bccd-5607383af888\",\"email_address\":\"dorothy.billing@oz.com\",\"normalized_email_address\":\"dorothy.billing@oz.com\",\"canonical_type\":\"billing\",\"custom_email_type_id\":null,\"custom_type\":null,\"display_order\":0,\"created_at\":\"$D2026-10-25T23:52:15.856Z\",\"updated_at\":\"$D2026-10-25T23:52:15.856Z\"}],\"primary_email_type\":\"work\"},\"originalData\":\"$T0:0:0\"}]\n"
+    },
+    "afterClear": [],
+    "tidy": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:{\"deleted_count\":0}\n"
+    },
+    "definitionsLeft": 0,
+    "contactFieldsUnchanged": true
+  }
+}

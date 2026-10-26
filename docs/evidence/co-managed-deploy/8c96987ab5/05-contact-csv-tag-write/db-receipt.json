@@ -1,0 +1,127 @@
+{
+  "build": {
+    "dist": ".next-review-final-8c96987a",
+    "revision": "8c96987ab5df4c68d76558521b1e76563f019818+da39a3ee5e6b",
+    "buildId": "build-1792978025330"
+  },
+  "terminated": {
+    "tenant": "3261f313-8e04-45df-94bc-0343e92ba454",
+    "relationshipBefore": {
+      "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+      "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "state": "terminated",
+      "ended_at": "2026-10-26T00:13:30.705+00:00",
+      "updated_at": "2026-10-26T00:13:30.705+00:00"
+    },
+    "relationshipAfter": {
+      "relationship_id": "ad0808b5-25df-4e95-987a-aa650c8ba24f",
+      "sponsor_tenant": "fa7f912f-6b62-463e-85cc-ffedab47ac44",
+      "state": "terminated",
+      "ended_at": "2026-10-26T00:13:30.705+00:00",
+      "updated_at": "2026-10-26T00:13:30.705+00:00"
+    },
+    "countsBefore": {
+      "tag_definitions": 1,
+      "tag_mappings": 1,
+      "contacts": 1
+    },
+    "countsAfter": {
+      "tag_definitions": 1,
+      "tag_mappings": 1,
+      "contacts": 1
+    },
+    "identical": true
+  },
+  "contactCsvImportRefusals": [
+    {
+      "action": "importContactsFromCSV",
+      "actionId": "7f813515b43d8ec95068036cd144bb227df2e44f21",
+      "args": [
+        [
+          {
+            "full_name": "Dorothy Gale",
+            "email": "admin@kansasfarms.test",
+            "client_id": "75dda991-66ad-4ecd-8329-7f7dd9f75c25",
+            "tags": "CSV after departure"
+          }
+        ],
+        true
+      ],
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":false,\"message\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\",\"originalData\":\"$T0:0:0\"}]\n"
+    },
+    {
+      "action": "importContactsFromCSV",
+      "actionId": "7f813515b43d8ec95068036cd144bb227df2e44f21",
+      "args": [
+        [
+          {
+            "full_name": "CSV new after departure",
+            "email": "csv-new-after-departure@kansasfarms.test",
+            "client_id": "75dda991-66ad-4ecd-8329-7f7dd9f75c25",
+            "tags": "CSV after departure"
+          }
+        ],
+        false
+      ],
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":false,\"message\":\"This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.\",\"originalData\":\"$T0:0:0\"}]\n"
+    }
+  ],
+  "activeCustomerControl": {
+    "contact": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+    "csvTag": "SMOKE csvtag contact 1792979490588",
+    "set": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\",\"role\":\"IT Administrator\",\"approver\":null,\"created_at\":\"$D2026-10-26T00:07:39.555Z\",\"updated_at\":\"$D2026-10-26T01:51:40.673Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"75e50fc5-b2bc-4d80-8ca2-67755cd82dea\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_sourc"
+    },
+    "withTag": [
+      {
+        "mapping_id": "3fb46606-6caf-4ed4-ab72-4c0a3e679d20",
+        "tag_id": "fb00454c-ec62-4968-9650-69af6f7e914a",
+        "tag_text": "SMOKE csvtag contact 1792979490588",
+        "tagged_id": "82fcd776-e8b2-4597-9182-0fcde55e88cd",
+        "tagged_type": "contact"
+      }
+    ],
+    "clear": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"c64b2666-7dd6-4c61-8ced-4b233f628e61\",\"contact_name_id\":\"82fcd776-e8b2-4597-9182-0fcde55e88cd\",\"full_name\":\"Alice Liddell\",\"email\":\"alice@whiterabbit.test\",\"role\":\"IT Administrator\",\"approver\":null,\"created_at\":\"$D2026-10-26T00:07:39.555Z\",\"updated_at\":\"$D2026-10-26T01:51:40.864Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"75e50fc5-b2bc-4d80-8ca2-67755cd82dea\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_sourc"
+    },
+    "afterClear": [],
+    "tidy": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:{\"deleted_count\":0}\n"
+    },
+    "definitionsLeft": 0,
+    "contactFieldsUnchanged": true
+  },
+  "nativeOzControl": {
+    "contact": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+    "csvTag": "SMOKE csvtag contact 1792979467436",
+    "set": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":null,\"approver\":null,\"created_at\":\"$D2026-10-25T23:52:15.853Z\",\"updated_at\":\"$D2026-10-26T01:51:18.159Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"f2334ed4-1c31-4b4d-b771-80edb684b551\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_syn"
+    },
+    "withTag": [
+      {
+        "mapping_id": "1ed8c34e-a0c2-42ff-b958-5d26dc0051f6",
+        "tag_id": "c95942cf-ac0c-4b9a-bb7a-ed5280daaa41",
+        "tag_text": "SMOKE csvtag contact 1792979467436",
+        "tagged_id": "05d4ac47-eadf-4c17-b627-d8a81859401e",
+        "tagged_type": "contact"
+      }
+    ],
+    "clear": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:[{\"success\":true,\"message\":\"Contact updated successfully\",\"contact\":{\"tenant\":\"fa7f912f-6b62-463e-85cc-ffedab47ac44\",\"contact_name_id\":\"05d4ac47-eadf-4c17-b627-d8a81859401e\",\"full_name\":\"Dorothy Gale\",\"email\":\"dorothy@oz.com\",\"role\":null,\"approver\":null,\"created_at\":\"$D2026-10-25T23:52:15.853Z\",\"updated_at\":\"$D2026-10-26T01:51:18.337Z\",\"is_inactive\":false,\"notes\":null,\"is_client_admin\":false,\"client_id\":\"f2334ed4-1c31-4b4d-b771-80edb684b551\",\"notes_document_id\":null,\"entra_object_id\":null,\"entra_sync_source\":null,\"last_entra_syn"
+    },
+    "afterClear": [],
+    "tidy": {
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"build-1792978025330\"}\n1:{\"deleted_count\":0}\n"
+    },
+    "definitionsLeft": 0,
+    "contactFieldsUnchanged": true
+  }
+}
