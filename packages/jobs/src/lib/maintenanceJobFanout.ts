@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { getJobDescriptor, listJobDescriptorNames } from './jobDescriptors';
 import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -68,7 +69,7 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 export type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
@@ -192,10 +193,15 @@ export function registerMaintenanceJob(jobName: string, def: MaintenanceJobDef):
   MAINTENANCE_JOBS[jobName] = def;
 }
 
-export const listMaintenanceJobNames = (): string[] => Object.keys(MAINTENANCE_JOBS);
+// Native names first, then descriptor names not shadowed by a native job.
+export const listMaintenanceJobNames = (): string[] => {
+  const native = Object.keys(MAINTENANCE_JOBS);
+  const extra = listJobDescriptorNames().filter((name) => !Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, name));
+  return extra.length ? [...native, ...extra] : native;
+};
 
 export const isKnownMaintenanceJob = (jobName: string): boolean =>
-  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);
+  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName) || getJobDescriptor(jobName) !== undefined;
 
 async function runWithConcurrency<T>(
   items: T[],
@@ -218,7 +224,7 @@ export async function runMaintenanceJob(
   jobName: string,
   opts: { concurrency?: number } = {},
 ): Promise<MaintenanceJobResult> {
-  const def = MAINTENANCE_JOBS[jobName];
+  const def: MaintenanceJobDef | undefined = MAINTENANCE_JOBS[jobName] ?? getJobDescriptor(jobName);
   if (!def) {
     throw new Error(`Unknown maintenance job: ${jobName}`);
   }
@@ -245,10 +251,10 @@ export async function runMaintenanceJob(
   }
 
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
-  const active = await db
-    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
-    .whereNull('suspended_at')
-    .select('tenant');
+  const tenantQuery = db
+    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs');
+  if (!def.includeSuspended) tenantQuery.whereNull('suspended_at');
+  const active = await tenantQuery.select('tenant');
   let tenants = active;
   if (def.tenants) {
     const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));

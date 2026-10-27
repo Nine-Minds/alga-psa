@@ -17,16 +17,37 @@ export { default as Knex } from './lib/knex-turbopack';
 export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
 
 // Tenant Connection
-export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly, withSavepoint } from './lib/tenant';
 export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
 export { getTenantTableScope, parseTableExpression, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
+export {
+  TENANT_TABLE_MANIFEST,
+  TenantManifestCycleError,
+  computeTenantDeletionOrder,
+  deletionEdges,
+  getTenantTableManifestEntry,
+  placeTenantTable,
+  tenantClientKeyedTables,
+  tenantDeletionOrder,
+  tenantExportOrder,
+} from './lib/tenantTableManifest';
+export type {
+  TenantDeletionComputation,
+  TenantDeletionViolation,
+  TenantInsertionWindow,
+  TenantTableEntry,
+  TenantTableForeignKey,
+  TenantTableReference,
+} from './lib/tenantTableManifest';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
-export { registerAfterCommit } from './lib/afterCommit';
+export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
+export { admitWrite, registerWriteAdmissionProvider, resetWriteAdmissionProvider } from './lib/writeAdmission';
+export type { WriteAdmissionContext, WriteAdmissionProvider } from './lib/writeAdmission';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)

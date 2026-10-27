@@ -6,6 +6,10 @@
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
+    "./tenantTableManifest": {
+      "import": "./dist/lib/tenantTableManifest.js",
+      "types": "./src/lib/tenantTableManifest.ts"
+    },
     "./tenantDb": {
       "import": "./dist/lib/tenantDb.js",
       "types": "./src/lib/tenantDb.ts"

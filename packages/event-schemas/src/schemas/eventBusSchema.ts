@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EXTENSION_EVENT_TYPES, EXTENSION_PAYLOAD_SCHEMAS } from './extensions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -198,7 +199,7 @@ import {
 } from './domain/inventoryEventSchemas';
 
 // Define event types
-export const EVENT_TYPES = [
+const CORE_EVENT_TYPES = [
   // Tickets (existing + legacy)
   'TICKET_CREATED',
   'TICKET_UPDATED',
@@ -545,6 +546,9 @@ export const EVENT_TYPES = [
   'CUSTOM_EVENT',
   'UNKNOWN',
 ] as const satisfies readonly [string, ...string[]];
+
+// Core plus extension event types; the extension list is empty natively.
+export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const;
 
 export const EventTypeEnum = z.enum(EVENT_TYPES);
 
@@ -1241,7 +1245,7 @@ const InboundEmailReceivedPayloadSchema = z.union([
 ]);
 
 // Map event types to their payload schemas
-export const EventPayloadSchemas = {
+const CorePayloadSchemas = {
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
@@ -1583,6 +1587,8 @@ export const EventPayloadSchemas = {
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
+
+export const EventPayloadSchemas = { ...CorePayloadSchemas, ...EXTENSION_PAYLOAD_SCHEMAS } as const;
 
 const missingPayloadSchemas = EVENT_TYPES.filter((t) => !(t in EventPayloadSchemas));
 if (missingPayloadSchemas.length > 0) {

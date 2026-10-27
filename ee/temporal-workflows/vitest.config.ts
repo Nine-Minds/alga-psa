@@ -90,6 +90,7 @@ export default defineConfig({
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: `${path.resolve(__dirname, '../packages/workflows/src')}/$1` },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../../packages/db/src/index.ts') },
       { find: '@alga-psa/db/workDate', replacement: path.resolve(__dirname, '../../packages/db/src/lib/workDate.ts') },
+      { find: '@alga-psa/db/tenantTableManifest', replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenantTableManifest.ts') },
       // Accept the ESM .js specifier form used by runtime code (package exports map it to dist/).
       { find: /^@alga-psa\/db\/admin(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db\/tenant(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenant.ts') },

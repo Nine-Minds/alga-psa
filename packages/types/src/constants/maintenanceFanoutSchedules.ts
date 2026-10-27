@@ -1,3 +1,4 @@
+import { JOB_SCHEDULE_EXTENSIONS } from './jobScheduleExtensions';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from './billingJobNames';
 
 /**
@@ -62,6 +63,7 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'rmm-polling-reconcile', cron: '*/5 * * * *' },
   { jobName: 'recover-comment-publications', cron: '* * * * *' },
   { jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' },
+  ...JOB_SCHEDULE_EXTENSIONS,
 ];
 
 /**
