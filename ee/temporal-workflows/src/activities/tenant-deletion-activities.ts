@@ -115,7 +115,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Task/project details
   'task_checklist_items', 'project_task_dependencies', 'task_resources',
   'project_ticket_links', 'project_task_comment_reactions', 'project_task_comments',
-  'project_materials', 'ticket_materials',
+  'project_materials', 'ticket_materials', 'ticket_fixed_fee_services',
 
   // Project template details
   'project_template_checklist_items', 'project_template_dependencies',

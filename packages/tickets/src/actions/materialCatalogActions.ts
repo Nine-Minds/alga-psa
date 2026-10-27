@@ -234,7 +234,7 @@ export const updateTicketMaterial = withAuth(async (
       if (!Number.isSafeInteger(Number(material.rate) * parsed.data.quantity)) {
         throw new CodedError('This quantity would exceed the supported total amount.', 'TICKET_MATERIAL_EDIT', 'features/tickets:chargeEdit.errors.amountTooLarge');
       }
-      let pendingStockLow = null;
+      let pendingStockLow: Awaited<ReturnType<typeof collectStockLowSignalAfterConsume>> = null;
       if (Number(material.quantity) !== parsed.data.quantity) {
         const settings = await db.table('product_inventory_settings')
           .where({ service_id: material.service_id }).forShare().first();
