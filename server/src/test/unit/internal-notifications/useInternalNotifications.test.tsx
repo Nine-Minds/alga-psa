@@ -25,7 +25,7 @@ const inbox = (message: string) => ({ notifications: [{ internal_notification_id
 beforeEach(() => {
   mocks.providers.length = 0; mocks.polling.length = 0;
   mocks.get.mockReset().mockResolvedValue(inbox('Current authorized content'));
-  mocks.fetch.mockReset().mockResolvedValue({ ok: true, json: async () => ({ token: 'signed-token', tenant, userId, expiresAt: Date.now() + 60000 }) });
+  mocks.fetch.mockReset().mockResolvedValue({ ok: true, json: async () => ({ token: 'signed-token', tenant, userId, expiresAt: Date.now() + 60000, expiresInMs: 60000 }) });
   vi.stubGlobal('fetch', mocks.fetch); vi.stubEnv('NEXT_PUBLIC_HOCUSPOCUS_URL', 'ws://localhost:1234');
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
@@ -76,20 +76,59 @@ it('polls only while disconnected', async () => {
 it('rotates the token about 15s before it expires (~285s for a 300s token) and refuses a token for another identity', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   try {
-    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't1', tenant, userId, expiresAt: Date.now() + 300000 }) });
+    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't1', tenant, userId, expiresAt: Date.now() + 300000, expiresInMs: 300000 }) });
     renderHook(() => useInternalNotifications({ tenant, userId }));
     await waitFor(() => expect(mocks.providers).toHaveLength(1));
     await act(async () => { await vi.advanceTimersByTimeAsync(283_000); });
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
-    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't2', tenant, userId, expiresAt: Date.now() + 300000 }) });
+    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't2', tenant, userId, expiresAt: Date.now() + 300000, expiresInMs: 300000 }) });
     await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mocks.providers.at(-1).options.parameters).toEqual({ token: 't2' }));
   } finally { vi.useRealTimers(); }
 });
 
+it.each([
+  ['20s behind', -20_000],
+  ['10 minutes ahead', 600_000],
+])('schedules rotation from expiresInMs, not expiresAt, with a browser clock %s', async (_label, skew) => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    vi.setSystemTime(Date.now() + skew);
+    // expiresAt is a server epoch that disagrees with the mocked browser clock.
+    const serverEpoch = Date.now() - skew;
+    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't1', tenant, userId, expiresAt: serverEpoch + 300000, expiresInMs: 300000 }) });
+    renderHook(() => useInternalNotifications({ tenant, userId }));
+    await waitFor(() => expect(mocks.providers).toHaveLength(1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(283_000); });
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't2', tenant, userId, expiresAt: serverEpoch + 300000, expiresInMs: 300000 }) });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.providers.at(-1).options.parameters).toEqual({ token: 't2' }));
+  } finally { vi.useRealTimers(); }
+});
+
+it('still constructs and connects the provider with the browser clock 10 minutes fast', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    vi.setSystemTime(Date.now() + 600_000);
+    mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 't1', tenant, userId, expiresAt: Date.now() - 600_000 + 300000, expiresInMs: 300000 }) });
+    const { result } = renderHook(() => useInternalNotifications({ tenant, userId }));
+    await waitFor(() => expect(result.current.isConnected).toBe(true));
+    expect(mocks.providers).toHaveLength(1);
+  } finally { vi.useRealTimers(); }
+});
+
+it('treats a response without a positive expiresInMs as invalid', async () => {
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'x', tenant, userId, expiresAt: Date.now() + 60000 }) });
+  renderHook(() => useInternalNotifications({ tenant, userId }));
+  await waitFor(() => expect(mocks.fetch).toHaveBeenCalled());
+  expect(mocks.providers).toHaveLength(0);
+});
+
 it('does not open a socket when the token response names another user', async () => {
-  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'x', tenant, userId: 'someone-else', expiresAt: Date.now() + 60000 }) });
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'x', tenant, userId: 'someone-else', expiresAt: Date.now() + 60000, expiresInMs: 60000 }) });
   const { result } = renderHook(() => useInternalNotifications({ tenant, userId }));
   await waitFor(() => expect(mocks.fetch).toHaveBeenCalled());
   expect(mocks.providers).toHaveLength(0);
@@ -113,7 +152,7 @@ it('ignores an old in-flight response after the authenticated user context chang
   let pending!: Promise<void>;
   act(() => { pending = result.current.refresh(); });
   mocks.get.mockResolvedValue(inbox('Other home user'));
-  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'new-token', tenant, userId: 'other-user', expiresAt: Date.now() + 60000 }) });
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'new-token', tenant, userId: 'other-user', expiresAt: Date.now() + 60000, expiresInMs: 60000 }) });
   rerender({ tenant, userId: 'other-user' });
   expect(result.current.notifications).toEqual([]);
   await act(async () => { resolve(inbox('Previous user secret')); await pending; });

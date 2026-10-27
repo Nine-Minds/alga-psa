@@ -24,7 +24,9 @@ export async function GET() {
       { secret: await getHocuspocusJwtSecret(), sessionExpiresAt },
     );
     return result
-      ? NextResponse.json(result, { headers })
+      // Relative lifetime from the server clock: browsers must not compare the
+      // absolute expiresAt with their own (possibly skewed) clock.
+      ? NextResponse.json({ ...result, expiresInMs: result.expiresAt - Date.now() }, { headers })
       : NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
   } catch {
     return NextResponse.json({ error: 'Unable to open notification stream' }, { status: 503, headers });

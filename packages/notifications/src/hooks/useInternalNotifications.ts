@@ -221,14 +221,17 @@ export function useInternalNotifications(
           tenant: string;
           userId: string;
           expiresAt: number;
+          expiresInMs: number;
         };
+        const receivedAt = Date.now();
         if (disposed || attempt !== generation) return;
         if (
           !access.token ||
           access.tenant !== tenant ||
           access.userId !== userId ||
-          !Number.isFinite(access.expiresAt) ||
-          access.expiresAt <= Date.now()
+          // Relative to the server's clock; expiresAt is never compared with the browser's.
+          !Number.isFinite(access.expiresInMs) ||
+          access.expiresInMs <= 0
         ) {
           throw new Error('Invalid notification stream identity');
         }
@@ -275,7 +278,7 @@ export function useInternalNotifications(
         // Nothing in the Yjs document is trusted or read: the socket carries
         // only a request to refresh (inbox) or the transient ring.
         next.connect();
-        schedule(Math.max(1000, access.expiresAt - Date.now() - TOKEN_ROTATION_LEAD_MS));
+        schedule(Math.max(1000, receivedAt + access.expiresInMs - TOKEN_ROTATION_LEAD_MS - Date.now()));
       } catch {
         if (!disposed && attempt === generation) {
           backoff();

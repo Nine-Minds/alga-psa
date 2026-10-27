@@ -32,6 +32,8 @@ describe('GET /api/notifications/live-token', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store, private');
     const body = await response.json();
     expect(body).toMatchObject({ tenant, userId: user });
+    expect(body.expiresInMs).toBeGreaterThan(290_000);
+    expect(body.expiresInMs).toBeLessThanOrEqual(300_000);
     expect(jwt.verify(body.token, 'route-secret', { audience: 'notification-signals' })).toMatchObject({ tenantId: tenant, userId: user, sessionId });
 
     mocks.getSession.mockResolvedValue(liveSession({ expires: new Date(Date.now() + 60_000).toISOString() }));

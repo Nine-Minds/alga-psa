@@ -1,5 +1,5 @@
 import { createClient } from 'redis'
-import { validateNotificationSignalRoom, validateLegacyNotificationRoom } from './tenantValidation.js'
+import { validateNotificationSignalRoom, validateLegacyNotificationRoom, SIGNAL_CLOCK_TOLERANCE_SECONDS } from './tenantValidation.js'
 
 /** Inbox events that collapse to a content-free wake-up. */
 const NOTIFICATION_CHANGE_EVENTS = ['notification.created', 'notification.read', 'notifications.all_read', 'notifications.unread_count']
@@ -23,6 +23,14 @@ export function toNotificationSignal(event) {
   return null
 }
 
+/** setTimeout stores its delay in a signed 32-bit int; larger values fire immediately. */
+const MAX_TIMER_MS = 2 ** 31 - 1
+const EXPIRED_CLOSE = { code: 4401, reason: 'Notification signal token expired' }
+
+/** The one instant after which a signal connection is dead: exp plus the same
+ * leeway the join gate grants. Every post-join check and the close timer use it. */
+const isLive = access => Boolean(access) && Date.now() <= access.deadline
+
 /** Signal rooms contain no inbox data. Redis events only wake the browser's
  * session-authorized reader; Yjs documents never cache message bodies, links,
  * counts or metadata for a later connection to reuse. The one exception is the
@@ -35,6 +43,7 @@ export class NotificationExtension {
     this.instance = null
     this.subscribed = false
     this.legacySubscriptions = new Map() // channel -> { connections, roomName }; rollout window only
+    this.expiryTimers = new WeakMap() // notificationSignals access -> close timer
     this.handleMessage = this.handleMessage.bind(this)
   }
 
@@ -62,12 +71,32 @@ export class NotificationExtension {
     if (!data.documentName?.startsWith('notification-signals:')) return
     const access = validateNotificationSignalRoom(data.documentName, data.request)
     data.connection.readOnly = true
-    return { notificationSignals: access }
+    return { notificationSignals: { ...access, deadline: access.expiresAt + SIGNAL_CLOCK_TOLERANCE_SECONDS * 1000 } }
+  }
+
+  /** hocuspocus v2 `connected` is the first hook that has both the Connection and
+   * the context. The server closes the socket at the deadline so a socket never
+   * reports connected while its signals are being dropped. */
+  async connected(data) {
+    if (!data.documentName?.startsWith('notification-signals:')) return
+    const access = data.context?.notificationSignals
+    const connection = data.connectionInstance
+    if (!access || !connection) return
+    if (!isLive(access)) { connection.close(EXPIRED_CLOSE); return }
+    const arm = () => {
+      const remaining = access.deadline - Date.now()
+      if (remaining > MAX_TIMER_MS) { this.expiryTimers.set(access, setTimeout(arm, MAX_TIMER_MS)); return }
+      this.expiryTimers.set(access, setTimeout(() => {
+        this.expiryTimers.delete(access)
+        connection.close(EXPIRED_CLOSE)
+      }, Math.max(0, remaining) + 1))
+    }
+    arm()
   }
 
   async beforeHandleMessage(data) {
     if (!data.documentName?.startsWith('notification-signals:')) return
-    if (!data.context?.notificationSignals || data.context.notificationSignals.expiresAt <= Date.now()) {
+    if (!isLive(data.context?.notificationSignals)) {
       throw new Error('Notification signal token expired')
     }
   }
@@ -85,12 +114,14 @@ export class NotificationExtension {
       if (!document) return
       document.broadcastStateless(JSON.stringify(signal), connection => {
         const access = connection.context?.notificationSignals
-        return access?.tenantId === tenant && access?.userId === userId && access.expiresAt > Date.now()
+        return access?.tenantId === tenant && access?.userId === userId && isLive(access)
       })
     } catch (error) { console.error('[NotificationExtension] Invalid notification signal:', error) }
   }
 
   async onDisconnect(data) {
+    const access = data.context?.notificationSignals
+    if (access && this.expiryTimers.has(access)) { clearTimeout(this.expiryTimers.get(access)); this.expiryTimers.delete(access) }
     if (data.documentName?.startsWith('notifications:')) await this.onLegacyDisconnect(data)
   }
 

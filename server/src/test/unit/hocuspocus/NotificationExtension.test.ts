@@ -10,7 +10,7 @@ const secret = 'notification-signal-test-secret';
 const room = `notification-signals:${tenant}:${user}`;
 function request(overrides = {}, ttl = 300, signingSecret = secret) {
   const token = jwt.sign({ scope: 'notification-signals', tenantId: tenant, userId: user, sessionId, ...overrides }, signingSecret,
-    { expiresIn: ttl, algorithm: 'HS256', audience: 'notification-signals' });
+    { ...('exp' in overrides ? {} : { expiresIn: ttl }), algorithm: 'HS256', audience: 'notification-signals' });
   return new Request(`http://localhost/hocuspocus?token=${token}`);
 }
 function harness() {
@@ -61,13 +61,13 @@ describe('authenticated notification refresh signals', () => {
     expect(broadcastStateless).toHaveBeenCalledTimes(4);
     const [payload, filter] = broadcastStateless.mock.calls[0];
     expect(JSON.parse(payload)).toEqual({ type: 'notifications.changed' });
-    const access = { tenantId: tenant, userId: user, expiresAt: Date.now() + 5000 };
+    const access = { tenantId: tenant, userId: user, expiresAt: Date.now() + 5000, deadline: Date.now() + 65000 };
     expect(filter({ context: { notificationSignals: access } })).toBe(true);
     expect(filter({ context: { notificationSignals: { ...access, userId: randomUUID() } } })).toBe(false);
-    expect(filter({ context: { notificationSignals: { ...access, expiresAt: Date.now() - 1 } } })).toBe(false);
+    expect(filter({ context: { notificationSignals: { ...access, deadline: Date.now() - 1 } } })).toBe(false);
     expect(filter({ context: {} })).toBe(false);
     expect(document.getMap).not.toHaveBeenCalled();
-    await expect(extension.beforeHandleMessage({ documentName: room, context: { notificationSignals: { ...access, expiresAt: 0 } } })).rejects.toThrow('expired');
+    await expect(extension.beforeHandleMessage({ documentName: room, context: { notificationSignals: { ...access, deadline: 0 } } })).rejects.toThrow('expired');
     await extension.onDestroy(); expect(redis.quit).toHaveBeenCalledOnce();
   });
   it('re-subscribes after Redis reconnect and ignores unmatched rooms or unknown events', async () => {
@@ -78,6 +78,58 @@ describe('authenticated notification refresh signals', () => {
     await extension.handleMessage(JSON.stringify({ type: 'notification.created' }), `test:internal-notifications:${tenant}:${randomUUID()}`);
     await extension.handleMessage(JSON.stringify({ type: 'unrecognized' }), `test:internal-notifications:${tenant}:${user}`);
     expect(broadcastStateless).not.toHaveBeenCalled();
+  });
+  describe('deadline after join (exp + 60s leeway)', () => {
+    const connectAt = async (extension, ttl, exp?: number) => {
+      const connection = { readOnly: false, close: vi.fn() };
+      const claims = exp === undefined ? {} : { iat: exp - 300, exp };
+      const context = await extension.onConnect({ documentName: room, request: request(claims, ttl), connection });
+      return { context, connection };
+    };
+    it('keeps a token exp = now-55s usable: messages pass and the ring reaches that connection', async () => {
+      const { extension, instance, broadcastStateless } = harness();
+      await extension.onConfigure({ instance });
+      const { context, connection } = await connectAt(extension, 0, Math.floor(Date.now() / 1000) - 55);
+      await expect(extension.beforeHandleMessage({ documentName: room, context })).resolves.toBeUndefined();
+      await extension.connected({ documentName: room, context, connectionInstance: connection });
+      expect(connection.close).not.toHaveBeenCalled();
+      await extension.handleMessage(JSON.stringify({ type: 'telephony.incoming_call', event: 'ringing', call: { callId: 'c1' } }), `test:internal-notifications:${tenant}:${user}`);
+      const [, filter] = broadcastStateless.mock.calls[0];
+      expect(filter({ context })).toBe(true);
+      await extension.onDisconnect({ documentName: room, context });
+    });
+    it('closes the socket at exp + 60s and rejects messages after it', async () => {
+      vi.useFakeTimers();
+      try {
+        const { extension } = harness();
+        const { context, connection } = await connectAt(extension, 120);
+        await extension.connected({ documentName: room, context, connectionInstance: connection });
+        await vi.advanceTimersByTimeAsync(170_000);
+        expect(connection.close).not.toHaveBeenCalled();
+        await expect(extension.beforeHandleMessage({ documentName: room, context })).resolves.toBeUndefined();
+        await vi.advanceTimersByTimeAsync(12_000);
+        expect(connection.close).toHaveBeenCalledOnce();
+        await expect(extension.beforeHandleMessage({ documentName: room, context })).rejects.toThrow('expired');
+      } finally { vi.useRealTimers(); }
+    });
+    it('closes immediately when the deadline has already passed', async () => {
+      const { extension } = harness();
+      const { context, connection } = await connectAt(extension, 120);
+      context.notificationSignals.deadline = Date.now() - 1;
+      await extension.connected({ documentName: room, context, connectionInstance: connection });
+      expect(connection.close).toHaveBeenCalledOnce();
+    });
+    it('clears the timer on disconnect so nothing closes a connection that is gone', async () => {
+      vi.useFakeTimers();
+      try {
+        const { extension } = harness();
+        const { context, connection } = await connectAt(extension, 120);
+        await extension.connected({ documentName: room, context, connectionInstance: connection });
+        await extension.onDisconnect({ documentName: room, context });
+        await vi.advanceTimersByTimeAsync(300_000);
+        expect(connection.close).not.toHaveBeenCalled();
+      } finally { vi.useRealTimers(); }
+    });
   });
   describe('legacy notifications: rooms (rollout window)', () => {
     const legacyRoom = `notifications:${tenant}:${user}`;

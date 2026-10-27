@@ -61,12 +61,12 @@ describe('NotificationExtension telephony.incoming_call relay', () => {
     const { deliver, lastFilter } = harness();
     await deliver({ type: 'telephony.incoming_call', event: 'ringing', call });
     const filter = lastFilter();
-    const access = { tenantId: tenant, userId: user, expiresAt: Date.now() + 5000 };
+    const access = { tenantId: tenant, userId: user, expiresAt: Date.now() + 5000, deadline: Date.now() + 65000 };
 
     expect(filter({ context: { notificationSignals: access } })).toBe(true);
     expect(filter({ context: { notificationSignals: { ...access, tenantId: 'other-tenant' } } })).toBe(false);
     expect(filter({ context: { notificationSignals: { ...access, userId: 'other-user' } } })).toBe(false);
-    expect(filter({ context: { notificationSignals: { ...access, expiresAt: Date.now() - 1 } } })).toBe(false);
+    expect(filter({ context: { notificationSignals: { ...access, deadline: Date.now() - 1 } } })).toBe(false);
     expect(filter({ context: {} })).toBe(false);
   });
 
