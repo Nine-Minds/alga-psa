@@ -120,6 +120,18 @@ describe('workspace setup sign-in email', () => {
     expect(mocks.userUpdates).toEqual([]);
   });
 
+  it('validates and stores the same trimmed, lower-cased address', async () => {
+    await expect(actions.saveClientInfo(admin, context, info('  New.Admin@Example.test  '))).resolves.toEqual({ success: true });
+    expect(mocks.findUsersByEmailAndType).toHaveBeenCalledWith('new.admin@example.test', 'internal');
+    expect(mocks.userUpdates).toEqual([expect.objectContaining({ email: 'new.admin@example.test' })]);
+  });
+
+  it('stores the caller\'s own address trimmed even when it is otherwise unchanged', async () => {
+    await expect(actions.saveClientInfo(admin, context, info('  Admin@Example.test '))).resolves.toEqual({ success: true });
+    expect(mocks.findUsersByEmailAndType).not.toHaveBeenCalled();
+    expect(mocks.userUpdates).toEqual([expect.objectContaining({ email: 'admin@example.test' })]);
+  });
+
   it('refuses an invalid email', async () => {
     await expect(actions.saveClientInfo(admin, context, info('not-an-email'))).resolves.toMatchObject({ success: false });
     expect(mocks.userUpdates).toEqual([]);

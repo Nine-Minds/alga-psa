@@ -152,7 +152,15 @@ export const saveClientInfo = withAuth(async (
       // The email here is the administrator's sign-in identity. Internal users
       // sign in with an email and no tenant, so a change must be well formed and
       // unique across every tenant (addUser enforces the same), or sign-in
-      // resolves to either account. Checked before anything is written.
+      // resolves to either account. Checked before anything is written, and the
+      // string checked is the string stored: sign-in lower-cases but does not
+      // trim, so a padded address stored as typed would be unreachable.
+      //
+      // The uniqueness read runs on the admin connection (it must see every
+      // tenant), not in this transaction. There is no unique constraint on
+      // internal emails, so two concurrent claims of the same new address can
+      // both pass between this read and the commit; addUser and updateUser
+      // share that window.
       const newEmail = data.email?.trim().toLowerCase();
       if (newEmail && newEmail !== (currentUser.email ?? '').trim().toLowerCase()) {
         if (!isValidEmail(newEmail)) {
@@ -177,7 +185,7 @@ export const saveClientInfo = withAuth(async (
 
         if (data.firstName) updateData.first_name = data.firstName;
         if (data.lastName) updateData.last_name = data.lastName;
-        if (data.email) updateData.email = data.email.toLowerCase();
+        if (newEmail) updateData.email = newEmail;
 
         // If new password is provided, hash and update it
         if (data.newPassword) {
