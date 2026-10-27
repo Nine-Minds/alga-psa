@@ -1583,6 +1583,8 @@
     "printColumns": "Colonnes à imprimer",
     "dialog": {
       "assetTitle": "Imprimer les étiquettes d'actifs",
+      "batch_one": "Une étiquette pour l'élément retenu ({{count}})",
+      "batch_other": "Une étiquette par élément retenu ({{count}})",
       "count_one": "{{count}} sélectionné",
       "count_other": "{{count}} sélectionnés",
       "failed": "Les étiquettes n'ont pas pu être imprimées.",
@@ -1592,6 +1594,14 @@
       "noAsset": "Aucun actif",
       "notFound": "Ces enregistrements n'ont pas pu être ouverts.",
       "openPdf": "Ouvrir le PDF",
+      "previewBatch_one": "Imprimer {{count}} étiquette pour l'élément retenu.",
+      "previewBatch_other": "Imprimer {{count}} étiquettes, une par élément retenu.",
+      "previewPicked": "L'étiquette indiquera l'emplacement et la prochaine action de cet élément.",
+      "previewPickedNotHeld": "Cet élément n'est pas retenu ; l'étiquette n'indique donc aucun emplacement.",
+      "previewSingle": "L'étiquette indiquera {{location}}.",
+      "previewSingleNoLocation": "L'étiquette indiquera la prochaine action de cet élément.",
+      "previewSummary_one": "{{count}} élément retenu.",
+      "previewSummary_other": "{{count}} éléments retenus.",
       "printed_one": "{{count}} étiquette imprimée.",
       "printed_other": "{{count}} étiquettes imprimées.",
       "printing": "Préparation…",
@@ -1603,6 +1613,7 @@
       "template": "Modèle",
       "ticketTitle": "Imprimer les étiquettes de travail",
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
+      "unnamedAsset": "Actif sans nom",
       "useTemplate": "Utiliser {{template}}"
     }
   },
