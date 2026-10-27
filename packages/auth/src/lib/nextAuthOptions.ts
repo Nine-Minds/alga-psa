@@ -445,7 +445,7 @@ function buildAzureADProvider(config: {
     clientId: string;
     clientSecret: string;
     authority: string;
-    checks?: Array<'pkce' | 'state' | 'nonce'>;
+    checks: Array<'pkce' | 'state' | 'nonce'>;
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
@@ -456,7 +456,7 @@ function buildAzureADProvider(config: {
             type: 'oauth' as const,
             clientId: config.clientId,
             clientSecret: config.clientSecret,
-            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state' | 'nonce'>,
+            checks: config.checks,
             authorization: {
                 url: endpoints.authorization,
                 params: {
@@ -477,7 +477,7 @@ function buildAzureADProvider(config: {
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
-        ...(config.checks ? { checks: config.checks } : {}),
+        checks: config.checks,
         profile: config.profile,
     });
 }
