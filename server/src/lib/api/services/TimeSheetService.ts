@@ -49,6 +49,7 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
+import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -344,6 +345,18 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
+        // Delegation guard: opening a sheet for someone else needs the same rights as acting
+        // on that user's time elsewhere (time_sheet approve + read_all or manager-of-subject).
+        if (data.user_id && data.user_id !== context.userId) {
+          try {
+            await assertCanActOnBehalf(context.user, context.tenant, data.user_id, trx);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('Permission denied:')) {
+              throw new ForbiddenError(error.message);
+            }
+            throw error;
+          }
+        }
         // Human-work guard: an explicit owner must be a licensed user; a defaulted owner
         // (the caller) must be one too.
         if (data.user_id) {
@@ -355,9 +368,7 @@ export class TimeSheetService extends BaseService<any> {
           ...data,
           user_id: data.user_id || context.userId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -404,10 +415,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        // time_sheets has no updated_at column: write only the caller's fields.
+        const updateData = { ...data };
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ [this.primaryKey]: id })

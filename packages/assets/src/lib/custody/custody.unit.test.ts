@@ -5,6 +5,11 @@ const tz = vi.hoisted(() => ({ value: 'UTC' }));
 vi.mock('@alga-psa/db', () => ({ resolveEffectiveTimeZone: async () => tz.value }));
 import { allowedCustodyEvents, assertCustodyTransition, nextCustodyState, CustodyTransitionError } from './stateMachine';
 import { formatCustodyForLabel, formatCustodyForLabelMulti, formatFollowUpDate } from './labelFormat';
+// Static imports (the @alga-psa/db mock above is hoisted): loading these module graphs at collection time keeps
+// cold-import cost out of each test's 5s timeout, which a loaded CI runner exceeded with in-test dynamic imports.
+import { resolveCustodyToday } from './today';
+import { toCustodyResult } from './actionResult';
+import { attributeValidationError, invalidAssetTypeError } from '../assetTypeAttributes';
 
 describe('custody state machine', () => {
   it('allows exactly the designed transitions', () => {
@@ -74,7 +79,6 @@ describe('resolveCustodyToday', () => {
 
   it('uses the resolved user time zone, so a UTC-today follow-up is overdue for an Auckland user', async () => {
     tz.value = 'Pacific/Auckland';
-    const { resolveCustodyToday } = await import('./today');
     const today = await resolveCustodyToday({} as any, 't', 'u', now);
     expect(today).toBe('2026-10-24');
     const followUp = { state: 'in_office', follow_up_on: '2026-10-23' } as any;
@@ -84,15 +88,12 @@ describe('resolveCustodyToday', () => {
 
   it('a Los Angeles user is still on the previous day late in the UTC day', async () => {
     tz.value = 'America/Los_Angeles';
-    const { resolveCustodyToday } = await import('./today');
     expect(await resolveCustodyToday({} as any, 't', 'u', new Date('2026-10-24T03:00:00Z'))).toBe('2026-10-23');
   });
 });
 
 describe('toCustodyResult asset-layer errors', () => {
   it('turns a thrown invalidAssetTypeError into a localizable validation result', async () => {
-    const { toCustodyResult } = await import('./actionResult');
-    const { invalidAssetTypeError } = await import('../assetTypeAttributes');
     const result = await toCustodyResult(async () => {
       throw invalidAssetTypeError('docking station');
     });
@@ -106,8 +107,6 @@ describe('toCustodyResult asset-layer errors', () => {
   });
 
   it('never surfaces an attributes.<key> path: generic missing-field key without a label', async () => {
-    const { toCustodyResult } = await import('./actionResult');
-    const { attributeValidationError } = await import('../assetTypeAttributes');
     const result = await toCustodyResult(async () => {
       throw attributeValidationError([{ key: 'rack_unit', code: 'required', message: 'is required' }]);
     });
@@ -118,7 +117,6 @@ describe('toCustodyResult asset-layer errors', () => {
   });
 
   it('keeps a field-named key when the issue carries the label', async () => {
-    const { toCustodyResult } = await import('./actionResult');
     const result = await toCustodyResult(async () => {
       throw new Error(JSON.stringify({ kind: 'validation', issues: [{
         path: ['attributes', 'rack_unit'], code: 'required', message: 'Missing required asset field: Rack Unit.',
@@ -133,7 +131,6 @@ describe('toCustodyResult asset-layer errors', () => {
   });
 
   it('still rethrows unrelated errors', async () => {
-    const { toCustodyResult } = await import('./actionResult');
     await expect(toCustodyResult(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
   });
 });

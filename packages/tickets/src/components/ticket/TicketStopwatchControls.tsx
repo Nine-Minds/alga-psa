@@ -16,6 +16,8 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { createStopwatchLogLauncher } from '../../lib/stopwatchLogLauncher';
+import { resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
 export interface TicketStopwatchControlsProps {
   id: string;
@@ -57,11 +59,12 @@ export function TicketStopwatchControls({
   const { openDrawer, closeDrawer } = useDrawer();
   const { launchTimeEntry } = useSchedulingCallbacks();
   const stopwatch = useStopwatch();
+  const timeWorkItem = resolveTicketTimeWorkItem(useTicketDataSource(), { ticket_id: ticketId });
   const { session, state } = stopwatch;
   const elapsedMs = useStopwatchElapsedMs();
   const [busy, setBusy] = useState(false);
 
-  const onThisTicket = !!session && session.work_item_type === 'ticket' && session.work_item_id === ticketId;
+  const onThisTicket = !!session && session.work_item_type === timeWorkItem.workItemType && session.work_item_id === timeWorkItem.workItemId;
   const elsewhere = !!session && !onThisTicket;
   const isPaused = state === 'paused';
 
@@ -90,10 +93,11 @@ export function TicketStopwatchControls({
     }
   }, []);
 
+  const trackedType = timeWorkItem.workItemType;
   const handleStart = () =>
     run(() =>
       stopwatch.start(
-        { workItemType: 'ticket', workItemId: ticketId, notes: timeDescription.trim() || undefined },
+        { workItemType: trackedType as 'ticket' | 'project_task', workItemId: timeWorkItem.workItemId, notes: timeDescription.trim() || undefined },
         launchLog(),
       ),
     );
@@ -103,6 +107,12 @@ export function TicketStopwatchControls({
       void stopwatch.updateNotes(timeDescription);
     }
   };
+
+  // The session store books ticket and project_task work only; other work item types book time
+  // through the time entry flow.
+  if (trackedType !== 'ticket' && trackedType !== 'project_task') {
+    return null;
+  }
 
   // D12: a board with the stopwatch off hides the controls, unless this ticket already holds the
   // user's open session (it stays stoppable).

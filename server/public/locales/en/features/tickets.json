@@ -92,6 +92,7 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
+    "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",

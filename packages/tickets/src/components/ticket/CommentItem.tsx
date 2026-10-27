@@ -16,7 +16,7 @@ import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import { EmojiPickerPopover } from '@alga-psa/ui/components/EmojiPickerPopover';
 import type { IAggregatedReaction } from '@alga-psa/types';
@@ -36,7 +36,6 @@ import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
-import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -190,6 +189,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
+  const dataSource = useTicketDataSource();
+  const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
+  const { searchUsersForMentions } = dataSource.viewer;
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
@@ -307,7 +309,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     if (conversation.is_system_generated) return false;
     // No handler means the host is showing the thread read-only.
     if (!onEdit || !onDelete) return false;
-    return currentUserId === conversation.user_id;
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
   }, [conversation.user_id, currentUserId, isDeleted, onEdit, onDelete]);
 
   const plainTextForCopy = useMemo(
@@ -348,6 +350,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         : t('conversation.copyCommentAriaLabel', 'Copy comment text');
 
   const handleSave = () => {
+    if (!canEdit) return;
     const updates: Partial<IComment> = {
       note: JSON.stringify(editedContent),
       is_internal: isInternalToggle,
@@ -362,6 +365,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     onContentChange(blocks);
   };
   const handleReschedule = async () => {
+    if (!canEdit) return;
     const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
     let date: Date;
     try {
@@ -373,16 +377,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
   const handleCancelSchedule = async () => {
+    if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
-    if (!currentComment || !isEditing) return null;
+    if (!currentComment || !isEditing || !canEdit) return null;
 
     return (
       <div className="min-w-0 max-w-full">
@@ -442,6 +447,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   }, [
     currentComment,
     isEditing,
+    canEdit,
     commentId,
     ticketId,
     editedContent,
@@ -458,7 +464,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.
   // We intentionally only use conversation values (the persisted values from the database).
   useEffect(() => {
-    if (isEditing && currentComment?.comment_id === conversation.comment_id) {
+    if (canEdit && isEditing && currentComment?.comment_id === conversation.comment_id) {
       // Reset toggles to persisted values
       setIsInternalToggle(conversation.is_internal ?? false);
       setIsResolutionToggle(conversation.is_resolution ?? false);
@@ -467,7 +473,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'edit')
       );
     }
-  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
+  }, [canEdit, isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
   useEffect(() => {
     if (!conversation.comment_id || typeof window === 'undefined') {
@@ -826,7 +832,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               >
                 [deleted]
               </div>
-            ) : isEditingThisComment ? (
+            ) : canEdit && isEditingThisComment ? (
               editorContent
             ) : (
               <div
@@ -869,7 +875,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
       <Dialog
         id={`reschedule-comment-${commentId}`}
-        isOpen={isRescheduleOpen}
+        isOpen={canEdit && isRescheduleOpen}
         onClose={() => setIsRescheduleOpen(false)}
         title={t('conversation.rescheduleComment', 'Reschedule comment')}
         className="max-w-md"

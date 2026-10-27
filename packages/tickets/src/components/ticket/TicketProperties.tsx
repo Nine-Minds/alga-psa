@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
-import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
-import { getClientBillingProfiles } from '../../actions/clientLookupActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation, IContact } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
 import { ITicketResource } from '@alga-psa/types';
@@ -20,19 +19,15 @@ import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getUserContactId } from '@alga-psa/user-composition/actions';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
-import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
@@ -111,6 +106,8 @@ interface TicketPropertiesProps {
   onEditTimeEntry?: (entry: { entry_id: string }) => void;
   onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
   hideTimeEntry?: boolean;
+  /** Rendered next to the time summary: inside the Time Entry card, or in its own Time card when the native time panel is hidden (for example an effort split). */
+  timeSummarySlot?: React.ReactNode;
   hideMaterials?: boolean;
   onLiveDirtyFieldsChange?: (fields: string[]) => void;
   liveHighlightedFields?: string[];
@@ -126,7 +123,6 @@ interface TicketPropertiesProps {
 // The picker takes its loader as a prop so the invisibility rule has one
 // implementation shared across ticket, project, contract, and location
 // surfaces that live in packages which must not depend on one another.
-const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
 // Shared with the grid layout's Location row so both views read alike.
 const formatLocationDisplay = formatTicketLocationDisplay;
@@ -184,6 +180,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onEditTimeEntry,
   onDeleteTimeEntry,
   hideTimeEntry = false,
+  timeSummarySlot = null,
   hideMaterials = false,
   onLiveDirtyFieldsChange,
   liveHighlightedFields = [],
@@ -198,6 +195,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getScheduledHoursForTicket, getTicketAppointmentRequests } = dataSource.ticket;
+  const { getClientBillingProfiles } = dataSource.people;
+  const { getTeamAvatarUrlsBatchAction, getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } = dataSource.avatars;
+  const { getUserContactId, getTicketingDisplaySettings } = dataSource.viewer;
   // These read 'en-US' outright, so they stayed American in every locale.
   const { formatDate, locale, dateFormat } = useFormatters();
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
@@ -601,9 +603,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             />
           )}
 
+          {/* Same placement as the Grid time tile: next to the time summary. */}
+          {timeSummarySlot}
         </div>
       </ContentCard>
       )}
+      {hideTimeEntry && timeSummarySlot ? (
+        <ContentCard
+          id={`${id}-time-summary-card`}
+          collapsible
+          defaultExpanded
+          title={t('properties.timeEntry', 'Time Entry')}
+          headerIcon={<Clock className="w-5 h-5" />}
+        >
+          {timeSummarySlot}
+        </ContentCard>
+      ) : null}
 
       <ContentCard
         id={`${id}-contact-info`}
@@ -970,7 +985,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <BillingProfilePicker
               id={`${id}-billing-profile-picker`}
               clientId={ticket.client_id}
-              loadProfiles={loadClientBillingProfiles}
+              loadProfiles={getClientBillingProfiles}
               value={ticket.billing_profile_id ?? null}
               onChange={onChangeBillingProfile}
               label={t('properties.billingProfile', 'Billing profile')}
@@ -1259,7 +1274,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           */}
 
           {/* Additional Agents */}
-          <div>
+          {!isFieldFrozen('additional_agents') && <div>
             <h5 className="font-bold mb-2">{t('properties.additionalAgents', 'Additional Agents')}</h5>
             <MultiUserAndTeamPicker
               id={`${id}-additional-agents`}
@@ -1317,11 +1332,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}
               userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
             />
-          </div>
+          </div>}
         </div>
       </ContentCard>
 
-      <TicketWatchListCard
+      {!isFieldFrozen('watch_list') && <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
         onUpdateWatchList={onUpdateWatchList}
@@ -1334,7 +1349,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         teams={teams}
         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-      />
+      />}
 
 
       {!hideMaterials && ticket.ticket_id && ticket.client_id && (

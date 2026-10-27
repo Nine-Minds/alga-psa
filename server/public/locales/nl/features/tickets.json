@@ -84,6 +84,7 @@
     "button": "Filters",
     "unassigned": "Niet toegewezen",
     "category": "Filter op categorie",
+    "removeFilterChip": "Filter verwijderen: {{label}}",
     "assignee": "Toegewezene",
     "allAssignees": "Alle toegewezen personen",
     "responseState": "Antwoordstatus",

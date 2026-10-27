@@ -513,11 +513,22 @@ export const createComment = withAuth(async (
   }
 });
 
-export const updateComment = withAuth(async (user, { tenant }, id: string, comment: Partial<IComment>) => {
+/**
+ * Who may change an existing comment, as on the ticket screen: its author. A
+ * user who may update tickets may also correct a comment nobody authored (one
+ * that arrived by email).
+ */
+async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment): Promise<void> {
+  if (existing.user_id === user.user_id) return;
+  if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
+  throw new Error('You can only edit your own comments');
+}
+
+export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
-      ...comment,
-      note: comment.note ? `${comment.note.substring(0, 50)}...` : undefined
+      ...requested,
+      note: requested.note ? `${requested.note.substring(0, 50)}...` : undefined
     }
   });
 
@@ -553,42 +564,20 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
-      // Verify user permissions - only allow users to edit their own comments
-      // or  MSP (internal) users to edit any comment
-      if (comment.user_id && comment.user_id !== existingComment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', commentTenant)
-          .select('user_type')
-          .where('user_id', comment.user_id)
-          .first();
-
-      // Only MSP (internal) users can edit other users' comments
-      if (!user || user.user_type !== 'internal') {
-        throw new Error('You can only edit your own comments');
+      await assertMayChangeComment(trx, user, existingComment);
+      // Only the text and its two flags are editable; authorship, timestamps,
+      // publication and deletion are history and have their own commands.
+      const comment: Partial<IComment> = {};
+      if (requested.note !== undefined) comment.note = requested.note;
+      if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
+      // A client can never make a comment internal, nor change an internal one.
+      if (requested.is_internal !== undefined) {
+        if (isMspPrincipalUserType(user.user_type)) {
+          comment.is_internal = requested.is_internal;
+        } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
+          throw new Error('Only MSP users can set comments as internal');
+        }
       }
-
-      // Set author_type based on user type
-      if (user) {
-        comment.author_type = isClientUserType(user.user_type)
-          ? 'client'
-          : isMspPrincipalUserType(user.user_type)
-            ? 'internal'
-            : 'unknown';
-      } else {
-        comment.author_type = 'unknown';
-      }
-    }
-
-    // Validate internal comment permissions
-    if (comment.is_internal !== undefined) {
-      // Only allow internal comments from  MSP (internal) users
-      if (comment.is_internal && comment.author_type !== 'internal' && existingComment.author_type !== 'internal') {
-        throw new Error('Only MSP users can set comments as internal');
-      }
-      // If a client user is updating a comment, ensure they can't make it internal
-      if (existingComment.author_type === 'client') {
-        comment.is_internal = existingComment.is_internal; // Preserve internal status
-      }
-    }
 
     // Convert BlockNote JSON to Markdown if note is being updated
     if (comment.note !== undefined) {
@@ -643,10 +632,10 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       }
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
-      if (updatedComment && comment.user_id && commentTenant) {
+      if (updatedComment && commentTenant) {
         const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id })
+          .where({ user_id: comment.user_id ?? updatedComment.user_id ?? user.user_id })
           .first();
         const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
 
@@ -656,7 +645,7 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
             payload: {
               tenantId: commentTenant,
               ticketId: updatedComment.ticket_id!,
-              userId: comment.user_id,
+              userId: user.user_id,
               oldComment: {
                 id: oldCommentData.id,
                 content: oldCommentData.content,
@@ -741,6 +730,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
+      if (existingComment) await assertMayChangeComment(trx, user, existingComment);
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
       await tenantScopedTable(trx, 'comment_reactions', tenant)

@@ -7077,7 +7077,8 @@ async function convertContractLineToMeteredType(
         .insert({
           tenant: contextLike.tenantId,
           config_id: configRow.config_id,
-          hourly_rate: params.baseRateCents / 100,
+          // hourly_rate is stored in cents (the engine bills it as-is)
+          hourly_rate: params.baseRateCents,
           minimum_billable_time: 15,
           round_up_to_nearest: 15,
           created_at: now,
@@ -7085,7 +7086,7 @@ async function convertContractLineToMeteredType(
         })
         .onConflict(['tenant', 'config_id'])
         .merge({
-          hourly_rate: params.baseRateCents / 100,
+          hourly_rate: params.baseRateCents,
           minimum_billable_time: 15,
           round_up_to_nearest: 15,
           updated_at: now,

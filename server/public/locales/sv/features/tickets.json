@@ -92,6 +92,7 @@
     "button": "Filter",
     "unassigned": "Ej tilldelat",
     "category": "Filtrera efter kategori",
+    "removeFilterChip": "Ta bort filter: {{label}}",
     "assignee": "Ansvarig",
     "allAssignees": "Alla ansvariga",
     "responseState": "Svarsstatus",

@@ -67,14 +67,14 @@ export default function MspLoginForm({
     setIsSubmitting(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = (await signIn('credentials', {
         email,
         password,
         userType: 'internal',
         redirect: false,
         callbackUrl,
         ...(captcha.token ? { captchaToken: captcha.token } : {}),
-      });
+      })) as unknown as { error?: string; code?: string; url?: string } | undefined;
 
       if (result?.error === '2FA_REQUIRED') {
         onTwoFactorRequired();
@@ -86,6 +86,16 @@ export default function MspLoginForm({
           type: 'error',
           title: t('signIn.errors.rateLimitedTitle', 'Too Many Attempts'),
           message: t('signIn.errors.rateLimitedMessage', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.')
+        });
+      } else if (result?.code === 'TENANT_REQUIRED') {
+        // The credentials were right, but the email belongs to internal users in
+        // more than one organization and the MSP sign-in has no way to name one,
+        // so only an administrator can resolve it. Not a failed attempt, so leave
+        // the captcha challenge alone.
+        onError({
+          type: 'error',
+          title: t('signIn.errors.tenantRequiredTitle', 'Contact Your Administrator'),
+          message: t('signIn.errors.tenantRequiredMessage', "This email is used in more than one organization, so we can't tell which account to sign you in to. Contact your administrator for help signing in.")
         });
       } else if (result?.error) {
         if (captcha.required) {

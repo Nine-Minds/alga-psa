@@ -49,7 +49,7 @@ import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/key
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
@@ -62,7 +62,6 @@ import {
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
 import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
-import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -192,6 +191,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   allowEmailRecipients = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { toggleCommentReaction, getCommentsReactionsBatch } = dataSource.comments;
+  const { getContactAvatarUrlAction } = dataSource.avatars;
+  const { getUserContactId, searchUsersForMentions } = dataSource.viewer;
   const { t: tCore } = useTranslation('common');
   const { deleteDocument } = useDocumentsCrossFeature();
   // Ensure we have a stable id for interactive element ids
@@ -399,7 +402,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     composeUploadSession.requestDiscard();
   };
 
-  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor });
+  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor && !readOnly });
   useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
     active: showEditor,
     enabled: !isSubmitting,
@@ -516,6 +519,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     [conversations]
   );
   useEffect(() => {
+    if (!dataSource.capabilities.reactions) return;
     const commentIds = commentIdsKey.split(',').filter(Boolean);
     if (commentIds.length === 0) return;
     getCommentsReactionsBatch(commentIds)
@@ -578,7 +582,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <CommentItem
           id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
           conversation={mergedConversation}
-          currentUserId={currentUser?.id}
+          currentUserId={readOnly ? null : currentUser?.id}
           isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
           currentComment={currentComment}
           ticketId={ticket.ticket_id || ''}
@@ -592,8 +596,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
-          reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
-          onToggleReaction={handleToggleReaction}
+          reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
+          onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
@@ -1057,6 +1061,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
+        canReply={!readOnly}
         replyParentCommentId={openPanelComment?.comment_id ?? null}
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
