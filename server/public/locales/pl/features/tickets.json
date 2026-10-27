@@ -84,6 +84,7 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
+    "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
     "responseState": "Stan odpowiedzi",

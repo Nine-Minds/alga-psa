@@ -119,6 +119,8 @@ interface DocumentsProps {
   allowLinkExistingDocuments?: boolean;
   /** Allow creating rich-text/block documents from this surface. */
   allowBlockDocuments?: boolean;
+  /** List and open documents only: no add, upload, link, delete or detach (for example an ended co-managed workspace). */
+  readOnly?: boolean;
 }
 
 const Documents = ({
@@ -143,6 +145,7 @@ const Documents = ({
   allowDocumentSharing = true,
   allowLinkExistingDocuments = true,
   allowBlockDocuments = true,
+  readOnly = false,
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -1342,15 +1345,15 @@ const Documents = ({
           <DocumentStorageCard
             id={`${id}-document-${document.document_id}`}
             document={document}
-            onDelete={getOrCreateDeleteHandler(document)}
+            onDelete={readOnly ? undefined : getOrCreateDeleteHandler(document)}
             onDisassociate={getOrCreateDisassociateHandler(document)}
             onMove={getOrCreateMoveHandler(document)}
-            showDisassociate={Boolean(entityId && entityType)}
+            showDisassociate={Boolean(entityId && entityType) && !readOnly}
             showMove={inFolderMode}
-            showVisibilityControls={showVisibilityControls}
+            showVisibilityControls={showVisibilityControls && !readOnly}
             onToggleVisibility={handleToggleDocumentVisibility}
             isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
-            onShare={allowDocumentSharing ? handleShareDocument : undefined}
+            onShare={allowDocumentSharing && !readOnly ? handleShareDocument : undefined}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1967,7 +1970,7 @@ const Documents = ({
   return (
     <ReflectionContainer id={id} label="Documents">
       <div className="w-full space-y-4">
-        <div className="flex justify-between items-center mb-4">
+        {!readOnly && <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
             {allowBlockDocuments && (
             <Button
@@ -2005,7 +2008,7 @@ const Documents = ({
               </Button>
             )}
           </div>
-        </div>
+        </div>}
 
         <div className="space-y-4">
             {showUpload && (

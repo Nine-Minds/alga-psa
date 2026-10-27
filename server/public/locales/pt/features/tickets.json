@@ -84,6 +84,7 @@
     "button": "Filtros",
     "unassigned": "Não atribuído",
     "category": "Filtrar por categoria",
+    "removeFilterChip": "Remover filtro: {{label}}",
     "assignee": "Responsável",
     "allAssignees": "Todos os responsáveis",
     "responseState": "Estado de resposta",
