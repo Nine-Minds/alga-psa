@@ -247,8 +247,24 @@ tenant is eligible.
   `@alga-psa/core/capability/server`; workers import only `@alga-psa/core/capability`.
 - Browser: `useCapability('co-managed')` reads the server bootstrap and never evaluates
   anything itself.
+- `registerCapabilityGate` merges into the existing definition; resolvers registered
+  separately survive a re-declaration. Remove one explicitly with
+  `registerCapabilityEligibility(key, null)` / `registerCapabilityParticipation(key, null)`.
 
-**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session) returns the
+**Server-bootstrapped flags.** The root layout evaluates `release-v2-0-feature` for the tenant
+(`tenant_<id>`, group `tenant`) and passes it to `PostHogProvider initialFeatureFlags`.
+`useFeatureFlag` treats a bootstrapped flag as decided: it does not re-evaluate it in
+posthog-js, which identifies the person (`anonymous_<tenant>_<user>`, no group) and could
+answer a group, person or percentage rule differently. Target `release-v2-0-feature` by the
+`tenant` group or the `tenant` person property; both are what the server sends. Flags that are
+not bootstrapped still follow PostHog updates.
+
+Cost per server process: one PostHog evaluation per tenant per 60 s (flag cache) and one
+`tenants` read per tenant per 5 min (`TENANT_FLAG_PROPERTIES_TTL_MS`, the person properties
+every server flag evaluation sends). The capability decision itself makes no query and no
+PostHog call until resolvers are registered.
+
+**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session; `/api/v1/capabilities/` is exempt from the middleware API-key check because the route authenticates the session itself) returns the
 caller's own tenant decision and reasons with `Cache-Control: no-store`, or the standard 404
 while the gate is closed. It accepts no parameters.
 
