@@ -57,6 +57,15 @@ describe('EmailHtmlViewer frame document', () => {
     expect(srcDoc.replace('<p>Hello</p>', '')).not.toMatch(COLOUR_LITERAL);
   });
 
+  it('backs the host frame with the card token, not bg-white', async () => {
+    const frame = await renderFrame('/api/tickets/t3/email-html');
+
+    // `bg-white` only survives dark mode through the legacy global shim; the
+    // corners of the frame have to match the card without it.
+    expect(frame.className).not.toContain('bg-white');
+    expect(frame.className).toContain('bg-[rgb(var(--color-card))]');
+  });
+
   it('withholds allow-scripts from the frame', async () => {
     const frame = await renderFrame('/api/tickets/t2/email-html');
     const sandbox = frame.getAttribute('sandbox') ?? '';

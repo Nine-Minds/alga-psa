@@ -200,8 +200,10 @@ export function EmailHtmlViewer({
       srcDoc={toFrameDocument(html)}
       onLoad={handleLoad}
       style={{ height }}
+      // The sheet itself is painted by the frame document; the host background
+      // shows only at the rounded corners, so it tracks the card it sits on.
       className={cn(
-        'w-full min-w-0 rounded-md border border-[rgb(var(--color-border-200))] bg-white',
+        'w-full min-w-0 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]',
         className
       )}
     />
