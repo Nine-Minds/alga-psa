@@ -33,19 +33,31 @@ function rowCount(result) {
   return typeof result.rowCount === 'number' ? result.rowCount : 0;
 }
 
-// Runs one DDL statement under a short lock_timeout. A lock timeout aborts the
-// statement only (savepoint), so the migration transaction can try again.
-async function withLockRetry(knex, sql) {
+// Runs one statement (SQL text, or an async function of knex) under a short
+// lock_timeout. A lock timeout aborts the statement only (savepoint), so the
+// migration transaction can try again.
+//
+// SET LOCAL outlives RELEASE SAVEPOINT, so the timeout is scoped by hand: the
+// transaction's own value is read first and put back on the success path and
+// on the rollback path. After this returns, `SHOW lock_timeout` is what it was
+// before the call and later statements in the migration are not under 2s.
+async function withLockRetry(knex, statement) {
+  const { rows } = await knex.raw(`SELECT current_setting('lock_timeout') AS value`);
+  const prior = rows[0].value;
+  const restore = () => knex.raw(`SELECT set_config('lock_timeout', ?, true)`, [prior]);
+
   for (let attempt = 1; ; attempt += 1) {
     await knex.raw(`SAVEPOINT lock_retry`);
     try {
       await knex.raw(`SET LOCAL lock_timeout = '2s'`);
-      await knex.raw(sql);
+      const result = typeof statement === 'function' ? await statement(knex) : await knex.raw(statement);
       await knex.raw(`RELEASE SAVEPOINT lock_retry`);
-      return;
+      await restore();
+      return result;
     } catch (error) {
       if (error.code !== '55P03' || attempt >= LOCK_ATTEMPTS) throw error;
       await knex.raw(`ROLLBACK TO SAVEPOINT lock_retry`);
+      await restore();
     }
   }
 }
@@ -65,12 +77,14 @@ exports.up = async function up(knex) {
   for (const { tenant } of tenants) {
     let moved;
     do {
-      moved = await knex.raw(
+      // Each batch is its own retried unit: a row held by a concurrent write
+      // for more than 2s fails that UPDATE only (it is atomic), not the migration.
+      moved = await withLockRetry(knex, (trx) => trx.raw(
         `UPDATE users SET is_inactive = false
           WHERE tenant = ? AND is_inactive IS NULL
             AND user_id IN (SELECT user_id FROM users WHERE tenant = ? AND is_inactive IS NULL LIMIT ${BATCH_SIZE})`,
         [tenant, tenant]
-      );
+      ));
     } while (rowCount(moved) === BATCH_SIZE);
   }
 
@@ -81,6 +95,8 @@ exports.up = async function up(knex) {
     );
   }
 };
+
+exports.withLockRetry = withLockRetry;
 
 exports.down = async function down(knex) {
   // Forward-only: the data change is never undone and NULLs are never resurrected.
