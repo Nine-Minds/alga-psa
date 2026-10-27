@@ -7,7 +7,7 @@ import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
-import { validateTagText } from '../lib/tagTextValidation';
+import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -339,7 +339,7 @@ export const createTag = withAuth(async (
   options: CreateTagOptions = {}
 ): Promise<ITag | TagActionError> => {
   const validation = validateTagText(tag.tag_text);
-  if (!validation.valid) {
+  if (isTagTextValidationFailure(validation)) {
     return actionError(validation.message, validation.i18nKey);
   }
   const tagText = validation.text;
@@ -875,7 +875,7 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
       // Same rules as createTag: an invalid tag is skipped, not fatal.
       const validation = validateTagText(tag.tag_text);
-      if (!validation.valid) {
+      if (isTagTextValidationFailure(validation)) {
         console.warn(`Skipping tag "${tag.tag_text}": ${validation.message}`);
         continue;
       }

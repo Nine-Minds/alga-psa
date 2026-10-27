@@ -17,7 +17,7 @@ import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
-import { validateTagText } from '@alga-psa/tags/lib/tagTextValidation';
+import { isTagTextValidationFailure, validateTagText } from '@alga-psa/tags/lib/tagTextValidation';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import {
   assertMspOrClientPortalOwnClientPermission,
@@ -1539,7 +1539,7 @@ async function writeImportedContactTags(
     const trimmed = raw.trim();
     if (!trimmed) continue;
     const validation = validateTagText(trimmed);
-    if (!validation.valid) {
+    if (isTagTextValidationFailure(validation)) {
       console.warn(`Skipping invalid tag during CSV import: ${validation.message}`, { tag: trimmed });
       continue;
     }

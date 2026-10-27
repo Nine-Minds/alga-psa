@@ -18,6 +18,18 @@ export type TagTextValidationResult =
   | { valid: true; text: string }
   | TagTextValidationFailure;
 
+/**
+ * Narrows a result to its failure branch. Callers use this rather than
+ * `!result.valid`: a boolean-literal discriminant does not narrow in projects
+ * compiled without strictNullChecks (e.g. ee/server), and the tags code is
+ * typechecked there too.
+ */
+export function isTagTextValidationFailure(
+  result: TagTextValidationResult,
+): result is TagTextValidationFailure {
+  return result.valid === false;
+}
+
 /** Validates a raw tag text. The returned `text` is trimmed. */
 export function validateTagText(raw: string | null | undefined): TagTextValidationResult {
   const text = (raw ?? '').trim();
