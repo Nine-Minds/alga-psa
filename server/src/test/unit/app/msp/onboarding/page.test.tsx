@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 // The onboarding page is where saved wizard progress is turned back into
-// wizard state. addTeamMembers persists the created members without a
-// createdTeamMemberEmails marker; restoreTeamMemberProgress rebuilds it so a
-// resumed wizard does not create or invite them again.
+// wizard state. restoreTeamMemberProgress folds the saved teamMembers into
+// createdTeamMemberEmails (older progress has only teamMembers) so a resumed
+// wizard does not create or invite them again.
 
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
@@ -31,6 +31,7 @@ vi.mock('@alga-psa/onboarding/components', () => ({
 }));
 
 import OnboardingPage from '../../../../../app/msp/onboarding/page';
+import { getTenantSettings } from '@alga-psa/tenancy/actions';
 
 const member = (email: string) => ({ firstName: 'T', lastName: 'M', email, role: 'Technician' });
 
@@ -63,7 +64,9 @@ describe('onboarding page', () => {
     render(<OnboardingPage />);
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/msp/dashboard'));
     // Nothing is loaded for them: no settings read, no saved progress handed over.
-    expect(mocks.wizardProps.mock.calls.every(([props]) => !props.initialData.teamMembers)).toBe(true);
+    await waitFor(() => expect(mocks.wizardProps).toHaveBeenCalled());
+    expect(mocks.wizardProps.mock.calls.at(-1)![0].initialData).toEqual({});
+    expect(getTenantSettings).not.toHaveBeenCalled();
   });
 
   it('does not redirect an administrator', async () => {

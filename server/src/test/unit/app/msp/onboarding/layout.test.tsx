@@ -7,15 +7,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   canRun: true as boolean | 'throw',
   onboardingCompleted: false,
-  redirect: vi.fn(),
+  session: { user: { user_type: 'internal', tenant: 'tenant-1' } } as { user: { user_type: string; tenant: string } } | null,
+  // Like Next's redirect, it never returns: the layout stops where it is called.
+  redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }),
 }));
 
 vi.mock('react', async (importOriginal) => ({ ...await importOriginal<typeof import('react')>(), cache: (fn: unknown) => fn }));
 vi.mock('next/headers.js', () => ({ cookies: async () => ({ get: () => undefined }) }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(),
-  getSessionWithRevocationCheck: vi.fn(async () => ({ user: { user_type: 'internal', tenant: 'tenant-1' } })),
+  getSession: vi.fn(async () => null),
+  getSessionWithRevocationCheck: vi.fn(async () => mocks.session),
 }));
 vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   getTenantSettings: vi.fn(async () => ({ onboarding_completed: mocks.onboardingCompleted, onboarding_skipped: false })),
@@ -50,7 +52,27 @@ async function layoutProps() {
 beforeEach(() => {
   mocks.canRun = true;
   mocks.onboardingCompleted = false;
-  mocks.redirect.mockReset();
+  mocks.session = { user: { user_type: 'internal', tenant: 'tenant-1' } };
+  mocks.redirect.mockClear();
+});
+
+describe('MSP layout sign-in redirects', () => {
+  it('sends a request without a session to MSP sign-in', async () => {
+    mocks.session = null;
+    await expect(layoutProps()).rejects.toThrow('NEXT_REDIRECT /auth/msp/signin');
+    expect(mocks.redirect).toHaveBeenCalledWith('/auth/msp/signin');
+  });
+
+  it('sends a client-portal session to MSP sign-in instead of rendering the MSP shell', async () => {
+    mocks.session = { user: { user_type: 'client', tenant: 'tenant-1' } };
+    await expect(layoutProps()).rejects.toThrow('NEXT_REDIRECT /auth/msp/signin');
+    expect(mocks.redirect).toHaveBeenCalledWith('/auth/msp/signin');
+  });
+
+  it('renders the shell for an internal session without redirecting', async () => {
+    await layoutProps();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
 });
 
 describe('MSP layout onboarding gate', () => {
