@@ -53,6 +53,11 @@
     "./reassignTicketResources": {
       "import": "./dist/lib/reassignTicketResources.js",
       "types": "./src/lib/reassignTicketResources.ts"
+    },
+    "./testing": {
+      "types": "./src/testing/index.ts",
+      "import": "./src/testing/index.ts",
+      "require": "./src/testing/index.ts"
     }
   },
   "scripts": {
