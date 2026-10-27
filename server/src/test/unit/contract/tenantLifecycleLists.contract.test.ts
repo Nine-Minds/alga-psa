@@ -4,8 +4,8 @@ import {
   CLIENT_KEYED_TABLES_LEFT_BEHIND,
   CLIENT_OWNED_MOVE_TABLES,
   PROFILE_HISTORY_TABLES,
-} from '../../../../packages/clients/src/lib/clientMergePlan';
-import { TENANT_TABLE_MANIFEST, tenantClientKeyedTables, tenantExportOrder } from '../../../../packages/db/src/lib/tenantTableManifest';
+} from '../../../../../packages/clients/src/lib/clientMergePlan';
+import { TENANT_TABLE_MANIFEST, tenantClientKeyedTables, tenantExportOrder } from '../../../../../packages/db/src/lib/tenantTableManifest';
 
 // Tables the client merge plan classifies that are not tenant-deletion tables keyed on client_id
 // in the manifest sense. Each exemption states why.

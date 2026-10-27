@@ -388,7 +388,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'invoice_charge_fixed_details', deletion: 'ordered' },
   { table: 'invoice_items', deletion: 'ordered', export: { rank: 17 } },
   { table: 'invoice_autopay_attempts', deletion: 'ordered' },
-  { table: 'billing_profile_autopay', deletion: 'ordered' },
+  { table: 'billing_profile_autopay', deletion: 'ordered', clientKeyed: true },
   { table: 'invoice_payment_links', deletion: 'ordered' },
   { table: 'invoice_payments', deletion: 'ordered' },
   { table: 'payment_confirmation_emails', deletion: 'ordered' },

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-const root = path.resolve(__dirname, '../../../..');
+const root = path.resolve(__dirname, '../../../../..');
 
 function grep(pattern: string, paths: string[]): string[] {
   try {

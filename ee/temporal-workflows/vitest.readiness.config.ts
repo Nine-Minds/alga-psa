@@ -37,6 +37,8 @@ export default defineConfig({
       'src/activities/__tests__/tenant-suspension-activities.test.ts',
       'src/activities/__tests__/tenant-deletion-external-links.test.ts',
       'src/activities/__tests__/tenant-deletion-answer-mappings.test.ts',
+      // Collected here so the inventory sees it; skipped unless HOTPATH_DB=1 points it at a disposable database.
+      'src/activities/__tests__/tenantDeletionQueryBudget.test.ts',
       'src/activities/__tests__/tenant-email-ingestion-activities.test.ts',
       'src/db/__tests__/tenant-operations.email-settings.test.ts',
       'src/activities/__tests__/product-upgrade-activities.test.ts',

@@ -14,7 +14,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 // @ts-expect-error plain ESM helper
-import { startRecording, emitStep } from '../../../../scripts/review/hotpathRecorder.mjs';
+import { startRecording, emitStep } from '../../../../../scripts/review/hotpathRecorder.mjs';
 
 const enabled = process.env.HOTPATH_DB === '1';
 
@@ -43,14 +43,14 @@ vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
   revertBundlePropagationForChild: vi.fn(),
 }));
-vi.mock('../../../../packages/tickets/src/lib/liveUpdates', () => ({ publishTicketUpdate: vi.fn() }));
+vi.mock('../../../../../packages/tickets/src/lib/liveUpdates', () => ({ publishTicketUpdate: vi.fn() }));
 
 const noopPublisher: any = new Proxy({}, { get: () => async () => undefined });
 const blockNote = (text: string) => JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }]);
 
 async function ticketFixture() {
   const { getAdminConnection } = await import('@alga-psa/db/admin');
-  const { createTenant, createClient, createUser } = await import('../../../test-utils/testDataFactory');
+  const { createTenant, createClient, createUser } = await import('../../../../test-utils/testDataFactory');
   const admin = await getAdminConnection();
   const tenant = await createTenant(admin, 'hotpath ticket fixture');
   const clientId = await createClient(admin, tenant, 'hotpath client');
@@ -116,7 +116,7 @@ describe.skipIf(!enabled)('hot path query budget', () => {
   it('ticket-and-comment-scenarios', async () => {
     await (async () => {
     fixture = await ticketFixture();
-    const { TicketModel } = await import('../../../../shared/models/ticketModel');
+    const { TicketModel } = await import('../../../../../shared/models/ticketModel');
     const { withTransaction } = await import('@alga-psa/db');
     const f = fixture;
     const recorder = startRecording();
@@ -131,7 +131,7 @@ describe.skipIf(!enabled)('hot path query budget', () => {
     })();
     await (async () => {
     const f = fixture!;
-    const { TicketModel } = await import('../../../../shared/models/ticketModel');
+    const { TicketModel } = await import('../../../../../shared/models/ticketModel');
     const { withTransaction } = await import('@alga-psa/db');
     const recorder = startRecording();
     await withTransaction(f.admin, (trx) => TicketModel.updateTicket(
@@ -141,7 +141,7 @@ describe.skipIf(!enabled)('hot path query budget', () => {
     })();
     await (async () => {
     const f = fixture!;
-    const { createComment } = await import('../../../../packages/tickets/src/actions/comment-actions/commentActions');
+    const { createComment } = await import('../../../../../packages/tickets/src/actions/comment-actions/commentActions');
     const recorder = startRecording();
     commentId = await createComment({
       ticket_id: ticketId, user_id: f.userId, note: blockNote('hotpath comment'),
@@ -153,7 +153,7 @@ describe.skipIf(!enabled)('hot path query budget', () => {
     })();
     await (async () => {
     const f = fixture!;
-    const { updateComment } = await import('../../../../packages/tickets/src/actions/comment-actions/commentActions');
+    const { updateComment } = await import('../../../../../packages/tickets/src/actions/comment-actions/commentActions');
     const recorder = startRecording();
     await updateComment(commentId, { note: blockNote('hotpath comment edited'), user_id: f.userId } as any);
     recorder.stop();
@@ -161,7 +161,7 @@ describe.skipIf(!enabled)('hot path query budget', () => {
     })();
     await (async () => {
     const f = fixture!;
-    const { TicketModel } = await import('../../../../shared/models/ticketModel');
+    const { TicketModel } = await import('../../../../../shared/models/ticketModel');
     const { withTransaction } = await import('@alga-psa/db');
     const recorder = startRecording();
     await withTransaction(f.admin, (trx) => TicketModel.createComment({
