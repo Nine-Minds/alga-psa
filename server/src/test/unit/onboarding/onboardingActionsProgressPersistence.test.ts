@@ -27,6 +27,7 @@ function queryFor(table: string) {
     first: vi.fn(async () => table === 'service_types' ? { id: 'service-type-1' } : undefined),
     insert: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
+    select: vi.fn(async () => []),
   };
 
   return query;

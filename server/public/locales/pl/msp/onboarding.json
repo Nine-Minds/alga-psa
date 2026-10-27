@@ -41,6 +41,7 @@
     "errors": {
       "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
       "addTeamMembers": "Nie udało się dodać członków zespołu",
+      "unsentInvites": "Przed kontynuowaniem wyślij zaproszenie do każdego dodanego członka zespołu lub go usuń.",
       "saveClient": "Nie udało się zapisać klienta",
       "addContact": "Nie udało się dodać kontaktu",
       "setupBilling": "Nie udało się skonfigurować fakturowania",

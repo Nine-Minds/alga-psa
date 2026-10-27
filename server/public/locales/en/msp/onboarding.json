@@ -41,6 +41,7 @@
     "errors": {
       "saveClientInfo": "Failed to save client info",
       "addTeamMembers": "Failed to add team members",
+      "unsentInvites": "Send the invitation for each team member you added, or remove them, before continuing.",
       "saveClient": "Failed to save client",
       "addContact": "Failed to add contact",
       "setupBilling": "Failed to setup billing",

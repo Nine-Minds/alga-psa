@@ -41,6 +41,7 @@
     "errors": {
       "saveClientInfo": "Kundeninfo konnte nicht gespeichert werden",
       "addTeamMembers": "Teammitglieder konnten nicht hinzugefügt werden",
+      "unsentInvites": "Senden Sie die Einladung für jedes hinzugefügte Teammitglied oder entfernen Sie es, bevor Sie fortfahren.",
       "saveClient": "Kunde konnte nicht gespeichert werden",
       "addContact": "Kontakt konnte nicht hinzugefügt werden",
       "setupBilling": "Abrechnung konnte nicht eingerichtet werden",

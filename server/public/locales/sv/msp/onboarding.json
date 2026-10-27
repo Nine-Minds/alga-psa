@@ -41,6 +41,7 @@
     "errors": {
       "saveClientInfo": "Det gick inte att spara företagsuppgifterna",
       "addTeamMembers": "Det gick inte att lägga till teammedlemmarna",
+      "unsentInvites": "Skicka inbjudan till varje teammedlem du har lagt till, eller ta bort dem, innan du fortsätter.",
       "saveClient": "Det gick inte att spara kunden",
       "addContact": "Det gick inte att lägga till kontakten",
       "setupBilling": "Det gick inte att konfigurera faktureringen",

@@ -213,12 +213,22 @@ export function OnboardingWizard({
           
         case 1: // Team Members
           const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email);
-          
-          // Filter out already created team members
+
+          // Members already created or invited are done. An invited member gets
+          // their account when they accept; creating one here would give them a
+          // login they never chose and break their invitation.
           const existingEmails = wizardData.createdTeamMemberEmails || [];
-          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email));
-          
-          
+          const invitedEmails = wizardData.invitedTeamMemberEmails || [];
+          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email) && !invitedEmails.includes(m.email));
+
+          // An unsent email invite has no password to create an account with.
+          if (newMembers.some(m => (m.inviteMode || 'email') === 'email')) {
+            setErrors(prev => ({ ...prev, [stepIndex]: t('onboardingWizard.errors.unsentInvites', {
+              defaultValue: 'Send the invitation for each team member you added, or remove them, before continuing.'
+            }) }));
+            return false;
+          }
+
           if (newMembers.length > 0) {
             const teamResult = await addTeamMembers(newMembers);
             if (!teamResult.success) {
