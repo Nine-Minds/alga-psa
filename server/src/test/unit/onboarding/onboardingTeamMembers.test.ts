@@ -178,6 +178,49 @@ describe('wizard team member creation', () => {
   });
 });
 
+describe('bookkeeping after a team member is created', () => {
+  it('still reports the created members when the progress write fails', async () => {
+    mocks.persist.mockRejectedValueOnce(new Error('settings write failed'));
+    const result = await addTeamMembers(user, context, [technician, { ...technician, email: 'two@example.test' }]);
+    expect(result).toMatchObject({ success: true, data: {
+      created: ['tom@example.test', 'two@example.test'], notCreated: [],
+      progressError: expect.stringMatching(/created, but setup progress could not be saved/),
+    } });
+  });
+
+  it('still reports a single created member when the progress write fails', async () => {
+    mocks.persist.mockRejectedValueOnce(new Error('settings write failed'));
+    await expect(addSingleTeamMember(user, context, technician)).resolves.toMatchObject({ success: true, data: {
+      created: 'tom@example.test', progressError: expect.stringMatching(/could not be saved/),
+    } });
+  });
+
+  it('keeps the created members of a partial batch when the progress write fails', async () => {
+    mocks.persist.mockRejectedValueOnce(new Error('settings write failed'));
+    mocks.addUser
+      .mockResolvedValueOnce({ success: true, user: { user_id: 'one' } })
+      .mockResolvedValueOnce({ success: false, code: 'USER_CREATE_FAILED', error: 'Could not create user.' });
+    const result = await addTeamMembers(user, context, [technician, { ...technician, email: 'two@example.test' }]);
+    expect(result).toMatchObject({ success: false, data: { created: ['tom@example.test'],
+      notCreated: [{ email: 'two@example.test' }], progressError: expect.any(String) } });
+  });
+
+  it('keeps members created earlier in the batch when a later create throws', async () => {
+    mocks.addUser
+      .mockResolvedValueOnce({ success: true, user: { user_id: 'one' } })
+      .mockRejectedValueOnce(new Error('connection reset'));
+    const result = await addTeamMembers(user, context, [technician, { ...technician, email: 'two@example.test' }]);
+    expect(result).toMatchObject({ success: false, data: { created: ['tom@example.test'],
+      notCreated: [{ email: 'two@example.test', reason: 'failed' }] } });
+    expect(mocks.saved.createdTeamMemberEmails).toEqual(['tom@example.test']);
+  });
+
+  it('reports no progress error when the write succeeds', async () => {
+    const result = await addTeamMembers(user, context, [technician]);
+    expect(result.data.progressError).toBeUndefined();
+  });
+});
+
 describe('wizard seat usage', () => {
   it('counts pending invitations as reserved seats on top of active users', async () => {
     mocks.pendingInvitations = 1;
