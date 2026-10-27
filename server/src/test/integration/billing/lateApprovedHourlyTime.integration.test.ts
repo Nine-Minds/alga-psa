@@ -456,6 +456,67 @@ describe('late approved hourly time in an already-invoiced service period', () =
     const taken = await tenantTable(db, tenantId, 'invoice_time_entries').where({ entry_id: lateEntry.entry_id }).select('invoice_id');
     expect(taken).toHaveLength(1);
   }, HOOK_TIMEOUT);
+
+  it("scopes late time and the Automatic Invoices preview to the requested client: client B's entries never appear in client A's", async () => {
+    const { getAvailableRecurringDueWork } = await import('@alga-psa/billing/actions/billingAndTax');
+    const clientA = await seedHourlyClient();
+    const clientB = await seedHourlyClient();
+    await issueDecember(clientA, true);
+    await issueDecember(clientB, true);
+    const lateA = await logApprovedHours(clientA, '2024-12-20T10:00:00Z', 60);
+    const lateB = await logApprovedHours(clientB, '2024-12-20T10:00:00Z', 60);
+    // Approved, uninvoiced hourly time on a service no contract covers: the unresolved
+    // (non-contract) time the Automatic Invoices scan in filterBillingPeriodsWithPotentialUnresolvedWork reads.
+    const adHocServiceId = uuidv4();
+    const { custom_service_type_id } = (await tenantTable(db, tenantId, 'service_catalog')
+      .where({ service_id: clientA.serviceId }).first()) as any;
+    await tenantTable(db, tenantId, 'service_catalog').insert({
+      tenant: tenantId,
+      service_id: adHocServiceId,
+      service_name: 'Ad-hoc Support',
+      description: 'hourly service on no contract',
+      default_rate: HOURLY_RATE_CENTS,
+      unit_of_measure: 'hour',
+      billing_method: 'per_unit',
+      custom_service_type_id,
+      tax_rate_id: null,
+      category_id: null,
+    });
+    await tenantTable(db, tenantId, 'service_prices').insert({
+      tenant: tenantId, service_id: adHocServiceId, currency_code: 'USD', rate: HOURLY_RATE_CENTS,
+    });
+    const unresolved = async (fixture: Fixture) => createTestTimeEntry(db, tenantId, {
+      work_item_id: fixture.ticketId,
+      work_item_type: 'ticket',
+      service_id: adHocServiceId,
+      user_id: fixture.techId,
+      start_time: new Date('2025-02-10T10:00:00Z'),
+      end_time: new Date('2025-02-10T11:00:00Z'),
+      billable_duration: 60,
+      approval_status: 'APPROVED',
+      tax_region: 'US-NY',
+    });
+    const unresolvedA = await unresolved(clientA);
+    const unresolvedB = await unresolved(clientB);
+
+    const lateIdsForA = (await late(clientA.clientId)).map((notice) => notice.entryId);
+    expect(lateIdsForA).toContain(lateA.entry_id);
+    expect(lateIdsForA).not.toContain(lateB.entry_id);
+
+    const clientAName = ((await tenantTable(db, tenantId, 'clients').where({ client_id: clientA.clientId }).first()) as any).client_name;
+    const preview = (await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 100,
+      dateRange: { from: '2025-01-01', to: '2025-03-01' },
+      clientName: clientAName,
+    })) as any;
+    expect(preview?.actionError).toBeUndefined();
+    const previewRecordIds: string[] = (preview.invoiceCandidates ?? []).flatMap((candidate: any) =>
+      (candidate.members ?? []).map((member: any) => String(member.recordId ?? '')),
+    );
+    expect(previewRecordIds).toContain(`unresolved:time:${unresolvedA.entry_id}`);
+    expect(previewRecordIds).not.toContain(`unresolved:time:${unresolvedB.entry_id}`);
+  }, HOOK_TIMEOUT);
 });
 
 async function ensureTenant(connection: Knex): Promise<string> {
