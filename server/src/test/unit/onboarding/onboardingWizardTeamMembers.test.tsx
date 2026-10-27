@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OnboardingWizard } from '../../../../../packages/onboarding/src/components/OnboardingWizard';
 import type { WizardData } from '@alga-psa/types';
+import { restoreTeamMemberProgress } from '../../../../../packages/onboarding/src/lib/restoreTeamMemberProgress';
 
 /**
  * The team step's Next: members already created or invited are never sent to
@@ -59,9 +60,15 @@ vi.mock('../../../../../packages/onboarding/src/components/steps/ClientInfoStep'
   ClientInfoStep: () => <div>ClientInfoStep</div>,
 }));
 vi.mock('../../../../../packages/onboarding/src/components/steps/TeamMembersStep', () => ({
-  TeamMembersStep: ({ data }: { data: WizardData }) => (
+  TeamMembersStep: ({ data, updateData }: { data: WizardData; updateData: (d: Partial<WizardData>) => void }) => (
     <div>
       TeamMembersStep
+      <button
+        data-testid="report-saved"
+        onClick={() => updateData({ createdTeamMemberEmails: [...(data.createdTeamMemberEmails ?? []), 'saved@example.test'] })}
+      >
+        report saved
+      </button>
       <span data-testid="created-emails">{(data.createdTeamMemberEmails ?? []).join(',')}</span>
     </div>
   ),
@@ -150,5 +157,55 @@ describe('OnboardingWizard team members step', () => {
     expect(screen.getByText('TeamMembersStep')).toBeInTheDocument();
     expect(screen.getByTestId('current-step')).toHaveTextContent('1');
     expect(screen.getByTestId('created-emails')).toHaveTextContent('ok@example.test');
+  });
+
+  it('treats a member restored from saved progress as created', async () => {
+    const saved = { teamMembers: [{ firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.test', role: 'Technician' }] };
+    await clickNextOnTeamStep(restoreTeamMemberProgress(saved as Partial<WizardData>));
+
+    await waitFor(() => expect(screen.getByText('AddClientStep')).toBeInTheDocument());
+    expect(mocks.addTeamMembers).not.toHaveBeenCalled();
+  });
+
+  it('shows a resumed member as created on the team step', () => {
+    const saved = { teamMembers: [{ firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.test', role: 'Technician' }] };
+    render(<OnboardingWizard fullPage initialData={{ currentStep: 1, ...restoreTeamMemberProgress(saved as Partial<WizardData>) }} onComplete={vi.fn()} />);
+    expect(screen.getByTestId('created-emails')).toHaveTextContent('ada@example.test');
+  });
+
+  it('clears the team-step error once a member is saved from the step', async () => {
+    mocks.addTeamMembers.mockResolvedValue({
+      success: false,
+      error: '1 team member(s) were not created',
+      data: { created: [], notCreated: [{ email: 'taken@example.test', reason: 'exists', error: 'already exists' }] },
+    });
+    await clickNextOnTeamStep({ teamMembers: [member('taken@example.test')] });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/These team members were not created/);
+
+    await userEvent.setup().click(screen.getByTestId('report-saved'));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+});
+
+describe('restoreTeamMemberProgress', () => {
+  const saved = (email: string) => ({ firstName: 'A', lastName: 'B', email, role: 'Technician' });
+
+  it('unions saved created emails with saved team members and de-duplicates', () => {
+    const result = restoreTeamMemberProgress({
+      teamMembers: [saved('a@x.test'), saved('b@x.test')],
+      createdTeamMemberEmails: ['b@x.test', 'c@x.test'],
+    } as Partial<WizardData>);
+    expect(result.createdTeamMemberEmails).toEqual(['b@x.test', 'c@x.test', 'a@x.test']);
+  });
+
+  it('keeps saved created emails when there are no team members', () => {
+    expect(restoreTeamMemberProgress({ createdTeamMemberEmails: ['a@x.test'] }).createdTeamMemberEmails).toEqual(['a@x.test']);
+    expect(restoreTeamMemberProgress({}).createdTeamMemberEmails).toEqual([]);
+  });
+
+  it('ignores blank emails and leaves other fields alone', () => {
+    const result = restoreTeamMemberProgress({ tenantName: 'T', teamMembers: [saved(''), saved('  '), saved('a@x.test')] } as Partial<WizardData>);
+    expect(result.createdTeamMemberEmails).toEqual(['a@x.test']);
+    expect(result.tenantName).toBe('T');
   });
 });

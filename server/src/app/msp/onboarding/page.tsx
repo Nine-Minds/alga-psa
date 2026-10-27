@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { OnboardingWizard } from '@alga-psa/onboarding/components';
 import { getTenantSettings } from '@alga-psa/tenancy/actions';
 import { getOnboardingInitialData, getWorkspaceSetupAccess } from '@alga-psa/onboarding/actions';
+import { restoreTeamMemberProgress } from '@alga-psa/onboarding/lib';
 import type { WizardData } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
@@ -47,6 +48,8 @@ export default function OnboardingPage() {
           data.tenantName = data.clientName;
         }
         delete (data as any).clientName;
+        // Members saved by addTeamMembers were created; mark them so the wizard does not redo them.
+        data = restoreTeamMemberProgress(data);
       }
 
       // For first-time users, fetch user data to prefill

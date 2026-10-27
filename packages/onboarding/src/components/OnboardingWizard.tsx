@@ -144,6 +144,12 @@ export function OnboardingWizard({
   }, [currentStep, testMode]);
 
   const updateData = (data: Partial<WizardData>) => {
+    // A member saved or invited from the team step supersedes any stale
+    // team-step error (e.g. "These team members were not created").
+    const listGrew =
+      (data.createdTeamMemberEmails?.length ?? 0) > (wizardData.createdTeamMemberEmails?.length ?? 0) ||
+      (data.invitedTeamMemberEmails?.length ?? 0) > (wizardData.invitedTeamMemberEmails?.length ?? 0);
+    if (listGrew) setErrors((prev) => ({ ...prev, [1]: '' }));
     setWizardData((prev) => ({ ...prev, ...data }));
   };
 
