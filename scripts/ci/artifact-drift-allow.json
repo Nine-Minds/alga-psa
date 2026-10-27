@@ -1,1 +1,64 @@
-[]
+[
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
+    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
+    "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
+  },
+
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
+    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/assigned_to/type",
+    "reason": "Mobile 2.0 task detail offers Unassign, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; callers still sending a uuid are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
+    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/due_date/type",
+    "reason": "Mobile 2.0 task detail offers a clearable due date, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
+    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/priority_id/type",
+    "reason": "Mobile 2.0 task detail offers a clearable priority, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
+    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/category_id/type",
+    "reason": "Re-classifying a ticket has to be able to clear the classification, so this request field widens from string to [string, null]. Accepting null on a request body takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
+    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TicketUpdateBody/properties/subcategory_id/type",
+    "reason": "Picking a category with no children must drop the old subcategory in the same request, so this request field widens from string to [string, null]. Accepting null takes strictly more input than before; existing callers are unaffected."
+  }
+]
