@@ -164,4 +164,35 @@ describe('registerAfterCommit', () => {
     expect(hook).toHaveBeenCalledTimes(1);
     expect(trx.commit).toHaveBeenCalledTimes(1);
   });
+
+  it('attaches hooks registered in a savepoint to the owning transaction', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      const savepoint = { parentTransaction: t, commit: vi.fn(), rollback: vi.fn() } as any;
+      registerAfterCommit(savepoint, hook);
+      expect(hook).not.toHaveBeenCalled();
+    });
+
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('never runs a savepoint hook when the outer transaction rolls back', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await expect(
+      withTransaction(knex, async (t) => {
+        registerAfterCommit({ parentTransaction: t } as any, hook);
+        throw new Error('Rollback');
+      })
+    ).rejects.toThrow('Rollback');
+
+    expect(hook).not.toHaveBeenCalled();
+  });
 });

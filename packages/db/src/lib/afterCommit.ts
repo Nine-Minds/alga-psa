@@ -10,7 +10,9 @@
  *
  * Nested withTransaction frames share the caller's `trx` object, so hooks
  * registered anywhere in the nesting attach to the same queue and flush
- * exactly once, when the outermost (owning) frame commits.
+ * exactly once, when the outermost (owning) frame commits. A hook registered
+ * inside a knex savepoint is attached to the transaction that owns the savepoint
+ * (via `parentTransaction`), so it fires once after the outer commit and never on rollback.
  */
 
 import type { Knex as KnexType } from './knex-turbopack';
@@ -35,11 +37,20 @@ export function registerAfterCommit(
   label?: string
 ): void {
   const entry: HookEntry = { hook, label };
-  const hooks = afterCommitHooks.get(trx);
+  // The object a knex savepoint callback receives (`trx.transaction(cb)`) carries
+  // `parentTransaction`, the transactor it was opened in (the internal `outerTx`
+  // is on knex's Transaction, not on the transactor handed to callbacks). Only
+  // the owning frame flushes, so hooks must be attached to the root, or they
+  // are never run.
+  let owner: KnexType.Transaction = trx;
+  while (owner.parentTransaction) {
+    owner = owner.parentTransaction;
+  }
+  const hooks = afterCommitHooks.get(owner);
   if (hooks) {
     hooks.push(entry);
   } else {
-    afterCommitHooks.set(trx, [entry]);
+    afterCommitHooks.set(owner, [entry]);
   }
 }
 
