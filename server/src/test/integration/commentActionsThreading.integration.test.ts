@@ -47,6 +47,7 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', () => ({
   publishTicketUpdate: vi.fn(),
 }));
 
+import { hasPermission } from '@alga-psa/auth';
 import { createComment, deleteComment, updateComment } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
 
 const blockNote = (text: string) => JSON.stringify([
@@ -469,6 +470,70 @@ describe('ticket comment threading actions', () => {
       await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
       await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();
+    }
+  });
+
+  it('refuses to let a user without ticket:update change a comment nobody authored', async () => {
+    // The author-less repair path is gated on ticket:update; without it an
+    // internal user is treated like any other non-author.
+    const ticket = await scopedDb().table('tickets').select('ticket_id').first();
+    const author = userRef.user;
+    const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
+      note: blockNote('Inbound text'), is_internal: false, is_resolution: false });
+    await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: null });
+    const other = { ...author, user_id: randomUUID() };
+    await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: other.user_id, username: `noupd-${other.user_id}`,
+      email: `noupd-${other.user_id}@example.test`, first_name: 'No', last_name: 'Update', hashed_password: 'not-a-login',
+      user_type: 'internal', is_inactive: false });
+    const permission = vi.mocked(hasPermission);
+    try {
+      permission.mockImplementation(async (_user: any, resource: string, action: string) =>
+        !(resource === 'ticket' && action === 'update'));
+      userRef.user = other;
+      await expect(updateComment(commentId, { note: blockNote('Rewritten without ticket:update') }))
+        .resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      await expect(deleteComment(commentId)).resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      expect(permission).toHaveBeenCalledWith(expect.objectContaining({ user_id: other.user_id }), 'ticket', 'update', expect.anything());
+      const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(stored).toBeTruthy();
+      expect(stored.note).toContain('Inbound text');
+    } finally {
+      permission.mockImplementation(async () => true);
+      userRef.user = author;
+      await scopedDb().table('comments').where({ comment_id: commentId }).delete();
+      await scopedDb().table('users').where({ user_id: other.user_id }).delete();
+    }
+  });
+
+  it('refuses a customer-side caller who submits is_internal on their own comment', async () => {
+    const ticket = await scopedDb().table('tickets').select('ticket_id').first();
+    const author = userRef.user;
+    const clientUserId = randomUUID();
+    await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: clientUserId, username: `cli-int-${clientUserId}`,
+      email: `cli-int-${clientUserId}@example.test`, first_name: 'Portal', last_name: 'Client', hashed_password: 'not-a-login',
+      user_type: 'client', is_inactive: false });
+    const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
+      note: blockNote('Client visible text'), is_internal: false, is_resolution: false });
+    await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: clientUserId, author_type: 'client' });
+    try {
+      userRef.user = { user_id: clientUserId, user_type: 'client', first_name: 'Portal', last_name: 'Client' };
+      await expect(updateComment(commentId, { note: blockNote('Now hidden from my own portal'), is_internal: true }))
+        .resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
+      const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(stored.is_internal).toBe(false);
+      expect(stored.note).toContain('Client visible text');
+
+      // Control: resubmitting the unchanged flag alongside a text edit is not a change and is accepted.
+      const edited = await updateComment(commentId, { note: blockNote('Edited by the client'), is_internal: false });
+      expect((edited as { actionError?: string } | undefined)?.actionError).toBeUndefined();
+      const after = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(after.note).toContain('Edited by the client');
+      expect(after.is_internal).toBe(false);
+    } finally {
+      userRef.user = author;
+      await scopedDb().table('comments').where({ comment_id: commentId }).delete();
+      await scopedDb().table('ticket_audit_logs').where({ actor_user_id: clientUserId }).delete();
+      await scopedDb().table('users').where({ user_id: clientUserId }).delete();
     }
   });
 

@@ -571,7 +571,13 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
       if (requested.note !== undefined) comment.note = requested.note;
       if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
       // A client can never make a comment internal, nor change an internal one.
-      if (requested.is_internal !== undefined && isMspPrincipalUserType(user.user_type)) comment.is_internal = requested.is_internal;
+      if (requested.is_internal !== undefined) {
+        if (isMspPrincipalUserType(user.user_type)) {
+          comment.is_internal = requested.is_internal;
+        } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
+          throw new Error('Only MSP users can set comments as internal');
+        }
+      }
 
     // Convert BlockNote JSON to Markdown if note is being updated
     if (comment.note !== undefined) {
