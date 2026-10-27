@@ -683,13 +683,26 @@ export const deleteBoard = withAuth(async (
     }
 
     // 3c. Automations that point at the board cannot be cleaned up safely:
-    // ticket_templates/recurring_ticket_definitions have no FK at all (the rows
-    // would dangle, and a recurring definition would keep creating tickets on a
-    // board that no longer exists — its board_id is NOT NULL), and nulling a
-    // checklist apply rule's board_id silently widens it to every board. Block.
+    // ticket_templates/recurring_ticket_definitions have no FK on board_id at
+    // all, so the rows would silently dangle instead of erroring, and nulling a
+    // checklist apply rule's board_id widens it to every board. Block, so the
+    // admin retargets or removes them deliberately.
+    //
+    // Archived recurring definitions are excluded. They are read-only forever
+    // (loadWritableDefinition throws DEFINITION_ARCHIVED and there is no
+    // unarchive or hard delete), so blocking on one would strand the board as
+    // permanently undeletable — the very failure this card removes. They also
+    // never generate tickets (generateRecurringTicketsForTenant filters on
+    // is_active + archived_at), so their board_id is inert history. Live rows
+    // stay blocking: archiving them is always reachable from the editor, so the
+    // block is recoverable.
     const [templateResult, recurringResult, checklistRuleResult] = await Promise.all([
       tenantScopedTable('ticket_templates').where({ board_id: boardId }).count('* as count').first(),
-      tenantScopedTable('recurring_ticket_definitions').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('recurring_ticket_definitions')
+        .where({ board_id: boardId })
+        .whereNull('archived_at')
+        .count('* as count')
+        .first(),
       tenantScopedTable('checklist_template_apply_rules').where({ board_id: boardId }).count('* as count').first(),
     ]);
 

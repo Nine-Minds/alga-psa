@@ -293,6 +293,50 @@ describe('board deletion dependency cleanup', () => {
     expect(remainingBoards.sort()).toEqual([defaultBoardId, doomedBoardId].sort());
   }, HOOK_TIMEOUT);
 
+  it('deletes a board whose only recurring schedule is archived', async () => {
+    const defaultBoardId = uuidv4();
+    const doomedBoardId = uuidv4();
+    const { tenantId, userId } = await createTenantFixture([
+      { boardId: defaultBoardId, name: 'General', isDefault: true },
+      { boardId: doomedBoardId, name: 'Retired' },
+    ]);
+
+    await addTicketStatus(tenantId, userId, doomedBoardId);
+
+    // Archived definitions are read-only forever (no unarchive, no delete), so
+    // blocking on one would leave the board permanently undeletable. They also
+    // never generate tickets, so a stale board_id on them is inert.
+    const archivedDefinitionId = uuidv4();
+    await tenantTable(tenantId, 'recurring_ticket_definitions').insert({
+      tenant: tenantId,
+      definition_id: archivedDefinitionId,
+      name: 'Retired maintenance',
+      title_template: 'Retired maintenance',
+      board_id: doomedBoardId,
+      priority_id: uuidv4(),
+      recurrence: JSON.stringify({ frequency: 'monthly', interval: 1 }),
+      start_date: '2026-01-01',
+      is_active: false,
+      archived_at: new Date(),
+    });
+
+    const confirm = await deleteBoard(doomedBoardId, false);
+    expect(confirm.success).toBe(false);
+    expect(confirm.code).toBe('BOARD_HAS_STATUSES');
+
+    const result = await deleteBoard(doomedBoardId, true);
+    expect(result.success).toBe(true);
+
+    const remainingBoards = await tenantTable(tenantId, 'boards').pluck('board_id');
+    expect(remainingBoards).toEqual([defaultBoardId]);
+
+    // The archived row survives as history; only its board is gone.
+    const archived = await tenantTable(tenantId, 'recurring_ticket_definitions')
+      .where({ definition_id: archivedDefinitionId })
+      .first();
+    expect(archived).toBeTruthy();
+  }, HOOK_TIMEOUT);
+
   it('blocks deletion while the board has its own outbound sender route', async () => {
     const defaultBoardId = uuidv4();
     const doomedBoardId = uuidv4();

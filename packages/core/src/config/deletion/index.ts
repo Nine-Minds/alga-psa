@@ -119,6 +119,24 @@ const countBoardSenderRoutes = async (
   return Number(result?.count ?? 0);
 };
 
+// Mirrors deleteBoard's own recurring-schedule check: archived definitions are
+// read-only forever (loadWritableDefinition throws DEFINITION_ARCHIVED and
+// there is no unarchive or hard delete), so blocking on one would leave the
+// board permanently undeletable. They also never generate tickets, so their
+// board_id is inert history.
+const countActiveBoardRecurringDefinitions = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'recurring_ticket_definitions')
+    .where({ board_id: options.entityId })
+    .whereNull('archived_at')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -636,7 +654,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countBoardSenderRoutes
       },
       { type: 'ticket_template', table: 'ticket_templates', foreignKey: 'board_id', label: 'ticket template' },
-      { type: 'recurring_ticket_definition', table: 'recurring_ticket_definitions', foreignKey: 'board_id', label: 'recurring ticket schedule' },
+      {
+        type: 'recurring_ticket_definition',
+        table: 'recurring_ticket_definitions',
+        label: 'recurring ticket schedule',
+        countQuery: countActiveBoardRecurringDefinitions
+      },
       { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' }
     ]
   },

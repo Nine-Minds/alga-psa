@@ -5,6 +5,7 @@ import { DELETION_CONFIGS, getDeletionConfig } from './index';
 function makeTrx() {
   const builder = {
     where: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     count: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue({ count: '0' }),
     select: vi.fn().mockReturnThis()
@@ -145,7 +146,6 @@ describe('deletion configs', () => {
     });
     expect(deps.recurring_ticket_definition).toMatchObject({
       table: 'recurring_ticket_definitions',
-      foreignKey: 'board_id',
       label: 'recurring ticket schedule'
     });
     expect(deps.checklist_apply_rule).toMatchObject({
@@ -174,6 +174,26 @@ describe('deletion configs', () => {
       route_type: 'board',
       board_id: 'board-1'
     });
+  });
+
+  it('board recurring_ticket_definition dependency ignores archived schedules', async () => {
+    const recurringDep = DELETION_CONFIGS.board.dependencies.find(
+      (dep) => dep.type === 'recurring_ticket_definition'
+    );
+    expect(recurringDep?.table).toBe('recurring_ticket_definitions');
+    expect(recurringDep?.label).toBe('recurring ticket schedule');
+    // Must be a countQuery, not a plain foreignKey count: archived definitions
+    // are read-only forever, so blocking on one would strand the board.
+    expect(recurringDep?.foreignKey).toBeUndefined();
+    expect(recurringDep?.countQuery).toBeDefined();
+
+    const { trx, builder } = makeTrx();
+    await recurringDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-1' });
+
+    expect(trx).toHaveBeenCalledWith('recurring_ticket_definitions');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'recurring_ticket_definitions.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, { board_id: 'board-1' });
+    expect(builder.whereNull).toHaveBeenCalledWith('archived_at');
   });
 
   it('ticket config includes schedule_entry dependency with polymorphic countQuery', async () => {
