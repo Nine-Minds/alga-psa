@@ -117,6 +117,16 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
+    // Session-authenticated capability probes (/api/v1/capabilities/<key>).
+    // Every product may ask about its own tenant; the capability gate inside
+    // the route decides the answer (closed => the NotFound 404). Not part of
+    // the public v1 metadata surface.
+    group: 'api_capability_probes',
+    staticPrefixes: ['/api/v1/capabilities'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     group: 'api_ticket_psa_only_subroutes',
     staticPrefixes: [
       '/api/v1/tickets/from-asset',
