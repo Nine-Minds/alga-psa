@@ -54,9 +54,14 @@ const SANDBOX = 'allow-same-origin allow-popups allow-popups-to-escape-sandbox';
  * card, so dark mode keeps the light rendering and flips the result: the body
  * is inverted (hue-rotated back, with media inverted a second time so photos
  * and logos stay true). Every surface the sender painted darkens while the
- * contrast they authored survives — unlike a plain dark canvas, where any
- * `color:#000` from Outlook or Gmail would simply go invisible. The body's own
- * ground is dropped so what shows behind the message is the app's card.
+ * contrast they authored survives — unlike a plain dark canvas, where the
+ * pure-black ink Outlook and Gmail emit would simply go invisible. The body's
+ * own ground is dropped so what shows behind the message is the app's card.
+ *
+ * The trade is the inverse case: a message the sender authored dark lands
+ * light, and CSS background art is not in the media list so it reads as a
+ * negative. Both are the cost of flipping a document whose intent we cannot
+ * inspect, paid on the rare mail to keep the common mail readable.
  */
 const FRAME_BODY_STYLES = [
   'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;',
