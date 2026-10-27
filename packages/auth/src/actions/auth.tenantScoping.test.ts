@@ -178,16 +178,83 @@ describe('authenticateUser tenant scoping', () => {
     expect(findUserByEmailTenantAndTypeMock).not.toHaveBeenCalled();
   });
 
-  it('leaves the internal (MSP) lookup on its existing unscoped path', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
-      ...clientUser(NINE_MINDS_TENANT, 'u-msp'),
-      user_type: 'internal',
+  describe('internal (MSP) logins', () => {
+    function internalUser(tenant: string, userId: string, overrides: Record<string, unknown> = {}) {
+      return { ...clientUser(tenant, userId), user_type: 'internal', ...overrides };
+    }
+
+    it('signs in a single internal match through the discovery path, never the .first() lookup', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([internalUser(NINE_MINDS_TENANT, 'u-msp')]);
+
+      const user = await authenticateUser('tinus@example.com', 'correct-horse', 'internal');
+
+      expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('tinus@example.com', 'internal');
+      expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+      expect(user?.user_id).toBe('u-msp');
     });
 
-    const user = await authenticateUser('tinus@example.com', 'correct-horse', 'internal');
+    it('does not let an inactive restored duplicate shadow the live user', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([
+        internalUser(OTHER_MSP_TENANT, 'u-restored', { is_inactive: true }),
+        internalUser(NINE_MINDS_TENANT, 'u-live'),
+      ]);
 
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('tinus@example.com', 'internal');
-    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
-    expect(user?.user_type).toBe('internal');
+      const user = await authenticateUser('tinus@example.com', 'correct-horse', 'internal');
+
+      expect(user?.user_id).toBe('u-live');
+      // The inactive identity is never password-checked.
+      expect(verifyPasswordMock).not.toHaveBeenCalledWith('correct-horse', 'hash-u-restored');
+      expect(verifyPasswordMock).toHaveBeenCalledWith('correct-horse', 'hash-u-live');
+    });
+
+    it('refuses equal live credentials in two tenants with TENANT_REQUIRED', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([
+        internalUser(OTHER_MSP_TENANT, 'u-other'),
+        internalUser(NINE_MINDS_TENANT, 'u-nine'),
+      ]);
+
+      await expect(
+        authenticateUser('tinus@example.com', 'correct-horse', 'internal'),
+      ).rejects.toMatchObject({ code: 'TENANT_REQUIRED' });
+      expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+    });
+
+    it('returns null for a wrong password without disclosing the ambiguity', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([
+        internalUser(OTHER_MSP_TENANT, 'u-other'),
+        internalUser(NINE_MINDS_TENANT, 'u-nine'),
+      ]);
+      verifyPasswordMock.mockResolvedValue(false);
+
+      await expect(authenticateUser('tinus@example.com', 'guess', 'internal')).resolves.toBeNull();
+    });
+
+    it('returns null when every match is inactive', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([
+        internalUser(OTHER_MSP_TENANT, 'u-other', { is_inactive: true }),
+        internalUser(NINE_MINDS_TENANT, 'u-nine', { is_inactive: true }),
+      ]);
+
+      await expect(
+        authenticateUser('tinus@example.com', 'correct-horse', 'internal'),
+      ).resolves.toBeNull();
+    });
+
+    it('keeps an explicit tenant hint scoped to that tenant', async () => {
+      findUserByEmailTenantAndTypeMock.mockResolvedValue(internalUser(NINE_MINDS_TENANT, 'u-nine'));
+
+      const user = await authenticateUser('tinus@example.com', 'correct-horse', 'internal', {
+        tenantId: NINE_MINDS_TENANT,
+        requireTenantMatch: true,
+      });
+
+      expect(findUserByEmailTenantAndTypeMock).toHaveBeenCalledWith(
+        'tinus@example.com',
+        NINE_MINDS_TENANT,
+        'internal',
+      );
+      expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+      expect(user?.tenant).toBe(NINE_MINDS_TENANT);
+    });
   });
 });
