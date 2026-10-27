@@ -1282,6 +1282,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Spårning av svarsstatus",
+      "defaultReplyInternalTitle": "Standardsynlighet för svar",
+      "defaultReplyInternalDescription": "Börja nya ärendesvar som interna för alla teammedlemmar. Användare kan fortfarande ändra ett svar till Kund. Svar i kundportalen och i befintliga trådar förblir oförändrade.",
+      "defaultReplyInternalLabel": "Använd interna ärendesvar som standard",
       "responseStateTrackingDescription": "När funktionen är aktiverad spårar ärenden automatiskt vem som behöver svara härnäst (väntar på svar från kunden eller internt). Om du inaktiverar funktionen döljs svarsstatusmarkeringar, filter och tillhörande alternativ för att pausa SLA.",
       "responseStateTrackingEnabled": "Spårning av svarsstatus har aktiverats",
       "responseStateTrackingDisabled": "Spårning av svarsstatus har inaktiverats",

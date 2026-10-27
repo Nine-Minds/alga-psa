@@ -1282,6 +1282,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
+      "defaultReplyInternalTitle": "Default reply visibility",
+      "defaultReplyInternalDescription": "Start new ticket replies as Internal for all team members. Users can still switch a reply to Client. Client portal replies and replies within existing threads are unchanged.",
+      "defaultReplyInternalLabel": "Default ticket replies to Internal",
       "responseStateTrackingDescription": "When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). Disabling this hides response state badges, filters, and related SLA pause options.",
       "responseStateTrackingEnabled": "Response state tracking enabled",
       "responseStateTrackingDisabled": "Response state tracking disabled",

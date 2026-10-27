@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",
+      "defaultReplyInternalTitle": "Domyślna widoczność odpowiedzi",
+      "defaultReplyInternalDescription": "Rozpoczynaj nowe odpowiedzi na zgłoszenia jako wewnętrzne dla wszystkich członków zespołu. Użytkownicy nadal mogą przełączyć odpowiedź na tryb klienta. Odpowiedzi w portalu klienta i istniejących wątkach pozostają bez zmian.",
+      "defaultReplyInternalLabel": "Domyślnie używaj odpowiedzi wewnętrznych",
       "responseStateTrackingDescription": "Po włączeniu zgłoszenia automatycznie śledzą, kto ma odpowiedzieć jako następny (oczekiwanie na klienta lub na odpowiedź wewnętrzną). Wyłączenie ukrywa znaczniki stanu odpowiedzi, filtry i powiązane opcje wstrzymania SLA.",
       "responseStateTrackingEnabled": "Śledzenie stanu odpowiedzi włączone",
       "responseStateTrackingDisabled": "Śledzenie stanu odpowiedzi wyłączone",

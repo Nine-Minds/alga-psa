@@ -22,6 +22,7 @@ export type TicketListSettings = TicketViewSettings;
 export type TicketingDisplaySettings = {
   showWeekday?: boolean; // default false — prefixes the weekday name to ticket timestamps
   responseStateTrackingEnabled?: boolean; // default true — when false, response state is not tracked or displayed
+  defaultReplyInternal?: boolean;
   list?: TicketListSettings;
 };
 
@@ -55,6 +56,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
     return {
       showWeekday: resolveShowWeekday(display),
       responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
+      defaultReplyInternal: display.defaultReplyInternal === true,
       list: {
         // Defaults (and the "Refined List" fold behavior) come from the shared
         // ticket-column catalog so this list can't drift from the renderer.
@@ -74,6 +76,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
     return {
       showWeekday: false,
       responseStateTrackingEnabled: true,
+      defaultReplyInternal: false,
       list: {
         columnVisibility: resolveTicketColumnVisibility(),
         tagsInlineUnderTitle: true,
@@ -102,6 +105,10 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
   // Check if user has permission to update ticket settings
   if (!await hasPermission(user, 'ticket_settings', 'update', knex)) {
     return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
+  if (updated.defaultReplyInternal !== undefined && typeof updated.defaultReplyInternal !== 'boolean') {
+    throw new Error('defaultReplyInternal must be a boolean');
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.

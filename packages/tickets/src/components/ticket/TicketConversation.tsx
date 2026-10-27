@@ -109,6 +109,7 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  defaultReplyInternal?: boolean;
   /**
    * Read-only: the thread is shown without any way to add to it. The client
    * portal uses this for a ticket a shared-workspace colleague can see but
@@ -175,6 +176,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
   hideInternalTab = false,
+  defaultReplyInternal = false,
   isSubmitting: isSubmittingFromParent = false,
   overrides = {},
   externalComments = [],
@@ -328,7 +330,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleAddCommentClick = (placement: 'top' | 'bottom' = 'top') => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+      setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setEditorPlacement(placement);
@@ -431,15 +433,17 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   };
 
-  // Sync toggles when active tab changes while editor is open
+  const previousComposerTab = useRef(activeTab);
+  // Explicit tab changes override visibility; loading settings must not change an open draft.
   useEffect(() => {
-    if (showEditor) {
+    if (showEditor && previousComposerTab.current !== activeTab) {
       if (!hideInternalTab) {
-        setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+        setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
       }
       setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     }
-  }, [activeTab, showEditor, hideInternalTab]);
+    previousComposerTab.current = activeTab;
+  }, [activeTab, showEditor, hideInternalTab, defaultReplyInternal]);
 
   // Reset close-status selection when leaving resolution mode or closing the editor.
   useEffect(() => {

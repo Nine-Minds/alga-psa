@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",
+      "defaultReplyInternalTitle": "Standard-Sichtbarkeit für Antworten",
+      "defaultReplyInternalDescription": "Neue Ticketantworten für alle Teammitglieder als intern beginnen. Benutzer können weiterhin zu einer Kundenantwort wechseln. Antworten im Kundenportal und in bestehenden Threads bleiben unverändert.",
+      "defaultReplyInternalLabel": "Ticketantworten standardmäßig als intern beginnen",
       "responseStateTrackingDescription": "Wenn diese Option aktiviert ist, erfassen Tickets automatisch, wer als Nächstes antworten muss (Kundenantwort oder interne Antwort ausstehend). Wenn Sie sie deaktivieren, werden Antwortstatus-Badges, Filter und zugehörige Optionen zum Pausieren von SLAs ausgeblendet.",
       "responseStateTrackingEnabled": "Antwortstatus-Tracking aktiviert",
       "responseStateTrackingDisabled": "Antwortstatus-Tracking deaktiviert",

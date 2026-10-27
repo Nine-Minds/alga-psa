@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",
+      "defaultReplyInternalTitle": "Visibilidade predefinida das respostas",
+      "defaultReplyInternalDescription": "Iniciar novas respostas a tickets como internas para todos os membros da equipa. Os utilizadores podem mudar uma resposta para Cliente. As respostas no portal do cliente e em conversas existentes permanecem inalteradas.",
+      "defaultReplyInternalLabel": "Usar respostas internas por predefinição",
       "responseStateTrackingDescription": "Quando ativado, os tickets rastreiam automaticamente quem precisa responder em seguida (aguardando cliente ou aguardando resposta interna). Desabilitar isso oculta emblemas de estado de resposta, filtros e opções de pausa de SLA relacionadas.",
       "responseStateTrackingEnabled": "Rastreamento de estado de resposta ativado",
       "responseStateTrackingDisabled": "Rastreamento de estado de resposta desativado",

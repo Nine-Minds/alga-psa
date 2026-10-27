@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
+      "defaultReplyInternalTitle": "Standaardzichtbaarheid van antwoorden",
+      "defaultReplyInternalDescription": "Begin nieuwe ticketantwoorden als Intern voor alle teamleden. Gebruikers kunnen een antwoord nog steeds naar Klant wijzigen. Antwoorden in het klantenportaal en bestaande gespreksthreads blijven ongewijzigd.",
+      "defaultReplyInternalLabel": "Ticketantwoorden standaard als Intern beginnen",
       "responseStateTrackingDescription": "Wanneer ingeschakeld, volgen tickets automatisch wie als volgende moet reageren (wachten op klant of wachten op interne reactie). Als u dit uitschakelt, verdwijnen reactiestatusbadges, filters en bijbehorende SLA-pauze-opties.",
       "responseStateTrackingEnabled": "Reactiestatusbewaking ingeschakeld",
       "responseStateTrackingDisabled": "Reactiestatusbewaking uitgeschakeld",

@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",
+      "defaultReplyInternalTitle": "Visibilité par défaut des réponses",
+      "defaultReplyInternalDescription": "Commencer les nouvelles réponses aux tickets en mode Interne pour tous les membres de l'équipe. Les utilisateurs peuvent toujours passer une réponse en mode Client. Les réponses du portail client et des fils existants restent inchangées.",
+      "defaultReplyInternalLabel": "Utiliser le mode Interne par défaut pour les réponses",
       "responseStateTrackingDescription": "Lorsqu'ils sont activés, les tickets suivent automatiquement qui doit répondre ensuite (en attente du client ou en attente de réponse interne). La désactivation de cette option masque les badges d’état de réponse, les filtres et les options de pause SLA associées.",
       "responseStateTrackingEnabled": "Suivi de l'état de réponse activé",
       "responseStateTrackingDisabled": "Suivi de l'état de réponse désactivé",

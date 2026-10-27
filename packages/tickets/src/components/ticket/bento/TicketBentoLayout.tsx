@@ -84,6 +84,7 @@ export interface TicketBentoLayoutProps {
   /** Persists the hero description when no batch handler is wired. */
   onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
+  defaultReplyInternal?: boolean;
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
   hideBilling?: boolean;
@@ -1103,6 +1104,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             refreshKey={props.timelineRefreshKey}
             initialOrder={props.timelineInitialOrder}
             editorKey={props.editorKey}
+            defaultReplyInternal={props.defaultReplyInternal}
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}

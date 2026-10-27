@@ -1274,6 +1274,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",
+      "defaultReplyInternalTitle": "Visibilità predefinita delle risposte",
+      "defaultReplyInternalDescription": "Avviare le nuove risposte ai ticket come interne per tutti i membri del team. Gli utenti possono comunque passare una risposta a Cliente. Le risposte nel portale clienti e nei thread esistenti restano invariate.",
+      "defaultReplyInternalLabel": "Usare risposte interne per impostazione predefinita",
       "responseStateTrackingDescription": "Quando è attivo, i ticket tengono traccia automatica di chi deve rispondere per primo (in attesa del cliente o del team interno). Disattivandolo si nascondono i badge di stato risposta, i filtri e le relative opzioni di pausa SLA.",
       "responseStateTrackingEnabled": "Tracciamento dello stato di risposta attivo",
       "responseStateTrackingDisabled": "Tracciamento dello stato di risposta disattivato",
