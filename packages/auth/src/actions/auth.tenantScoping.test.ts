@@ -227,6 +227,44 @@ describe('authenticateUser tenant scoping', () => {
     expect(findUserByEmailTenantAndTypeMock).not.toHaveBeenCalled();
   });
 
+  // Writers store trimmed, lowercased email; the lookup must ask for exactly
+  // that string, or a pasted address with padding misses a valid account.
+  describe('padded identifiers', () => {
+    const PADDED = '  Tinus@Example.com \t';
+    const STORED = 'tinus@example.com';
+
+    it('looks up the stored form on the unscoped path', async () => {
+      findUsersByEmailAndTypeMock.mockImplementation(async (email: string) =>
+        email === STORED ? [clientUser(NINE_MINDS_TENANT, 'u-nine')] : [],
+      );
+
+      const user = await authenticateUser(PADDED, 'correct-horse', 'client');
+
+      expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith(STORED, 'client');
+      expect(user?.user_id).toBe('u-nine');
+    });
+
+    it('looks up the stored form on the tenant-scoped path', async () => {
+      getTenantIdBySlugMock.mockResolvedValue(NINE_MINDS_TENANT);
+      findUserByEmailTenantAndTypeMock.mockImplementation(async (email: string) =>
+        email === STORED ? clientUser(NINE_MINDS_TENANT, 'u-nine') : undefined,
+      );
+
+      const user = await authenticateUser(PADDED, 'correct-horse', 'client', {
+        tenantSlug: NINE_MINDS_SLUG,
+        requireTenantMatch: true,
+      });
+
+      expect(findUserByEmailTenantAndTypeMock).toHaveBeenCalledWith(STORED, NINE_MINDS_TENANT, 'client');
+      expect(user?.user_id).toBe('u-nine');
+    });
+
+    it('treats a whitespace-only email as missing', async () => {
+      await expect(authenticateUser('   ', 'correct-horse', 'client')).resolves.toBeNull();
+      expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('internal (MSP) logins', () => {
     function internalUser(tenant: string, userId: string, overrides: Record<string, unknown> = {}) {
       return { ...clientUser(tenant, userId), user_type: 'internal', ...overrides };

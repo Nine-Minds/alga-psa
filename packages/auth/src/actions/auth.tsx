@@ -9,6 +9,7 @@ import { IUser, isInteractiveUserType } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
 import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
+import { normalizeLoginEmail } from '../lib/security/loginEmail';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
@@ -141,12 +142,12 @@ export async function authenticateUser(
         hasPortalDomain: Boolean(options.portalDomain),
     });
 
-    if (!email || !password) {
+    const normalizedEmail = normalizeLoginEmail(email);
+    if (!normalizedEmail || !password) {
         logger.warn("[authenticateUser] Missing credentials");
         return null;
     }
 
-    const normalizedEmail = email.toLowerCase();
     let resolvedTenantId: string | undefined | null = options.tenantId;
 
     if (!resolvedTenantId && options.tenantSlug) {
@@ -253,7 +254,7 @@ export async function have_two_factor_enabled( password: string, email: string, 
 
 export async function userExists( email: string): Promise<boolean> {
     logger.system(`Checking if user exists for email ${email}`);
-    const user = await User.findUserByEmail(email.toLowerCase());
+    const user = await User.findUserByEmail(normalizeLoginEmail(email));
     if (!user || !user.user_id) { return false; }
     return true;
 }
