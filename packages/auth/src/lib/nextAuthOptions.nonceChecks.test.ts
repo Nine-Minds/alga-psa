@@ -13,14 +13,23 @@ vi.mock('next-auth/providers/google', () => ({ default: (config: unknown) => con
 vi.mock('next-auth/providers/azure-ad', () => ({
   default: (config: Record<string, unknown>) => ({ id: 'azure-ad', ...config }),
 }));
-vi.mock('./session', () => ({
-  getNextAuthSecret: async () => 'unit-test-secret',
-  getNextAuthSecretSync: () => 'unit-test-secret',
-  getSessionCookieConfig: () => ({ name: 'authjs.session-token', options: {} }),
-  getSessionMaxAge: () => 3600,
-  isSecureCookieEnvironment: () => false,
-  withDevPortSuffix: (value: string) => value,
-}));
+// The OAuth check cookies are named once, at module load, by the real
+// withDevPortSuffix. Pin a public URL with a port before the import so the
+// names below are the ones a worktree dev server would set.
+const PUBLIC_PORT = '3826';
+process.env.NEXTAUTH_URL = `http://localhost:${PUBLIC_PORT}`;
+
+vi.mock('./session', async () => {
+  const actual = await vi.importActual<typeof import('./session')>('./session');
+  return {
+    getNextAuthSecret: async () => 'unit-test-secret',
+    getNextAuthSecretSync: () => 'unit-test-secret',
+    getSessionCookieConfig: () => ({ name: 'authjs.session-token', options: {} }),
+    getSessionMaxAge: () => 3600,
+    isSecureCookieEnvironment: () => false,
+    withDevPortSuffix: actual.withDevPortSuffix,
+  };
+});
 vi.mock('./PortalDomainSessionToken', () => ({ issuePortalDomainOtt: vi.fn() }));
 vi.mock('@alga-psa/validation', () => ({ buildTenantPortalSlug: () => 'tenant-slug', isValidTenantSlug: () => true }));
 vi.mock('@alga-psa/core/features', () => ({ isEnterprise: false }));
@@ -105,6 +114,7 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.f
 const { buildAuthOptions, buildTeamsAuthOptions } = await import('./nextAuthOptions');
 
 type BuiltProvider = { id?: string; checks?: string[] };
+type BuiltCookies = Record<string, { name: string }>;
 
 function azureProviders(options: { providers: BuiltProvider[] }): BuiltProvider[] {
   return options.providers.filter((provider) => provider.id === 'azure-ad');
@@ -139,5 +149,19 @@ describe('Microsoft SSO nonce checks', () => {
     const providers = azureProviders(await buildAuthOptions());
     expect(providers).toHaveLength(1);
     expect(providers[0].checks).toEqual(REQUIRED_CHECKS);
+  });
+
+  it('names every OAuth check cookie with the runtime port, so worktrees on one host cannot consume each other\'s', async () => {
+    const options = (await buildAuthOptions()) as unknown as { cookies: BuiltCookies };
+    const names = Object.fromEntries(
+      ['nonce', 'pkceCodeVerifier', 'state', 'callbackUrl', 'csrfToken'].map((key) => [key, options.cookies[key]?.name]),
+    );
+    expect(names).toEqual({
+      nonce: `authjs-port-${PUBLIC_PORT}.nonce`,
+      pkceCodeVerifier: `authjs-port-${PUBLIC_PORT}.pkce.code_verifier`,
+      state: `authjs-port-${PUBLIC_PORT}.state`,
+      callbackUrl: `authjs-port-${PUBLIC_PORT}.callback-url`,
+      csrfToken: `authjs-port-${PUBLIC_PORT}.csrf-token`,
+    });
   });
 });
