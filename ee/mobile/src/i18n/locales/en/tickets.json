@@ -472,6 +472,12 @@
     "noClients": "No clients found.",
     "noContacts": "No contacts found.",
     "noLocations": "No locations available.",
+    "assets": "Assets",
+    "selectAssets": "Select assets",
+    "searchAssets": "Search assets…",
+    "noAssets": "No assets for this client.",
+    "assetsNeedClient": "Select a client first",
+    "clearAssets": "Clear assets",
     "noStatuses": "No statuses available.",
     "noPriorities": "No priorities available.",
     "noAgents": "No agents found.",
@@ -487,7 +493,8 @@
       "loadAgents": "Unable to load agents.",
       "permission": "You don't have permission to create tickets.",
       "validation": "Ticket creation was rejected by the server.",
-      "generic": "Unable to create ticket. Please try again."
+      "generic": "Unable to create ticket. Please try again.",
+      "loadAssets": "Unable to load assets."
     },
     "newClient": "New client",
     "newContact": "New contact"

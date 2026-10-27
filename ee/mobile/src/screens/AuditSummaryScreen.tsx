@@ -8,11 +8,10 @@ import { useTheme } from "../ui/ThemeContext";
 import { Card } from "../ui/components/Card";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { ErrorState, LoadingState } from "../ui/states";
-import { CreateTicketModal } from "../features/assets/CreateTicketModal";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { getAssetAudit, type AssetAudit, type AssetAuditItem } from "../api/assetAudits";
+import { getAssetAudit, type AssetAudit } from "../api/assetAudits";
 import { formatDateTime } from "../ui/formatters/dateTime";
 import { logger } from "../logging/logger";
 
@@ -40,7 +39,6 @@ export function AuditSummaryScreen({ navigation, route }: Props) {
 
   const [audit, setAudit] = useState<AssetAudit | null>(null);
   const [loading, setLoading] = useState(true);
-  const [ticketAsset, setTicketAsset] = useState<AssetAuditItem | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -177,7 +175,11 @@ export function AuditSummaryScreen({ navigation, route }: Props) {
                   </View>
                   <Pressable
                     testID={`audit-summary-create-ticket-${item.asset_id}`}
-                    onPress={() => setTicketAsset(item)}
+                    onPress={() => navigation.navigate("CreateTicket", {
+                      clientId: item.client_id ?? audit.client_id,
+                      clientName: audit.client_name ?? undefined,
+                      assets: [{ asset_id: item.asset_id, name: item.asset_name ?? item.asset_id }],
+                    })}
                     accessibilityRole="button"
                     accessibilityLabel={t("audit.createTicket", "Create ticket")}
                     hitSlop={8}
@@ -237,17 +239,6 @@ export function AuditSummaryScreen({ navigation, route }: Props) {
         </PrimaryButton>
       </View>
 
-      {ticketAsset ? (
-        <CreateTicketModal
-          visible
-          client={client}
-          apiKey={apiKey ?? null}
-          assetId={ticketAsset.asset_id}
-          clientId={ticketAsset.client_id ?? audit.client_id}
-          onClose={() => setTicketAsset(null)}
-          onCreated={() => setTicketAsset(null)}
-        />
-      ) : null}
     </View>
   );
 }

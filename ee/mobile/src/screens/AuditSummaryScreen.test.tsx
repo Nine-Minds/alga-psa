@@ -35,9 +35,6 @@ vi.mock("../api/assetAudits", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/assetAudits")>()),
   getAssetAudit: (...args: unknown[]) => mocks.getAssetAudit(...args),
 }));
-vi.mock("../features/assets/CreateTicketModal", () => ({
-  CreateTicketModal: (props: Record<string, unknown>) => React.createElement("MockCreateTicket", props),
-}));
 vi.mock("../logging/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 
 import { AuditSummaryScreen } from "./AuditSummaryScreen";
@@ -115,8 +112,12 @@ describe("AuditSummaryScreen", () => {
       renderer.root.find((n) => n.props?.testID === "audit-summary-create-ticket-a-2").props.onPress(),
     );
 
-    const modal = renderer.root.find((n) => n.type === ("MockCreateTicket" as never));
-    expect(modal.props).toMatchObject({ assetId: "a-2", clientId: "cl-1" });
+    // One create form for every route in: the missing device seeds its picker.
+    expect(mocks.navigate).toHaveBeenCalledWith("CreateTicket", {
+      clientId: "cl-1",
+      clientName: undefined,
+      assets: [{ asset_id: "a-2", name: "Lost PC" }],
+    });
   });
 
   it("shows the three counts and the unexpected device's real location", async () => {

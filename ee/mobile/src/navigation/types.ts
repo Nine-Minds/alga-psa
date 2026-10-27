@@ -23,7 +23,10 @@ export type RootStackParamList = {
     ticketId: string;
     qaScenario?: TicketRichTextQaScenario;
   };
-  CreateTicket: undefined;
+  /** Opened from an asset: that client and device start the form's selection. */
+  CreateTicket:
+    | { clientId?: string; clientName?: string; assets?: { asset_id: string; name: string }[] }
+    | undefined;
   AccountDeletion: undefined;
   MutedUsers: undefined;
   ClientDetail: { clientId: string; clientName?: string };

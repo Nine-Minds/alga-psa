@@ -582,6 +582,8 @@ export type CreateTicketParams = {
   contact_name_id?: string;
   category_id?: string;
   assigned_to?: string;
+  /** Devices the ticket is raised against; linked in the ticket's own transaction. */
+  asset_ids?: string[];
   attributes?: Record<string, unknown>;
   auditHeaders?: Record<string, string | undefined>;
 };

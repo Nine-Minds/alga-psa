@@ -15,7 +15,6 @@ const mockRecordMaintenance = vi.fn();
 const mockGetNotes = vi.fn();
 const mockSaveNotes = vi.fn();
 const mockLink = vi.fn();
-const mockCreate = vi.fn();
 vi.mock("../api/assets", () => ({
   getAsset: (...args: unknown[]) => mockGetAsset(...args),
   getAssetMaintenance: (...args: unknown[]) => mockGetMaintenance(...args),
@@ -26,7 +25,6 @@ vi.mock("../api/assets", () => ({
   getAssetNotes: (...args: unknown[]) => mockGetNotes(...args),
   saveAssetNotes: (...args: unknown[]) => mockSaveNotes(...args),
   linkAssetToTicket: (...args: unknown[]) => mockLink(...args),
-  createTicketFromAsset: (...args: unknown[]) => mockCreate(...args),
 }));
 
 const mockListTickets = vi.fn();
@@ -54,12 +52,6 @@ vi.mock("../features/inventory/hooks/useInventoryApi", () => ({
 const mockShowToast = vi.fn();
 vi.mock("../ui/toast/ToastProvider", () => ({
   useToast: () => ({ showToast: mockShowToast }),
-}));
-
-// Drive the board/status/priority pickers directly through onSelect instead of the
-// real bottom-sheet, so the create-ticket flow is host-testable.
-vi.mock("../ui/components/Select", () => ({
-  Select: (props: Record<string, unknown>) => React.createElement("MockSelect", props),
 }));
 
 import { AssetDetailScreen } from "./AssetDetailScreen";
@@ -135,9 +127,6 @@ const hosts = (tree: ReactTestRenderer, testID: string): ReactTestInstance[] =>
 const byLabel = (tree: ReactTestRenderer, label: string): ReactTestInstance[] =>
   tree.root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === label);
 
-const mockSelect = (tree: ReactTestRenderer, title: string): ReactTestInstance =>
-  tree.root.findAll((node) => String(node.type) === "MockSelect" && node.props.title === title)[0];
-
 function allText(tree: ReactTestRenderer): string {
   const out: string[] = [];
   for (const node of tree.root.findAll((n) => typeof n.type === "string")) {
@@ -163,7 +152,6 @@ describe("AssetDetailScreen", () => {
     mockGetNotes.mockResolvedValue(ok({ data: { document: null, blockData: null, lastUpdated: null } }));
     mockSaveNotes.mockResolvedValue(ok({ data: {} }));
     mockLink.mockResolvedValue(ok({ data: {} }));
-    mockCreate.mockResolvedValue(ok({ data: { ticket_id: "t-100", ticket_number: "TK-100" } }));
     mockListTickets.mockResolvedValue(
       ok({
         data: [{ ticket_id: "tkt-1", ticket_number: "TKT-500", title: "Printer jam", status_name: "Open", client_name: "Acme Corp" }],
@@ -252,49 +240,33 @@ describe("AssetDetailScreen", () => {
   });
 
   it("hands off from the link picker to create-a-ticket when none fits", async () => {
-    const tree = await renderScreen();
+    const navigate = vi.fn();
+    const tree = await renderScreen(navigate);
 
     await act(async () => byLabel(tree, "asset-detail-link-ticket")[0].props.onPress());
     await act(async () => {});
 
-    // The "can't find it?" escape hatch closes the picker and opens the create flow.
+    // The "can't find it?" escape hatch closes the picker and opens the create form.
     await act(async () => hosts(tree, "asset-detail-link-ticket-create-instead")[0].props.onPress());
     await act(async () => {});
 
-    expect(byLabel(tree, "asset-detail-create-ticket-title").length).toBeGreaterThan(0);
+    expect(navigate).toHaveBeenCalledWith("CreateTicket", expect.objectContaining({ clientId: "client-1" }));
   });
 
-  it("creates a ticket from the asset once title and pickers are set", async () => {
-    const tree = await renderScreen();
+  it("opens the shared create form with this asset already picked", async () => {
+    const navigate = vi.fn();
+    const tree = await renderScreen(navigate);
 
     await act(async () => byLabel(tree, "asset-detail-create-ticket")[0].props.onPress());
     await act(async () => {});
 
-    // Blocked before any input.
-    expect(byLabel(tree, "asset-detail-create-ticket-submit")[0].props.disabled).toBe(true);
-
-    act(() => byLabel(tree, "asset-detail-create-ticket-title")[0].props.onChangeText("Broken screen"));
-    await act(async () => mockSelect(tree, "Board").props.onSelect("board-1"));
-    act(() => mockSelect(tree, "Status").props.onSelect("status-1"));
-    act(() => mockSelect(tree, "Priority").props.onSelect("prio-1"));
-
-    const submit = byLabel(tree, "asset-detail-create-ticket-submit")[0];
-    expect(submit.props.disabled).toBe(false);
-    await act(async () => submit.props.onPress());
-
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        data: expect.objectContaining({
-          title: "Broken screen",
-          board_id: "board-1",
-          status_id: "status-1",
-          priority_id: "prio-1",
-          asset_id: "asset-1",
-          client_id: "client-1",
-        }),
-      }),
-    );
+    // One create form for every route in: the asset seeds the device picker
+    // rather than a separate create-from-asset dialog (alga-2026-0002785).
+    expect(navigate).toHaveBeenCalledWith("CreateTicket", {
+      clientId: "client-1",
+      clientName: "Acme Corp",
+      assets: [{ asset_id: "asset-1", name: "Dell Latitude" }],
+    });
   });
 
   it("links to the stock movement trail for an inventory-sourced asset", async () => {

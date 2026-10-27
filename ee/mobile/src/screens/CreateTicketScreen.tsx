@@ -13,6 +13,7 @@ import { EntityPickerModal, type EntityPickerItem } from "../ui/components/Entit
 import { createTicket, getTicketStatuses, getTicketPriorities, type TicketStatus, type TicketPriority } from "../api/tickets";
 import { listBoards, listClients, listContacts, listClientLocations, type BoardListItem, type ClientListItem, type ContactListItem, type LocationListItem } from "../api/referenceData";
 import { listUsers, getUserDisplayName, type UserListItem } from "../api/users";
+import { listAssets, type AssetListItem } from "../api/assets";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { invalidateTicketsListCache } from "../cache/ticketsCache";
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
@@ -21,9 +22,9 @@ import { ContactFormModal } from "../features/contacts/components/ContactFormMod
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateTicket">;
 
-type PickerField = "board" | "client" | "contact" | "location" | "status" | "priority" | "assignee" | null;
+type PickerField = "board" | "client" | "contact" | "location" | "status" | "priority" | "assignee" | "assets" | null;
 
-export function CreateTicketScreen({ navigation }: Props) {
+export function CreateTicketScreen({ navigation, route }: Props) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
   const config = useMemo(() => getAppConfig(), []);
@@ -44,12 +45,16 @@ export function CreateTicketScreen({ navigation }: Props) {
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
 
+  // Opened from an asset (asset detail, audit summary): that client and device
+  // seed the form instead of a separate create-from-asset path.
+  const preset = route.params ?? {};
+
   // --- Form state ---
   const [title, setTitle] = useState("");
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [clientName, setClientName] = useState("");
+  const [clientId, setClientId] = useState<string | null>(preset.clientId ?? null);
+  const [clientName, setClientName] = useState(preset.clientName ?? "");
   const [contactId, setContactId] = useState<string | null>(null);
   const [contactName, setContactName] = useState("");
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -61,6 +66,11 @@ export function CreateTicketScreen({ navigation }: Props) {
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [assigneeName, setAssigneeName] = useState("");
   const [description, setDescription] = useState("");
+  const [assetIds, setAssetIds] = useState<string[]>(() => (preset.assets ?? []).map((asset) => asset.asset_id));
+  // Chip labels; the preset names come with the route, the rest from the picker.
+  const [assetNames, setAssetNames] = useState<Record<string, string>>(() =>
+    Object.fromEntries((preset.assets ?? []).map((asset) => [asset.asset_id, asset.name])),
+  );
 
   // --- Picker state ---
   const [activePicker, setActivePicker] = useState<PickerField>(null);
@@ -81,6 +91,7 @@ export function CreateTicketScreen({ navigation }: Props) {
   const contactsRef = useRef<ContactListItem[]>([]);
   const locationsRef = useRef<LocationListItem[]>([]);
   const usersRef = useRef<UserListItem[]>([]);
+  const assetsRef = useRef<AssetListItem[]>([]);
 
   // --- Fetch helpers ---
   const fetchBoards = useCallback(async () => {
@@ -181,6 +192,30 @@ export function CreateTicketScreen({ navigation }: Props) {
     finally { setPickerLoading(false); }
   }, [client, apiKey, clientId, t]);
 
+  const fetchAssets = useCallback(async (query?: string) => {
+    if (!client || !clientId) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setPickerLoading(true);
+    setPickerError(null);
+    try {
+      const res = await listAssets(client, { apiKey, client_id: clientId, search: query || undefined, limit: 50, signal: controller.signal });
+      if (!res.ok) { setPickerError(t("create.errors.loadAssets")); return; }
+      assetsRef.current = res.data.data;
+      setAssetNames((current) => ({
+        ...current,
+        ...Object.fromEntries(res.data.data.map((asset) => [asset.asset_id, asset.name])),
+      }));
+      setPickerItems(res.data.data.map((asset) => ({
+        id: asset.asset_id,
+        label: asset.name,
+        subtitle: [asset.asset_tag, asset.location].filter(Boolean).join(" · ") || null,
+      })));
+    } catch { if (!controller.signal.aborted) setPickerError(t("create.errors.loadAssets")); }
+    finally { if (!controller.signal.aborted) setPickerLoading(false); }
+  }, [client, apiKey, clientId, t]);
+
   const fetchUsers = useCallback(async (query?: string) => {
     if (!client) return;
     abortRef.current?.abort();
@@ -211,8 +246,9 @@ export function CreateTicketScreen({ navigation }: Props) {
       case "status": if (boardId) void fetchStatuses(boardId); break;
       case "priority": void fetchPriorities(); break;
       case "assignee": void fetchUsers(); break;
+      case "assets": void fetchAssets(); break;
     }
-  }, [fetchBoards, fetchClients, fetchContacts, fetchLocations, fetchStatuses, fetchPriorities, fetchUsers, boardId]);
+  }, [fetchBoards, fetchClients, fetchContacts, fetchLocations, fetchStatuses, fetchPriorities, fetchUsers, fetchAssets, boardId]);
 
   // --- Auto-select default board on mount ---
   useEffect(() => {
@@ -276,6 +312,16 @@ export function CreateTicketScreen({ navigation }: Props) {
     setLocationName("");
   }, [clientId]);
 
+  // The picked devices belong to the client that was selected before, so a
+  // client change clears them. The preset selection the screen opened with is
+  // for the preset client, so the first run must not wipe it.
+  const assetScopeClientRef = useRef<string | null>(preset.clientId ?? null);
+  useEffect(() => {
+    if (assetScopeClientRef.current === clientId) return;
+    assetScopeClientRef.current = clientId;
+    setAssetIds([]);
+  }, [clientId]);
+
   // --- Picker callbacks ---
   const handlePickerSelect = useCallback((id: string, label: string) => {
     switch (activePicker) {
@@ -307,6 +353,11 @@ export function CreateTicketScreen({ navigation }: Props) {
         setAssigneeId(id);
         setAssigneeName(label);
         break;
+      case "assets":
+        // Multi-select: a tap toggles and the sheet stays open.
+        setAssetNames((current) => ({ ...current, [id]: label }));
+        setAssetIds((current) => (current.includes(id) ? current.filter((assetId) => assetId !== id) : [...current, id]));
+        return;
     }
     setActivePicker(null);
   }, [activePicker]);
@@ -316,8 +367,9 @@ export function CreateTicketScreen({ navigation }: Props) {
       case "client": void fetchClients(query); break;
       case "contact": void fetchContacts(query); break;
       case "assignee": void fetchUsers(query); break;
+      case "assets": void fetchAssets(query); break;
     }
-  }, [activePicker, fetchClients, fetchContacts, fetchUsers]);
+  }, [activePicker, fetchClients, fetchContacts, fetchUsers, fetchAssets]);
 
   // --- Validation ---
   const canSubmit = title.trim().length > 0 && boardId && clientId && statusId && priorityId;
@@ -339,6 +391,7 @@ export function CreateTicketScreen({ navigation }: Props) {
         ...(contactId ? { contact_name_id: contactId } : {}),
         ...(locationId ? { location_id: locationId } : {}),
         ...(assigneeId ? { assigned_to: assigneeId } : {}),
+        ...(assetIds.length > 0 ? { asset_ids: assetIds } : {}),
         ...(description.trim() ? { attributes: { description: description.trim() } } : {}),
         auditHeaders,
       });
@@ -370,6 +423,7 @@ export function CreateTicketScreen({ navigation }: Props) {
     status: { title: t("create.selectStatus"), searchable: false, empty: t("create.noStatuses"), selectedId: statusId },
     priority: { title: t("create.selectPriority"), searchable: false, empty: t("create.noPriorities"), selectedId: priorityId },
     assignee: { title: t("create.selectAssignee"), placeholder: t("create.searchAgents"), searchable: true, empty: t("create.noAgents"), selectedId: assigneeId },
+    assets: { title: t("create.selectAssets"), placeholder: t("create.searchAssets"), searchable: true, empty: t("create.noAssets"), selectedId: null },
   };
 
   const currentPicker = activePicker ? pickerConfig[activePicker] : null;
@@ -412,6 +466,7 @@ export function CreateTicketScreen({ navigation }: Props) {
 
         {/* Board */}
         <FieldSelector
+          testID="create-ticket-board"
           label={t("create.board")}
           required
           value={boardName}
@@ -424,6 +479,7 @@ export function CreateTicketScreen({ navigation }: Props) {
 
         {/* Client */}
         <FieldSelector
+          testID="create-ticket-client"
           label={t("create.client")}
           required
           value={clientName}
@@ -437,6 +493,7 @@ export function CreateTicketScreen({ navigation }: Props) {
         {/* Contact (optional, requires client) */}
         {clientId ? (
           <FieldSelector
+            testID="create-ticket-contact"
             label={t("create.contact")}
             value={contactName}
             placeholder={t("create.selectContact")}
@@ -451,6 +508,7 @@ export function CreateTicketScreen({ navigation }: Props) {
         {/* Location (optional, requires client) */}
         {clientId ? (
           <FieldSelector
+            testID="create-ticket-location"
             label={t("create.location")}
             value={locationName}
             placeholder={t("create.selectLocation")}
@@ -462,9 +520,57 @@ export function CreateTicketScreen({ navigation }: Props) {
           />
         ) : null}
 
+        {/* Assets (optional, requires client) */}
+        {features.assets ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("create.assets")}</Text>
+            <Pressable
+              testID="create-ticket-assets"
+              onPress={() => openPicker("assets")}
+              disabled={!clientId}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !clientId }}
+              style={({ pressed }) => ({
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 10,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: clientId ? colors.card : colors.disabled.bg,
+                marginTop: spacing.xs,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...typography.body, color: assetIds.length > 0 ? colors.text : colors.textSecondary, flex: 1 }}>
+                {assetIds.length > 0
+                  ? assetIds.map((assetId) => assetNames[assetId] ?? assetId).join(", ")
+                  : clientId
+                    ? t("create.selectAssets")
+                    : t("create.assetsNeedClient")}
+              </Text>
+              <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+            </Pressable>
+            {assetIds.length > 0 ? (
+              <Pressable
+                testID="create-ticket-assets-clear"
+                onPress={() => setAssetIds([])}
+                accessibilityRole="button"
+                accessibilityLabel={t("create.clearAssets")}
+                style={{ paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>{t("create.clearAssets")}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Status (requires board) */}
         {boardId ? (
           <FieldSelector
+            testID="create-ticket-status"
             label={t("create.status")}
             required
             value={statusName}
@@ -478,6 +584,7 @@ export function CreateTicketScreen({ navigation }: Props) {
 
         {/* Priority */}
         <FieldSelector
+          testID="create-ticket-priority"
           label={t("create.priority")}
           required
           value={priorityName}
@@ -490,6 +597,7 @@ export function CreateTicketScreen({ navigation }: Props) {
 
         {/* Assignee (optional) */}
         <FieldSelector
+          testID="create-ticket-assignee"
           label={t("create.assignee")}
           value={assigneeName}
           placeholder={t("create.selectAssignee")}
@@ -562,6 +670,7 @@ export function CreateTicketScreen({ navigation }: Props) {
           error={pickerError}
           searchable={currentPicker.searchable}
           selectedId={currentPicker.selectedId}
+          selectedIds={activePicker === "assets" ? assetIds : undefined}
           authToken={apiKey}
           onSearch={currentPicker.searchable ? handlePickerSearch : undefined}
           onSelect={handlePickerSelect}
@@ -604,6 +713,7 @@ export function CreateTicketScreen({ navigation }: Props) {
 // --- Field Selector Component ---
 
 function FieldSelector({
+  testID,
   label,
   required,
   value,
@@ -614,6 +724,7 @@ function FieldSelector({
   spacing,
   typography,
 }: {
+  testID: string;
   label: string;
   required?: boolean;
   value: string;
@@ -631,6 +742,7 @@ function FieldSelector({
       </Text>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: spacing.xs }}>
         <Pressable
+          testID={testID}
           onPress={onPress}
           accessibilityRole="button"
           style={({ pressed }) => ({
