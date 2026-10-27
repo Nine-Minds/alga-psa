@@ -134,7 +134,7 @@ The following REST API groups are available in the Community Edition under the b
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
-- **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. The `lifecycle_status` field controls whether a client appears in the default Clients list: it defaults to `active`; clients created with `lifecycle_status: "prospect"` or `lifecycle_status: "former"` are **hidden from the default Clients list**. See the Client Lifecycle Status, Client Merge, and Billing Profile Contacts sections below.
 - **Label Printing** — Generate PDF labels for tickets, assets, and stock inventory units via `POST /api/labels/pdf`. See **Label Printing** below.
 - Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
@@ -208,6 +208,18 @@ Agents can Cc or Bcc one-off external email addresses when posting a public tick
 #### Ticket Location Address
 
 The single-ticket detail endpoint `GET /api/v1/tickets/{id}` includes `location_address` alongside `location_name` in its response. `location_address` is the full formatted postal address of the ticket's linked location — `address_line1`, `city`, `state_province`, `postal_code`, and `country_name` joined with commas — or `null` if the location has no address data. Use this field when building map links or displaying location context in field-service workflows; the location name alone is a poor geocoding input.
+
+#### Client Lifecycle Status
+
+The `lifecycle_status` field on a client record controls how the client appears in the default Clients list. It defaults to `active` when a client is created without specifying this field.
+
+| Value | Default Clients list visibility | Use case |
+|-------|--------------------------------|----------|
+| `active` | **Visible** (this is the default) | All live customers. Omitting `lifecycle_status` on create produces an `active` client. |
+| `prospect` | **Hidden** | Prospective customers tracked in AlgaPSA before an agreement is signed. Use only when the end user explicitly requests a prospect record. |
+| `former` | **Hidden** | Past clients whose relationship has ended; billing and ticket history is preserved. Use only when the end user explicitly asks to mark a client as former. |
+
+> ⚠️ **AI/MCP callers:** omitting `lifecycle_status` creates an `active` client, which is the correct default for almost every case. Passing `lifecycle_status: "prospect"` causes the newly created client to be absent from the default Clients list, a common source of user confusion (e.g. the MCP creating a client that then appears "missing"). Only pass a non-`active` value when the end user explicitly requests that classification.
 
 #### Client Merge
 
