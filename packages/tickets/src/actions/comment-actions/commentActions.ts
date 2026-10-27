@@ -642,18 +642,15 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
       if (updatedComment && commentTenant) {
-        const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
-          .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id ?? updatedComment.user_id ?? user.user_id })
-          .first();
-        const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
+        // Authorship is not editable, so the edited comment's author is the one already resolved.
+        const newAuthorName = oldAuthorName;
 
         try {
           await publishCommentEvent(trx, 'ticket', {
             tenantId: commentTenant,
             ticketId: updatedComment.ticket_id!,
             commentId: updatedComment.comment_id!,
-            userId: comment.user_id,
+            userId: user.user_id,
             eventType: 'TICKET_COMMENT_UPDATED',
           }, async () => {
             await publishEvent({
