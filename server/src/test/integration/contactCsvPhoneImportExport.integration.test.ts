@@ -10,6 +10,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 const testState = vi.hoisted(() => ({
   tenant: 'test-tenant',
   userId: 'test-user',
+  canCreateTags: true,
   createTenantKnexMock: vi.fn(),
   withTransactionMock: vi.fn(),
   createTagMock: vi.fn().mockResolvedValue(undefined),
@@ -51,7 +52,8 @@ vi.mock('@alga-psa/tags/actions', () => ({
 // tags can mint their definitions.
 vi.mock('../../../../packages/tags/src/lib/authHelpers', async (importOriginal) => ({
   ...(await importOriginal<any>()),
-  hasPermissionAsync: vi.fn(async () => true),
+  hasPermissionAsync: vi.fn(async (_user: any, resource: string, action: string) =>
+    resource === 'tag' && action === 'create' ? testState.canCreateTags : true),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -182,6 +184,7 @@ describe('contact CSV hybrid email import/export integration', () => {
     // Unlike the rest of this file, run the real withTransaction so the
     // after-commit hooks flush exactly as they do in production.
     beforeEach(() => {
+      testState.canCreateTags = true;
       testState.withTransactionMock.mockImplementation((knexLike: Knex, callback: any) =>
         testState.actualWithTransaction!(knexLike, callback));
     });
@@ -342,6 +345,25 @@ describe('contact CSV hybrid email import/export integration', () => {
 
       expect(await tagsOf(tenantId, contactId)).toEqual(['Board', 'VIP']);
       expect(tagEvents()).toEqual([]);
+    }, 20_000);
+
+    it('publishes no events and keeps the original tags when a new tag is refused after an existing one was mapped', async () => {
+      const { tenantId, clientId, email, contactId } = await seedTaggedContact();
+      // Make VIP the only pre-existing definition the replacement can reuse: Board stays
+      // defined too, but 'Fresh' does not exist and the importer may not create it.
+      testState.canCreateTags = false;
+      testState.publishWorkflowEventMock.mockClear();
+
+      const results = await settlesWithin5s(importContactsFromCSV([
+        { full_name: 'Tagged CSV Contact', email, client_id: clientId, tags: 'VIP, Fresh' } as any,
+      ], true));
+
+      // The tag savepoint rolled back (replace-delete and the VIP mapping with it)...
+      expect(await tagsOf(tenantId, contactId)).toEqual(['Board', 'VIP']);
+      expect(await mappingCount(tenantId, contactId)).toBe(2);
+      // ...so the VIP mapping that was queued before the refusal must not be announced.
+      expect(tagEvents()).toEqual([]);
+      expect(results).toHaveLength(1);
     }, 20_000);
 
     it('replaces the tag set when the Tags cell is non-blank', async () => {

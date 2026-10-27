@@ -921,8 +921,9 @@ export const createTagsForEntityWithTransaction = withAuth(async (
         tagged_type: entityType
       }, userId);
 
-      // Events are deferred to the owning transaction's commit: a caller that
-      // later rolls back (or a savepoint that is discarded) must not emit them.
+      // Events are deferred until the owning transaction commits. registerAfterCommit
+      // keeps them on this transactor's savepoint, so they are dropped if that
+      // savepoint (or the outer transaction) rolls back and emitted only if both commit.
       const occurredAt = new Date().toISOString();
       if (createdDefinition) {
         registerAfterCommit(trx, () => publishWorkflowEvent({
