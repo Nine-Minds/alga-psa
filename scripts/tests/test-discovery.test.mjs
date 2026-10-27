@@ -170,6 +170,15 @@ test('every literal temporal readiness include is a temporal-readiness candidate
   for (const file of includes) assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true, file);
 });
 
+test('the env-gated tenant deletion query budget is collected by Temporal readiness only', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/tenantDeletionQueryBudget.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
 test('worker boot under a failing capability gate must execute in Temporal readiness', () => {
   const file = 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts';
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
