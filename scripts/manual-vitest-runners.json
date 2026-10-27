@@ -34,5 +34,23 @@
     "reason": "The existing visual-review workflow is explicitly opt-in and machine/font dependent. Its collection is not release evidence; mandatory invoice PDF content and persisted-layout journeys run separately.",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
     "expires": "2026-11-08"
+  },
+  {
+    "runner": "tenant-deletion-hotpath-review",
+    "cwd": "ee/temporal-workflows",
+    "cli": "server/node_modules/vitest/vitest.mjs",
+    "config": "vitest.no-docker.config.ts",
+    "filters": [
+      "src/activities/__tests__/tenantDeletionQueryBudget.test.ts"
+    ],
+    "env": {
+      "HOTPATH_DB": "1"
+    },
+    "owner": "Platform maintainers",
+    "runtime": "Manual L0b hot-path capture against a migrated, disposable PostgreSQL database (HOTPATH_DB=1 plus admin DB credentials)",
+    "mandatory": false,
+    "reason": "The suite deletes a fixture tenant and records its statement list for scripts/review/hotpath-diff.mjs to compare across commits; it needs a disposable migrated database that the DB-less Temporal readiness lane does not provide. HOTPATH_DB=1 is set only so collection registers the env-gated case; collection never executes test bodies. Tenant deletion behavior is mandatory separately in Temporal readiness (tenant-deletion-workflow.behavior, tenant-deletion-external-links, tenant-deletion-answer-mappings).",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3911",
+    "expires": "2026-11-27"
   }
 ]

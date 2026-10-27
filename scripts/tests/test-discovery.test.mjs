@@ -172,13 +172,29 @@ test('every literal temporal readiness include is a temporal-readiness candidate
   for (const file of includes) assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true, file);
 });
 
-test('the env-gated tenant deletion query budget is collected by Temporal readiness only', () => {
+// Temporal readiness runs without a database or Temporal server and requires
+// executed assertions in every candidate file, so an env-gated suite there
+// skips and fails the gate. Such suites belong to a lane providing their
+// runtime, or to the manual registry.
+test('no Temporal readiness candidate gates its cases on the environment', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const candidates = repositoryTestFiles(root).filter(file => isAdditionalWorkspaceTest(file, 'temporal-readiness'));
+  assert.ok(candidates.length > 0);
+  for (const file of candidates) {
+    assert.doesNotMatch(readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8'), /\.(skipIf|runIf)\(/, file);
+  }
+});
+
+test('the env-gated tenant deletion query budget is collected only by its manual review runner', () => {
   const file = 'ee/temporal-workflows/src/activities/__tests__/tenantDeletionQueryBudget.test.ts';
-  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
-  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
-  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
-  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
-  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+  for (const lane of ['temporal-readiness', 'temporal-engine', 'temporal-database']) {
+    assert.equal(isAdditionalWorkspaceTest(file, lane), false, lane);
+  }
+  const runners = JSON.parse(readFileSync(new URL('../manual-vitest-runners.json', import.meta.url), 'utf8'));
+  const runner = runners.find(entry => entry.filters?.some(filter => `${entry.cwd}/${filter}` === file));
+  assert.equal(runner?.mandatory, false);
+  // vitest list omits skipped cases; collection must see the gated case.
+  assert.equal(runner.env?.HOTPATH_DB, '1');
 });
 
 test('worker boot under a failing capability gate must execute in Temporal readiness', () => {
