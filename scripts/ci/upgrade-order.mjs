@@ -17,9 +17,10 @@
 //    scripts/ci/upgrade-order-smoke.json run against the PR schema.
 //
 // Needs: DB_HOST, DB_PORT, DB_USER_ADMIN, DB_PASSWORD_ADMIN (superuser on a pgvector Postgres).
-// Exit 0 compatible, 1 incompatible, 2 the gate could not run.
+// Exit 0 compatible, 1 incompatible, 2 the gate could not run (including a smoke suite that
+// needs an executable the runner lacks: scripts/lib/smoke-failure.mjs).
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -28,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 import knex from 'knex';
 
 import { assertN1, snapshotSchema } from '../lib/n1-schema.mjs';
+import { classifySmokeFailure, environmentMessages } from '../lib/smoke-failure.mjs';
 import { prepareUpgradeSchema } from '../lib/upgrade-schema-source.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -155,10 +157,15 @@ async function main(argv) {
 
     process.chdir(root);
     if (!o.skipSmoke) {
-      const code = runSmoke({ work, baseSha, pr, database });
-      if (code !== 0) {
+      const smoke = await runSmoke({ work, baseSha, pr, database });
+      if (smoke.kind === 'environment') {
+        for (const line of environmentMessages(smoke.tools)) console.error(line);
+        log('smoke UNDECIDED: the runner lacks a tool the smoke suites need; this says nothing about schema compatibility');
+        return 2;
+      }
+      if (smoke.kind === 'incompatible') {
         log(`smoke FAILED: the release at ${baseSha} would break on this schema during blue/green`);
-        return code === 2 ? 2 : 1;
+        return 1;
       }
     }
     result = 'compatible';
@@ -176,7 +183,7 @@ async function main(argv) {
   }
 }
 
-function runSmoke({ work, baseSha, pr, database }) {
+async function runSmoke({ work, baseSha, pr, database }) {
   const list = JSON.parse(fs.readFileSync(SMOKE_LIST, 'utf8'));
   const release = path.join(work, 'release');
   fs.mkdirSync(release);
@@ -187,9 +194,9 @@ function runSmoke({ work, baseSha, pr, database }) {
   log(`smoke: ${list.tests.length} baseline suites against the PR schema`);
   // The release's own tests bootstrap their schema from TEST_MIGRATIONS_DIR (server/test-utils/dbConfig.ts),
   // so pointing it at the PR's combined migrations runs old code and old seeds on the new schema.
-  const res = spawnSync('npx', ['vitest', 'run', '--coverage.enabled=false', ...list.tests.map((t) => t.replace(/^server\//, ''))], {
+  const child = spawn('npx', ['vitest', 'run', '--coverage.enabled=false', ...list.tests.map((t) => t.replace(/^server\//, ''))], {
     cwd: path.join(release, 'server'),
-    stdio: 'inherit',
+    stdio: ['inherit', 'pipe', 'pipe'],
     env: {
       ...process.env,
       TEST_DB_NAME: `${database}_smoke`,
@@ -199,7 +206,21 @@ function runSmoke({ work, baseSha, pr, database }) {
       NODE_ENV: 'test',
     },
   });
-  return res.status ?? 2;
+  // Stream live to the CI log and keep a copy for classification.
+  let output = '';
+  const tee = (stream, sink) => stream.on('data', (chunk) => { output += chunk; sink.write(chunk); });
+  tee(child.stdout, process.stdout);
+  tee(child.stderr, process.stderr);
+  const outcome = await new Promise((resolve) => {
+    child.on('error', (error) => resolve({ error }));
+    child.on('close', (status, signal) => resolve({ status, signal }));
+  });
+  if (outcome.error) {
+    // vitest never started (e.g. npx missing): a runner problem.
+    return { kind: 'environment', tools: [outcome.error.code === 'ENOENT' ? String(outcome.error.path || 'npx') : `npx (${outcome.error.message})`] };
+  }
+  if (outcome.status === 0) return { kind: 'passed' };
+  return classifySmokeFailure(output);
 }
 
 main(process.argv.slice(2)).then(

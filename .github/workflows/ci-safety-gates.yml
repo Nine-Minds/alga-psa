@@ -145,7 +145,10 @@ jobs:
       - run: npm ci
 
       - name: Structural N-1 assertion self-tests
-        run: node --test scripts/tests/n1-schema.test.mjs
+        run: node --test scripts/tests/n1-schema.test.mjs scripts/tests/smoke-failure.test.mjs
+
+      - name: Install poppler-utils (pdftotext, used by smoke suites)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
 
       - name: Baseline schema + seed, apply PR migrations, N-1 assertions, release-tree smoke
         run: |
