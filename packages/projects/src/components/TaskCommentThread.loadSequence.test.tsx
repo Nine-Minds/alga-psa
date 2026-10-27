@@ -4,7 +4,7 @@ import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, configure, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TaskCommentThread from './TaskCommentThread';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
@@ -38,14 +38,28 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', async (importOriginal) => ({
 vi.mock('@alga-psa/ui/editor', () => ({
   DEFAULT_BLOCK: [{ type: 'paragraph', content: [{ type: 'text', text: '', styles: {} }] }],
   RichTextViewer: () => <div data-automation-id="rich-text-viewer" />,
+  // A stateful stand-in for the rich-text editor: its text lives in this instance's
+  // state, so a remount loses it exactly as the real editor's draft would.
   TextEditor: ({ editorRef }: any) => {
+    const [text, setText] = React.useState('Reply body');
+    const textRef = React.useRef(text);
+    textRef.current = text;
     if (editorRef) {
       editorRef.current = {
-        document: [{ type: 'paragraph', content: [{ type: 'text', text: 'Reply body', styles: {} }] }],
-        replaceBlocks: vi.fn(),
+        get document() {
+          return [{ type: 'paragraph', content: [{ type: 'text', text: textRef.current, styles: {} }] }];
+        },
+        replaceBlocks: () => setText(''),
       };
     }
-    return <div data-automation-id="task-comment-editor" />;
+    return (
+      <textarea
+        data-automation-id="task-comment-editor"
+        aria-label="Comment editor"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+    );
   },
 }));
 
@@ -258,6 +272,48 @@ describe('TaskCommentThread load sequencing', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByTestId('task-comment-form-container')).toBeInTheDocument();
+  });
+
+  it('A4: a failed refresh keeps the loaded list visible behind a banner', async () => {
+    const user = userEvent.setup();
+    const dRefresh = deferred<any>();
+    mocks.getTaskComments.mockResolvedValueOnce([comment()]).mockReturnValueOnce(dRefresh.promise);
+
+    render(<TaskCommentThread taskId="task-a" projectId="p" />);
+    expect(await screen.findByTestId('task-comment-root')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    await settle(dRefresh, { actionError: 'transient' });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Failed to load comments.');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-root')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-comments-empty')).not.toBeInTheDocument();
+  });
+
+  it('A4: a draft being typed survives a failed refresh triggered elsewhere in the thread', async () => {
+    const user = userEvent.setup();
+    const dRefresh = deferred<any>();
+    mocks.getTaskComments.mockResolvedValueOnce([comment()]).mockReturnValueOnce(dRefresh.promise);
+
+    render(<TaskCommentThread taskId="task-a" projectId="p" />);
+    expect(await screen.findByTestId('task-comment-root')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    const topEditor = () =>
+      within(screen.getByTestId('task-comment-form-container')).getByRole('textbox', { name: 'Comment editor' });
+    await user.clear(topEditor());
+    await user.type(topEditor(), 'unsent draft');
+
+    // An inline reply elsewhere in the thread posts and triggers the refresh that fails.
+    await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
+    expect(mocks.createTaskComment).toHaveBeenCalledTimes(1);
+    await settle(dRefresh, { actionError: 'transient' });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(topEditor()).toHaveValue('unsent draft');
   });
 
   it('A1: an older reaction batch resolving after a newer one is dropped', async () => {

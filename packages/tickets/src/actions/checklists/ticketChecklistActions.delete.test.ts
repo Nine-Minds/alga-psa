@@ -5,7 +5,7 @@ type Statement = { conn: 'trx' | 'base'; table: string; op: string; where?: unkn
 const state = vi.hoisted(() => ({
   statements: [] as Array<{ conn: 'trx' | 'base'; table: string; op: string; where?: unknown }>,
   outcomes: [] as string[],
-  existingItem: { checklist_item_id: 'item-1', ticket_id: 'ticket-1' } as any,
+  existingItem: { tenant: 'tenant-1', checklist_item_id: 'item-1', ticket_id: 'ticket-1' } as any,
   deletedRows: 1,
   deleteError: null as Error | null,
 }));
@@ -58,7 +58,13 @@ vi.mock('@alga-psa/db', () => ({
           record('forUpdate', where);
           return builder;
         },
-        first: async () => state.existingItem,
+        // Honours the effective predicate (the tenantDb scope plus the caller's
+        // where): the row comes back only if every key matches it.
+        first: async () => {
+          const predicate: Record<string, unknown> = { tenant, ...(where as object) };
+          const row = state.existingItem;
+          return row && Object.entries(predicate).every(([k, v]) => row[k] === v) ? row : undefined;
+        },
         del: async () => {
           record('del', where);
           if (state.deleteError) throw state.deleteError;
@@ -74,7 +80,7 @@ describe('deleteChecklistItem transaction boundary', () => {
   beforeEach(() => {
     state.statements = [];
     state.outcomes = [];
-    state.existingItem = { checklist_item_id: 'item-1', ticket_id: 'ticket-1' };
+    state.existingItem = { tenant: 'tenant-1', checklist_item_id: 'item-1', ticket_id: 'ticket-1' };
     state.deletedRows = 1;
     state.deleteError = null;
   });
@@ -88,7 +94,8 @@ describe('deleteChecklistItem transaction boundary', () => {
       ['trx', 'forUpdate'],
       ['trx', 'del'],
     ]);
-    expect(state.statements[1].where).toMatchObject({ ticket_id: 'ticket-1', checklist_item_id: 'item-1' });
+    expect(state.statements[0].where).toEqual({ tenant: 'tenant-1', checklist_item_id: 'item-1' });
+    expect(state.statements[1].where).toMatchObject({ tenant: 'tenant-1', ticket_id: 'ticket-1', checklist_item_id: 'item-1' });
     expect(state.outcomes).toEqual(['commit']);
   });
 
@@ -103,6 +110,15 @@ describe('deleteChecklistItem transaction boundary', () => {
 
   it('A5(ii): a missing item returns the not-found error without deleting', async () => {
     state.existingItem = undefined;
+    const { deleteChecklistItem } = await import('./ticketChecklistActions');
+    const result: any = await deleteChecklistItem('item-1');
+
+    expect(result).toMatchObject({ actionError: 'Checklist item not found' });
+    expect(state.statements.map((s: Statement) => s.op)).toEqual(['forUpdate']);
+  });
+
+  it('A5(ii): the guard read is tenant-scoped, so another tenant\'s item is not found and not deleted', async () => {
+    state.existingItem = { tenant: 'tenant-2', checklist_item_id: 'item-1', ticket_id: 'ticket-1' };
     const { deleteChecklistItem } = await import('./ticketChecklistActions');
     const result: any = await deleteChecklistItem('item-1');
 
