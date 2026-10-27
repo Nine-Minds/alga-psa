@@ -969,22 +969,6 @@
     "tagCreatePartialFailure_many": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_few": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden",
-    "customFields": {
-      "heading": "Benutzerdefinierte Felder",
-      "empty": "Noch keine Werte für benutzerdefinierte Felder.",
-      "name": "Feldname",
-      "value": "Wert",
-      "remove": "Feld entfernen",
-      "add": "Benutzerdefiniertes Feld hinzufügen",
-      "errors": {
-        "nameBlank": "Geben Sie einen Namen für dieses Feld ein",
-        "nameReserved": "Dieser Name ist reserviert",
-        "nameTooLong": "Namen dürfen höchstens {{max}} Zeichen lang sein",
-        "nameDuplicate": "Ein anderes Feld verwendet diesen Namen bereits",
-        "valueTooLong": "Werte dürfen höchstens {{max}} Zeichen lang sein",
-        "tooMany": "Höchstens {{max}} benutzerdefinierte Felder sind erlaubt"
-      }
-    },
     "assets": {
       "heading": "Assets",
       "selectClientFirst": "Wählen Sie einen Kunden aus, um Assets zu verknüpfen.",
@@ -1545,8 +1529,7 @@
       "statusRequired": "Bitte wählen Sie einen Status aus",
       "priorityRequired": "Bitte wählen Sie eine Priorität aus",
       "impactRequired": "Bitte wählen Sie eine Auswirkung aus",
-      "urgencyRequired": "Bitte wählen Sie eine Dringlichkeit aus",
-      "customFieldsInvalid": "Korrigieren Sie die markierten benutzerdefinierten Felder"
+      "urgencyRequired": "Bitte wählen Sie eine Dringlichkeit aus"
     },
     "category": {
       "nameRequired": "Der Kategoriename ist erforderlich",

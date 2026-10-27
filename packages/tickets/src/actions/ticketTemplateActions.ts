@@ -490,7 +490,6 @@ export const getTicketTemplateForCreate = withAuth(async (
         }),
         checklist: template.checklist.map((item) => ({ item_name: item.item_name, is_required: item.is_required })),
         custom_field_count: countDuplicableCustomFields({ custom_fields: template.custom_fields }),
-        custom_fields: allowlistedCustomFields(template.custom_fields),
         warnings: problems.map((problem) => problem.message),
       } satisfies TicketTemplateForCreate;
     });

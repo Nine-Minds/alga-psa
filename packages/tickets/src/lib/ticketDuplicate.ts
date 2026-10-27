@@ -37,8 +37,6 @@ export interface TicketDuplicateSource {
   }[];
   checklist: { item_name: string; is_required: boolean }[];
   custom_field_count: number;
-  /** The values a duplicate would carry over, so the create form can show them as editable rows. */
-  custom_fields?: Record<string, unknown>;
 }
 
 /**

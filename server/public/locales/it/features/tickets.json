@@ -969,22 +969,6 @@
     "tagCreatePartialFailure_many": "Impossibile creare {{count}} tag",
     "tagCreationFailed_few": "Impossibile creare {{count}} tag",
     "tagCreationFailed_many": "Impossibile creare {{count}} tag",
-    "customFields": {
-      "heading": "Campi personalizzati",
-      "empty": "Ancora nessun valore nei campi personalizzati.",
-      "name": "Nome del campo",
-      "value": "Valore",
-      "remove": "Rimuovi campo",
-      "add": "Aggiungi campo personalizzato",
-      "errors": {
-        "nameBlank": "Inserisci un nome per questo campo",
-        "nameReserved": "Questo nome è riservato",
-        "nameTooLong": "I nomi possono contenere al massimo {{max}} caratteri",
-        "nameDuplicate": "Un altro campo usa già questo nome",
-        "valueTooLong": "I valori possono contenere al massimo {{max}} caratteri",
-        "tooMany": "Sono consentiti al massimo {{max}} campi personalizzati"
-      }
-    },
     "assets": {
       "heading": "Asset",
       "selectClientFirst": "Seleziona un cliente per collegare gli asset.",
@@ -1545,8 +1529,7 @@
       "statusRequired": "Seleziona uno stato",
       "priorityRequired": "Seleziona una priorità",
       "impactRequired": "Seleziona un impatto",
-      "urgencyRequired": "Seleziona un'urgenza",
-      "customFieldsInvalid": "Correggi i campi personalizzati evidenziati"
+      "urgencyRequired": "Seleziona un'urgenza"
     },
     "category": {
       "nameRequired": "Il nome della categoria è obbligatorio",

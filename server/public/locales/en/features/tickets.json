@@ -977,22 +977,6 @@
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
     "tagCreationFailed_many": "{{count}} tags could not be created",
-    "customFields": {
-      "heading": "Custom Fields",
-      "empty": "No custom field values yet.",
-      "name": "Field name",
-      "value": "Value",
-      "remove": "Remove field",
-      "add": "Add custom field",
-      "errors": {
-        "nameBlank": "Enter a name for this field",
-        "nameReserved": "This name is reserved",
-        "nameTooLong": "Names can be at most {{max}} characters",
-        "nameDuplicate": "Another field already uses this name",
-        "valueTooLong": "Values can be at most {{max}} characters",
-        "tooMany": "At most {{max}} custom fields are allowed"
-      }
-    },
     "assets": {
       "heading": "Assets",
       "selectClientFirst": "Select a client to link assets.",
@@ -1553,8 +1537,7 @@
       "statusRequired": "Please select a status",
       "priorityRequired": "Please select a priority",
       "impactRequired": "Please select an impact",
-      "urgencyRequired": "Please select an urgency",
-      "customFieldsInvalid": "Fix the highlighted custom fields"
+      "urgencyRequired": "Please select an urgency"
     },
     "category": {
       "nameRequired": "Category name is required",

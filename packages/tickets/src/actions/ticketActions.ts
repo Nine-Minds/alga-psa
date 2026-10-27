@@ -608,11 +608,10 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
 
-      // Optional create extras (linked assets, watchers, custom fields). Parsed and validated before
-      // anything is written; all three are optional so callers that send none behave as before.
+      // Optional create extras (linked assets, watchers). Parsed and validated before anything is
+      // written; both are optional so callers that send none behave as before.
       const extras = parseTicketCreateExtras(data);
-      const hasCreateExtras =
-        extras.assetIds.length > 0 || extras.watcherIds.length > 0 || extras.customFields !== undefined;
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
       if (hasCreateExtras) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -749,45 +748,33 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         createTicketInput.attributes = provenance.attributes;
       }
 
-      // Custom fields and watchers go into `attributes`, so they are written by the same insert as the
-      // ticket. Custom fields the caller sent are the complete, user-edited set: they replace whatever
-      // a template or duplicate source supplied (the form shows those as editable rows).
-      const templateCustomFieldsCopied = countDuplicableCustomFields(createTicketInput.attributes);
-      if (extras.customFields !== undefined || extras.watcherIds.length > 0) {
+      // Watchers go into `attributes.watch_list`, so they are written by the same insert as the ticket.
+      if (extras.watcherIds.length > 0) {
         const attributes: Record<string, unknown> = { ...(createTicketInput.attributes ?? {}) };
-        if (extras.customFields !== undefined) {
-          if (Object.keys(extras.customFields).length > 0) {
-            attributes.custom_fields = extras.customFields;
-          } else {
-            delete attributes.custom_fields;
+        const watcherRows = await tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', extras.watcherIds)
+          .where({ user_type: 'internal' })
+          .select('user_id', 'email', 'first_name', 'last_name');
+        const watchersById = new Map<string, any>(watcherRows.map((row: any) => [row.user_id, row]));
+        const recipients: TicketWatchListRecipientInput[] = [];
+        for (const watcherId of extras.watcherIds) {
+          const watcher = watchersById.get(watcherId);
+          if (!watcher) {
+            throw new Error(`Invalid watcher: user ${watcherId} was not found`);
           }
-        }
-        if (extras.watcherIds.length > 0) {
-          const watcherRows = await tenantScopedTable(trx, 'users', tenant)
-            .whereIn('user_id', extras.watcherIds)
-            .where({ user_type: 'internal' })
-            .select('user_id', 'email', 'first_name', 'last_name');
-          const watchersById = new Map<string, any>(watcherRows.map((row: any) => [row.user_id, row]));
-          const recipients: TicketWatchListRecipientInput[] = [];
-          for (const watcherId of extras.watcherIds) {
-            const watcher = watchersById.get(watcherId);
-            if (!watcher) {
-              throw new Error(`Invalid watcher: user ${watcherId} was not found`);
-            }
-            if (!watcher.email) {
-              throw new Error(`Invalid watcher: user ${watcherId} has no email address`);
-            }
-            recipients.push({
-              email: watcher.email,
-              source: 'manual',
-              name: `${watcher.first_name || ''} ${watcher.last_name || ''}`.trim() || undefined,
-              entity_type: 'user',
-              entity_id: watcher.user_id,
-            });
+          if (!watcher.email) {
+            throw new Error(`Invalid watcher: user ${watcherId} has no email address`);
           }
-          const watchList = mergeTicketWatchListRecipients(attributes.watch_list, recipients);
-          if (watchList.length > 0) attributes.watch_list = watchList;
+          recipients.push({
+            email: watcher.email,
+            source: 'manual',
+            name: `${watcher.first_name || ''} ${watcher.last_name || ''}`.trim() || undefined,
+            entity_type: 'user',
+            entity_id: watcher.user_id,
+          });
         }
+        const watchList = mergeTicketWatchListRecipients(attributes.watch_list, recipients);
+        if (watchList.length > 0) attributes.watch_list = watchList;
         createTicketInput.attributes = Object.keys(attributes).length > 0 ? attributes : undefined;
       }
 
@@ -942,7 +929,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
-            custom_fields_copied: templateCustomFieldsCopied,
+            custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
           },
         });
       }
@@ -1066,7 +1053,6 @@ async function loadTicketCloneSource(
       is_required: row.is_required,
     })),
     custom_field_count: countDuplicableCustomFields(source.attributes),
-    custom_fields: (pickDuplicableAttributes(source.attributes).custom_fields ?? {}) as Record<string, unknown>,
   } satisfies TicketDuplicateSource;
 
   return { duplicate, checklistRows };

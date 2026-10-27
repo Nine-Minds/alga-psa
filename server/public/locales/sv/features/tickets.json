@@ -977,22 +977,6 @@
     "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_many": "{{count}} taggar kunde inte skapas",
-    "customFields": {
-      "heading": "Anpassade fält",
-      "empty": "Inga värden för anpassade fält ännu.",
-      "name": "Fältnamn",
-      "value": "Värde",
-      "remove": "Ta bort fält",
-      "add": "Lägg till anpassat fält",
-      "errors": {
-        "nameBlank": "Ange ett namn för det här fältet",
-        "nameReserved": "Det här namnet är reserverat",
-        "nameTooLong": "Namn får vara högst {{max}} tecken",
-        "nameDuplicate": "Ett annat fält använder redan det här namnet",
-        "valueTooLong": "Värden får vara högst {{max}} tecken",
-        "tooMany": "Högst {{max}} anpassade fält tillåts"
-      }
-    },
     "assets": {
       "heading": "Tillgångar",
       "selectClientFirst": "Välj en kund för att länka tillgångar.",
@@ -1553,8 +1537,7 @@
       "statusRequired": "Välj en status",
       "priorityRequired": "Välj en prioritet",
       "impactRequired": "Välj påverkan",
-      "urgencyRequired": "Välj brådska",
-      "customFieldsInvalid": "Åtgärda de markerade anpassade fälten"
+      "urgencyRequired": "Välj brådska"
     },
     "category": {
       "nameRequired": "Kategorinamn krävs",

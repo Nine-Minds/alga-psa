@@ -977,22 +977,6 @@
     "tagCreatePartialFailure_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreationFailed_few": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreationFailed_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
-    "customFields": {
-      "heading": "⟦Ƈŭşŧȯḿ Ƒīḗŀḓş⟧",
-      "empty": "⟦Ƞȯ ƈŭşŧȯḿ ƒīḗŀḓ ṽȧŀŭḗş ẏḗŧ.⟧",
-      "name": "⟦Ƒīḗŀḓ ƞȧḿḗ⟧",
-      "value": "⟦Ṽȧŀŭḗ⟧",
-      "remove": "⟦Řḗḿȯṽḗ ƒīḗŀḓ⟧",
-      "add": "⟦Ȧḓḓ ƈŭşŧȯḿ ƒīḗŀḓ⟧",
-      "errors": {
-        "nameBlank": "⟦Ḗƞŧḗř ȧ ƞȧḿḗ ƒȯř ŧħīş ƒīḗŀḓ⟧",
-        "nameReserved": "⟦Ŧħīş ƞȧḿḗ īş řḗşḗřṽḗḓ⟧",
-        "nameTooLong": "⟦Ƞȧḿḗş ƈȧƞ ƀḗ ȧŧ ḿȯşŧ {{max}} ƈħȧřȧƈŧḗřş⟧",
-        "nameDuplicate": "⟦Ȧƞȯŧħḗř ƒīḗŀḓ ȧŀřḗȧḓẏ ŭşḗş ŧħīş ƞȧḿḗ⟧",
-        "valueTooLong": "⟦Ṽȧŀŭḗş ƈȧƞ ƀḗ ȧŧ ḿȯşŧ {{max}} ƈħȧřȧƈŧḗřş⟧",
-        "tooMany": "⟦Ȧŧ ḿȯşŧ {{max}} ƈŭşŧȯḿ ƒīḗŀḓş ȧřḗ ȧŀŀȯẇḗḓ⟧"
-      }
-    },
     "assets": {
       "heading": "⟦Ȧşşḗŧş⟧",
       "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ŀīƞķ ȧşşḗŧş.⟧",
@@ -1553,8 +1537,7 @@
       "statusRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şŧȧŧŭş⟧",
       "priorityRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ ƥřīȯřīŧẏ⟧",
       "impactRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧƞ īḿƥȧƈŧ⟧",
-      "urgencyRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧƞ ŭřɠḗƞƈẏ⟧",
-      "customFieldsInvalid": "⟦Ƒīẋ ŧħḗ ħīɠħŀīɠħŧḗḓ ƈŭşŧȯḿ ƒīḗŀḓş⟧"
+      "urgencyRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧƞ ŭřɠḗƞƈẏ⟧"
     },
     "category": {
       "nameRequired": "⟦Ƈȧŧḗɠȯřẏ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",

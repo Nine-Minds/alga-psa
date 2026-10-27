@@ -969,22 +969,6 @@
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt",
-    "customFields": {
-      "heading": "Aangepaste velden",
-      "empty": "Nog geen waarden voor aangepaste velden.",
-      "name": "Veldnaam",
-      "value": "Waarde",
-      "remove": "Veld verwijderen",
-      "add": "Aangepast veld toevoegen",
-      "errors": {
-        "nameBlank": "Voer een naam in voor dit veld",
-        "nameReserved": "Deze naam is gereserveerd",
-        "nameTooLong": "Namen mogen maximaal {{max}} tekens bevatten",
-        "nameDuplicate": "Een ander veld gebruikt deze naam al",
-        "valueTooLong": "Waarden mogen maximaal {{max}} tekens bevatten",
-        "tooMany": "Maximaal {{max}} aangepaste velden zijn toegestaan"
-      }
-    },
     "assets": {
       "heading": "Assets",
       "selectClientFirst": "Selecteer een klant om assets te koppelen.",
@@ -1545,8 +1529,7 @@
       "statusRequired": "Selecteer een status",
       "priorityRequired": "Selecteer een prioriteit",
       "impactRequired": "Selecteer een impact",
-      "urgencyRequired": "Selecteer een urgentie",
-      "customFieldsInvalid": "Corrigeer de gemarkeerde aangepaste velden"
+      "urgencyRequired": "Selecteer een urgentie"
     },
     "category": {
       "nameRequired": "Categorienaam is verplicht",

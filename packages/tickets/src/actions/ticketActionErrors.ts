@@ -68,7 +68,6 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Child ticket not found',
   'Invalid asset:',
   'Invalid category combination',
-  'Invalid custom fields:',
   'Invalid ticket create payload:',
   'Invalid watcher:',
   'Invalid destination status',

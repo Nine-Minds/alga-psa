@@ -1,6 +1,6 @@
 /**
- * Integration test for the optional create extras on addTicket: linked assets, watchers and
- * custom fields are written in the ticket's own transaction, and an invalid one rolls the whole
+ * Integration test for the optional create extras on addTicket: linked assets, and watchers
+ * are written in the ticket's own transaction, and an invalid one rolls the whole
  * create back. Real database and RBAC; only the session seam is mocked (as in
  * ticketDuplicate.integration.test.ts).
  */
@@ -136,13 +136,13 @@ describe('addTicket create extras (integration)', () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(creator);
   }, HOOK_TIMEOUT);
 
-  it('writes assets, watchers and custom fields together with the ticket', async () => {
+  it('writes assets and watchers together with the ticket', async () => {
     const result: any = await ticketActions.addTicket(
       createForm({
         asset_id: assetA, // the "opened from asset" id merges with the list and dedupes
         asset_ids: JSON.stringify([assetA, assetB]),
         watcher_ids: JSON.stringify([watcherUserId]),
-        custom_fields: JSON.stringify({ ' Serial ': 'SN-1', Rack: 'R7' }),
+        custom_fields: JSON.stringify({ Serial: 'SN-1', Rack: 'R7' }), // ignored: not persisted
       })
     );
     expect(result?.ticket_id).toBeTruthy();
@@ -152,7 +152,7 @@ describe('addTicket create extras (integration)', () => {
 
     const row = await tt('tickets').where({ ticket_id: result.ticket_id }).first();
     const attributes = typeof row.attributes === 'string' ? JSON.parse(row.attributes) : row.attributes;
-    expect(attributes.custom_fields).toEqual({ Serial: 'SN-1', Rack: 'R7' });
+    expect(attributes?.custom_fields).toBeUndefined();
     expect(attributes.watch_list).toEqual([
       expect.objectContaining({ email: 'wes@example.com', active: true, entity_type: 'user', entity_id: watcherUserId }),
     ]);
@@ -179,7 +179,7 @@ describe('addTicket create extras (integration)', () => {
     });
     vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({ knex: poolLike, tenant: tenantId }) as any);
     const outcome = await ticketActions.addTicket(
-      createForm({ asset_ids: JSON.stringify([assetA, foreignAsset]), custom_fields: JSON.stringify({ a: 'b' }) })
+      createForm({ asset_ids: JSON.stringify([assetA, foreignAsset]) })
     ).then((value: any) => ({ value }), (error: Error) => ({ error }));
     const message = 'error' in outcome ? outcome.error.message : JSON.stringify(outcome.value);
     expect(message).toMatch(/Invalid asset/);
@@ -187,30 +187,25 @@ describe('addTicket create extras (integration)', () => {
     expect(await tt('asset_associations').where({ asset_id: assetA }).count('* as n').first().then((r: any) => Number(r.n))).toBe(0);
   });
 
-  it('rejects an unknown watcher and duplicate custom field names without creating a ticket', async () => {
+  it('rejects an unknown watcher without creating a ticket', async () => {
     const before = await countTickets();
     const badWatcher = await ticketActions.addTicket(createForm({ watcher_ids: JSON.stringify([uuidv4()]) }))
       .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
     expect(badWatcher).toMatch(/Invalid watcher/);
-    const dupes = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify({ A: '1', a: '2' }) }))
-      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
-    expect(dupes).toMatch(/Invalid custom fields/);
     expect(await countTickets()).toBe(before);
   });
 
-  it('rejects blank and over-limit custom fields sent straight to the action', async () => {
-    const before = await countTickets();
-    const blank = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify({ '   ': 'x' }) }))
-      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
-    expect(blank).toMatch(/Invalid custom fields.*blank name/);
-    const longValue = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify({ A: 'x'.repeat(2001) }) }))
-      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
-    expect(longValue).toMatch(/Invalid custom fields.*longer than 2000/);
-    const tooMany = Object.fromEntries(Array.from({ length: 101 }, (_, n) => [`f${n}`, 'v']));
-    const many = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify(tooMany) }))
-      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
-    expect(many).toMatch(/at most 100 custom fields/);
-    expect(await countTickets()).toBe(before);
+  it('ignores custom_fields sent in the FormData: no error, nothing persisted', async () => {
+    const result: any = await ticketActions.addTicket(
+      createForm({ custom_fields: JSON.stringify({ Serial: 'SN-1' }) })
+    );
+    expect(result?.ticket_id).toBeTruthy();
+    const row = await tt('tickets').where({ ticket_id: result.ticket_id }).first();
+    const attributes = typeof row.attributes === 'string' ? JSON.parse(row.attributes) : row.attributes;
+    expect(attributes?.custom_fields).toBeUndefined();
+    // Malformed values are ignored too, not rejected.
+    const malformed: any = await ticketActions.addTicket(createForm({ custom_fields: '{not json' }));
+    expect(malformed?.ticket_id).toBeTruthy();
   });
 
   it('rejects linking assets without asset:update permission', async () => {

@@ -969,22 +969,6 @@
     "tagCreatePartialFailure_many": "Impossible de créer {{count}} balises",
     "tagCreationFailed_few": "{{count}} tags n'ont pas pu être créés",
     "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés",
-    "customFields": {
-      "heading": "Champs personnalisés",
-      "empty": "Aucune valeur de champ personnalisé pour le moment.",
-      "name": "Nom du champ",
-      "value": "Valeur",
-      "remove": "Supprimer le champ",
-      "add": "Ajouter un champ personnalisé",
-      "errors": {
-        "nameBlank": "Saisissez un nom pour ce champ",
-        "nameReserved": "Ce nom est réservé",
-        "nameTooLong": "Les noms peuvent contenir {{max}} caractères au maximum",
-        "nameDuplicate": "Un autre champ utilise déjà ce nom",
-        "valueTooLong": "Les valeurs peuvent contenir {{max}} caractères au maximum",
-        "tooMany": "{{max}} champs personnalisés au maximum sont autorisés"
-      }
-    },
     "assets": {
       "heading": "Actifs",
       "selectClientFirst": "Sélectionnez un client pour lier des actifs.",
@@ -1545,8 +1529,7 @@
       "statusRequired": "Veuillez sélectionner un statut",
       "priorityRequired": "Veuillez sélectionner une priorité",
       "impactRequired": "Veuillez sélectionner un impact",
-      "urgencyRequired": "Veuillez sélectionner une urgence",
-      "customFieldsInvalid": "Corrigez les champs personnalisés en surbrillance"
+      "urgencyRequired": "Veuillez sélectionner une urgence"
     },
     "category": {
       "nameRequired": "Le nom de la catégorie est obligatoire",
