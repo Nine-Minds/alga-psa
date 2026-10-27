@@ -72,16 +72,18 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     return () => { mounted.current = false; };
   }, []);
 
-  const loadComments = async () => {
+  // Resolves true only when this load became the thread's current, successfully
+  // loaded state; false when it failed or was superseded.
+  const loadComments = async (): Promise<boolean> => {
     const sequence = ++loadSequence.current;
     const isCurrent = () => mounted.current && sequence === loadSequence.current;
     try {
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
-      if (!isCurrent()) return;
+      if (!isCurrent()) return false;
       if (showReturnedActionError(fetchedComments)) {
         setLoadError(true);
-        return;
+        return false;
       }
       setLoadError(false);
       setComments(fetchedComments);
@@ -91,17 +93,19 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       if (commentIds.length > 0) {
         try {
           const { reactions, userNames } = await getTaskCommentsReactionsBatch(commentIds);
-          if (!isCurrent()) return;
+          if (!isCurrent()) return false;
           setReactionsMap(reactions);
           setReactionUserNames(prev => ({ ...prev, ...userNames }));
         } catch (err) {
           console.error('Failed to load reactions:', err);
         }
       }
+      return isCurrent();
     } catch (error) {
-      if (!isCurrent()) return;
+      if (!isCurrent()) return false;
       console.error('Failed to load comments:', error);
       setLoadError(true);
+      return false;
     } finally {
       if (isCurrent()) setIsLoading(false);
     }
@@ -143,10 +147,14 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     };
   }, [taskId]);
 
+  // The composers are closed only once the refreshed thread is on screen. A failed
+  // refresh leaves them mounted (and the error state offers a retry), so a transient
+  // failure never discards what the user has open.
   const handleCommentAdded = async () => {
-    await loadComments();
-    setShowEditor(false);
-    setReplyingToCommentId(null);
+    if (await loadComments()) {
+      setShowEditor(false);
+      setReplyingToCommentId(null);
+    }
   };
 
   const handleCommentUpdated = async () => {
@@ -312,7 +320,9 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       </div>
 
       {/* Comment Form at Top (when visible) */}
-      {showEditor && !loadError && (
+      {/* Stays mounted through a failed refresh so a draft in progress survives it;
+          opening it is what the load error gates (button and shortcut above). */}
+      {showEditor && (
         <div
           {...withDataAutomationId({ id: 'task-comment-form-container' })}
           className="border rounded-lg p-4 bg-gray-50"
@@ -350,15 +360,30 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         </div>
       )}
 
-      {/* Load Error State: thread contents are unknown, so no composer or empty state */}
+      {/* Load Error State: thread contents are unknown, so no new composer or empty
+          state. Retry re-runs the load on its own; a successful load clears the error. */}
       {!isLoading && loadError && (
-        <p
-          role="alert"
-          {...withDataAutomationId({ id: 'task-comments-load-error' })}
-          className="text-center py-8 text-red-600"
-        >
-          {t('comments.loadError', 'Failed to load comments.')}
-        </p>
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p
+            role="alert"
+            {...withDataAutomationId({ id: 'task-comments-load-error' })}
+            className="text-center text-red-600"
+          >
+            {t('comments.loadError', 'Failed to load comments.')}
+          </p>
+          <Button
+            id="task-comments-retry-button"
+            type="button"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void loadComments();
+            }}
+          >
+            {t('comments.retry', 'Retry')}
+          </Button>
+        </div>
       )}
 
       {/* Empty State */}

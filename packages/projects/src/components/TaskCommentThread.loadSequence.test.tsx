@@ -23,7 +23,16 @@ const NOTE = JSON.stringify([
 const mocks = vi.hoisted(() => ({
   getTaskComments: vi.fn(),
   createTaskComment: vi.fn(),
+  getTaskCommentsReactionsBatch: vi.fn(),
   toastError: vi.fn(),
+  pageCreateShortcut: { enabled: undefined as boolean | undefined },
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/keyboard-shortcuts')>()),
+  usePageCreateShortcut: (_handler: unknown, options: { enabled?: boolean } = {}) => {
+    mocks.pageCreateShortcut.enabled = options.enabled;
+  },
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
@@ -58,7 +67,11 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 vi.mock('@alga-psa/ui/components/UserAvatar', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: () => null }));
-vi.mock('@alga-psa/ui/components/ReactionDisplay', () => ({ ReactionDisplay: () => null }));
+vi.mock('@alga-psa/ui/components/ReactionDisplay', () => ({
+  ReactionDisplay: ({ id, reactions }: { id: string; reactions: Array<{ emoji: string }> }) => (
+    <div data-automation-id={id}>{reactions.map((r) => r.emoji).join(',')}</div>
+  ),
+}));
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-automation-id': id }),
   withUIReflectionId: ({ id }: { id: string }) => ({ 'data-automation-id': id }),
@@ -69,7 +82,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 vi.mock('../actions/projectTaskCommentReactionActions', () => ({
-  getTaskCommentsReactionsBatch: vi.fn().mockResolvedValue({ reactions: {}, userNames: {} }),
+  getTaskCommentsReactionsBatch: (...args: any[]) => mocks.getTaskCommentsReactionsBatch(...args),
   toggleTaskCommentReaction: vi.fn(),
 }));
 vi.mock('../actions/projectTaskCommentActions', () => ({
@@ -117,7 +130,13 @@ const settle = async (d: { resolve: (v: any) => void }, value: unknown) => {
 describe('TaskCommentThread load sequencing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset (not just clear) the hand-controlled mocks so an unconsumed
+    // mockReturnValueOnce from a failing test cannot leak into the next one.
+    mocks.getTaskComments.mockReset();
+    mocks.getTaskCommentsReactionsBatch.mockReset();
     mocks.createTaskComment.mockResolvedValue(undefined);
+    mocks.getTaskCommentsReactionsBatch.mockResolvedValue({ reactions: {}, userNames: {} });
+    mocks.pageCreateShortcut.enabled = undefined;
   });
   afterEach(() => cleanup());
 
@@ -190,5 +209,74 @@ describe('TaskCommentThread load sequencing', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load comments.');
     expect(screen.queryByRole('button', { name: 'Add Comment' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('task-comments-empty')).not.toBeInTheDocument();
+    expect(mocks.pageCreateShortcut.enabled).toBe(false);
+  });
+
+  it('A4: retry re-runs the load and a successful retry clears the error state', async () => {
+    const user = userEvent.setup();
+    const dFail = deferred<any>();
+    const dRetry = deferred<any>();
+    mocks.getTaskComments.mockReturnValueOnce(dFail.promise).mockReturnValueOnce(dRetry.promise);
+
+    render(<TaskCommentThread taskId="task-a" projectId="p" />);
+    await settle(dFail, { actionError: 'transient' });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.getTaskComments).toHaveBeenCalledTimes(2);
+    await settle(dRetry, [comment()]);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-root')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Comment' })).toBeInTheDocument();
+    expect(mocks.pageCreateShortcut.enabled).toBe(true);
+  });
+
+  it('A4: a failed refresh keeps the open composer mounted until a load succeeds', async () => {
+    const user = userEvent.setup();
+    const dRefresh = deferred<any>();
+    const dRetry = deferred<any>();
+    mocks.getTaskComments
+      .mockResolvedValueOnce([comment()])
+      .mockReturnValueOnce(dRefresh.promise)
+      .mockReturnValueOnce(dRetry.promise);
+
+    render(<TaskCommentThread taskId="task-a" projectId="p" />);
+    expect(await screen.findByTestId('task-comment-root')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    expect(mocks.createTaskComment).toHaveBeenCalledTimes(1);
+    await settle(dRefresh, { actionError: 'transient' });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-form-container')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    await settle(dRetry, [comment()]);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-form-container')).toBeInTheDocument();
+  });
+
+  it('A1: an older reaction batch resolving after a newer one is dropped', async () => {
+    const user = userEvent.setup();
+    const rOld = deferred<any>();
+    const rNew = deferred<any>();
+    mocks.getTaskComments.mockResolvedValue([comment()]);
+    mocks.getTaskCommentsReactionsBatch.mockReturnValueOnce(rOld.promise).mockReturnValueOnce(rNew.promise);
+
+    render(<TaskCommentThread taskId="task-a" projectId="p" />);
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    expect(mocks.getTaskCommentsReactionsBatch).toHaveBeenCalledTimes(2);
+
+    const reaction = (emoji: string) => ({ emoji, count: 1, userIds: ['user-1'], currentUserReacted: true });
+    await settle(rNew, { reactions: { root: [reaction('new')] }, userNames: {} });
+    await settle(rOld, { reactions: { root: [reaction('old')] }, userNames: {} });
+
+    expect(screen.getByTestId('task-comment-root-reactions')).toHaveTextContent('new');
+    expect(screen.getByTestId('task-comment-root-reactions')).not.toHaveTextContent('old');
   });
 });

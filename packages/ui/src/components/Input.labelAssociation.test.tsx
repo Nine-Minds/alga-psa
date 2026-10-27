@@ -27,4 +27,18 @@ describe('Input label association', () => {
     expect(second).toBe(first);
     expect(second.getAttribute('id')).toBe(firstId);
   });
+
+  it('A6: rows sharing a static data-automation-id get distinct DOM ids', () => {
+    render(
+      <>
+        <Input label="Row" data-automation-id="row-input" />
+        <Input label="Row" data-automation-id="row-input" />
+      </>
+    );
+    const inputs = screen.getAllByLabelText('Row');
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0].id).toBeTruthy();
+    expect(inputs[0].id).not.toBe(inputs[1].id);
+    expect(inputs[0]).toHaveAttribute('data-automation-id', 'row-input');
+  });
 });

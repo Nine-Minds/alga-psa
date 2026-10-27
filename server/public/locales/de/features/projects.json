@@ -1537,7 +1537,8 @@
     "submitting": "Wird gesendet...",
     "loading": "Laden...",
     "empty": "Noch keine Kommentare. Seien Sie der Erste!",
-    "loadError": "Kommentare konnten nicht geladen werden."
+    "loadError": "Kommentare konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
   },
   "clientPortal": {
     "clientsWillSee": "Kunden werden sehen:",

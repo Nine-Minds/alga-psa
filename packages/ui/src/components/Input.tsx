@@ -63,7 +63,7 @@ export function Input({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cursorPositionRef = useRef<number | null>(null);
   const isComposing = useRef(false);
-  const fallbackId = useId();
+  const generatedId = useId();
 
   const mergedRef = useCallback(
     (element: HTMLInputElement | null) => {
@@ -96,9 +96,10 @@ export function Input({
   // Always use the generated automation props (which include our override ID if provided)
   const finalAutomationProps = textProps;
 
-  // One id for both sides of the label association: the caller's id, else the id the
-  // automation hook generated, else a React-generated one.
-  const fieldId = id || textProps.id || fallbackId;
+  // One id for both sides of the label association: the caller's id, else a
+  // React-generated one. Not the automation id: that may be a static
+  // data-automation-id shared by repeated rows, which would duplicate DOM ids.
+  const fieldId = id || generatedId;
 
   // Update metadata when field props change
   useEffect(() => {

@@ -1537,7 +1537,8 @@
     "submitting": "Verzenden...",
     "loading": "Laden...",
     "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!",
-    "loadError": "Opmerkingen konden niet worden geladen."
+    "loadError": "Opmerkingen konden niet worden geladen.",
+    "retry": "Opnieuw proberen"
   },
   "clientPortal": {
     "clientsWillSee": "Klanten zullen zien:",
