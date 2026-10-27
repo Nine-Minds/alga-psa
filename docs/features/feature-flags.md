@@ -264,7 +264,7 @@ Cost per server process: one PostHog evaluation per tenant per 60 s (flag cache)
 every server flag evaluation sends). The capability decision itself makes no query and no
 PostHog call until resolvers are registered.
 
-**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session; `/api/v1/capabilities/` is exempt from the middleware API-key check because the route authenticates the session itself) returns the
+**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session; the probe path is exempted from the middleware API-key check by exact match (`exactApiKeySkipPaths`) because the route authenticates the session itself; other paths under `/api/v1/capabilities/` still need an API key) returns the
 caller's own tenant decision and reasons with `Cache-Control: no-store`, or the standard 404
 while the gate is closed. It accepts no parameters.
 

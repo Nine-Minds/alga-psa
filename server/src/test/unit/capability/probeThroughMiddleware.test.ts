@@ -81,6 +81,20 @@ describe('capability probe behind the real middleware', () => {
     expect(await res.json()).toEqual({ error: 'Unauthorized' });
   });
 
+  it('the exemption names the probe only: siblings and deeper paths under /api/v1/capabilities/ still need an API key', async () => {
+    for (const url of [
+      'http://localhost:3000/api/v1/capabilities/other',
+      'http://localhost:3000/api/v1/capabilities/co-managed/extra',
+      'http://localhost:3000/api/v1/capabilities/co-managed-evil',
+      'http://localhost:3000/api/v1/capabilities',
+    ]) {
+      const res = await dispatch(url, { user: mspUser });
+      expect(res.status, url).toBe(401);
+      expect(await res.json()).toEqual({ error: { code: 'UNAUTHORIZED', message: 'API key required' } });
+    }
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
   it('the same harness still stops an unexempted v1 route at the API-key check', async () => {
     const res = await dispatch('http://localhost:3000/api/v1/boards', { user: mspUser });
     expect(res.status).toBe(401);

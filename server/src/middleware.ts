@@ -163,9 +163,6 @@ const apiKeySkipPaths = [
   '/api/mcp',
   // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
   '/api/v1/mcp/',
-  // Capability probes (e.g. /api/v1/capabilities/co-managed) are session-authenticated
-  // in-route; the tenant always comes from the session, never from the request.
-  '/api/v1/capabilities/',
   // Workflow definition/run APIs are session-authenticated for MSP workflow UI tooling.
   '/api/workflow-definitions',
   '/api/workflow-definitions/',
@@ -228,6 +225,12 @@ const exactApiKeySkipPaths = [
   // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
   '/api/webhooks/datto',
   '/api/webhooks/datto/',
+  // The co-managed capability probe: a read-only GET that authenticates the
+  // session in-route (tenant from the session, never the request). Exact match
+  // only, so any future route under /api/v1/capabilities/ stays behind the
+  // API-key gate until it is exempted by name.
+  '/api/v1/capabilities/co-managed',
+  '/api/v1/capabilities/co-managed/',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
