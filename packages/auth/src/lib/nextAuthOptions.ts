@@ -303,16 +303,23 @@ export interface SsoProfileHints {
 }
 
 /**
- * What the server already knows about this OAuth callback, from signed state it
- * issued itself: the client-portal resolution cookie, then the MSP resolution
- * cookie (whose `scopeTenantId`, or tenant-owned credential source, scopes the
- * user), then the Teams context. IdP profile claims are not consulted here and
- * must never select an internal user's tenant.
+ * What the server already knows about this OAuth callback. The Teams context
+ * comes first: buildAuthOptions(context) is assembled explicitly by the server
+ * for the Teams surface, so it is the most trusted scope and no cookie (which
+ * may be a leftover from an earlier MSP SSO attempt) can override it. Otherwise,
+ * from signed state the server issued itself: the client-portal resolution
+ * cookie, then the MSP resolution cookie (whose `scopeTenantId`, or tenant-owned
+ * credential source, scopes the user). IdP profile claims are not consulted here
+ * and must never select an internal user's tenant.
  */
 export async function getSsoProfileHints(
     provider: MspSsoProviderId,
     context?: { teamsTenantId?: string },
 ): Promise<SsoProfileHints | null> {
+    if (context?.teamsTenantId) {
+        return { userType: 'internal', scopeTenantId: context.teamsTenantId };
+    }
+
     try {
         const signingSecret = await getMspSsoSigningSecret();
         if (signingSecret) {
@@ -340,9 +347,6 @@ export async function getSsoProfileHints(
         console.warn('[sso] failed to read OAuth profile hints', error);
     }
 
-    if (context?.teamsTenantId) {
-        return { userType: 'internal', scopeTenantId: context.teamsTenantId };
-    }
     return null;
 }
 

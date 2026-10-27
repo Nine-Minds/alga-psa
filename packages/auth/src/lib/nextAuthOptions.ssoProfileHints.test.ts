@@ -168,6 +168,19 @@ describe('getSsoProfileHints', () => {
     expect(await getSsoProfileHints('google')).toBeNull();
   });
 
+  it('Teams context wins over a leftover unscoped MSP resolution cookie for the same provider', async () => {
+    parseMspMock.mockReturnValue(payload({ provider: 'azure-ad', source: 'app' }));
+    expect(await getSsoProfileHints('azure-ad', { teamsTenantId: 'tenant-teams' })).toEqual({
+      userType: 'internal',
+      scopeTenantId: 'tenant-teams',
+    });
+    parseMspMock.mockReturnValue(payload({ provider: 'azure-ad', scopeTenantId: 'tenant-other' }));
+    expect(await getSsoProfileHints('azure-ad', { teamsTenantId: 'tenant-teams' })).toEqual({
+      userType: 'internal',
+      scopeTenantId: 'tenant-teams',
+    });
+  });
+
   it('uses the Teams tenant as scope when no cookie applies', async () => {
     expect(await getSsoProfileHints('azure-ad', { teamsTenantId: 'tenant-teams' })).toEqual({
       userType: 'internal',

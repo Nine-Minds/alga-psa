@@ -26,12 +26,18 @@ vi.mock('../../../../packages/auth/src/lib/security/rateLimiting', async () => {
 const { createTestDbConnection, wireLocalTestDbEnv } = await import('../../../test-utils/dbConfig');
 const { createTenant, createUser } = await import('../../../test-utils/testDataFactory');
 
+process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
 const PASSWORD = 'Correct-Horse-9!';
 const OTHER_PASSWORD = 'Different-Battery-7!';
 let db: Knex;
 let tenantA: string;
 let tenantB: string;
 let email: string;
+
+const setBPassword = async (password: string) => {
+  await db('users').where({ tenant: tenantB, email }).update({ hashed_password: await hashPassword(password) });
+};
 
 const slugOf = async (tenantId: string) => {
   const { getTenantSlugForTenant } = await import('@alga-psa/db');
@@ -53,6 +59,9 @@ describe('MSP multi-organization sign-in (same email in two tenants)', () => {
   }, 180_000);
 
   afterAll(async () => {
+    // Remove the rows this file created; the database itself is a per-file TEST_DB_NAME.
+    await db?.('users').whereIn('tenant', [tenantA, tenantB].filter(Boolean)).del().catch(() => undefined);
+    await db?.('tenants').whereIn('tenant', [tenantA, tenantB].filter(Boolean)).del().catch(() => undefined);
     await db?.destroy().catch(() => undefined);
     const { destroyAdminConnection } = await import('@alga-psa/db/admin');
     await destroyAdminConnection().catch(() => undefined);
@@ -60,8 +69,8 @@ describe('MSP multi-organization sign-in (same email in two tenants)', () => {
 
   it('an unscoped authenticateUser reports TenantRequired when both passwords could apply', async () => {
     // Make B share A's password so the email + password pair is genuinely ambiguous.
-    await db('users').where({ tenant: tenantB, email }).update({ hashed_password: await hashPassword(PASSWORD) });
-    await expect(authenticateUser(email, PASSWORD, 'internal')).rejects.toThrow(/tenant/i);
+    await setBPassword(PASSWORD);
+    await expect(authenticateUser(email, PASSWORD, 'internal')).rejects.toMatchObject({ code: 'TENANT_REQUIRED' });
   });
 
   it("tenantSlug = A's slug returns A's user", async () => {
@@ -70,12 +79,13 @@ describe('MSP multi-organization sign-in (same email in two tenants)', () => {
   });
 
   it("tenantSlug = B's slug returns B's user", async () => {
+    await setBPassword(PASSWORD);
     const user = await authenticateUser(email, PASSWORD, 'internal', { tenantSlug: await slugOf(tenantB) });
     expect(user?.tenant).toBe(tenantB);
   });
 
   it("B's slug with A's (different) password returns null", async () => {
-    await db('users').where({ tenant: tenantB, email }).update({ hashed_password: await hashPassword(OTHER_PASSWORD) });
+    await setBPassword(OTHER_PASSWORD);
     const user = await authenticateUser(email, PASSWORD, 'internal', { tenantSlug: await slugOf(tenantB) });
     expect(user).toBeNull();
   });
