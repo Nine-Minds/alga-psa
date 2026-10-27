@@ -1506,6 +1506,39 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/labels/linked-assets",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/labels/linked-assets/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/labels/pdf",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/labels/pdf/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/labels/templates",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/labels/templates/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/marketing/capture/{tenant}/{slug}",
     "methods": [
       "POST"
@@ -1641,6 +1674,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/notifications/live-token",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/notifications/live-token/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/online-meetings/recordings/{artifactId}",
     "methods": [
       "GET"
@@ -1652,11 +1696,33 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/portal-domain/surface",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/portal-domain/surface/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/projects",
     "methods": [
       "GET"
     ],
     "route_file": "server/src/app/api/projects/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/projects/staging/containers/{id}/manifest",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/projects/staging/containers/[id]/manifest/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -2069,6 +2135,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/tickets/{id}/email-html",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/tickets/[id]/email-html/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/tickets/{id}/live-token",
     "methods": [
       "GET"
@@ -2262,6 +2339,84 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/asset-audits",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-audits/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/[id]/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-audits/{id}/cancel",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/[id]/cancel/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-audits/{id}/complete",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/[id]/complete/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-audits/{id}/items",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/[id]/items/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-audits/{id}/items/{assetId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/asset-audits/[id]/items/[assetId]/route.ts",
+    "controller": "ApiAssetAuditController",
+    "controller_import": "@/lib/api/controllers/ApiAssetAuditController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetAuditController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-custody",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/asset-custody/route.ts",
+    "controller": "ApiAssetCustodyController",
+    "controller_import": "@/lib/api/controllers/ApiAssetCustodyController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetCustodyController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/asset-groups",
     "methods": [
       "GET",
@@ -2447,6 +2602,29 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/custody",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/custody/route.ts",
+    "controller": "ApiAssetCustodyController",
+    "controller_import": "@/lib/api/controllers/ApiAssetCustodyController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetCustodyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/custody/events",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/custody/events/route.ts",
+    "controller": "ApiAssetCustodyController",
+    "controller_import": "@/lib/api/controllers/ApiAssetCustodyController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetCustodyController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/assets/{id}/documents",
     "methods": [
       "GET",
@@ -2501,8 +2679,8 @@
     ],
     "route_file": "server/src/app/api/v1/assets/[id]/notes/route.ts",
     "controller": "",
-    "controller_import": "",
-    "controller_file": ""
+    "controller_import": "server/src/lib/api/controllers/assetReadGuard",
+    "controller_file": "server/src/lib/api/controllers/assetReadGuard.ts"
   },
   {
     "edition": "CE",
@@ -2579,8 +2757,8 @@
     ],
     "route_file": "server/src/app/api/v1/assets/[id]/software/route.ts",
     "controller": "",
-    "controller_import": "",
-    "controller_file": ""
+    "controller_import": "server/src/lib/api/controllers/assetReadGuard",
+    "controller_file": "server/src/lib/api/controllers/assetReadGuard.ts"
   },
   {
     "edition": "CE",
@@ -2662,6 +2840,28 @@
     "controller": "ApiBoardController",
     "controller_import": "@/lib/api/controllers/ApiBoardController",
     "controller_file": "server/src/lib/api/controllers/ApiBoardController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/calendars",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/calendars/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/capabilities/co-managed",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/capabilities/co-managed/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
   },
   {
     "edition": "CE",
@@ -4530,6 +4730,17 @@
       "POST"
     ],
     "route_file": "server/src/app/api/v1/invoices/[id]/finalize/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/history",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/history/route.ts",
     "controller": "ApiInvoiceController",
     "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
     "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
@@ -7514,6 +7725,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/tickets/categories",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/categories/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/tickets/from-asset",
     "methods": [
       "GET",
@@ -8761,6 +8983,18 @@
       "POST"
     ],
     "route_file": "server/src/app/api/webhooks/alternative-payments/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/webhooks/datto",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/webhooks/datto/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -10571,6 +10805,18 @@
       "POST"
     ],
     "route_file": "ee/server/src/app/api/webhooks/ai-gateway/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/webhooks/datto",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/webhooks/datto/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
