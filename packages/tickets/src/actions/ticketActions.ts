@@ -59,6 +59,10 @@ import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
+import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -567,7 +571,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const description = data.get('description');
       const location_id = data.get('location_id');
       const billing_profile_id = data.get('billing_profile_id');
-      const asset_id = data.get('asset_id');
+      // The asset picker sends one `asset_ids` entry per device; `asset_id` is
+      // the older single-asset form and still accepted.
+      const assetIds = dedupeTicketAssetIds([
+        ...data.getAll('asset_ids').map((value) => (typeof value === 'string' ? value : '')),
+        typeof data.get('asset_id') === 'string' ? (data.get('asset_id') as string) : '',
+      ]);
       const due_date = data.get('due_date');
 
       // Duplicate-ticket fields. The client only names the source; the hidden
@@ -640,13 +649,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // profile (or its location's default) when the caller picked none. This
       // is the QuickAddTicket path used by the asset header, the asset list,
       // service history and maintenance — `createTicketFromAsset` does the
-      // same for its own dialog.
-      if (asset_id && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      // same for its own dialog. Several picked devices are ambiguous, so the
+      // client default stands (alga-2026-0002785).
+      const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);
+      if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            asset_id as string,
+            billingProfileSourceAssetId,
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -712,17 +723,21 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         3 // max retries
       );
 
-      // Server-specific: Create asset association if asset_id is provided
-      if (asset_id) {
-        await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-          tenant,
-          asset_id: asset_id as string,
-          entity_id: ticketResult.ticket_id,
-          entity_type: 'ticket',
-          relationship_type: 'affected',
-          created_by: user.user_id,
-          created_at: new Date().toISOString(),
-        });
+      // Server-specific: link every picked device in this same transaction, so
+      // a failed link never leaves a ticket with a missing asset.
+      if (assetIds.length > 0) {
+        const linkedAt = new Date().toISOString();
+        await tenantScopedTable(trx, 'asset_associations', tenant).insert(
+          assetIds.map((assetId) => ({
+            tenant,
+            asset_id: assetId,
+            entity_id: ticketResult.ticket_id,
+            entity_type: 'ticket',
+            relationship_type: 'affected',
+            created_by: user.user_id,
+            created_at: linkedAt,
+          }))
+        );
       }
 
       // Server-specific: Handle assigned ticket event

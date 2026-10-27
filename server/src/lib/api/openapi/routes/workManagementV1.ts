@@ -198,6 +198,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
+        'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. Exactly one asset also makes the ticket inherit that asset\'s billing profile, as POST /tickets/from-asset does; with several assets billing_profile_id is left to the client default.',
+      ),
     }),
   );
 

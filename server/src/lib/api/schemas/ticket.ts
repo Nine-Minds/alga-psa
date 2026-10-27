@@ -133,6 +133,11 @@ export const createTicketSchema = z.object({
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
+  // Devices the ticket is raised against. Linked in the ticket's own
+  // transaction, so a rejected asset leaves no orphan ticket. Exactly one
+  // asset also inherits its billing profile (the from-asset rule); several
+  // leave billing_profile_id to the client default.
+  asset_ids: z.array(uuidSchema).max(50).optional(),
 });
 
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
@@ -147,6 +152,8 @@ export const updateTicketSchema = createUpdateSchema(
     severity_id: true,
     urgency_id: true,
     impact_id: true,
+    // Create-only: later links go through POST /tickets/{id}/assets.
+    asset_ids: true,
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),

@@ -55,9 +55,12 @@ describe('asset billing profile reaches tickets from assets', () => {
     expect(text).toContain(
       "import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';"
     );
+    // The source asset is now the one picked device (alga-2026-0002785): with
+    // several devices there is nothing unambiguous to inherit.
     expect(text).toMatch(
-      /if \(asset_id && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(/
+      /if \(billingProfileSourceAssetId && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(/
     );
+    expect(text).toContain('const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);');
   });
 
   it('T130: the portal prefers the asset profile over the contact heuristic', () => {

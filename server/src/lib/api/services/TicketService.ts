@@ -79,6 +79,11 @@ import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
+import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
   CommentEmailRecipientsError,
@@ -1688,6 +1693,30 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   /**
+   * Every named asset must exist in this tenant. Called inside the create
+   * transaction so an unknown id rolls the ticket back instead of leaving one
+   * with a missing device.
+   */
+  private async assertAssetsBelongToTenant(
+    assetIds: string[],
+    context: ServiceContext,
+    trx: Knex.Transaction
+  ): Promise<void> {
+    if (assetIds.length === 0) return;
+    const found = await tenantScopedTable(trx, 'assets', context.tenant)
+      .whereIn('asset_id', assetIds)
+      .pluck('asset_id');
+    const known = new Set(found as string[]);
+    const missing = assetIds.filter((assetId) => !known.has(assetId));
+    if (missing.length > 0) {
+      throw new ValidationError('Validation failed', missing.map((assetId) => ({
+        path: ['asset_ids'],
+        message: `asset_id ${assetId} was not found`,
+      })));
+    }
+  }
+
+  /**
    * Create new ticket
     // Override for BaseService compatibility  
     async create(data: Partial<ITicket>, context: ServiceContext): Promise<ITicket>;
@@ -1730,6 +1759,18 @@ export class TicketService extends BaseService<ITicket> {
           ]);
         }
 
+        // Devices named on the create request. Validated before the insert so a
+        // bad asset id rolls back with no ticket written at all.
+        const assetIds = dedupeTicketAssetIds(data.asset_ids);
+        await this.assertAssetsBelongToTenant(assetIds, context, trx);
+
+        // One asset inherits its billing profile, exactly like the from-asset
+        // dialog; several assets are ambiguous, so the client default stands.
+        const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);
+        const inheritedBillingProfileId = billingProfileSourceAssetId
+          ? await resolveAssetBillingProfileIdForClient(trx, context.tenant, billingProfileSourceAssetId, data.client_id)
+          : null;
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -1737,6 +1778,7 @@ export class TicketService extends BaseService<ITicket> {
           board_id: data.board_id,
           client_id: data.client_id,
           location_id: data.location_id,
+          billing_profile_id: inheritedBillingProfileId ?? undefined,
           contact_id: data.contact_name_id, // Maps to contact_name_id in database
           status_id: data.status_id,
           category_id: data.category_id,
@@ -1771,6 +1813,24 @@ export class TicketService extends BaseService<ITicket> {
         // Handle tags if provided (API service specific functionality)
         if (data.tags && data.tags.length > 0) {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
+        }
+
+        // Link the named devices in the same transaction as the insert, into the
+        // same asset_associations table the from-asset path and
+        // POST /tickets/{id}/assets write.
+        if (assetIds.length > 0) {
+          const linkedAt = new Date().toISOString();
+          await tenantScopedTable(trx, 'asset_associations', context.tenant).insert(
+            assetIds.map((assetId) => ({
+              tenant: context.tenant,
+              asset_id: assetId,
+              entity_id: ticketResult.ticket_id,
+              entity_type: 'ticket',
+              relationship_type: 'affected',
+              created_by: context.userId,
+              created_at: linkedAt,
+            }))
+          );
         }
 
         // Persist ticket-level external links in the same transaction so a bot's
