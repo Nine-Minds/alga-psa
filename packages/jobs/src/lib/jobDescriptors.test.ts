@@ -47,8 +47,9 @@ vi.mock('./handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliver
 vi.mock('./handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: vi.fn() }));
 vi.mock('./handlers/providerDisconnectRetryHandler', () => ({ providerDisconnectRetryHandler: vi.fn() }));
 
-import { defineJob, resetJobDescriptors } from './jobDescriptors';
-import { isKnownMaintenanceJob, listMaintenanceJobNames, runMaintenanceJob } from './maintenanceJobFanout';
+import { MAINTENANCE_FANOUT_SCHEDULES, listMaintenanceFanoutSchedules, resolveCeMaintenanceSchedules } from '@alga-psa/types';
+import { defineJob, listJobDescriptorNames, registerJobCapabilityFilter, resetJobDescriptors } from './jobDescriptors';
+import { isKnownMaintenanceJob, listMaintenanceJobNames, registerMaintenanceJob, runMaintenanceJob } from './maintenanceJobFanout';
 
 afterEach(() => { resetJobDescriptors(); tenantQueryCalls.length = 0; });
 
@@ -71,10 +72,42 @@ describe('jobDescriptors', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it('a native job name wins over a descriptor of the same name', () => {
+  it('rejects a descriptor that would shadow a native job or a native schedule', () => {
     const [first] = listMaintenanceJobNames();
-    defineJob({ name: first, scope: 'system', run: async () => undefined });
-    expect(listMaintenanceJobNames().filter((n) => n === first)).toHaveLength(1);
+    expect(() => defineJob({ name: first, scope: 'system', run: async () => undefined })).toThrow('native maintenance job');
+    expect(() => defineJob({ name: 'sla-timer', scope: 'system', run: async () => undefined })).toThrow('native maintenance job');
+    expect(listJobDescriptorNames()).toEqual([]);
+  });
+
+  it('a native registration cannot take a descriptor name', () => {
+    defineJob({ name: 'ext-owned', scope: 'system', run: async () => undefined });
+    expect(() => registerMaintenanceJob('ext-owned', { scope: 'system', run: async () => undefined })).toThrow('defineJob');
+  });
+
+  it('a schedule registers a row both schedulers read, scoped by edition', () => {
+    const nativeEe = listMaintenanceFanoutSchedules();
+    const nativeCe = resolveCeMaintenanceSchedules({});
+    expect(nativeEe).toEqual([...MAINTENANCE_FANOUT_SCHEDULES]);
+    defineJob({ name: 'both-eds', scope: 'system', run: async () => undefined, schedule: { cron: '*/5 * * * *' } });
+    defineJob({ name: 'ee-only', scope: 'system', run: async () => undefined, schedule: { cron: '0 1 * * *' }, edition: 'ee' });
+    defineJob({ name: 'ce-only', scope: 'system', run: async () => undefined, schedule: { cron: '0 2 * * *' }, edition: 'ce' });
+    defineJob({ name: 'unscheduled', scope: 'system', run: async () => undefined });
+    expect(listMaintenanceFanoutSchedules()).toEqual([
+      ...nativeEe,
+      { jobName: 'both-eds', cron: '*/5 * * * *' },
+      { jobName: 'ee-only', cron: '0 1 * * *' },
+    ]);
+    expect(resolveCeMaintenanceSchedules({})).toEqual([
+      ...nativeCe,
+      { jobName: 'both-eds', cron: '*/5 * * * *' },
+      { jobName: 'ce-only', cron: '0 2 * * *' },
+    ]);
+    resetJobDescriptors();
+    expect(listMaintenanceFanoutSchedules()).toEqual(nativeEe);
+  });
+
+  it('an edition without a schedule is rejected', () => {
+    expect(() => defineJob({ name: 'ed', scope: 'system', run: async () => undefined, edition: 'ee' })).toThrow('edition');
   });
 
   it('rejects duplicate names and malformed crons', () => {
@@ -94,5 +127,31 @@ describe('jobDescriptors', () => {
     await runMaintenanceJob('all');
     expect(tenantQueryCalls).toEqual([]);
     expect(seen).toEqual(['a', 'b']);
+  });
+
+  it('a capability-gated job skips before any tenant SQL when no filter is registered', async () => {
+    const run = vi.fn(async () => undefined);
+    defineJob({ name: 'gated', scope: 'tenant', capability: 'co-managed', run });
+    await expect(runMaintenanceJob('gated')).resolves.toEqual({ jobName: 'gated', scope: 'tenant', total: 0, succeeded: 0, failed: 0 });
+    expect(tenantQueryCalls).toEqual([]);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('a capability-gated job runs only for the tenants the filter serves', async () => {
+    const seen: string[] = [];
+    const filter = vi.fn(async (_cap: string, ids: readonly string[]) => ids.filter((t) => t === 'b'));
+    registerJobCapabilityFilter(filter);
+    defineJob({ name: 'gated', scope: 'tenant', capability: 'co-managed', run: async (t) => { seen.push(t); } });
+    await expect(runMaintenanceJob('gated')).resolves.toMatchObject({ total: 1, succeeded: 1 });
+    expect(filter).toHaveBeenCalledWith('co-managed', ['a', 'b']);
+    expect(seen).toEqual(['b']);
+  });
+
+  it('an ungated job never consults the capability filter', async () => {
+    const filter = vi.fn(async () => []);
+    registerJobCapabilityFilter(filter);
+    defineJob({ name: 'open', scope: 'tenant', run: async () => undefined });
+    await expect(runMaintenanceJob('open')).resolves.toMatchObject({ total: 2 });
+    expect(filter).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { EXTENSION_EVENT_TYPES, EXTENSION_PAYLOAD_SCHEMAS } from './extensions';
+import {
+  EXTENSION_EVENT_TYPES,
+  EXTENSION_PAYLOAD_SCHEMAS,
+  assertEventExtensionsCompose,
+  type ExtensionEventType,
+} from './extensions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -547,8 +552,19 @@ const CORE_EVENT_TYPES = [
   'UNKNOWN',
 ] as const satisfies readonly [string, ...string[]];
 
+// An extension may add event types, never redeclare one: a collision with a core
+// name fails here at compile time and in assertEventExtensionsCompose at load.
+type AssertNoCoreCollision<T extends never> = T;
+export type EventExtensionCoreCollisions = AssertNoCoreCollision<
+  Extract<ExtensionEventType, (typeof CORE_EVENT_TYPES)[number]>
+>;
+assertEventExtensionsCompose(CORE_EVENT_TYPES);
+
 // Core plus extension event types; the extension list is empty natively.
-export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const;
+export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const satisfies readonly [
+  string,
+  ...string[],
+];
 
 export const EventTypeEnum = z.enum(EVENT_TYPES);
 
@@ -1245,7 +1261,8 @@ const InboundEmailReceivedPayloadSchema = z.union([
 ]);
 
 // Map event types to their payload schemas
-const CorePayloadSchemas = {
+/** Core payload schemas; `EventPayloadSchemas` hands out these same objects. */
+export const CorePayloadSchemas = {
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,

@@ -39,7 +39,7 @@ export interface TenantTableReference {
 export interface TenantTableEntry {
   table: string;
   /** `ordered`: deleted by the loop in declared order. `excluded`: never deleted by it (reason required). */
-  deletion: 'ordered' | 'excluded' | 'prepass-only';
+  deletion: 'ordered' | 'excluded';
   /** Required when `deletion` is `excluded`. */
   reason?: string;
   /** Declared where `tenantTableMetadata` has no entry; the tenant column is discovered at runtime. */

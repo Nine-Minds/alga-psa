@@ -175,5 +175,11 @@ export {
   resetCommentEventContributors,
   type CommentEvent,
   type CommentEventContributor,
+  type CommentEventEnvelope,
   type CommentEventSource,
+  type CommentEventType,
+  type CommentEventTypesBySource,
+  type CommentEventsBySource,
+  type ProjectTaskCommentEvent,
+  type TicketCommentEvent,
 } from './lib/commentEventRegistry';

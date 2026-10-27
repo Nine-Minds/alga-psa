@@ -16,7 +16,7 @@ function chain(): any {
 
 vi.mock('@alga-psa/db', async importOriginal => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
-  withTransaction: async (_db: unknown, fn: (trx: unknown) => unknown) => fn({}),
+  withTransaction: async (_db: unknown, fn: (trx: unknown) => unknown) => fn({ isTransaction: true }),
   tenantDb: () => ({ table: () => chain(), tenantJoin: () => undefined }),
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent, publishWorkflowEvent }));
@@ -44,8 +44,10 @@ describe('task comment update routes publication through the comment-event regis
     const retain = vi.fn(async () => true);
     registerCommentEventContributor({ name: 'outbox', retain });
     await updateTaskCommentWithDb({} as any, 't1', user, 'c1', { note: 'new' });
-    expect(retain).toHaveBeenCalledWith(expect.anything(), 'project-task',
-      expect.objectContaining({ tenantId: 't1', taskId: 'task1', commentId: 'c1', eventType: 'TASK_COMMENT_UPDATED' }));
+    expect(retain).toHaveBeenCalledWith(expect.anything(), {
+      source: 'project-task',
+      event: expect.objectContaining({ tenantId: 't1', taskId: 'task1', commentId: 'c1', eventType: 'TASK_COMMENT_UPDATED' }),
+    });
     expect(publishWorkflowEvent).not.toHaveBeenCalled();
     expect(publishEvent).not.toHaveBeenCalled();
   });

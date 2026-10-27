@@ -178,7 +178,17 @@ export {
   publishCommentEvent,
   resetCommentEventContributors,
 } from './commentEventRegistry';
-export type { CommentEvent, CommentEventContributor, CommentEventSource } from './commentEventRegistry';
+export type {
+  CommentEvent,
+  CommentEventContributor,
+  CommentEventEnvelope,
+  CommentEventSource,
+  CommentEventType,
+  CommentEventTypesBySource,
+  CommentEventsBySource,
+  ProjectTaskCommentEvent,
+  TicketCommentEvent,
+} from './commentEventRegistry';
 export {
   registerScheduledCommentAdmission,
   admitScheduledComment,
