@@ -236,6 +236,128 @@ export function ruleA(files: SourceFile[]): string[] {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Rule A2: the tenant handed to a Next-bound adapter comes from the session
+// ---------------------------------------------------------------------------
+
+/** Adapters 1-3 take `(capability, tenantId, mode?)`; the tenant is argument 1. */
+export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'capabilityRouteGuard', 'requireCapabilityForPage']);
+/** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
+const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);
+/** Zero-argument calls that return the session tenant itself. */
+const SESSION_TENANT_HELPERS = new Set(['getCurrentTenant', 'getTenantForCurrentRequest']);
+
+type Binding =
+  | { kind: 'param'; fn: ts.SignatureDeclaration; index: number; path: string[] }
+  | { kind: 'var'; init: ts.Expression; path: string[] };
+
+function bindingPathTo(name: ts.BindingName, target: string, prefix: string[] = []): string[] | null {
+  if (ts.isIdentifier(name)) return name.text === target ? prefix : null;
+  for (const el of name.elements) {
+    if (ts.isOmittedExpression(el)) continue;
+    const key =
+      ts.isObjectBindingPattern(name)
+        ? el.propertyName
+          ? ts.isIdentifier(el.propertyName) || ts.isStringLiteral(el.propertyName)
+            ? el.propertyName.text
+            : null
+          : ts.isIdentifier(el.name)
+            ? el.name.text
+            : null
+        : null; // array patterns never carry `.tenant`
+    if (key === null) {
+      if (bindingPathTo(el.name, target, [...prefix, '?']) !== null) return [...prefix, '?'];
+      continue;
+    }
+    const found = bindingPathTo(el.name, target, [...prefix, key]);
+    if (found) return found;
+  }
+  return null;
+}
+
+function resolveBinding(name: string, from: ts.Node): Binding | null {
+  for (let n: ts.Node | undefined = from.parent; n; n = n.parent) {
+    if (ts.isFunctionLike(n)) {
+      const params = (n as ts.SignatureDeclaration).parameters;
+      for (let i = 0; i < params.length; i++) {
+        const path = bindingPathTo(params[i].name, name);
+        if (path) return { kind: 'param', fn: n as ts.SignatureDeclaration, index: i, path };
+      }
+    }
+    const statements = ts.isBlock(n) || ts.isSourceFile(n) ? n.statements : null;
+    if (!statements) continue;
+    for (const st of statements) {
+      if (!ts.isVariableStatement(st)) continue;
+      for (const d of st.declarationList.declarations) {
+        const path = bindingPathTo(d.name, name);
+        if (path && d.initializer) return { kind: 'var', init: d.initializer, path };
+      }
+    }
+  }
+  return null;
+}
+
+const unwrap = (e: ts.Expression): ts.Expression => {
+  for (;;) {
+    if (ts.isAwaitExpression(e) || ts.isParenthesizedExpression(e) || ts.isNonNullExpression(e) || ts.isAsExpression(e)) e = e.expression;
+    else return e;
+  }
+};
+
+const isWithAuthCallback = (fn: ts.SignatureDeclaration): boolean =>
+  !!fn.parent && ts.isCallExpression(fn.parent) && fn.parent.arguments[0] === fn && calleeName(fn.parent) === 'withAuth';
+
+/** Does `expr` (read at property `path`) evaluate to the authenticated session's tenant? */
+export function isSessionTenant(expr: ts.Expression, path: string[] = [], depth = 0): boolean {
+  if (depth > 20) return false;
+  const e = unwrap(expr);
+  if (ts.isPropertyAccessExpression(e)) return isSessionTenant(e.expression, [e.name.text, ...path], depth + 1);
+  if (ts.isIdentifier(e)) {
+    const b = resolveBinding(e.text, e);
+    if (!b) return false;
+    const full = [...b.path, ...path];
+    if (b.kind === 'param') {
+      // withAuth(async (user, ctx, ...args) => ...): user.tenant and ctx.tenant are the session tenant;
+      // every later parameter is caller-supplied.
+      return isWithAuthCallback(b.fn) && b.index <= 1 && full.length === 1 && full[0] === 'tenant';
+    }
+    return isSessionTenant(b.init, full, depth + 1);
+  }
+  if (ts.isCallExpression(e)) {
+    const name = calleeName(e);
+    if (name && SESSION_TENANT_HELPERS.has(name)) return e.arguments.length === 0 && path.length === 0;
+    if (name && SESSION_OBJECT_SOURCES.has(name)) {
+      const p = path.join('.');
+      return e.arguments.length === 0 && (p === 'tenant' || p === 'user.tenant');
+    }
+  }
+  return false;
+}
+
+/** Rule A2: adapters 1-3 in co-managed entry points take the tenant from the session, never from input. */
+export function ruleA2(files: SourceFile[]): string[] {
+  const out: string[] = [];
+  for (const f of files.filter((x) => isEntryPoint(x.path))) {
+    const sf = parse(f);
+    const visit = (n: ts.Node) => {
+      if (ts.isCallExpression(n)) {
+        const name = calleeName(n);
+        if (name && SESSION_TENANT_ADAPTERS.has(name)) {
+          const tenant = n.arguments[1];
+          if (!tenant || !isSessionTenant(tenant)) {
+            out.push(
+              `capabilityEntryPoints: ${name} at ${f.path}:${lineOf(sf, n)} takes a tenant that does not come from the authenticated session (${tenant ? tenant.getText(sf) : 'missing'})`,
+            );
+          }
+        }
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return out;
+}
+
 /** Rule B: the retired flag key, anywhere in scanned source. */
 export function ruleB(files: SourceFile[]): string[] {
   const out: string[] = [];
@@ -408,6 +530,10 @@ describe('capability gate coverage (AST) — branch is green', () => {
     expect(ruleA(repoFiles)).toEqual([]);
   });
 
+  it('Rule A2: Next-bound adapters take the tenant from the authenticated session', () => {
+    expect(ruleA2(repoFiles)).toEqual([]);
+  });
+
   it('Rule B: release-v1-6-feature is referenced nowhere', () => {
     expect(ruleB(repoFiles)).toEqual([]);
   });
@@ -536,6 +662,41 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     expect(ruleA([file('server/src/app/api/v1/co-management/x/route.ts', `export async function GET(){ const g = await capabilityRouteGuard('co-managed','t'); return g; }`)])).toEqual([]);
     expect(ruleA([file('packages/jobs/src/lib/jobs/handlers/coManagedSync.ts', `export const h = withCapabilityJob('co-managed', async () => { await knex('x'); });`)])).toEqual([]);
     expect(ruleA([file('ee/temporal-workflows/src/activities/coManagedA.ts', `export async function a(){ return knex('x'); }`)])).toHaveLength(1);
+  });
+
+  describe('Rule A2: the tenant argument', () => {
+    const ok = (src: string, path = ACTION) => expect(ruleA2([file(path, src)])).toEqual([]);
+    const bad = (src: string, path = ACTION) => expect(ruleA2([file(path, src)])).toHaveLength(1);
+
+    it('accepts the withAuth context and user', () => {
+      ok(`export const a = withAuth(async (user, { tenant }, id: string) => { await requireCapabilityForAction('co-managed', tenant); });`);
+      ok(`export const a = withAuth(async (user, ctx) => { await requireCapabilityForAction('co-managed', ctx.tenant); });`);
+      ok(`export const a = withAuth(async (user, ctx) => { const t = ctx.tenant; await requireCapabilityForAction('co-managed', t); });`);
+      ok(`export const a = withAuth(async (user) => { await requireCapabilityForAction('co-managed', user.tenant, 'serves'); });`);
+    });
+
+    it('accepts session-derived tenants in pages and routes', () => {
+      ok(`export default async function P() { const session = await getSession(); await requireCapabilityForPage('co-managed', session!.user.tenant); }`, 'server/src/app/msp/co-management/page.tsx');
+      ok(`export default async function P() { const tenant = await getCurrentTenant(); await requireCapabilityForPage('co-managed', tenant); }`, 'server/src/app/msp/co-management/page.tsx');
+      ok(`export async function GET() { const user = await getCurrentUser(); return capabilityRouteGuard('co-managed', user!.tenant); }`, 'server/src/app/api/v1/co-management/x/route.ts');
+      ok(`export async function GET() { const { user } = (await getSession())!; return capabilityRouteGuard('co-managed', user.tenant); }`, 'server/src/app/api/v1/co-management/x/route.ts');
+    });
+
+    it('rejects a tenant from the request body, query, route params or an action argument', () => {
+      bad(`export async function POST(req: Request) { const body = await req.json(); return capabilityRouteGuard('co-managed', body.tenantId); }`, 'server/src/app/api/v1/co-management/x/route.ts');
+      bad(`export async function GET(req: NextRequest) { return capabilityRouteGuard('co-managed', req.nextUrl.searchParams.get('tenant')!); }`, 'server/src/app/api/v1/co-management/x/route.ts');
+      bad(`export default async function P({ params }) { await requireCapabilityForPage('co-managed', params.tenant); }`, 'server/src/app/msp/co-management/page.tsx');
+      bad(`export const a = withAuth(async (user, ctx, input: { tenant: string }) => { await requireCapabilityForAction('co-managed', input.tenant); });`);
+      bad(`export const a = withAuth(async (user, ctx, tenant: string) => { await requireCapabilityForAction('co-managed', tenant); });`);
+      bad(`export async function a(tenantId: string) { await requireCapabilityForAction('co-managed', tenantId); }`);
+      bad(`export async function a() { await requireCapabilityForAction('co-managed', 'tenant-1'); }`);
+      bad(`export async function a() { const t = await getTenantForCurrentRequest(body.tenant); await requireCapabilityForAction('co-managed', t); }`);
+      bad(`export const a = withAuth(async (user, ctx) => { await requireCapabilityForAction('co-managed', ctx.other); });`);
+    });
+
+    it('does not apply to worker adapters, whose tenant comes from the job, event or activity input', () => {
+      ok(`export async function a(input: { tenantId: string }) { return activityServesCapability('co-managed', input.tenantId); }`, 'ee/temporal-workflows/src/activities/coManagedA.ts');
+    });
   });
 
   it('Rule B fails on any release-v1-6-feature reference, with the plan message', () => {
