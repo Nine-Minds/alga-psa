@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isAdditionalWorkspaceTest, isNodeToolingTest, isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
 
@@ -160,4 +161,11 @@ test('the portal-domain SSO redirect URI gate must execute in Temporal readiness
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
   const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
   assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('every literal temporal readiness include is a temporal-readiness candidate', () => {
+  const config = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  const includes = [...config.matchAll(/'(src\/[^'*]+\.test\.ts)'/g)].map(([, file]) => `ee/temporal-workflows/${file}`);
+  assert.ok(includes.length > 0);
+  for (const file of includes) assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true, file);
 });
