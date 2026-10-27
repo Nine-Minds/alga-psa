@@ -103,8 +103,8 @@ describe('wizard team member creation', () => {
 });
 
 describe('wizard seat usage', () => {
-  it('counts pending invitations as used seats', async () => {
+  it('counts seats as addUser admits them, so the counter and the save agree', async () => {
     mocks.pendingInvitations = 1;
-    await expect(getOnboardingLicenseUsage(user, context)).resolves.toEqual({ success: true, data: { limit: 3, used: 2 } });
+    await expect(getOnboardingLicenseUsage(user, context)).resolves.toEqual({ success: true, data: { limit: 3, used: 1 } });
   });
 });

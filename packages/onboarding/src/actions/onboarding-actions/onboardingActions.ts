@@ -285,11 +285,11 @@ export const saveClientInfo = withAuth(async (
 /**
  * The wizard creates team members through addUser, the same path as Settings →
  * Users: it checks the user:create permission, keeps internal emails unique
- * across tenants, admits the account against the seat limit (pending
- * invitations included) under a lock, and assigns the chosen role
- * by id. The wizard's own copy of that logic skipped all of it, defaulted a
- * missing password to a fixed one, and fell back to the alphabetically first
- * role (Admin) when its case-folded role lookup missed.
+ * across tenants, admits the account against the seat limit under a lock,
+ * and assigns the chosen role by id. The wizard's own copy of that logic
+ * skipped all of it, defaulted a missing password to a fixed one, and fell
+ * back to the alphabetically first role (Admin) when its case-folded role
+ * lookup missed.
  */
 type TeamMemberOutcome =
   | { status: 'created' }
@@ -1155,26 +1155,20 @@ export const getAvailableRoles = withAuth(async (
  * session tenant directly instead of getLicenseUsageAction's header/async
  * -context lookup, which is unreliable this early in onboarding and left the
  * step's "Users: N" counter stuck at 0.
+ *
+ * A seat here is what addUser admits against: an active internal user. The
+ * counter, the save, and the licenseStatus returned after a save all read the
+ * same number, so the step never blocks a save addUser would accept and the
+ * count does not drop after one. Pending email invitations are held to the
+ * limit by sendUserInvitation itself, which reports its refusal on the row.
  */
-/**
- * Seats as admission counts them, so the step never offers a seat that saving
- * would then refuse: a pending invitation holds a seat until it is accepted or
- * expires (sendUserInvitation reserves it).
- */
-async function committedSeats(tenant: string, activeUsers: number): Promise<number> {
-  const { knex } = await createTenantKnex();
-  const pending = await tenantDb(knex, tenant).table('user_invitations').whereNull('used_at')
-    .where('expires_at', '>', knex.fn.now()).count('* as count').first();
-  return activeUsers + Number(pending?.count ?? 0);
-}
-
 export const getOnboardingLicenseUsage = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<OnboardingActionResult> => {
   try {
     const usage = await getLicenseUsage(tenant);
-    return { success: true, data: { limit: usage.limit, used: await committedSeats(tenant, usage.used) } };
+    return { success: true, data: { limit: usage.limit, used: usage.used } };
   } catch (error) {
     console.error('Error fetching onboarding license usage:', error);
     return { success: false, error: onboardingActionErrorMessage(error, 'Failed to load license usage') };
