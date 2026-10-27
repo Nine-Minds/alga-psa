@@ -24,6 +24,10 @@ export interface SendTenantRecoveryEmailOptions {
   locale?: SupportedLocale;
 }
 
+// Brand each audience sees when NEXT_PUBLIC_PLATFORM_NAME is not set.
+const CLIENT_PORTAL_PLATFORM_NAME = 'Client Portal';
+const MSP_PLATFORM_NAME = 'AlgaPSA';
+
 /**
  * Emergency English copy used only when the template row is missing from the
  * database. Chosen by template so the MSP email never says "client portal".
@@ -31,6 +35,8 @@ export interface SendTenantRecoveryEmailOptions {
 const FALLBACK_COPY: Record<
   TenantRecoveryTemplateName,
   {
+    /** Brand shown in subject, header and footer when NEXT_PUBLIC_PLATFORM_NAME is unset. */
+    defaultPlatformName: string;
     subject: (platformName: string) => string;
     heading: string;
     intro: (count: number) => string;
@@ -38,6 +44,7 @@ const FALLBACK_COPY: Record<
   }
 > = {
   'tenant-recovery': {
+    defaultPlatformName: CLIENT_PORTAL_PLATFORM_NAME,
     subject: (platformName) => `${platformName} - Your Login Links`,
     heading: 'Your Login Links',
     intro: (count) =>
@@ -48,6 +55,7 @@ const FALLBACK_COPY: Record<
     help: "If you have any questions or need assistance, please contact your organization's support team.",
   },
   'msp-tenant-recovery': {
+    defaultPlatformName: MSP_PLATFORM_NAME,
     subject: (platformName) => `${platformName} - Your Sign-in Links`,
     heading: 'Your Sign-in Links',
     intro: (count) =>
@@ -163,7 +171,8 @@ async function generateEmailContent(
   templateName: TenantRecoveryTemplateName
 ): Promise<{ subject: string; html: string; text: string }> {
   const currentYear = new Date().getFullYear();
-  const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
+  const platformName =
+    process.env.NEXT_PUBLIC_PLATFORM_NAME || FALLBACK_COPY[templateName].defaultPlatformName;
 
   // Try to fetch template from database
   const dbTemplate = await fetchTemplate(templateName, locale);
@@ -288,7 +297,8 @@ async function generateNoAccountEmailContent(
   locale: SupportedLocale
 ): Promise<{ subject: string; html: string; text: string }> {
   const currentYear = new Date().getFullYear();
-  const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
+  // The no-account email is only ever sent to client-portal requesters.
+  const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || CLIENT_PORTAL_PLATFORM_NAME;
 
   // Try to fetch template from database
   const dbTemplate = await fetchTemplate('no-account-found', locale);
