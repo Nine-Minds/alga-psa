@@ -43,6 +43,7 @@ vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getAvailableRecurringDueWork: vi.fn(async () => ({
     invoiceCandidates: [], recurringDueWork: [], materializationGaps: [],
   })),
+  getLateApprovedHourlyTime: vi.fn(async () => []),
 }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ hardDeleteInvoice: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({

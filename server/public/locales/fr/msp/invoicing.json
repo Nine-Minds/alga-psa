@@ -323,6 +323,21 @@
       "any": "tout",
       "clear": "Effacer",
       "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "lateTime": {
+      "title": "Temps horaire approuvé tardivement",
+      "description": "Ce temps a été approuvé après l'émission de la facture de sa période de service. Les entrées en attente de facturation sont ajoutées une seule fois à la prochaine facture, signalées comme temps tardif. Les entrées hors de la période de rétroaction ne sont pas facturées.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technicien",
+        "service": "Service",
+        "workDate": "Date de travail",
+        "hours": "Heures",
+        "closedPeriod": "Période de service clôturée",
+        "status": "Statut"
+      },
+      "nextInvoice": "Facturé sur la prochaine facture",
+      "outsideLookback": "Hors de la période de rétroaction — non facturé"
     }
   },
   "manualInvoices": {
