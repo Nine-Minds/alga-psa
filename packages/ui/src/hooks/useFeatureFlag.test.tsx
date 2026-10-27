@@ -30,7 +30,7 @@ describe('useFeatureFlag', () => {
     vi.useRealTimers();
   });
 
-  it('uses the server-bootstrapped value until PostHog delivers an update', async () => {
+  it('uses the server-bootstrapped value and never asks PostHog for it', async () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'sample-bootstrapped-flag': true }}>
         {children}
@@ -80,13 +80,11 @@ describe('useFeatureFlag', () => {
     expect(result.current).toMatchObject({ enabled: false, resolved: true });
   });
 
-  it('accepts later PostHog flag updates after the bootstrapped render', async () => {
-    let deliverFeatureFlags: (() => void) | undefined;
-    posthog.onFeatureFlags.mockImplementationOnce((callback: () => void) => {
-      deliverFeatureFlags = callback;
-      return vi.fn();
-    });
-
+  it('a bootstrapped flag is server-decided: a later PostHog update for another subject cannot flip it', async () => {
+    // posthog-js evaluates for the person; the server bootstrapped the tenant's
+    // value. A person/percentage/group rule can disagree, and the hook must not
+    // flip the first-paint value on hydration.
+    posthog.isFeatureEnabled.mockReturnValue(false);
     const wrapper = ({ children }: { children: ReactNode }) => (
       <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'sample-bootstrapped-flag': true }}>
         {children}
@@ -97,12 +95,38 @@ describe('useFeatureFlag', () => {
       () => useFeatureFlag('sample-bootstrapped-flag', { defaultValue: false }),
       { wrapper }
     );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
 
+    expect(result.current).toMatchObject({ enabled: true, resolved: true, loading: false });
+    expect(posthog.onFeatureFlags).not.toHaveBeenCalled();
+    expect(posthog.isFeatureEnabled).not.toHaveBeenCalled();
+    posthog.isFeatureEnabled.mockReset();
+    posthog.isFeatureEnabled.mockImplementation(() => false);
+  });
+
+  it('a flag the server did not bootstrap still follows later PostHog updates', async () => {
+    let deliverFeatureFlags: (() => void) | undefined;
+    posthog.onFeatureFlags.mockImplementationOnce((callback: () => void) => {
+      deliverFeatureFlags = callback;
+      return vi.fn();
+    });
+    posthog.isFeatureEnabled.mockReturnValue(true);
+
+    const { result } = renderHook(() => useFeatureFlag('sample-unbootstrapped-flag', { defaultValue: false }));
     await act(async () => {
       deliverFeatureFlags?.();
     });
+    expect(result.current.enabled).toBe(true);
 
+    posthog.isFeatureEnabled.mockReturnValue(false);
+    await act(async () => {
+      deliverFeatureFlags?.();
+    });
     expect(result.current.enabled).toBe(false);
-    expect(posthog.isFeatureEnabled).toHaveBeenCalledWith('sample-bootstrapped-flag');
+    expect(posthog.isFeatureEnabled).toHaveBeenCalledWith('sample-unbootstrapped-flag');
+    posthog.isFeatureEnabled.mockReset();
+    posthog.isFeatureEnabled.mockImplementation(() => false);
   });
 });

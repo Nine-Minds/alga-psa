@@ -128,6 +128,19 @@ export function useFeatureFlag(
       return;
     }
 
+    // A bootstrapped flag was decided by the server for the tenant
+    // (distinctId `tenant_<id>`, group `tenant`). posthog-js evaluates for the
+    // person (`anonymous_<tenant>_<user>`) with no group, so a group-targeted or
+    // percentage rule can answer differently; re-deciding it here would flip
+    // the first-paint value on hydration. The server value is authoritative.
+    if (bootstrappedValue !== undefined) {
+      setEnabled(Boolean(bootstrappedValue));
+      setLoading(false);
+      setError(null);
+      setResolved(true);
+      return;
+    }
+
     if (!posthog) {
       setLoading(false);
       return;
@@ -166,11 +179,9 @@ export function useFeatureFlag(
       }
     };
 
-    const timeoutId = bootstrappedValue === undefined
-      ? setTimeout(() => {
-          void checkFlag();
-        }, 200)
-      : undefined;
+    const timeoutId = setTimeout(() => {
+      void checkFlag();
+    }, 200);
 
     const unsubscribeFromFeatureFlags = posthog.onFeatureFlags(() => {
       void checkFlag();
@@ -179,14 +190,14 @@ export function useFeatureFlag(
     if (options.pollInterval && options.pollInterval > 0) {
       const interval = setInterval(checkFlag, options.pollInterval);
       return () => {
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
         clearInterval(interval);
         unsubscribeFromFeatureFlags();
       };
     }
 
     return () => {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       unsubscribeFromFeatureFlags();
     };
   }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval, forcedValue, bootstrappedValue]);
