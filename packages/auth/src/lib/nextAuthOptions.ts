@@ -17,7 +17,7 @@ import {
     withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
-import { isClientUserType, isInteractiveUserType } from "@alga-psa/types";
+import { isClientUserType, isInteractiveUserType, resolveProductCode, type ProductCode } from "@alga-psa/types";
 import { assertInteractiveUser } from "./assertInteractiveUser";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
@@ -206,7 +206,7 @@ async function checkTrackedSession(
  */
 interface TenantSubscriptionInfo {
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
@@ -280,7 +280,9 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
 
     return {
         plan: tenantRecord?.plan ?? undefined,
-        product_code: tenantRecord?.product_code === 'algadesk' ? 'algadesk' : 'psa',
+        // Unknown or unrecognised values resolve to psa (the same rule as every
+        // other product-code read), so the session can only ever carry a known product.
+        product_code: resolveProductCode(tenantRecord?.product_code).productCode,
         addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
@@ -718,7 +720,7 @@ interface ExtendedUser {
     contactId?: string;
     authFailure?: OAuthMappingFailure;
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -2409,7 +2411,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
