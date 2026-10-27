@@ -102,8 +102,8 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="algadesk"
         needsOnboarding={false}
         initialSidebarCollapsed={false}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>algadesk content</div>
       </MspLayoutClient>,
     );
@@ -120,8 +120,8 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="psa"
         needsOnboarding={false}
         initialSidebarCollapsed={false}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>psa content</div>
       </MspLayoutClient>,
     );
@@ -137,8 +137,8 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="psa"
         needsOnboarding={true}
         initialSidebarCollapsed={false}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>psa content</div>
       </MspLayoutClient>,
     );
@@ -222,8 +222,8 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>psa content</div>
       </MspLayoutClient>,
     );
@@ -255,8 +255,8 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>psa content</div>
       </MspLayoutClient>
     );
@@ -285,8 +285,8 @@ describe('MspLayoutClient product shell behavior', () => {
         onboardingResolvedServerSide={resolved}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>psa content</div>
       </MspLayoutClient>
     );
@@ -352,8 +352,8 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
-      
-        canRunOnboarding>
+        canRunOnboarding
+      >
         <div>onboarding content</div>
       </MspLayoutClient>,
     );
