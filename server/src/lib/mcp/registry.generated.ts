@@ -44519,7 +44519,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "required": false,
         "schema": {
           "type": "string",
-          "description": "ISO 8601 date or date-time; entries starting at or after."
+          "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
         }
       },
       {
@@ -44528,7 +44528,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "required": false,
         "schema": {
           "type": "string",
-          "description": "ISO 8601 date or date-time; entries ending at or before."
+          "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
         }
       },
       {
@@ -44644,7 +44644,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/search",
     "displayName": "Search schedules",
     "summary": "Search schedules",
-    "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
+    "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time; a date-only end_date covers that whole UTC day) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
     "tags": [
       "Work Management v1"
     ],
@@ -44672,7 +44672,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "required": false,
         "schema": {
           "type": "string",
-          "description": "ISO 8601 date or date-time; entries starting at or after."
+          "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
         }
       },
       {
@@ -44681,7 +44681,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "required": false,
         "schema": {
           "type": "string",
-          "description": "ISO 8601 date or date-time; entries ending at or before."
+          "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
         }
       },
       {
