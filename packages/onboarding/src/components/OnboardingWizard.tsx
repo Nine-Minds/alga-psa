@@ -24,7 +24,8 @@ import {
   configureTicketing,
   completeOnboarding,
   validateOnboardingDefaults,
-  saveOnboardingStepPosition
+  saveOnboardingStepPosition,
+  type TeamMemberNotCreated,
 } from '../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { updateTenantDefaultLocaleAction } from '@alga-psa/tenancy/actions';
@@ -231,22 +232,31 @@ export function OnboardingWizard({
 
           if (newMembers.length > 0) {
             const teamResult = await addTeamMembers(newMembers);
-            if (!teamResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
-                defaultValue: 'Failed to add team members'
-              }) }));
-              return false;
-            }
-            
-            // Track created team member emails
-            if (teamResult.data?.created && teamResult.data.created.length > 0) {
-              const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
+
+            // Members created in a partial batch are done even when others
+            // failed, so a retry after fixing the rest does not recreate them.
+            const createdNow: string[] = teamResult.data?.created ?? [];
+            if (createdNow.length > 0) {
+              const allCreated = [...new Set([...existingEmails, ...createdNow])];
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
-              
-              // Show warning if some users were skipped
-              if (teamResult.data.message) {
-                setErrors(prev => ({ ...prev, [stepIndex]: teamResult.data.message }));
-              }
+            }
+
+            if (!teamResult.success) {
+              // Name every member that was not created and why; the step
+              // stays put until each one is fixed or removed.
+              const notCreated: TeamMemberNotCreated[] = teamResult.data?.notCreated ?? [];
+              const message = notCreated.length > 0
+                ? [
+                    t('onboardingWizard.errors.teamMembersNotCreated', {
+                      defaultValue: 'These team members were not created. Fix or remove each one before continuing:'
+                    }),
+                    ...notCreated.map(entry => `• ${entry.email}: ${entry.error}`),
+                  ].join('\n')
+                : teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
+                    defaultValue: 'Failed to add team members'
+                  });
+              setErrors(prev => ({ ...prev, [stepIndex]: message }));
+              return false;
             }
           }
           break;
@@ -632,7 +642,7 @@ export function OnboardingWizard({
 
       {errors[currentOriginalStepIndex] && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{errors[currentOriginalStepIndex]}</AlertDescription>
+          <AlertDescription className="whitespace-pre-line">{errors[currentOriginalStepIndex]}</AlertDescription>
         </Alert>
       )}
     </>

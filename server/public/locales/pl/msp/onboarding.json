@@ -42,6 +42,7 @@
       "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
       "addTeamMembers": "Nie udało się dodać członków zespołu",
       "unsentInvites": "Przed kontynuowaniem wyślij zaproszenie do każdego dodanego członka zespołu lub go usuń.",
+      "teamMembersNotCreated": "Ci członkowie zespołu nie zostali utworzeni. Przed kontynuowaniem popraw lub usuń każdego z nich:",
       "saveClient": "Nie udało się zapisać klienta",
       "addContact": "Nie udało się dodać kontaktu",
       "setupBilling": "Nie udało się skonfigurować fakturowania",

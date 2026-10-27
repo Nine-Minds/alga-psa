@@ -42,6 +42,7 @@
       "saveClientInfo": "No se pudo guardar la información del cliente",
       "addTeamMembers": "No se pudieron añadir los miembros del equipo",
       "unsentInvites": "Envíe la invitación a cada miembro del equipo que agregó, o elimínelo, antes de continuar.",
+      "teamMembersNotCreated": "Estos miembros del equipo no se crearon. Corrija o elimine cada uno antes de continuar:",
       "saveClient": "No se pudo guardar el cliente",
       "addContact": "No se pudo añadir el contacto",
       "setupBilling": "No se pudo configurar la facturación",

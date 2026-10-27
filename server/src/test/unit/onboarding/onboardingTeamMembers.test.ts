@@ -83,15 +83,40 @@ describe('wizard team member creation', () => {
     await expect(addSingleTeamMember(user, context, technician)).resolves.toEqual({ success: false, error: 'A user with this email already exists.' });
   });
 
-  it('stops at the seat limit and lists the members that did not fit', async () => {
+  it('reports each member the seat limit refused, and only those, as skipped for the limit', async () => {
     mocks.addUser
       .mockResolvedValueOnce({ success: true, user: { user_id: 'one' } })
+      .mockResolvedValueOnce({ success: false, code: 'LICENSE_LIMIT_REACHED', error: 'Limit reached.' })
+      .mockResolvedValueOnce({ success: false, code: 'EMAIL_ALREADY_EXISTS', error: 'Email in use.' })
       .mockResolvedValueOnce({ success: false, code: 'LICENSE_LIMIT_REACHED', error: 'Limit reached.' });
     const result = await addTeamMembers(user, context, [technician,
-      { ...technician, email: 'two@example.test' }, { ...technician, email: 'three@example.test' }]);
-    expect(result).toMatchObject({ success: true, data: { created: ['tom@example.test'],
-      skippedDueToLimit: ['two@example.test', 'three@example.test'] } });
-    expect(mocks.addUser).toHaveBeenCalledTimes(2);
+      { ...technician, email: 'two@example.test' }, { ...technician, email: 'three@example.test' },
+      { ...technician, email: 'four@example.test' }, { ...technician, email: 'five@example.test', password: undefined }]);
+    expect(result.success).toBe(false);
+    expect(result.data.created).toEqual(['tom@example.test']);
+    expect(result.data.notCreated).toEqual([
+      { email: 'two@example.test', reason: 'limit', error: 'Limit reached.' },
+      { email: 'three@example.test', reason: 'exists', error: 'Email in use.' },
+      { email: 'four@example.test', reason: 'limit', error: 'Limit reached.' },
+      { email: 'five@example.test', reason: 'failed', error: expect.stringMatching(/temporary password/) },
+    ]);
+    expect(result.error).toMatch(/^4 team member\(s\) were not created/);
+    // The member without a password never reaches addUser; every other one does.
+    expect(mocks.addUser).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not report a mixed batch as a success', async () => {
+    mocks.addUser
+      .mockResolvedValueOnce({ success: true, user: { user_id: 'one' } })
+      .mockResolvedValueOnce({ success: false, code: 'USER_CREATE_FAILED', error: 'Could not create user.' });
+    const result = await addTeamMembers(user, context, [technician, { ...technician, email: 'two@example.test' }]);
+    expect(result).toMatchObject({ success: false, data: { created: ['tom@example.test'],
+      notCreated: [{ email: 'two@example.test', reason: 'failed', error: 'Could not create user.' }] } });
+  });
+
+  it('reports a fully created batch as a success', async () => {
+    const result = await addTeamMembers(user, context, [technician, { ...technician, email: 'two@example.test' }]);
+    expect(result).toMatchObject({ success: true, data: { created: ['tom@example.test', 'two@example.test'], notCreated: [] } });
   });
 
   it('never stores temporary passwords in the onboarding progress', async () => {

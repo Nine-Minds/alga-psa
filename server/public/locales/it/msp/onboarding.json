@@ -42,6 +42,7 @@
       "saveClientInfo": "Impossibile salvare le informazioni del cliente",
       "addTeamMembers": "Impossibile aggiungere i membri del team",
       "unsentInvites": "Invia l’invito a ogni membro del team che hai aggiunto, oppure rimuovilo, prima di continuare.",
+      "teamMembersNotCreated": "Questi membri del team non sono stati creati. Correggi o rimuovi ciascuno prima di continuare:",
       "saveClient": "Impossibile salvare il cliente",
       "addContact": "Impossibile aggiungere il contatto",
       "setupBilling": "Impossibile configurare la fatturazione",

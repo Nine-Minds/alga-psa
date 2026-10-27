@@ -42,6 +42,7 @@
       "saveClientInfo": "Falha ao salvar informações do cliente",
       "addTeamMembers": "Falha ao adicionar membros da equipe",
       "unsentInvites": "Envie o convite para cada membro da equipe que você adicionou, ou remova-o, antes de continuar.",
+      "teamMembersNotCreated": "Estes membros da equipe não foram criados. Corrija ou remova cada um antes de continuar:",
       "saveClient": "Falha ao salvar o cliente",
       "addContact": "Falha ao adicionar contato",
       "setupBilling": "Falha ao configurar o faturamento",

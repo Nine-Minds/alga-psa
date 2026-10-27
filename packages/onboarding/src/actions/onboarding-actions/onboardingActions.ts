@@ -336,6 +336,19 @@ export const addSingleTeamMember = withAuth(async (
   }
 });
 
+/** A member the batch did not create, and why. Never carries the password. */
+export interface TeamMemberNotCreated {
+  email: string;
+  reason: 'exists' | 'limit' | 'failed';
+  error: string;
+}
+
+/**
+ * Creates every member it can and reports each one it could not. The result
+ * is a success only when all of them were created: a partial batch returns
+ * success false with the created emails and the per-member reasons in data,
+ * so no caller can mistake it for a finished step.
+ */
 export const addTeamMembers = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -345,51 +358,37 @@ export const addTeamMembers = withAuth(async (
   try {
     const roleIds = await mspRoleIds(tenant);
     const created: string[] = [];
-    const alreadyExists: string[] = [];
-    const failed: Array<{ member: Omit<TeamMember, 'password'>; error: string }> = [];
-    const skippedDueToLimit: string[] = [];
+    const notCreated: TeamMemberNotCreated[] = [];
 
+    // Every member is attempted on its own: a seat-limit refusal for one says
+    // nothing about the next (it may already exist, or lack a password), and
+    // addUser re-checks the limit for each.
     for (const member of members) {
-      // Once the seat limit refuses one member, the rest cannot fit either.
-      if (skippedDueToLimit.length) { skippedDueToLimit.push(member.email); continue; }
       const outcome = await createTeamMember(member, roleIds);
       if (outcome.status === 'created') created.push(member.email);
-      else if (outcome.status === 'exists') alreadyExists.push(member.email);
-      else if (outcome.status === 'limit') {
-        if (!created.length) return { success: false, error: outcome.error };
-        skippedDueToLimit.push(member.email);
-      } else {
-        const { password: _password, ...withoutPassword } = member;
-        failed.push({ member: withoutPassword, error: outcome.error });
-      }
+      else notCreated.push({ email: member.email, reason: outcome.status, error: outcome.error });
     }
 
-    if (failed.length && !created.length) return { success: false, error: failed[0].error };
-
-    // Progress is stored as tenant data: never keep the temporary passwords.
-    const { knex } = await createTenantKnex();
-    await withTransaction(knex, (trx: Knex.Transaction) => persistTenantOnboardingProgress(trx, tenant, {
-      teamMembers: members.filter(m => created.includes(m.email))
-        .map(({ firstName, lastName, email, role }) => ({ firstName, lastName, email, role })),
-    }));
+    // A batch where nothing was created leaves the stored progress alone.
+    if (created.length || !notCreated.length) {
+      // Progress is stored as tenant data: never keep the temporary passwords.
+      const { knex } = await createTenantKnex();
+      await withTransaction(knex, (trx: Knex.Transaction) => persistTenantOnboardingProgress(trx, tenant, {
+        teamMembers: members.filter(m => created.includes(m.email))
+          .map(({ firstName, lastName, email, role }) => ({ firstName, lastName, email, role })),
+      }));
+    }
 
     revalidatePath('/msp/onboarding');
 
-    let message: string | undefined = undefined;
-    if (skippedDueToLimit.length > 0) {
-      message = `License limit reached. ${created.length} user(s) created, ${skippedDueToLimit.length} skipped: ${skippedDueToLimit.join(', ')}`;
-    }
     const usage = await getLicenseUsage(tenant);
+    const data = { created, notCreated, licenseStatus: { current: usage.used, limit: usage.limit } };
+    if (!notCreated.length) return { success: true, data };
     return {
-      success: true,
-      data: {
-        created,
-        alreadyExists,
-        failed,
-        skippedDueToLimit,
-        licenseStatus: { current: usage.used, limit: usage.limit },
-        message
-      }
+      success: false,
+      error: `${notCreated.length} team member(s) were not created: `
+        + notCreated.map(entry => `${entry.email} (${entry.error})`).join('; '),
+      data,
     };
   } catch (error) {
     console.error('Error adding team members:', error);

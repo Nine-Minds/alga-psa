@@ -42,6 +42,7 @@
       "saveClientInfo": "Klantinfo opslaan mislukt",
       "addTeamMembers": "Teamleden toevoegen mislukt",
       "unsentInvites": "Verstuur de uitnodiging voor elk teamlid dat u hebt toegevoegd, of verwijder het, voordat u verdergaat.",
+      "teamMembersNotCreated": "Deze teamleden zijn niet aangemaakt. Corrigeer of verwijder elk teamlid voordat u verdergaat:",
       "saveClient": "Klant opslaan mislukt",
       "addContact": "Contact toevoegen mislukt",
       "setupBilling": "Facturatie instellen mislukt",
