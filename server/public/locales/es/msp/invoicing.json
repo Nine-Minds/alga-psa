@@ -323,6 +323,21 @@
       "any": "cualquiera",
       "clear": "Limpiar",
       "countSummary": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
+    },
+    "lateTime": {
+      "title": "Tiempo por horas aprobado tarde",
+      "description": "Este tiempo se aprobó después de emitir la factura de su período de servicio. Las entradas pendientes de facturar se añaden una sola vez a la próxima factura, marcadas como tiempo tardío. Las entradas fuera del período de revisión no se facturan.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Técnico",
+        "service": "Servicio",
+        "workDate": "Fecha de trabajo",
+        "hours": "Horas",
+        "closedPeriod": "Período de servicio cerrado",
+        "status": "Estado"
+      },
+      "nextInvoice": "Se factura en la próxima factura",
+      "outsideLookback": "Fuera del período de revisión — no se factura"
     }
   },
   "manualInvoices": {

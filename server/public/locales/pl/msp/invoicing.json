@@ -343,6 +343,21 @@
       "any": "dowolne",
       "clear": "Wyczyść",
       "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "lateTime": {
+      "title": "Późno zatwierdzony czas godzinowy",
+      "description": "Ten czas został zatwierdzony po wystawieniu faktury za jego okres usługi. Wpisy oczekujące na rozliczenie są jednorazowo dodawane do następnej faktury i oznaczane jako czas z opóźnieniem. Wpisy spoza okresu wstecznego nie są rozliczane.",
+      "columns": {
+        "client": "Klient",
+        "technician": "Technik",
+        "service": "Usługa",
+        "workDate": "Data pracy",
+        "hours": "Godziny",
+        "closedPeriod": "Zamknięty okres usługi",
+        "status": "Status"
+      },
+      "nextInvoice": "Zostanie rozliczony na następnej fakturze",
+      "outsideLookback": "Poza okresem wstecznym — nie rozliczono"
     }
   },
   "manualInvoices": {
