@@ -6,10 +6,14 @@ import { FileStoreModel } from '@alga-psa/storage/models/storage';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 /**
- * Schema-drift guard (D1/D2). Code reads and writes columns that no migration
+ * Schema-drift guard (D1). Code reads and writes columns that no migration
  * used to create. These tests go through the real model against a migrated
  * database and read the row back with a separate query, so a missing column or
  * a model that drops the value fails here (a mock assertion would not).
+ *
+ * The D2 guard (stripe_subscriptions, an EE table) lives in the enterprise
+ * integration lane: ee/server/src/__tests__/integration/
+ * schemaDrift.stripeSubscriptionItemId.integration.test.ts.
  */
 let conn: Knex;
 const tenant = randomUUID();
@@ -58,14 +62,5 @@ describe('external_files.metadata (D1)', () => {
     await runWithTenant(tenant, () => FileStoreModel.updateMetadata(conn, created.file_id, { audited: true }));
 
     expect((await readBack(created.file_id)).metadata).toEqual({ audited: true });
-  });
-});
-
-describe('stripe_subscriptions.stripe_subscription_item_id (D2)', () => {
-  it('exists on a freshly migrated schema', async (ctx) => {
-    // stripe_subscriptions is created by an EE migration; a CE-only database
-    // (no TEST_MIGRATIONS_DIR overlay) legitimately has no such table.
-    if (!(await conn.schema.hasTable('stripe_subscriptions'))) ctx.skip();
-    expect(await conn.schema.hasColumn('stripe_subscriptions', 'stripe_subscription_item_id')).toBe(true);
   });
 });
