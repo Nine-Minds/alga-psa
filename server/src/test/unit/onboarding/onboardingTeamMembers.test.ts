@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     mocks.saved = { ...mocks.saved, ...JSON.parse(JSON.stringify(patch)) };
   }),
   pendingInvitations: 0,
+  revalidatePath: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -43,7 +44,7 @@ vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ cre
 vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
   getLicenseUsage: vi.fn(async () => ({ limit: 3, used: 1 })),
 }));
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
 
 import { addSingleTeamMember, addTeamMembers, getOnboardingLicenseUsage }
   from '../../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions';
@@ -57,6 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.pendingInvitations = 0;
   mocks.saved = {};
+  mocks.revalidatePath.mockReset();
   mocks.addUser.mockResolvedValue({ success: true, user: { user_id: 'new' } });
 });
 
@@ -213,6 +215,25 @@ describe('bookkeeping after a team member is created', () => {
     expect(result).toMatchObject({ success: false, data: { created: ['tom@example.test'],
       notCreated: [{ email: 'two@example.test', reason: 'failed' }] } });
     expect(mocks.saved.createdTeamMemberEmails).toEqual(['tom@example.test']);
+  });
+
+  it('still reports created members when revalidating the page throws', async () => {
+    mocks.revalidatePath.mockImplementation(() => { throw new Error('static generation store missing'); });
+    await expect(addSingleTeamMember(user, context, technician)).resolves.toMatchObject({
+      success: true, data: { created: 'tom@example.test' } });
+    await expect(addTeamMembers(user, context, [{ ...technician, email: 'two@example.test' }])).resolves.toMatchObject({
+      success: true, data: { created: ['two@example.test'] } });
+  });
+
+  it('creates and records a padded, capitalised address trimmed and lower-cased', async () => {
+    await addTeamMembers(user, context, [{ ...technician, email: '  Pad@Example.TEST ' }]);
+    expect(mocks.addUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'pad@example.test' }));
+    expect(mocks.saved.createdTeamMemberEmails).toEqual(['pad@example.test']);
+    expect((mocks.saved.teamMembers as Array<{ email: string }>)[0].email).toBe('pad@example.test');
+
+    await expect(addSingleTeamMember(user, context, { ...technician, email: ' Row@Example.test' })).resolves.toMatchObject({
+      success: true, data: { created: 'row@example.test' } });
+    expect(mocks.addUser).toHaveBeenLastCalledWith(expect.objectContaining({ email: 'row@example.test' }));
   });
 
   it('reports no progress error when the write succeeds', async () => {

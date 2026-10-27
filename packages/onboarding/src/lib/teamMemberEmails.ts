@@ -1,8 +1,11 @@
 /**
- * The one rule for matching a team member's email in onboarding: trimmed and
- * lower-cased, the same as internal sign-in identities are stored. Saved
- * progress, the wizard's guard and the team step all compare through it, so
- * `Dana@x.com` and `dana@x.com` are one member everywhere.
+ * The one rule for a team member's email in onboarding: trimmed and
+ * lower-cased. Saved progress, the wizard's guard and the team step compare
+ * through it, so `Dana@x.com` and `dana@x.com` are one member everywhere.
+ *
+ * addUser itself only lower-cases (it does not trim), so the onboarding team
+ * actions apply this rule before calling it: an account they create is stored
+ * under exactly this key, and the address recorded in progress names it.
  */
 export function teamMemberEmailKey(email: string): string {
   return email.trim().toLowerCase();

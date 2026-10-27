@@ -412,6 +412,25 @@ async function tryRecordCreatedTeamMembers(tenant: string, members: TeamMember[]
   }
 }
 
+function tryRevalidateOnboarding(): void {
+  try {
+    revalidatePath('/msp/onboarding');
+  } catch (error) {
+    console.error('Error revalidating the onboarding page after creating team members:', error);
+  }
+}
+
+/**
+ * The team actions' own copy of the member with its email trimmed and
+ * lower-cased (teamMemberEmailKey). addUser lower-cases but does not trim, and
+ * changing that is out of this card's scope; normalizing here means the wizard
+ * never creates an account whose address has surrounding spaces, and the
+ * address recorded in progress is exactly the one stored on the user.
+ */
+function withNormalizedEmail(member: TeamMember): TeamMember {
+  return { ...member, email: teamMemberEmailKey(member.email ?? '') };
+}
+
 async function tryLicenseStatus(tenant: string): Promise<{ current: number; limit: number | null } | undefined> {
   try {
     const usage = await onboardingSeatUsage(tenant);
@@ -425,21 +444,24 @@ async function tryLicenseStatus(tenant: string): Promise<{ current: number; limi
 export const addSingleTeamMember = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-  member: TeamMember
+  submitted: TeamMember
 ): Promise<OnboardingActionResult> => {
   if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  const member = withNormalizedEmail(submitted);
+  let outcome: TeamMemberOutcome;
   try {
-    const outcome = await createTeamMember(member, await mspRoleIds(tenant));
-    if (outcome.status !== 'created') return { success: false, error: outcome.error };
-    // The user exists from here on; nothing below may turn that into a failure.
-    const progressError = await tryRecordCreatedTeamMembers(tenant, [member]);
-    const licenseStatus = await tryLicenseStatus(tenant);
-    revalidatePath('/msp/onboarding');
-    return { success: true, data: { created: member.email, licenseStatus, progressError } };
+    outcome = await createTeamMember(member, await mspRoleIds(tenant));
   } catch (error) {
     console.error('Error adding single team member:', error);
     return { success: false, error: onboardingActionErrorMessage(error, 'Failed to create team member') };
   }
+  if (outcome.status !== 'created') return { success: false, error: outcome.error };
+  // The user exists from here on. Everything below is non-fatal by
+  // construction, outside any catch that could report the create as failed.
+  const progressError = await tryRecordCreatedTeamMembers(tenant, [member]);
+  const licenseStatus = await tryLicenseStatus(tenant);
+  tryRevalidateOnboarding();
+  return { success: true, data: { created: member.email, licenseStatus, progressError } };
 });
 
 /** A member the batch did not create, and why. Never carries the password. */
@@ -458,49 +480,54 @@ export interface TeamMemberNotCreated {
 export const addTeamMembers = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-  members: TeamMember[]
+  submitted: TeamMember[]
 ): Promise<OnboardingActionResult> => {
   if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  const members = submitted.map(withNormalizedEmail);
+  // The only step that can fail the whole batch runs before any user exists.
+  let roleIds: Map<string, string>;
   try {
-    const roleIds = await mspRoleIds(tenant);
-    const created: string[] = [];
-    const notCreated: TeamMemberNotCreated[] = [];
-
-    // Every member is attempted on its own: a seat-limit refusal for one says
-    // nothing about the next (it may already exist, or lack a password), and
-    // addUser re-checks the limit for each.
-    // A throw for one member is that member's failure: it must not discard
-    // the members already created earlier in the loop.
-    for (const member of members) {
-      try {
-        const outcome = await createTeamMember(member, roleIds);
-        if (outcome.status === 'created') created.push(member.email);
-        else notCreated.push({ email: member.email, reason: outcome.status, error: outcome.error });
-      } catch (error) {
-        console.error(`Error creating team member ${member.email}:`, error);
-        notCreated.push({ email: member.email, reason: 'failed', error: onboardingActionErrorMessage(error, 'Failed to create team member') });
-      }
-    }
-
-    // A batch where nothing was created leaves the stored progress alone.
-    const progressError = created.length || !notCreated.length
-      ? await tryRecordCreatedTeamMembers(tenant, members.filter(m => created.includes(m.email)))
-      : undefined;
-    const licenseStatus = await tryLicenseStatus(tenant);
-    revalidatePath('/msp/onboarding');
-
-    const data = { created, notCreated, licenseStatus, progressError };
-    if (!notCreated.length) return { success: true, data };
-    return {
-      success: false,
-      error: `${notCreated.length} team member(s) were not created: `
-        + notCreated.map(entry => `${entry.email} (${entry.error})`).join('; '),
-      data,
-    };
+    roleIds = await mspRoleIds(tenant);
   } catch (error) {
     console.error('Error adding team members:', error);
     return { success: false, error: onboardingActionErrorMessage(error, 'Failed to add team members') };
   }
+
+  const created: string[] = [];
+  const notCreated: TeamMemberNotCreated[] = [];
+
+  // Every member is attempted on its own: a seat-limit refusal for one says
+  // nothing about the next (it may already exist, or lack a password), and
+  // addUser re-checks the limit for each. A throw for one member is that
+  // member's failure: it must not discard the members created before it.
+  for (const member of members) {
+    try {
+      const outcome = await createTeamMember(member, roleIds);
+      if (outcome.status === 'created') created.push(member.email);
+      else notCreated.push({ email: member.email, reason: outcome.status, error: outcome.error });
+    } catch (error) {
+      console.error(`Error creating team member ${member.email}:`, error);
+      notCreated.push({ email: member.email, reason: 'failed', error: onboardingActionErrorMessage(error, 'Failed to create team member') });
+    }
+  }
+
+  // Users may exist from here on. Everything below is non-fatal by
+  // construction, outside any catch that could report them as not created.
+  // A batch where nothing was created leaves the stored progress alone.
+  const progressError = created.length || !notCreated.length
+    ? await tryRecordCreatedTeamMembers(tenant, members.filter(m => created.includes(m.email)))
+    : undefined;
+  const licenseStatus = await tryLicenseStatus(tenant);
+  tryRevalidateOnboarding();
+
+  const data = { created, notCreated, licenseStatus, progressError };
+  if (!notCreated.length) return { success: true, data };
+  return {
+    success: false,
+    error: `${notCreated.length} team member(s) were not created: `
+      + notCreated.map(entry => `${entry.email} (${entry.error})`).join('; '),
+    data,
+  };
 });
 
 export const createClient = withAuth(async (
