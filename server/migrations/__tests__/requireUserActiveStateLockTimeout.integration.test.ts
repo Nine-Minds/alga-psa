@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
-import { randomUUID } from 'node:crypto';
-import knex, { type Knex } from 'knex';
-import { getSecret } from '../../src/lib/utils/getSecret';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { Knex } from 'knex';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbConfig';
 
 // withLockRetry applies a 2s lock_timeout with SET LOCAL, which survives
 // RELEASE SAVEPOINT. It must put the transaction's own value back, otherwise
@@ -14,28 +16,36 @@ const { withLockRetry } = require('../20261026090000_require_user_active_state.c
   withLockRetry: (knex: Knex, statement: string | ((knex: Knex) => Promise<unknown>)) => Promise<unknown>;
 };
 
+// A scratch database recreated on every run, holding one lockable table owned
+// by the app role (ALTER TABLE needs ownership). Nothing touches the shared
+// test database, so a stale run cannot leave a table behind there.
+const DB_NAME = 'test_db_lock_retry_scope';
+const scratch = 'lock_retry_scratch';
 let db: Knex;
-const scratch = `lock_timeout_scratch_${randomUUID().replaceAll('-', '')}`;
+let scratchMigrationsDir: string;
+let scratchSeedsDir: string;
 
 const lockTimeout = async (conn: Knex): Promise<string> =>
   (await conn.raw('SHOW lock_timeout')).rows[0].lock_timeout;
 
 beforeAll(async () => {
-  // withLockRetry needs a real connection and a lockable table, not the app
-  // schema, so this runs as the app user against one scratch table (dropped
-  // below) rather than a freshly migrated database.
-  db = knex({ client: 'pg', connection: {
-    host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5432),
-    user: process.env.DB_USER_SERVER || 'app_user',
-    password: await getSecret('db_password_server', 'DB_PASSWORD_SERVER', ''),
-    database: process.env.DB_NAME_SERVER || process.env.DB_NAME || 'postgres',
-  }, pool: { min: 0, max: 4 } });
-  await db.raw(`CREATE TABLE ${scratch} (id int)`);
-}, 60_000);
+  wireLocalTestDbEnv();
+  scratchMigrationsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lock-retry-migrations-'));
+  scratchSeedsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lock-retry-seeds-'));
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  fs.writeFileSync(path.join(scratchMigrationsDir, '20261026000000_lock_retry_fixture.cjs'), `exports.up = async (knex) => {
+    await knex.raw('CREATE TABLE ${scratch} (id int)');
+    await knex.raw('ALTER TABLE ${scratch} OWNER TO ${appUser}');
+  };
+  exports.down = async (knex) => { await knex.raw('DROP TABLE IF EXISTS ${scratch}'); };
+`);
+  db = await createTestDbConnection({ databaseName: DB_NAME, migrationsDir: scratchMigrationsDir, seedsDir: scratchSeedsDir, runSeeds: false });
+}, 300_000);
 
 afterAll(async () => {
-  await db?.raw(`DROP TABLE IF EXISTS ${scratch}`).catch(() => undefined);
   await db?.destroy().catch(() => undefined);
+  if (scratchMigrationsDir) fs.rmSync(scratchMigrationsDir, { recursive: true, force: true });
+  if (scratchSeedsDir) fs.rmSync(scratchSeedsDir, { recursive: true, force: true });
 });
 
 describe('withLockRetry scopes its lock_timeout', () => {
