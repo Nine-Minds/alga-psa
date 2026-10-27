@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 import { PRODUCT_CODES, PRODUCT_NAV_DESTINATIONS, PRODUCT_NAV_TARGETS, type ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '../../../lib/productSurfaceRegistry';
@@ -48,4 +51,37 @@ describe('product navigation destinations', () => {
       });
     }
   }
+});
+
+/**
+ * `productNavHref()` and the `*_SETUP_ENTRY_PATH` aliases point at
+ * `/msp/go/<target>`, resolved by `server/src/app/msp/go/[target]/route.ts`.
+ * L0a ships the table but not the dispatcher (no link uses it yet). The first
+ * production file that renders one of these links must ship the dispatcher in
+ * the same change, or every such link is a 404.
+ */
+describe('/msp/go dispatcher', () => {
+  const repo = path.resolve(__dirname, '../../../../..');
+  const dispatcher = path.join(repo, 'server/src/app/msp/go/[target]/route.ts');
+  const LINK_EXPORTS = /\b(productNavHref|PROVIDER_SETUP_ENTRY_PATH|MAILBOX_SETUP_ENTRY_PATH|CALENDAR_SETUP_ENTRY_PATH)\b|['"`]\/msp\/go\//;
+
+  it('no production code renders a /msp/go link unless the dispatcher route exists', () => {
+    let listed = '';
+    try {
+      listed = execFileSync('git', ['grep', '-lE', LINK_EXPORTS.source, '--', 'server/src', 'packages', 'ee/server/src', 'shared'], {
+        cwd: repo,
+        encoding: 'utf8',
+      });
+    } catch (error) {
+      if ((error as { status?: number }).status !== 1) throw error; // 1 = no match
+    }
+    const files = listed
+      .split('\n')
+      .filter(Boolean)
+      .filter((f) => !/\.(test|spec)\.[tj]sx?$|(^|\/)__tests__\/|(^|\/)test\//.test(f))
+      .filter((f) => f !== 'packages/types/src/constants/productRoutes.ts' && f !== 'packages/types/src/constants/index.ts');
+    if (!existsSync(dispatcher)) {
+      expect(files, `these files render /msp/go links but ${path.relative(repo, dispatcher)} does not exist`).toEqual([]);
+    }
+  });
 });

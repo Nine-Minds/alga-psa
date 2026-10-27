@@ -15,9 +15,11 @@ import { resolveProductCode } from './productCodes';
  * Microsoft Entra application and then sent it to `/msp/settings/integrations`,
  * which the co-managed product boundary denies.
  *
- * So links point at `/msp/go/<target>` and
- * `server/src/app/msp/go/[target]/route.ts` resolves the tenant's product
- * server-side and redirects. This is navigation only: it grants nothing, every
+ * So links point at `/msp/go/<target>` and a dispatcher route
+ * (`server/src/app/msp/go/[target]/route.ts`) resolves the tenant's product
+ * server-side and redirects. The dispatcher is not shipped yet: the first change
+ * that renders one of these links ships it too (pinned by
+ * `productNavDestinations.contract.test.ts`). This is navigation only: it grants nothing, every
  * destination keeps its own product route rule, and the server actions behind
  * each page keep their own RBAC and tenant-ownership guards.
  */
@@ -29,7 +31,7 @@ export function isProductNavTarget(value: unknown): value is ProductNavTarget {
   return typeof value === 'string' && PRODUCT_NAV_TARGETS.includes(value as ProductNavTarget);
 }
 
-/** The link to render. Resolved by the dispatcher route, never rendered as-is. */
+/** The link to render. Resolved by the dispatcher route (not shipped yet; see above). */
 export function productNavHref(target: ProductNavTarget): string {
   return `/msp/go/${target}`;
 }
