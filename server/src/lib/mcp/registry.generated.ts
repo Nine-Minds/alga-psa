@@ -44507,7 +44507,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules",
     "displayName": "List schedule entries",
     "summary": "List schedule entries",
-    "description": "Lists schedule entries via ApiTimeSheetController.listScheduleEntries().",
+    "description": "Lists schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns every entry visible to the caller under shared-calendar rules (unpaginated), filtered by start_date, end_date (ISO 8601 date or date-time) and user_id. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.",
     "tags": [
       "Work Management v1"
     ],
@@ -44644,7 +44644,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/search",
     "displayName": "Search schedules",
     "summary": "Search schedules",
-    "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time; a date-only end_date covers that whole UTC day) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
+    "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.",
     "tags": [
       "Work Management v1"
     ],
