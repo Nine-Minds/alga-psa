@@ -123,6 +123,23 @@ describe('consumer connect failures surface on the provider card', () => {
     expect(providerRow().error_message).toBeNull();
   });
 
+  it('skips the clearing lookup for a provider whose config reads healthy', async () => {
+    const { connectMicrosoftAdapterForFetch } = await import('../unifiedInboundEmailQueueJobProcessor');
+    Object.assign(providerRow(), {
+      status: 'error',
+      error_message: 'Inbound message fetch failed: stale red card',
+    });
+
+    // The job read `connected` moments earlier, so the healthy fast path runs
+    // and leaves the row for the next message to clear.
+    await connectMicrosoftAdapterForFetch(
+      { connect: async () => undefined } as any,
+      { ...PROVIDER, connection_status: 'connected' },
+    );
+
+    expect(providerRow().status).toBe('error');
+  });
+
   it('leaves an error written by the subscription path alone', async () => {
     const { connectMicrosoftAdapterForFetch } = await import('../unifiedInboundEmailQueueJobProcessor');
     Object.assign(providerRow(), { status: 'error', error_message: 'Webhook subscription renewal failed' });

@@ -515,7 +515,7 @@ async function clearConsumerConnectFailure(providerId: string, tenant: string): 
  */
 export async function connectMicrosoftAdapterForFetch(
   adapter: Pick<MicrosoftGraphAdapter, 'connect'>,
-  config: Pick<EmailProviderConfig, 'id' | 'tenant'>,
+  config: Pick<EmailProviderConfig, 'id' | 'tenant'> & Partial<Pick<EmailProviderConfig, 'connection_status'>>,
 ): Promise<void> {
   try {
     await adapter.connect();
@@ -531,7 +531,12 @@ export async function connectMicrosoftAdapterForFetch(
     // The queue retry policy stays authoritative for the attempt itself.
     throw error;
   }
-  await clearConsumerConnectFailure(config.id, config.tenant);
+  // Only a card already showing red can need clearing, so the healthy path —
+  // every message of a working mailbox — skips the lookup. A card turned red
+  // after this job read its config clears on the next message instead.
+  if (config.connection_status === undefined || config.connection_status === 'error') {
+    await clearConsumerConnectFailure(config.id, config.tenant);
+  }
 }
 
 export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
