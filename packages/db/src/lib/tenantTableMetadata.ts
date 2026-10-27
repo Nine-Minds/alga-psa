@@ -574,6 +574,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ticket_checklist_items: { scope: 'tenant' },
   ticket_entity_links: { scope: 'tenant' },
   ticket_materials: { scope: 'tenant' },
+  ticket_fixed_fee_services: { scope: 'tenant' },
   ticket_resources: { scope: 'tenant' },
   time_entries: { scope: 'tenant' },
   time_entry_change_requests: { scope: 'tenant' },

@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Tjänster med fast avgift",
+    "add": "Lägg till tjänst",
+    "service": "Tjänst",
+    "selectService": "Sök tjänster med fast avgift",
+    "currency": "Valuta",
+    "quantity": "Antal",
+    "decreaseQuantity": "Minska antal",
+    "increaseQuantity": "Öka antal",
+    "rate": "Styckpris",
+    "total": "Totalt",
+    "description": "Beskrivning",
+    "loading": "Laddar tjänster med fast avgift…",
+    "empty": "Inga tjänster med fast avgift har lagts till.",
+    "billed": "Fakturerad",
+    "unbilled": "Ofakturerad",
+    "remove": "Ta bort tjänst",
+    "confirmRemove": "Ta bort denna ofakturerade tjänst med fast avgift från ärendet?",
+    "errors": {
+      "load": "Det gick inte att ladda tjänster med fast avgift. Försök igen.",
+      "prices": "Det gick inte att ladda katalogpriser. Försök igen.",
+      "add": "Det gick inte att lägga till denna tjänst med fast avgift. Försök igen.",
+      "remove": "Det gick inte att ta bort denna tjänst med fast avgift. Försök igen.",
+      "invalidInput": "Välj en tjänst, en valuta och ett positivt heltal som antal.",
+      "ticketMissing": "Ärendet finns inte längre. Uppdatera sidan och försök igen.",
+      "serviceInvalid": "Välj en aktiv tjänst med fast avgift.",
+      "priceInvalid": "Ett giltigt katalogpris krävs för denna valuta och detta antal.",
+      "cannotDelete": "Denna tjänstepost har redan fakturerats eller tagits bort. Uppdatera sidan och försök igen."
+    }
+  },
+  "chargeEdit": {
+    "title": "Redigera ärendeavgift",
+    "save": "Spara ändringar",
+    "edit": "Redigera avgift",
+    "errors": {
+      "save": "Det gick inte att spara denna avgift. Försök igen.",
+      "invalidInput": "Ange ett positivt heltal som antal och en beskrivning på högst 2 000 tecken.",
+      "notEditable": "Fakturerade eller borttagna poster kan inte redigeras. Uppdatera sidan och försök igen.",
+      "amountTooLarge": "Detta antal skulle överskrida det högsta tillåtna totalbeloppet.",
+      "serialized": "Material med serienummer måste behålla antal 1. Lägg till eller ta bort enskilda enheter i stället.",
+      "trackingChanged": "Lagerspårningen har ändrats sedan detta material lades till. Stäm av lagret innan du ändrar antalet.",
+      "locationInvalid": "Den ursprungliga lagerplatsen saknas eller är inkonsekvent. Stäm av detta material innan du ändrar antalet.",
+      "costCurrency": "Lagerkostnaderna använder olika valutor. Stäm av detta material innan du minskar antalet."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} fel:",
     "errorCount_other": "{{count}} fel:",

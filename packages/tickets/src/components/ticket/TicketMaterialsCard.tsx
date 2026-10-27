@@ -6,7 +6,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Trash2, Package, Loader2 } from 'lucide-react';
+import { Trash2, Package, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -27,6 +27,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { isStockConflictResult, type StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import type { ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
+import TicketChargeEditDialog from './TicketChargeEditDialog';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -70,6 +71,7 @@ export default function TicketMaterialsCard({
     listTicketMaterials,
     addTicketMaterial,
     deleteTicketMaterial,
+    updateTicketMaterial,
     searchServiceCatalogForPicker,
     getServicePrices,
     listAvailableStockUnitsForMaterial,
@@ -81,6 +83,9 @@ export default function TicketMaterialsCard({
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<ITicketMaterial | null>(null);
+
+  useEffect(() => { setEditingMaterial(null); }, [ticketId]);
 
   // Add form state
   const [selectedProductId, setSelectedProductId] = useState<string>('');
@@ -591,7 +596,7 @@ export default function TicketMaterialsCard({
                   </tr>
                 </thead>
                 <tbody>
-                  {materials.map((material) => (
+                  {materials.map((material, index) => (
                     <tr key={material.ticket_material_id} className="border-b last:border-0">
                       <td className="py-2">
                         <div>
@@ -621,6 +626,11 @@ export default function TicketMaterialsCard({
                         )}
                       </td>
                       <td className="py-2 text-right">
+                        {!material.is_billed && !readOnly && updateTicketMaterial && (
+                          <Button id={`${id}-edit-${index}-button`} variant="ghost" size="sm"
+                            data-material-id={material.ticket_material_id} aria-label={t('chargeEdit.edit')}
+                            onClick={() => setEditingMaterial(material)}><Pencil className="h-4 w-4" /></Button>
+                        )}
                         {!material.is_billed && !readOnly && (
                           <Button
                             {...withDataAutomationId({ id: `${id}-delete-${material.ticket_material_id}` })}
@@ -673,6 +683,16 @@ export default function TicketMaterialsCard({
           </div>
         )}
       </ContentCard>
+      {editingMaterial && !readOnly && updateTicketMaterial && (
+        <TicketChargeEditDialog key={editingMaterial.ticket_material_id} id={`${id}-edit-dialog`}
+          quantity={editingMaterial.quantity} description={editingMaterial.description}
+          onClose={() => setEditingMaterial(null)}
+          onSave={async (input) => {
+            const result = await updateTicketMaterial(editingMaterial.ticket_material_id, input);
+            if (!isReturnedActionError(result)) await loadMaterials();
+            return result;
+          }} />
+      )}
       <ConfirmationDialog
         id={`${id}-reserved-stock-confirm`}
         isOpen={reservedConflict !== null}

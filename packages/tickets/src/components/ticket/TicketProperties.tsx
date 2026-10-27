@@ -30,6 +30,7 @@ import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
+import TicketFixedFeeServicesCard from './TicketFixedFeeServicesCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import TicketTimeEntries from './TicketTimeEntries';
 import { TicketStopwatchControls } from './TicketStopwatchControls';
@@ -1352,6 +1353,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       />}
 
 
+      {dataSource.capabilities.fixedFeeServices && !hideMaterials && ticket.ticket_id && ticket.client_id && (
+        <TicketFixedFeeServicesCard ticketId={ticket.ticket_id} />
+      )}
       {!hideMaterials && ticket.ticket_id && ticket.client_id && (
         <TicketMaterialsCard
           ticketId={ticket.ticket_id}

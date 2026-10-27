@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Servizi a tariffa fissa",
+    "add": "Aggiungi servizio",
+    "service": "Servizio",
+    "selectService": "Cerca servizi a tariffa fissa",
+    "currency": "Valuta",
+    "quantity": "Quantità",
+    "decreaseQuantity": "Riduci quantità",
+    "increaseQuantity": "Aumenta quantità",
+    "rate": "Prezzo unitario",
+    "total": "Totale",
+    "description": "Descrizione",
+    "loading": "Caricamento dei servizi a tariffa fissa…",
+    "empty": "Nessun servizio a tariffa fissa aggiunto.",
+    "billed": "Fatturato",
+    "unbilled": "Non fatturato",
+    "remove": "Rimuovi servizio",
+    "confirmRemove": "Rimuovere dal ticket questo servizio a tariffa fissa non fatturato?",
+    "errors": {
+      "load": "Impossibile caricare i servizi a tariffa fissa. Riprova.",
+      "prices": "Impossibile caricare i prezzi del catalogo. Riprova.",
+      "add": "Impossibile aggiungere questo servizio a tariffa fissa. Riprova.",
+      "remove": "Impossibile rimuovere questo servizio a tariffa fissa. Riprova.",
+      "invalidInput": "Seleziona un servizio, una valuta e una quantità intera positiva.",
+      "ticketMissing": "Il ticket non esiste più. Aggiorna la pagina e riprova.",
+      "serviceInvalid": "Seleziona un servizio a tariffa fissa attivo.",
+      "priceInvalid": "È necessario un prezzo di catalogo valido per questa valuta e quantità.",
+      "cannotDelete": "Questa voce di servizio è già stata fatturata o rimossa. Aggiorna la pagina e riprova."
+    }
+  },
+  "chargeEdit": {
+    "title": "Modifica addebito del ticket",
+    "save": "Salva modifiche",
+    "edit": "Modifica addebito",
+    "errors": {
+      "save": "Impossibile salvare questo addebito. Riprova.",
+      "invalidInput": "Inserisci una quantità intera positiva e una descrizione di massimo 2.000 caratteri.",
+      "notEditable": "Le voci fatturate o rimosse non possono essere modificate. Aggiorna la pagina e riprova.",
+      "amountTooLarge": "Questa quantità supererebbe l’importo totale supportato.",
+      "serialized": "I materiali con numero di serie devono mantenere la quantità 1. Aggiungi o rimuovi singole unità.",
+      "trackingChanged": "Il monitoraggio delle scorte è cambiato dopo l’aggiunta di questo materiale. Riconcilia le scorte prima di modificare la quantità.",
+      "locationInvalid": "L’ubicazione di magazzino originale è mancante o incoerente. Riconcilia questo materiale prima di modificare la quantità.",
+      "costCurrency": "I costi di magazzino utilizzano valute diverse. Riconcilia questo materiale prima di ridurre la quantità."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} errore:",
     "errorCount_other": "{{count}} errori:",

@@ -478,6 +478,8 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Festgebühren-Services",
+    "excludedFixedFees": "Wegen abweichender Rechnungswährung ausgeschlossene Festgebühren-Serviceeinträge: {{count}}.",
     "currencyExcluded": "{{count}} Produkt(e) ausgeschlossen, da ihre Währung von {{currency}} abweicht.",
     "action": "Schnellrechnung",
     "title": "Dieses Ticket schnell abrechnen",

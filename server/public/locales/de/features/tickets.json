@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Festgebühren-Services",
+    "add": "Service hinzufügen",
+    "service": "Dienstleistung",
+    "selectService": "Festgebühren-Services suchen",
+    "currency": "Währung",
+    "quantity": "Menge",
+    "decreaseQuantity": "Menge verringern",
+    "increaseQuantity": "Menge erhöhen",
+    "rate": "Stückpreis",
+    "total": "Gesamt",
+    "description": "Beschreibung",
+    "loading": "Festgebühren-Services werden geladen…",
+    "empty": "Keine Festgebühren-Services hinzugefügt.",
+    "billed": "Abgerechnet",
+    "unbilled": "Nicht abgerechnet",
+    "remove": "Service entfernen",
+    "confirmRemove": "Diesen nicht abgerechneten Festgebühren-Service vom Ticket entfernen?",
+    "errors": {
+      "load": "Festgebühren-Services konnten nicht geladen werden. Bitte erneut versuchen.",
+      "prices": "Katalogpreise konnten nicht geladen werden. Bitte erneut versuchen.",
+      "add": "Dieser Festgebühren-Service konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
+      "remove": "Dieser Festgebühren-Service konnte nicht entfernt werden. Bitte erneut versuchen.",
+      "invalidInput": "Wählen Sie einen Service, eine Währung und eine positive ganzzahlige Menge.",
+      "ticketMissing": "Das Ticket existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceInvalid": "Wählen Sie einen aktiven Festgebühren-Service.",
+      "priceInvalid": "Für diese Währung und Menge ist ein gültiger Katalogpreis erforderlich.",
+      "cannotDelete": "Dieser Serviceeintrag wurde bereits abgerechnet oder entfernt. Aktualisieren Sie die Seite und versuchen Sie es erneut."
+    }
+  },
+  "chargeEdit": {
+    "title": "Ticketposition bearbeiten",
+    "save": "Änderungen speichern",
+    "edit": "Position bearbeiten",
+    "errors": {
+      "save": "Diese Position konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      "invalidInput": "Geben Sie eine positive ganzzahlige Menge und eine Beschreibung mit höchstens 2.000 Zeichen ein.",
+      "notEditable": "Abgerechnete oder entfernte Einträge können nicht bearbeitet werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "amountTooLarge": "Diese Menge würde den unterstützten Gesamtbetrag überschreiten.",
+      "serialized": "Materialien mit Seriennummer müssen die Menge 1 behalten. Fügen Sie stattdessen einzelne Einheiten hinzu oder entfernen Sie diese.",
+      "trackingChanged": "Die Bestandsverfolgung wurde nach dem Hinzufügen dieses Materials geändert. Gleichen Sie den Bestand ab, bevor Sie die Menge ändern.",
+      "locationInvalid": "Der ursprüngliche Lagerort fehlt oder ist uneinheitlich. Gleichen Sie dieses Material ab, bevor Sie die Menge ändern.",
+      "costCurrency": "Die Lagerkosten verwenden unterschiedliche Währungen. Gleichen Sie dieses Material ab, bevor Sie die Menge verringern."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} Fehler:",
     "errorCount_other": "{{count}} Fehler:",

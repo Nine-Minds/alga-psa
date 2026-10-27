@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Usługi z opłatą stałą",
+    "add": "Dodaj usługę",
+    "service": "Usługa",
+    "selectService": "Szukaj usług z opłatą stałą",
+    "currency": "Waluta",
+    "quantity": "Ilość",
+    "decreaseQuantity": "Zmniejsz ilość",
+    "increaseQuantity": "Zwiększ ilość",
+    "rate": "Cena jednostkowa",
+    "total": "Razem",
+    "description": "Opis",
+    "loading": "Ładowanie usług z opłatą stałą…",
+    "empty": "Nie dodano usług z opłatą stałą.",
+    "billed": "Zafakturowano",
+    "unbilled": "Niezafakturowane",
+    "remove": "Usuń usługę",
+    "confirmRemove": "Usunąć tę niezafakturowaną usługę z opłatą stałą ze zgłoszenia?",
+    "errors": {
+      "load": "Nie można wczytać usług z opłatą stałą. Spróbuj ponownie.",
+      "prices": "Nie można wczytać cen katalogowych. Spróbuj ponownie.",
+      "add": "Nie można dodać tej usługi z opłatą stałą. Spróbuj ponownie.",
+      "remove": "Nie można usunąć tej usługi z opłatą stałą. Spróbuj ponownie.",
+      "invalidInput": "Wybierz usługę, walutę i dodatnią całkowitą ilość.",
+      "ticketMissing": "Zgłoszenie już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "serviceInvalid": "Wybierz aktywną usługę z opłatą stałą.",
+      "priceInvalid": "Dla tej waluty i ilości wymagana jest prawidłowa cena katalogowa.",
+      "cannotDelete": "Ta pozycja usługi została już zafakturowana lub usunięta. Odśwież stronę i spróbuj ponownie."
+    }
+  },
+  "chargeEdit": {
+    "title": "Edytuj opłatę w zgłoszeniu",
+    "save": "Zapisz zmiany",
+    "edit": "Edytuj opłatę",
+    "errors": {
+      "save": "Nie można zapisać tej opłaty. Spróbuj ponownie.",
+      "invalidInput": "Wprowadź dodatnią całkowitą ilość i opis o długości do 2000 znaków.",
+      "notEditable": "Nie można edytować zafakturowanych ani usuniętych pozycji. Odśwież stronę i spróbuj ponownie.",
+      "amountTooLarge": "Ta ilość spowodowałaby przekroczenie obsługiwanej kwoty łącznej.",
+      "serialized": "Materiały z numerem seryjnym muszą zachować ilość 1. Dodaj lub usuń pojedyncze jednostki.",
+      "trackingChanged": "Śledzenie zapasów zmieniło się po dodaniu tego materiału. Uzgodnij stan zapasów przed zmianą ilości.",
+      "locationInvalid": "Pierwotna lokalizacja magazynowa nie istnieje lub jest niespójna. Uzgodnij ten materiał przed zmianą ilości.",
+      "costCurrency": "Koszty zapasów są w różnych walutach. Uzgodnij ten materiał przed zmniejszeniem ilości."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} błąd:",
     "errorCount_few": "{{count}} błędy:",

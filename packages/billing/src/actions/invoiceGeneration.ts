@@ -4219,7 +4219,7 @@ export async function createInvoiceFromBillingResultImpl(
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
     try {
       const billedAt = Temporal.Now.instant().toString();
-      const materialCharges = billingResult.charges.filter((charge): charge is IProductCharge => (
+      const materialCharges = scopedCharges.filter((charge): charge is IProductCharge => (
         charge.type === 'product'
         && Boolean((charge as IProductCharge).material_source_id)
         && Boolean((charge as IProductCharge).material_source_type)
@@ -4247,20 +4247,22 @@ export async function createInvoiceFromBillingResultImpl(
         }
       }
       if (ticketMaterialIds.length > 0) {
-        const uniqueTicketMaterialIds = [...new Set(ticketMaterialIds)];
-        const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
-          .where({ is_billed: false })
-          .whereIn('ticket_material_id', uniqueTicketMaterialIds)
-          .update({
-            is_billed: true,
-            billed_invoice_id: newInvoice!.invoice_id,
-            billed_at: billedAt,
-            updated_at: billedAt
-          });
-        if (updatedCount !== uniqueTicketMaterialIds.length) {
-          throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
+        for (const charge of materialCharges.filter((charge) => charge.material_source_type === 'ticket')
+          .sort((a, b) => a.material_source_id!.localeCompare(b.material_source_id!))) {
+          if (!charge.material_source_updated_at) throw new Error('Ticket material source version is required.');
+          const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
+            .where({
+              ticket_material_id: charge.material_source_id, is_billed: false,
+              updated_at: charge.material_source_updated_at,
+            })
+            .update({
+              is_billed: true, billed_invoice_id: newInvoice!.invoice_id,
+              billed_at: billedAt, updated_at: billedAt,
+            });
+          if (updatedCount !== 1) {
+            throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
+          }
         }
-
       }
     } catch (err) {
       if (!isMissingRelationError(err)) {

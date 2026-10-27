@@ -478,6 +478,8 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Services à frais fixes",
+    "excludedFixedFees": "Entrées de services à frais fixes exclues en raison d’une devise différente de celle de la facture : {{count}}.",
     "currencyExcluded": "{{count}} produit(s) exclus car leur devise diffère de {{currency}}.",
     "action": "Facture rapide",
     "title": "Facturer rapidement ce ticket",

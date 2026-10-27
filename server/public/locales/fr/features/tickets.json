@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Services à frais fixes",
+    "add": "Ajouter un service",
+    "service": "Service",
+    "selectService": "Rechercher des services à frais fixes",
+    "currency": "Devise",
+    "quantity": "Quantité",
+    "decreaseQuantity": "Diminuer la quantité",
+    "increaseQuantity": "Augmenter la quantité",
+    "rate": "Prix unitaire",
+    "total": "Total",
+    "description": "Description",
+    "loading": "Chargement des services à frais fixes…",
+    "empty": "Aucun service à frais fixes ajouté.",
+    "billed": "Facturé",
+    "unbilled": "Non facturé",
+    "remove": "Retirer le service",
+    "confirmRemove": "Retirer ce service à frais fixes non facturé du ticket ?",
+    "errors": {
+      "load": "Impossible de charger les services à frais fixes. Réessayez.",
+      "prices": "Impossible de charger les prix du catalogue. Réessayez.",
+      "add": "Impossible d’ajouter ce service à frais fixes. Réessayez.",
+      "remove": "Impossible de retirer ce service à frais fixes. Réessayez.",
+      "invalidInput": "Sélectionnez un service, une devise et une quantité entière positive.",
+      "ticketMissing": "Le ticket n’existe plus. Actualisez la page et réessayez.",
+      "serviceInvalid": "Sélectionnez un service à frais fixes actif.",
+      "priceInvalid": "Un prix de catalogue valide est requis pour cette devise et cette quantité.",
+      "cannotDelete": "Cette entrée de service a déjà été facturée ou retirée. Actualisez la page et réessayez."
+    }
+  },
+  "chargeEdit": {
+    "title": "Modifier les frais du ticket",
+    "save": "Enregistrer les modifications",
+    "edit": "Modifier les frais",
+    "errors": {
+      "save": "Impossible d’enregistrer ces frais. Réessayez.",
+      "invalidInput": "Saisissez une quantité entière positive et une description de 2 000 caractères maximum.",
+      "notEditable": "Les entrées facturées ou retirées ne peuvent pas être modifiées. Actualisez la page et réessayez.",
+      "amountTooLarge": "Cette quantité dépasserait le montant total pris en charge.",
+      "serialized": "Les matériaux avec numéro de série doivent conserver une quantité de 1. Ajoutez ou retirez des unités individuelles.",
+      "trackingChanged": "Le suivi des stocks a changé après l’ajout de ce matériau. Rapprochez son stock avant de modifier la quantité.",
+      "locationInvalid": "L’emplacement de stock d’origine est manquant ou incohérent. Rapprochez ce matériau avant de modifier la quantité.",
+      "costCurrency": "Les coûts de stock utilisent des devises différentes. Rapprochez ce matériau avant de réduire la quantité."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} erreur :",
     "errorCount_other": "{{count}} erreurs :",

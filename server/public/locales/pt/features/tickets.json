@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Serviços de taxa fixa",
+    "add": "Adicionar serviço",
+    "service": "Serviço",
+    "selectService": "Pesquisar serviços de taxa fixa",
+    "currency": "Moeda",
+    "quantity": "Quantidade",
+    "decreaseQuantity": "Diminuir quantidade",
+    "increaseQuantity": "Aumentar quantidade",
+    "rate": "Preço unitário",
+    "total": "Total",
+    "description": "Descrição",
+    "loading": "A carregar serviços de taxa fixa…",
+    "empty": "Nenhum serviço de taxa fixa adicionado.",
+    "billed": "Faturado",
+    "unbilled": "Não faturado",
+    "remove": "Remover serviço",
+    "confirmRemove": "Remover este serviço de taxa fixa não faturado do ticket?",
+    "errors": {
+      "load": "Não foi possível carregar os serviços de taxa fixa. Tente novamente.",
+      "prices": "Não foi possível carregar os preços do catálogo. Tente novamente.",
+      "add": "Não foi possível adicionar este serviço de taxa fixa. Tente novamente.",
+      "remove": "Não foi possível remover este serviço de taxa fixa. Tente novamente.",
+      "invalidInput": "Selecione um serviço, uma moeda e uma quantidade inteira positiva.",
+      "ticketMissing": "O ticket já não existe. Atualize a página e tente novamente.",
+      "serviceInvalid": "Selecione um serviço de taxa fixa ativo.",
+      "priceInvalid": "É necessário um preço de catálogo válido para esta moeda e quantidade.",
+      "cannotDelete": "Esta entrada de serviço já foi faturada ou removida. Atualize a página e tente novamente."
+    }
+  },
+  "chargeEdit": {
+    "title": "Editar cobrança do ticket",
+    "save": "Guardar alterações",
+    "edit": "Editar cobrança",
+    "errors": {
+      "save": "Não foi possível guardar esta cobrança. Tente novamente.",
+      "invalidInput": "Introduza uma quantidade inteira positiva e uma descrição com até 2.000 caracteres.",
+      "notEditable": "Não é possível editar entradas faturadas ou removidas. Atualize a página e tente novamente.",
+      "amountTooLarge": "Esta quantidade excederia o montante total suportado.",
+      "serialized": "Os materiais com número de série devem manter a quantidade 1. Adicione ou remova unidades individuais.",
+      "trackingChanged": "O controlo de inventário mudou após a adição deste material. Reconcilie o stock antes de alterar a quantidade.",
+      "locationInvalid": "A localização de stock original está em falta ou é inconsistente. Reconcilie este material antes de alterar a quantidade.",
+      "costCurrency": "Os custos de stock utilizam moedas diferentes. Reconcilie este material antes de reduzir a quantidade."
+    }
+  },
   "importDialog": {
     "errorCount_one": "Erro {{count}}:",
     "errorCount_other": "Erros {{count}}:",

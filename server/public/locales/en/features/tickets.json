@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Fixed-fee services",
+    "add": "Add service",
+    "service": "Service",
+    "selectService": "Search fixed-fee services",
+    "currency": "Currency",
+    "quantity": "Quantity",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "rate": "Unit price",
+    "total": "Total",
+    "description": "Description",
+    "loading": "Loading fixed-fee services…",
+    "empty": "No fixed-fee services added.",
+    "billed": "Billed",
+    "unbilled": "Unbilled",
+    "remove": "Remove service",
+    "confirmRemove": "Remove this unbilled fixed-fee service from the ticket?",
+    "errors": {
+      "load": "Unable to load fixed-fee services. Please try again.",
+      "prices": "Unable to load catalog prices. Please try again.",
+      "add": "Unable to add this fixed-fee service. Please try again.",
+      "remove": "Unable to remove this fixed-fee service. Please try again.",
+      "invalidInput": "Select a service, currency, and a positive whole-number quantity.",
+      "ticketMissing": "The ticket no longer exists. Refresh and try again.",
+      "serviceInvalid": "Select an active fixed-fee service.",
+      "priceInvalid": "A valid catalog price is required for this currency and quantity.",
+      "cannotDelete": "This service entry is already billed or was removed. Refresh and try again."
+    }
+  },
+  "chargeEdit": {
+    "title": "Edit ticket charge",
+    "save": "Save changes",
+    "edit": "Edit charge",
+    "errors": {
+      "save": "Unable to save this charge. Please try again.",
+      "invalidInput": "Enter a positive whole-number quantity and a description of at most 2,000 characters.",
+      "notEditable": "Billed or removed entries cannot be edited. Refresh and try again.",
+      "amountTooLarge": "This quantity would exceed the supported total amount.",
+      "serialized": "Serialized materials must keep quantity 1. Add or remove individual units instead.",
+      "trackingChanged": "Inventory tracking changed after this material was added. Reconcile its stock before changing quantity.",
+      "locationInvalid": "The original stock location is missing or inconsistent. Reconcile this material before changing quantity.",
+      "costCurrency": "Stock costs use different currencies. Reconcile this material before reducing quantity."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} error:",
     "errorCount_other": "{{count}} errors:",

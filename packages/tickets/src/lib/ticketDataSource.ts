@@ -112,6 +112,7 @@ import type {
   listTicketMaterials,
   addTicketMaterial,
   deleteTicketMaterial,
+  updateTicketMaterial,
   searchServiceCatalogForPicker,
   getServicePrices,
   listAvailableStockUnitsForMaterial,
@@ -125,6 +126,7 @@ import type {
   getTicketSlaPolicyName,
 } from '../actions/ticketBentoActions';
 import type { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import type { listTicketFixedFeeServices, addTicketFixedFeeService, deleteTicketFixedFeeService, updateTicketFixedFeeService } from '../actions/ticketFixedFeeActions';
 
 // ---------------------------------------------------------------------------
 // Identity
@@ -166,6 +168,8 @@ export interface TicketCapabilities {
   assets: boolean;
   /** Materials card. */
   materials: boolean;
+  /** Fixed-fee service entries. Alternate sources must explicitly implement this group. */
+  fixedFeeServices?: boolean;
   /** Billing rollup tile and billing profile lookups. */
   billing: boolean;
   /** Quick invoice (the injected `renderQuickInvoice` node). */
@@ -215,6 +219,7 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
   documents: true,
   assets: true,
   materials: true,
+  fixedFeeServices: true,
   billing: true,
   quickInvoice: true,
   emailLogs: true,
@@ -487,10 +492,18 @@ export interface TicketMaterialMethods {
   listTicketMaterials: typeof listTicketMaterials;
   addTicketMaterial: typeof addTicketMaterial;
   deleteTicketMaterial: typeof deleteTicketMaterial;
+  updateTicketMaterial?: typeof updateTicketMaterial;
   searchServiceCatalogForPicker: typeof searchServiceCatalogForPicker;
   getServicePrices: typeof getServicePrices;
   listAvailableStockUnitsForMaterial: typeof listAvailableStockUnitsForMaterial;
   getProductAvailability: typeof getProductAvailability;
+}
+
+export interface TicketFixedFeeMethods {
+  listTicketFixedFeeServices: typeof listTicketFixedFeeServices;
+  addTicketFixedFeeService: typeof addTicketFixedFeeService;
+  deleteTicketFixedFeeService: typeof deleteTicketFixedFeeService;
+  updateTicketFixedFeeService: typeof updateTicketFixedFeeService;
 }
 
 /** Bento (Grid layout) tile reads. */
@@ -562,6 +575,7 @@ export interface TicketDataSource {
   readonly activity: TicketActivityMethods;
   readonly email: TicketEmailMethods;
   readonly materials: TicketMaterialMethods;
+  readonly fixedFees: TicketFixedFeeMethods;
   readonly tiles: TicketTileMethods;
   readonly tags: TicketTagMethods;
   readonly avatars: TicketAvatarMethods;
@@ -594,6 +608,16 @@ export function composeTicketDataSource(
       typeof value === 'object' && value !== null && !Array.isArray(value) &&
       typeof baseValue === 'object' && baseValue !== null;
     merged[key] = isGroup ? { ...(baseValue as object), ...(value as object) } : value;
+  }
+  if (overrides.kind && overrides.kind !== base.kind &&
+      !(overrides.fixedFees?.listTicketFixedFeeServices &&
+        overrides.fixedFees?.addTicketFixedFeeService &&
+        overrides.fixedFees?.deleteTicketFixedFeeService &&
+        overrides.fixedFees?.updateTicketFixedFeeService)) {
+    merged.capabilities = { ...(merged.capabilities as TicketCapabilities), fixedFeeServices: false };
+  }
+  if (overrides.kind && overrides.kind !== base.kind && !overrides.materials?.updateTicketMaterial) {
+    merged.materials = { ...(merged.materials as TicketMaterialMethods), updateTicketMaterial: undefined };
   }
   // A read-only screen offers no pure-write action, whatever the base allowed.
   if ((merged.screen as TicketScreenBehavior | undefined)?.readOnly) {

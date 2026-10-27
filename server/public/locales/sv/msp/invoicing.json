@@ -478,6 +478,8 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Tjänster med fast avgift",
+    "excludedFixedFees": "Poster för tjänster med fast avgift som uteslutits på grund av annan fakturavaluta: {{count}}.",
     "currencyExcluded": "Produkter som undantas eftersom deras valuta skiljer sig från {{currency}}: {{count}}.",
     "action": "Snabbfakturering",
     "title": "Snabbfakturera det här ärendet",

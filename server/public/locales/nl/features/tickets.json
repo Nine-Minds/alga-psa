@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Vaste-vergoedingsservices",
+    "add": "Service toevoegen",
+    "service": "Service",
+    "selectService": "Vaste-vergoedingsservices zoeken",
+    "currency": "Valuta",
+    "quantity": "Aantal",
+    "decreaseQuantity": "Aantal verlagen",
+    "increaseQuantity": "Aantal verhogen",
+    "rate": "Eenheidsprijs",
+    "total": "Totaal",
+    "description": "Omschrijving",
+    "loading": "Vaste-vergoedingsservices laden…",
+    "empty": "Geen vaste-vergoedingsservices toegevoegd.",
+    "billed": "Gefactureerd",
+    "unbilled": "Niet gefactureerd",
+    "remove": "Service verwijderen",
+    "confirmRemove": "Deze niet-gefactureerde vaste-vergoedingsservice uit het ticket verwijderen?",
+    "errors": {
+      "load": "Vaste-vergoedingsservices konden niet worden geladen. Probeer het opnieuw.",
+      "prices": "Catalogusprijzen konden niet worden geladen. Probeer het opnieuw.",
+      "add": "Deze vaste-vergoedingsservice kon niet worden toegevoegd. Probeer het opnieuw.",
+      "remove": "Deze vaste-vergoedingsservice kon niet worden verwijderd. Probeer het opnieuw.",
+      "invalidInput": "Selecteer een service, een valuta en een positief geheel aantal.",
+      "ticketMissing": "Het ticket bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "serviceInvalid": "Selecteer een actieve vaste-vergoedingsservice.",
+      "priceInvalid": "Voor deze valuta en dit aantal is een geldige catalogusprijs vereist.",
+      "cannotDelete": "Deze serviceregel is al gefactureerd of verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    }
+  },
+  "chargeEdit": {
+    "title": "Ticketkosten bewerken",
+    "save": "Wijzigingen opslaan",
+    "edit": "Kosten bewerken",
+    "errors": {
+      "save": "Deze kosten konden niet worden opgeslagen. Probeer het opnieuw.",
+      "invalidInput": "Voer een positief geheel aantal en een omschrijving van maximaal 2.000 tekens in.",
+      "notEditable": "Gefactureerde of verwijderde regels kunnen niet worden bewerkt. Vernieuw de pagina en probeer het opnieuw.",
+      "amountTooLarge": "Dit aantal zou het ondersteunde totaalbedrag overschrijden.",
+      "serialized": "Materialen met een serienummer moeten aantal 1 behouden. Voeg afzonderlijke eenheden toe of verwijder ze.",
+      "trackingChanged": "De voorraadregistratie is gewijzigd nadat dit materiaal is toegevoegd. Stem de voorraad af voordat u het aantal wijzigt.",
+      "locationInvalid": "De oorspronkelijke voorraadlocatie ontbreekt of is inconsistent. Stem dit materiaal af voordat u het aantal wijzigt.",
+      "costCurrency": "De voorraadkosten gebruiken verschillende valuta. Stem dit materiaal af voordat u het aantal verlaagt."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} fout:",
     "errorCount_other": "{{count}} fouten:",

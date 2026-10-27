@@ -1745,7 +1745,7 @@ export class BillingEngine {
         : {};
     const nonContractSelection = options.nonContractSelection;
 
-    const materialCharges = projectBillingContext
+    const materialCharges: IBillingCharge[] = projectBillingContext
       ? await this.calculateMaterialCharges(
           clientId,
           billingPeriod,
@@ -1759,6 +1759,9 @@ export class BillingEngine {
           billingPeriod,
           billingCurrency,
         );
+    if (!projectBillingContext && !options.projectTarget) {
+      materialCharges.push(...await this.calculateTicketFixedFeeCharges(clientId, billingPeriod, billingCurrency));
+    }
     const projectMaterialWarnings = options.projectTarget
       ? await this.getProjectMaterialCurrencyWarnings(
           clientId,
@@ -7123,6 +7126,52 @@ export class BillingEngine {
     );
   }
 
+  private async calculateTicketFixedFeeCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    currencyCode: string,
+  ): Promise<IFixedPriceCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) throw new Error("Tenant context is required for ticket fixed-fee billing.");
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("ticket_fixed_fee_services as f");
+    db.tenantJoin(query, "service_catalog as sc", "sc.service_id", "f.service_id");
+    const rows = await query.where({
+      "f.client_id": clientId, "f.is_billed": false, "f.currency_code": currencyCode,
+    })
+      .where("f.created_at", ">=", billingPeriod.startDate)
+      .where("f.created_at", "<", billingPeriod.endDate)
+      .orderBy("f.entry_id")
+      .select("f.*", "sc.service_name", "sc.tax_rate_id",
+        this.knex.raw("f.updated_at::text as source_updated_at"));
+    if (rows.length === 0) return [];
+    const client = await db.table("clients").where("client_id", clientId).first();
+    if (!client) throw new Error(`Client ${clientId} not found for ticket fixed-fee billing.`);
+    return Promise.all(rows.map(async (row): Promise<IFixedPriceCharge> => {
+      const quantity = Number(row.quantity);
+      const rate = Number(row.rate);
+      const total = quantity * rate;
+      if (!Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(rate) || rate < 0 ||
+          !Number.isSafeInteger(total)) {
+        throw new Error(`Ticket fixed-fee entry ${row.entry_id} has an invalid quantity or rate.`);
+      }
+      const { taxRegion, isTaxable } = await this.getTaxInfoFromService({
+        service_id: row.service_id, tax_rate_id: row.tax_rate_id,
+      });
+      const region = taxRegion ?? await this.getClientDefaultTaxRegionCode(clientId) ?? undefined;
+      const tax = !client.is_tax_exempt && isTaxable && region
+        ? await new TaxService().calculateTax(clientId, total, billingPeriod.endDate, region, true, currencyCode)
+        : { taxAmount: 0, taxRate: 0 };
+      return {
+        type: "fixed", ticket_fixed_fee_id: row.entry_id,
+        ticket_fixed_fee_updated_at: row.source_updated_at,
+        serviceId: row.service_id, serviceName: row.description || row.service_name,
+        quantity, rate, total, is_taxable: isTaxable, tax_region: region,
+        tax_amount: tax.taxAmount, tax_rate: tax.taxRate,
+      };
+    }));
+  }
+
   private async calculateMaterialCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -7217,6 +7266,7 @@ export class BillingEngine {
             "tm.currency_code",
             "tm.description",
             "tm.created_at",
+            this.knex.raw("tm.updated_at::text as source_updated_at"),
             "sc.service_name",
             "sc.tax_rate_id",
           ]);
@@ -7313,6 +7363,9 @@ export class BillingEngine {
             : {}),
           material_source_type: row.source_type,
           material_source_id: row.source_id,
+          ...(row.source_type === "ticket"
+            ? { material_source_updated_at: row.source_updated_at }
+            : {}),
         };
       },
     );

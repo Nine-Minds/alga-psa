@@ -344,7 +344,7 @@ async function releaseMaterialsForDeletedInvoice(
   invoiceId: string,
 ): Promise<void> {
   const releasedAt = new Date().toISOString();
-  for (const tableName of ['project_materials', 'ticket_materials']) {
+  for (const tableName of ['project_materials', 'ticket_materials', 'ticket_fixed_fee_services']) {
     await tenantScopedTable(trx, tenant, tableName)
       .where({ billed_invoice_id: invoiceId, is_billed: true })
       .update({

@@ -778,7 +778,9 @@ async function validateManualTicketSources(
   // Stable lock order prevents overlapping selections from deadlocking.
   const key = (item: ManualInvoiceItemInput) => {
     const link = item.source_link!;
-    return link.kind === 'time_entry' ? `time:${link.entryId}` : `material:${'materialId' in link ? link.materialId : ''}`;
+    if (link.kind === 'time_entry') return `time:${link.entryId}`;
+    if (link.kind === 'ticket_fixed_fee') return `fixed:${link.entryId}`;
+    return `material:${link.materialId}`;
   };
   const seen = new Set<string>();
   for (const item of [...sourceItems].sort((a, b) => key(a).localeCompare(key(b)))) {
@@ -823,6 +825,23 @@ async function validateManualTicketSources(
       }
       if (item.service_id !== material.service_id || item.quantity !== Number(material.quantity) ||
           item.rate !== Math.max(0, Math.round(Number(material.rate) || 0))) throw reject();
+      if (link.updatedAt && !await tenantScopedTable(tx, tenant, 'ticket_materials')
+        .where({ ticket_material_id: link.materialId, updated_at: link.updatedAt }).first('ticket_material_id')) throw reject();
+    } else if (link.kind === 'ticket_fixed_fee') {
+      const entry = await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+        .where({ entry_id: link.entryId }).forUpdate().first();
+      if (!entry || entry.is_billed) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected fixed-fee service is already billed or removed.');
+      }
+      if (entry.ticket_id !== ticket.ticket_id || entry.client_id !== invoice.client_id ||
+          Number(entry.quantity) <= 0 || item.service_id !== entry.service_id ||
+          item.quantity !== Number(entry.quantity) || item.rate !== Number(entry.rate) ||
+          !link.updatedAt) throw reject();
+      if (!await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+        .where({ entry_id: link.entryId, updated_at: link.updatedAt }).first('entry_id')) throw reject();
+      if (entry.currency_code !== invoice.currency_code) {
+        throw new ManualInvoiceError('SOURCE_CURRENCY_MISMATCH', 'The fixed-fee service currency does not match the invoice.');
+      }
     } else {
       throw reject();
     }
@@ -866,6 +885,16 @@ async function claimManualChargeSource(
       tenant,
       created_at: claimedAt,
     });
+    return;
+  }
+
+  if (sourceLink.kind === 'ticket_fixed_fee') {
+    const count = await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+      .where({ entry_id: sourceLink.entryId, is_billed: false })
+      .update({ is_billed: true, billed_invoice_id: invoiceId, billed_at: claimedAt, updated_at: claimedAt });
+    if (count !== 1) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The fixed-fee service was already invoiced or removed.', { recordId: sourceLink.entryId });
+    }
     return;
   }
 
@@ -1486,7 +1515,7 @@ async function persistFixedInvoiceCharges(
         unit_price: charge.rate, // The custom rate
         net_amount: netAmount,
         tax_amount: charge.tax_amount || 0, // Use tax from charge if available
-        tax_region: client.tax_region, // Use client default
+        tax_region: charge.ticket_fixed_fee_id ? charge.tax_region : client.tax_region,
         tax_rate: charge.tax_rate || 0, // Use rate from charge if available
         total_price: netAmount + (charge.tax_amount || 0),
         is_manual: false,
@@ -1505,6 +1534,21 @@ async function persistFixedInvoiceCharges(
         tenant
       };
       await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
+      if (charge.ticket_fixed_fee_id) {
+        if (!charge.ticket_fixed_fee_updated_at) throw new Error('Ticket fixed-fee source version is required.');
+        const invoice = await tenantScopedTable(tx, tenant, 'invoices').where('invoice_id', invoiceId).first('currency_code');
+        const count = await tenantScopedTable(tx, tenant, 'ticket_fixed_fee_services')
+          .where({
+            entry_id: charge.ticket_fixed_fee_id, client_id: client.client_id, is_billed: false,
+            service_id: charge.serviceId, quantity: charge.quantity, rate: charge.rate,
+            currency_code: invoice.currency_code,
+            updated_at: charge.ticket_fixed_fee_updated_at,
+          })
+          .update({ is_billed: true, billed_invoice_id: invoiceId, billed_at: now, updated_at: now });
+        if (count !== 1) {
+          throw new Error('A ticket fixed-fee service changed or was already billed. Refresh and try again.');
+        }
+      }
       fixedSubtotal += netAmount;
     }
   }

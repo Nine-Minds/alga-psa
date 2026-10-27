@@ -37,6 +37,7 @@ import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
 import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
+import TicketFixedFeeServicesCard from '../TicketFixedFeeServicesCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { useTicketDataSource } from '../TicketDataSourceContext';
@@ -885,6 +886,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} />
     ) } : null,
     timerTile ? { key: 'time', zone: 'end', group: 'work', rank: 22, node: timerTile } : null,
+    capabilities.fixedFeeServices && !props.hideMaterials && ticket.client_id ? { key: 'fixed-fee-services', zone: 'end', group: 'work', rank: 23, node: (
+      <TicketFixedFeeServicesCard id={`${id}-fixed-fee-services`} ticketId={ticketId} />
+    ) } : null,
     capabilities.checklist ? { key: 'checklist', zone: 'end', group: 'work', rank: 24, node: (
       <TicketChecklistSection
         id={`${id}-checklist-section`}

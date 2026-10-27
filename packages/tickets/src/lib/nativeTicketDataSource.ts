@@ -147,10 +147,18 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     listTicketMaterials: lazy(() => import('../actions/materialCatalogActions'), 'listTicketMaterials'),
     addTicketMaterial: lazy(() => import('../actions/materialCatalogActions'), 'addTicketMaterial'),
     deleteTicketMaterial: lazy(() => import('../actions/materialCatalogActions'), 'deleteTicketMaterial'),
+    updateTicketMaterial: lazy(() => import('../actions/materialCatalogActions'), 'updateTicketMaterial'),
     searchServiceCatalogForPicker: lazy(() => import('../actions/materialCatalogActions'), 'searchServiceCatalogForPicker'),
     getServicePrices: lazy(() => import('../actions/materialCatalogActions'), 'getServicePrices'),
     listAvailableStockUnitsForMaterial: lazy(() => import('../actions/materialCatalogActions'), 'listAvailableStockUnitsForMaterial'),
     getProductAvailability: lazy(() => import('@alga-psa/inventory/actions/availabilityActions'), 'getProductAvailability'),
+  }),
+
+  fixedFees: Object.freeze({
+    listTicketFixedFeeServices: lazy(() => import('../actions/ticketFixedFeeActions'), 'listTicketFixedFeeServices'),
+    addTicketFixedFeeService: lazy(() => import('../actions/ticketFixedFeeActions'), 'addTicketFixedFeeService'),
+    deleteTicketFixedFeeService: lazy(() => import('../actions/ticketFixedFeeActions'), 'deleteTicketFixedFeeService'),
+    updateTicketFixedFeeService: lazy(() => import('../actions/ticketFixedFeeActions'), 'updateTicketFixedFeeService'),
   }),
 
   tiles: Object.freeze({
