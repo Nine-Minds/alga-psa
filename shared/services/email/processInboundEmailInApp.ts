@@ -37,6 +37,7 @@ import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
+  detectThreadHeaderSelfAutomatedLoop,
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import {
@@ -1340,6 +1341,31 @@ export async function processInboundEmailInApp(
     }
 
     if (params.matchedBy === 'thread_headers') {
+      // LEVERAGE: pattern principal-address-classification — sender classification (contact / internal user / watcher / ours) is re-derived here, in the board audience resolver and in the save-time guards.
+      // Redelivery of our own automated notification through a DL that expands
+      // into a connected mailbox: skip before the sender check so it is neither
+      // quarantined as an unknown sender nor turned into a comment/watcher.
+      const selfLoop = await detectThreadHeaderSelfAutomatedLoop({
+        tenantId,
+        ticketId: params.ticketId,
+        emailData,
+        senderEmail,
+      });
+      if (selfLoop.isLoop) {
+        console.info('processInboundEmailInApp: skipping thread-header redelivery of our own notification', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedLogId: selfLoop.matchedLogId,
+        });
+        if (diagnostics) {
+          diagnostics.notificationLoop = selfLoop;
+          diagnostics.threading.failureReason = 'notification_loop';
+        }
+        return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+      }
+
       const senderIsTicketClientContact = Boolean(
         matchedSenderContact
         && !matchedSenderIsInternalUser

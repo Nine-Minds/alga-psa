@@ -24,7 +24,7 @@ import {
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 import { resolveTicketSubjectLabel, usableDisplayName } from '@alga-psa/shared/lib/ticketRequesterDisplay';
 import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
-import { resolveBoardNotificationRecipients } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { resolveBoardNotificationAudience } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 
@@ -241,7 +241,8 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     // Board notification rules (trigger: created). One-shot queue alert to the
     // rule's users and teams; never assigns and never touches the watch list.
     if (ticket.board_id && shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
-      const ruleRecipients = await resolveBoardNotificationRecipients(
+      // Users only: plain-address recipients are email-only (no in-app).
+      const { users: ruleRecipients } = await resolveBoardNotificationAudience(
         db,
         tenantId,
         { kind: 'created', boardId: ticket.board_id },
@@ -352,7 +353,8 @@ async function handleTicketStatusChanged(
       : (await tenantScopedTable(db, 'statuses', tenantId).select('name').where({ status_id: statusId }).first())?.name;
 
     const assignees = await getAllTicketAssignees(db, tenantId, ticketId);
-    const recipients = await resolveBoardNotificationRecipients(
+    // Users only: plain-address recipients are email-only (no in-app).
+    const { users: recipients } = await resolveBoardNotificationAudience(
       db,
       tenantId,
       { kind: 'status_entered', statusId },

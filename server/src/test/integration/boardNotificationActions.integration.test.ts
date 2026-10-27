@@ -166,7 +166,7 @@ describe('board notification settings actions (integration)', () => {
     );
     expectError(
       await saveBoardNotificationSettings(boardId, { rules: [{ notify_on_create: true, user_ids: [], team_ids: [] }] }),
-      'must notify at least one user or team'
+      'must notify at least one user, team or email address'
     );
     // A valid first rule with an invalid second one must not leave the first behind.
     expectError(
@@ -294,5 +294,156 @@ describe('board notification settings actions (integration)', () => {
     expect(await countRows('board_notification_rule_recipients', { rule_id: ruleId })).toBe(0);
     expect(await countRows('board_notification_rule_statuses', { rule_id: ruleId })).toBe(0);
     expect(await countRows('board_default_watchers', { board_id: cascadeBoard })).toBe(0);
+  });
+
+  describe('email address recipients', () => {
+    let contactClientId: string;
+
+    const auditRows = async () =>
+      db.transaction(async (trx) => {
+        await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+        return trx('audit_logs')
+          .where({ tenant, table_name: 'board_notification_rule_recipients', record_id: boardId, operation: 'board_notification_email_recipients_changed' })
+          .orderBy('timestamp', 'asc');
+      });
+    const clearAudit = async () =>
+      db.transaction(async (trx) => {
+        await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+        await trx('audit_logs').where({ tenant, record_id: boardId }).delete();
+      });
+    const save = (rules: any[]) => saveBoardNotificationSettings(boardId, { rules });
+
+    beforeAll(async () => {
+      contactClientId = uuidv4();
+      await scoped.table('clients').insert({ tenant, client_id: contactClientId, client_name: `Addr client ${contactClientId}` });
+      await scoped.table('contacts').insert({ tenant, contact_name_id: uuidv4(), full_name: 'Cara', email: 'cara@contact-co.example', client_id: contactClientId });
+      const withAlt = uuidv4();
+      await scoped.table('contacts').insert({ tenant, contact_name_id: withAlt, full_name: 'Alt', email: 'alt-primary@contact-co.example', client_id: contactClientId });
+      await scoped.table('contact_additional_email_addresses').insert({ tenant, contact_name_id: withAlt, email_address: 'Alt-Extra@contact-co.example', canonical_type: 'work', display_order: 0 });
+      await scoped.table('client_locations').insert({
+        tenant, location_id: uuidv4(), client_id: contactClientId, location_name: 'HQ', address_line1: '1 Way', city: 'X',
+        country_code: 'US', country_name: 'United States', email: 'hq@contact-co.example',
+      });
+      await scoped.table('client_inbound_email_domains').insert({ tenant, client_id: contactClientId, domain: 'bigclient.example' });
+      await scoped.table('email_providers').insert({
+        id: uuidv4(), tenant, provider_type: 'google', provider_name: 'Support box', mailbox: 'Support@msp-inbound.example',
+        is_active: true, status: 'connected',
+      });
+    }, HOOK_TIMEOUT);
+
+    beforeEach(async () => {
+      await clearAudit();
+    });
+
+    it('round-trips normalized, deduped addresses and accepts a rule whose only recipient is an address', async () => {
+      const saved: any = await save([
+        { notify_on_create: true, email_addresses: ['  Queue-DL@MSP.test ', 'queue-dl@msp.test', '"Pager" <pager@msp.test>'] },
+      ]);
+      expect(isActionMessageError(saved), JSON.stringify(saved)).toBe(false);
+      expect([...saved.rules[0].email_addresses].sort()).toEqual(['pager@msp.test', 'queue-dl@msp.test']);
+      expect(saved.rules[0].user_ids).toEqual([]);
+
+      const loaded: any = await getBoardNotificationSettings(boardId);
+      expect([...loaded.rules[0].email_addresses].sort()).toEqual(['pager@msp.test', 'queue-dl@msp.test']);
+    });
+
+    it('rejects an invalid address and a rule with more than 25 addresses, persisting nothing', async () => {
+      expectError(await save([{ notify_on_create: true, email_addresses: ['not an address'] }]), 'invalid email address');
+      // Single-label domains pass a naive '@' check but are dropped by the send path's validator.
+      for (const bad of ['a@b', 'user@localhost']) {
+        expectError(await save([{ notify_on_create: true, email_addresses: [bad] }]), 'invalid email address');
+      }
+      const tooMany = Array.from({ length: 26 }, (_, i) => `dl${i}@msp.test`);
+      expectError(await save([{ notify_on_create: true, email_addresses: tooMany }]), 'at most 25 email addresses');
+      const exactly = Array.from({ length: 25 }, (_, i) => `dl${i}@msp.test`);
+      const ok: any = await save([{ notify_on_create: true, email_addresses: exactly }]);
+      expect(ok.rules[0].email_addresses).toHaveLength(25);
+      expect(await countRows('board_notification_rules', { board_id: boardId })).toBe(1);
+      // A failed save leaves the previous state alone.
+      expectError(await save([{ notify_on_create: true, email_addresses: tooMany }]), 'at most 25');
+      expect(await countRows('board_notification_rule_recipients', { recipient_type: 'email' })).toBeGreaterThanOrEqual(25);
+    });
+
+    it('rejects each D5 case with its own message and translation key', async () => {
+      const cases: Array<[string, string, string]> = [
+        ['tech1-na@example.com', "Alga user's email", 'notificationEmailIsUser'],
+        ['cara@contact-co.example', 'client contact or location', 'notificationEmailIsContact'],
+        ['alt-extra@contact-co.example', 'client contact or location', 'notificationEmailIsContact'],
+        ['hq@contact-co.example', 'client contact or location', 'notificationEmailIsContact'],
+        ['anyone@bigclient.example', "client's email domain", 'notificationEmailClientDomain'],
+        ['support@msp-inbound.example', 'connected inbound mailbox', 'notificationEmailInboundMailbox'],
+      ];
+      for (const [address, fragment, key] of cases) {
+        const result: any = await save([{ notify_on_create: true, email_addresses: ['fine-dl@msp.test', address] }]);
+        expectError(result, fragment);
+        expect(result.messageKey).toBe(`features/tickets:errors.board.${key}`);
+        expect(await countRows('board_notification_rules', { board_id: boardId })).toBe(0);
+      }
+    });
+
+    it('an inactive user and a client-type user email do not block an address', async () => {
+      const result: any = await save([{ notify_on_create: true, email_addresses: ['gone-na@example.com'] }]);
+      expect(isActionMessageError(result), JSON.stringify(result)).toBe(false);
+    });
+
+    it('re-validates addresses that are already stored', async () => {
+      await save([{ notify_on_create: true, email_addresses: ['later-contact@msp.test'] }]);
+      const loaded: any = await getBoardNotificationSettings(boardId);
+      // The address becomes a contact after it was stored: the next save must refuse it.
+      const contactId = uuidv4();
+      await scoped.table('contacts').insert({ tenant, contact_name_id: contactId, full_name: 'Later', email: 'later-contact@msp.test', client_id: contactClientId });
+      try {
+        expectError(
+          await save([{ rule_id: loaded.rules[0].rule_id, notify_on_create: true, email_addresses: ['later-contact@msp.test'] }]),
+          'client contact or location'
+        );
+      } finally {
+        await scoped.table('contacts').where({ contact_name_id: contactId }).delete();
+      }
+    });
+
+    it('writes one audit row with the correct added/removed per rule, and none when unchanged', async () => {
+      const first: any = await save([
+        { notify_on_create: true, email_addresses: ['a-dl@msp.test', 'b-dl@msp.test'] },
+        { notify_on_create: true, user_ids: [tech1] },
+      ]);
+      let rows = await auditRows();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].user_id).toBe(adminUser);
+      expect(rows[0].changed_data.rules).toEqual([
+        { rule_id: first.rules[0].rule_id, added: ['a-dl@msp.test', 'b-dl@msp.test'], removed: [] },
+      ]);
+
+      // Unchanged addresses: no new row.
+      await save([
+        { rule_id: first.rules[0].rule_id, notify_on_create: true, email_addresses: ['b-dl@msp.test', 'a-dl@msp.test'] },
+        { rule_id: first.rules[1].rule_id, notify_on_create: true, user_ids: [tech1] },
+      ]);
+      expect(await auditRows()).toHaveLength(1);
+
+      // Add one, remove one.
+      await save([
+        { rule_id: first.rules[0].rule_id, notify_on_create: true, email_addresses: ['b-dl@msp.test', 'c-dl@msp.test'] },
+        { rule_id: first.rules[1].rule_id, notify_on_create: true, user_ids: [tech1] },
+      ]);
+      rows = await auditRows();
+      expect(rows).toHaveLength(2);
+      expect(rows[1].changed_data.rules).toEqual([
+        { rule_id: first.rules[0].rule_id, added: ['c-dl@msp.test'], removed: ['a-dl@msp.test'] },
+      ]);
+
+      // Deleting the rule counts as removing its addresses.
+      await save([{ rule_id: first.rules[1].rule_id, notify_on_create: true, user_ids: [tech1] }]);
+      rows = await auditRows();
+      expect(rows).toHaveLength(3);
+      expect(rows[2].changed_data.rules).toEqual([
+        { rule_id: first.rules[0].rule_id, added: [], removed: ['b-dl@msp.test', 'c-dl@msp.test'] },
+      ]);
+    });
+
+    it('a failed save writes no audit row', async () => {
+      await save([{ notify_on_create: true, email_addresses: ['x-dl@msp.test', 'cara@contact-co.example'] }]);
+      expect(await auditRows()).toHaveLength(0);
+    });
   });
 });

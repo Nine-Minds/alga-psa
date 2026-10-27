@@ -1635,7 +1635,14 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "notificationEmailInvalid": "La regla de notificación {{rule}} tiene una dirección de correo electrónico no válida (hasta {{max}} caracteres)",
+      "notificationEmailLimit": "La regla de notificación {{rule}} puede tener como máximo {{max}} direcciones de correo electrónico",
+      "notificationRecipientRequired": "La regla de notificación {{rule}} debe notificar al menos a un usuario, equipo o dirección de correo electrónico",
+      "notificationEmailIsUser": "Regla de notificación {{rule}}: {{address}} es la dirección de correo de un usuario de Alga. Elige al usuario en su lugar.",
+      "notificationEmailIsContact": "Regla de notificación {{rule}}: {{address}} pertenece a un contacto o ubicación de un cliente y no puede ser destinatario.",
+      "notificationEmailClientDomain": "Regla de notificación {{rule}}: {{address}} pertenece al dominio de correo de un cliente y no puede ser destinatario.",
+      "notificationEmailInboundMailbox": "Regla de notificación {{rule}}: {{address}} es un buzón de entrada conectado y no puede ser destinatario."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",

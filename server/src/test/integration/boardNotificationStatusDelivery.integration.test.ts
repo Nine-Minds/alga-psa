@@ -10,7 +10,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
  * Board notification rule, trigger "status entered": delivered by the TICKET_STATUS_CHANGED
  * handlers (email + in-app). Rule recipients are never assigned and never added to the watch list.
  */
-const sent: Array<{ to: string; template: string }> = [];
+const sent: Array<{ to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }> = [];
 let testDb: Knex;
 const deniedUserIds = new Set<string>();
 
@@ -26,8 +26,8 @@ vi.mock('../../lib/db', async (importOriginal) => ({
 
 vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/notifications/sendEventEmail')>()),
-  sendEventEmail: vi.fn(async (params: { to: string; template: string }) => {
-    sent.push({ to: params.to, template: params.template });
+  sendEventEmail: vi.fn(async (params: { to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }) => {
+    sent.push({ to: params.to, template: params.template, recipientUserId: params.recipientUserId, replyContext: params.replyContext });
   }),
 }));
 
@@ -325,5 +325,107 @@ describe('board notification rules: status-entered trigger delivery (integration
     await runWithTenant(tenant, () => inAppCreatedHandler(created, { propagateErrors: true }));
     expect(emails()).toEqual([]);
     expect(await inApp()).toEqual([]);
+  });
+
+  describe('plain-address (DL) recipients', () => {
+    const addAddresses = async (...addresses: string[]) => {
+      for (const email of addresses) {
+        await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: ruleId, recipient_type: 'email', email });
+      }
+    };
+    const removeAddresses = () =>
+      scoped.table('board_notification_rule_recipients').where({ rule_id: ruleId, recipient_type: 'email' }).delete();
+
+    it('emails the DL immediately, even when the accumulator is ready, with thread context but no reply token, and no in-app', async () => {
+      await addAddresses('status-dl@msp.test');
+      try {
+        const ticketId = await createTicketRow();
+        await deliver(statusEvent(ticketId));
+
+        const toDl = sent.filter((email) => email.to === 'status-dl@msp.test');
+        expect(toDl).toHaveLength(1);
+        expect(toDl[0].template).toBe(RULE_TEMPLATE);
+        expect(toDl[0].recipientUserId).toBeUndefined();
+        expect(toDl[0].replyContext).toMatchObject({ ticketId, issueReplyToken: false });
+        expect(accumulate).not.toHaveBeenCalled();
+        // Users are unchanged and still send without an issueReplyToken override.
+        expect(emails()).toEqual([...allEmails, 'status-dl@msp.test'].sort());
+        expect(sent.find((email) => email.to === 'a@example.com')?.replyContext).toBeUndefined();
+        expect(await inApp()).toEqual(allUsers());
+      } finally {
+        await removeAddresses();
+      }
+    });
+
+    it("an assignee's address (an internal user) is not emailed twice, and neither is the actor's", async () => {
+      await addAddresses('assignee@example.com', 'actor@example.com');
+      try {
+        const ticketId = await createTicketRow({ assigned_to: users.assignee });
+        await deliver(statusEvent(ticketId));
+        expect(emails()).toEqual(allEmails);
+        expect(await inApp()).toEqual(allUsers());
+      } finally {
+        await removeAddresses();
+      }
+    });
+
+    it('a DL that is an active watcher is skipped', async () => {
+      await addAddresses('watch-dl@msp.test');
+      try {
+        const ticketId = await createTicketRow({
+          attributes: JSON.stringify({ watch_list: [{ email: 'watch-dl@msp.test', active: true }] }),
+        });
+        await deliver(statusEvent(ticketId));
+        expect(emails()).toEqual(allEmails);
+      } finally {
+        await removeAddresses();
+      }
+    });
+
+    it('an address that is an active internal user is checked as that user', async () => {
+      await addAddresses('watcher@example.com');
+      try {
+        deniedUserIds.add(users.watcher);
+        const ticketId = await createTicketRow();
+        await deliver(statusEvent(ticketId));
+        expect(emails()).toEqual(allEmails);
+        expect(await inApp()).toEqual(allUsers());
+
+        deniedUserIds.clear();
+        sent.length = 0;
+        await deliver(statusEvent(ticketId));
+        expect(emails()).toContain('watcher@example.com');
+        expect(sent.find((email) => email.to === 'watcher@example.com')?.recipientUserId).toBe(users.watcher);
+        expect(await inApp()).toContain(users.watcher);
+      } finally {
+        await removeAddresses();
+      }
+    });
+
+    it('suppressInternalNotifications silences the DL', async () => {
+      await addAddresses('status-dl@msp.test');
+      try {
+        const ticketId = await createTicketRow();
+        await deliver(statusEvent(ticketId, { suppressInternalNotifications: true }));
+        expect(emails()).toEqual([]);
+      } finally {
+        await removeAddresses();
+      }
+    });
+
+    it('a rule with only a DL still fires', async () => {
+      const dlRule = uuidv4();
+      await scoped.table('board_notification_rules').insert({ tenant, rule_id: dlRule, board_id: boardId, notify_on_create: false });
+      await scoped.table('board_notification_rule_statuses').insert({ tenant, rule_id: dlRule, status_id: otherStatusId });
+      await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: dlRule, recipient_type: 'email', email: 'only-dl@msp.test' });
+      try {
+        const ticketId = await createTicketRow({ status_id: otherStatusId });
+        await deliver(statusEvent(ticketId, { previousStatusId: triggerStatusId, newStatusId: otherStatusId }));
+        expect(emails()).toEqual(['only-dl@msp.test']);
+        expect(await inApp()).toEqual([]);
+      } finally {
+        await scoped.table('board_notification_rules').where({ rule_id: dlRule }).delete();
+      }
+    });
   });
 });

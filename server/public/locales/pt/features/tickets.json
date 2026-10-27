@@ -1635,7 +1635,14 @@
       "referenceInvalid": "O quadro, o status, a prioridade, o responsável, a equipe ou a política de SLA selecionados não são mais válidos. Atualize a página e tente novamente.",
       "duplicateName": "Já existe um quadro com este nome.",
       "duplicate": "Já existe um quadro ou status com as mesmas configurações.",
-      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente.",
+      "notificationEmailInvalid": "A regra de notificação {{rule}} tem um endereço de e-mail inválido (até {{max}} caracteres)",
+      "notificationEmailLimit": "A regra de notificação {{rule}} pode ter no máximo {{max}} endereços de e-mail",
+      "notificationRecipientRequired": "A regra de notificação {{rule}} deve notificar pelo menos um usuário, equipe ou endereço de e-mail",
+      "notificationEmailIsUser": "Regra de notificação {{rule}}: {{address}} é o endereço de e-mail de um usuário Alga. Selecione o usuário em vez disso.",
+      "notificationEmailIsContact": "Regra de notificação {{rule}}: {{address}} pertence a um contato ou local de um cliente e não pode ser destinatário.",
+      "notificationEmailClientDomain": "Regra de notificação {{rule}}: {{address}} pertence ao domínio de e-mail de um cliente e não pode ser destinatário.",
+      "notificationEmailInboundMailbox": "Regra de notificação {{rule}}: {{address}} é uma caixa de correio de entrada conectada e não pode ser destinatário."
     },
     "material": {
       "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",
