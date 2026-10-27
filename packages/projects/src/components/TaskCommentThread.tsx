@@ -45,6 +45,11 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const { t } = useTranslation(['features/projects', 'common']);
   const [comments, setComments] = useState<IProjectTaskCommentWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Whether this task's thread has loaded successfully at least once. A failed
+  // refresh of a loaded thread keeps the last good list on screen behind a banner;
+  // only a thread that never loaded is unknown and gets the full error state.
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
@@ -56,25 +61,36 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   // on unmount, so a late resolution reached React after teardown -- which surfaced
   // in CI as an unhandled "window is not defined" rejection from setIsLoading in the
   // finally below. It is a race, so it failed intermittently rather than every run.
-  // LEVERAGE: pattern unguarded-async-load -- 169 components carry the same
-  // load-then-setIsLoading(false)-in-finally shape with no unmount guard. Each is
-  // a latent intermittent failure once readiness is a required check. The answer
-  // is a loader hook that makes cancellation the default, not this guard repeated
-  // 169 times.
+  // LEVERAGE: pattern unguarded-async-load -- this instance is fixed (teardown via
+  // `mounted`, supersession via `loadSequence`), but ~168 other components still
+  // carry the same load-then-setIsLoading(false)-in-finally shape with no guard.
+  // The general answer -- a loader hook that makes cancellation the default -- is
+  // still owed; it is not this guard repeated.
   const mounted = useRef(true);
+  // `mounted` answers "was the component torn down?"; `loadSequence` answers "has a
+  // newer load (same task reload, or another task) superseded this one?". Every
+  // await in a load must re-check both before writing state or reporting a count.
+  const loadSequence = useRef(0);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
 
-  const loadComments = async () => {
+  // Resolves true only when this load became the thread's current, successfully
+  // loaded state; false when it failed or was superseded.
+  const loadComments = async (): Promise<boolean> => {
+    const sequence = ++loadSequence.current;
+    const isCurrent = () => mounted.current && sequence === loadSequence.current;
     try {
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
-      if (!mounted.current) return;
+      if (!isCurrent()) return false;
       if (showReturnedActionError(fetchedComments)) {
-        return;
+        setLoadError(true);
+        return false;
       }
+      setLoadError(false);
+      setHasLoaded(true);
       setComments(fetchedComments);
       onCommentCountChange?.(taskId, fetchedComments.length);
       // Load reactions for fetched comments
@@ -82,17 +98,21 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       if (commentIds.length > 0) {
         try {
           const { reactions, userNames } = await getTaskCommentsReactionsBatch(commentIds);
-          if (!mounted.current) return;
+          if (!isCurrent()) return false;
           setReactionsMap(reactions);
           setReactionUserNames(prev => ({ ...prev, ...userNames }));
         } catch (err) {
           console.error('Failed to load reactions:', err);
         }
       }
+      return isCurrent();
     } catch (error) {
+      if (!isCurrent()) return false;
       console.error('Failed to load comments:', error);
+      setLoadError(true);
+      return false;
     } finally {
-      if (mounted.current) setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
   };
 
@@ -115,14 +135,30 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   };
 
   useEffect(() => {
+    // Thread-scoped state belongs to one task; clear it when the task changes (not
+    // on every reload, which would blank the list after each post/edit/delete).
+    setComments([]);
+    setReactionsMap({});
+    setReactionUserNames({});
+    setLoadError(false);
+    setHasLoaded(false);
+    setShowEditor(false);
+    setReplyingToCommentId(null);
+    setOpenPanelCommentId(null);
+    // The new load claims the next sequence number before its first await, which is
+    // what supersedes any load still in flight for the outgoing task.
     loadComments();
     loadCurrentUser();
   }, [taskId]);
 
+  // The composers are closed only once the refreshed thread is on screen. A failed
+  // refresh leaves them mounted (and the error state offers a retry), so a transient
+  // failure never discards what the user has open.
   const handleCommentAdded = async () => {
-    await loadComments();
-    setShowEditor(false);
-    setReplyingToCommentId(null);
+    if (await loadComments()) {
+      setShowEditor(false);
+      setReplyingToCommentId(null);
+    }
   };
 
   const handleCommentUpdated = async () => {
@@ -133,7 +169,11 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     await loadComments();
   };
 
-  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor });
+  // The thread's contents are unknown only when it has never loaded; a failed
+  // refresh still has the last good list on screen.
+  const threadUnknown = loadError && !hasLoaded;
+
+  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor && !threadUnknown });
 
   const toggleCommentOrder = () => {
     setReverseOrder(!reverseOrder);
@@ -271,7 +311,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             <ArrowUpDown className="w-4 h-4" />
             <span>{reverseOrder ? t('comments.newestFirst', 'Newest first') : t('comments.oldestFirst', 'Oldest first')}</span>
           </button>
-          {!showEditor && (
+          {!showEditor && !threadUnknown && (
             <Button
               id="task-comments-add-button"
               type="button"
@@ -288,6 +328,8 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       </div>
 
       {/* Comment Form at Top (when visible) */}
+      {/* Stays mounted through a failed refresh so a draft in progress survives it;
+          opening it is what an unknown thread gates (button and shortcut above). */}
       {showEditor && (
         <div
           {...withDataAutomationId({ id: 'task-comment-form-container' })}
@@ -326,8 +368,41 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         </div>
       )}
 
+      {/* Load Error: a thread that never loaded is unknown, so it gets the full error
+          state with no empty state or list. A failed refresh of a loaded thread is a
+          banner above the last good list. Either way Retry re-runs the load on its own,
+          and a successful load clears the error. */}
+      {!isLoading && loadError && (
+        <div
+          className={threadUnknown
+            ? 'flex flex-col items-center gap-3 py-8'
+            : 'flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2'}
+        >
+          <p
+            role="alert"
+            {...withDataAutomationId({ id: 'task-comments-load-error' })}
+            className={threadUnknown ? 'text-center text-red-600' : 'text-sm text-red-600'}
+          >
+            {t('comments.loadError', 'Failed to load comments.')}
+          </p>
+          <Button
+            id="task-comments-retry-button"
+            type="button"
+            variant="outline"
+            size={threadUnknown ? undefined : 'sm'}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void loadComments();
+            }}
+          >
+            {t('comments.retry', 'Retry')}
+          </Button>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!isLoading && comments.length === 0 && (
+      {!isLoading && !threadUnknown && comments.length === 0 && (
         <div
           {...withDataAutomationId({ id: 'task-comments-empty' })}
           className="text-center py-8 text-gray-500"
@@ -337,7 +412,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       )}
 
       {/* Comments List */}
-      {!isLoading && comments.length > 0 && (
+      {!isLoading && !threadUnknown && comments.length > 0 && (
         <div
           {...withDataAutomationId({ id: 'task-comments-list' })}
           className="space-y-3"
