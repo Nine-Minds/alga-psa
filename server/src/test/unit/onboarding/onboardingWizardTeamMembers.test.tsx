@@ -36,7 +36,8 @@ vi.mock('@alga-psa/tenancy/actions', () => ({ updateTenantDefaultLocaleAction: v
 vi.mock('@alga-psa/core/i18n/config', () => ({ isSupportedLocale: () => true }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key),
+    t: (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key)
+      .replace(/\{\{(\w+)\}\}/g, (_m, name) => String(options?.[name] ?? '')),
   }),
   useI18n: () => ({ locale: 'en', setLocale: vi.fn() }),
 }));
@@ -157,6 +158,43 @@ describe('OnboardingWizard team members step', () => {
     expect(screen.getByText('TeamMembersStep')).toBeInTheDocument();
     expect(screen.getByTestId('current-step')).toHaveTextContent('1');
     expect(screen.getByTestId('created-emails')).toHaveTextContent('ok@example.test');
+  });
+
+  it('does not advance silently when the members were created but progress was not saved', async () => {
+    mocks.addTeamMembers.mockResolvedValue({ success: true, data: {
+      created: ['new@example.test'], notCreated: [], progressError: 'server english',
+    } });
+    const user = userEvent.setup();
+    await clickNextOnTeamStep({ teamMembers: [member('new@example.test')] });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/created, but setup could not save its progress: new@example.test/);
+    expect(alert).not.toHaveTextContent('server english');
+    expect(screen.getByTestId('current-step')).toHaveTextContent('1');
+    expect(screen.getByTestId('created-emails')).toHaveTextContent('new@example.test');
+
+    // The warning is not a dead end: Next continues without creating them again.
+    await user.click(screen.getByTestId('next-button'));
+    await waitFor(() => expect(screen.getByText('AddClientStep')).toBeInTheDocument());
+    expect(mocks.addTeamMembers).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the progress warning to the not-created list in a partial batch', async () => {
+    mocks.addTeamMembers.mockResolvedValue({ success: false, error: 'x', data: {
+      created: ['ok@example.test'], progressError: 'server english',
+      notCreated: [{ email: 'bad@example.test', reason: 'failed', error: 'Could not create user.' }],
+    } });
+    await clickNextOnTeamStep({ teamMembers: [member('ok@example.test'), member('bad@example.test')] });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('bad@example.test: Could not create user.');
+    expect(alert).toHaveTextContent(/could not save its progress: ok@example.test/);
+  });
+
+  it('does not send a member whose email is only spaces', async () => {
+    await clickNextOnTeamStep({ teamMembers: [member('   ')] });
+    await waitFor(() => expect(screen.getByText('AddClientStep')).toBeInTheDocument());
+    expect(mocks.addTeamMembers).not.toHaveBeenCalled();
   });
 
   it('treats a member restored from saved progress as created', async () => {

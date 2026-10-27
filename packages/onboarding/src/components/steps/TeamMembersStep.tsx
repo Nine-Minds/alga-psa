@@ -29,6 +29,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [savingMemberIndex, setSavingMemberIndex] = useState<number | null>(null);
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
+  // Non-blocking: the member was created but saved progress does not name them.
+  const [saveWarnings, setSaveWarnings] = useState<Record<number, string>>({});
   const [hasUnsavedForm, setHasUnsavedForm] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
 
@@ -179,6 +181,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
     setSavingMemberIndex(index);
     setSaveErrors(prev => ({ ...prev, [index]: '' }));
+    setSaveWarnings(prev => ({ ...prev, [index]: '' }));
 
     try {
       if (inviteMode === 'email') {
@@ -213,8 +216,14 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         if (result.success) {
           const currentCreated = data.createdTeamMemberEmails || [];
           updateData({
-            createdTeamMemberEmails: [...currentCreated, member.email]
+            createdTeamMemberEmails: [...currentCreated, result.data?.created ?? member.email]
           });
+          if (result.data?.progressError) {
+            setSaveWarnings(prev => ({ ...prev, [index]: t('teamMembersStep.errors.progressNotSaved', {
+              defaultValue: '{{email}} was created, but setup could not save its progress. If you leave setup and come back this member may not show as added; the account already exists, so do not add it again.',
+              email: result.data?.created ?? member.email
+            }) }));
+          }
 
           await checkLicenseStatus();
         } else {
@@ -587,6 +596,12 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           {hasError && (
             <Alert variant="destructive">
               <AlertDescription>{saveErrors[index]}</AlertDescription>
+            </Alert>
+          )}
+
+          {saveWarnings[index] && (
+            <Alert variant="warning">
+              <AlertDescription>{saveWarnings[index]}</AlertDescription>
             </Alert>
           )}
         </div>

@@ -220,7 +220,7 @@ export function OnboardingWizard({
           break;
           
         case 1: // Team Members
-          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email);
+          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email?.trim());
 
           // Members already created or invited are done. An invited member gets
           // their account when they accept; creating one here would give them a
@@ -248,6 +248,17 @@ export function OnboardingWizard({
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
             }
 
+            // The members exist but the saved progress does not name them, so
+            // a resumed wizard would not know them. Say so before moving on:
+            // the step stays put once, and Next then continues (they are
+            // already marked created and are not sent again).
+            const progressNotSaved = teamResult.data?.progressError && createdNow.length > 0
+              ? t('onboardingWizard.errors.teamProgressNotSaved', {
+                  defaultValue: 'These team members were created, but setup could not save its progress: {{users}}. If you leave setup and come back they may not show as added; their accounts already exist, so do not add them again. Select Next to continue.',
+                  users: createdNow.join(', ')
+                })
+              : undefined;
+
             if (!teamResult.success) {
               // Name every member that was not created and why; the step
               // stays put until each one is fixed or removed.
@@ -262,7 +273,12 @@ export function OnboardingWizard({
                 : teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
                     defaultValue: 'Failed to add team members'
                   });
-              setErrors(prev => ({ ...prev, [stepIndex]: message }));
+              setErrors(prev => ({ ...prev, [stepIndex]: progressNotSaved ? `${message}\n\n${progressNotSaved}` : message }));
+              return false;
+            }
+
+            if (progressNotSaved) {
+              setErrors(prev => ({ ...prev, [stepIndex]: progressNotSaved }));
               return false;
             }
           }
