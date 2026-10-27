@@ -152,6 +152,17 @@ describe('MspSignInPage', () => {
       expect(inner(result)?.props.scopedTenant).toEqual({ slug: SLUG, name: 'Acme MSP' });
     });
 
+    it('never substitutes the slug for a missing organization name', async () => {
+      getSessionMock.mockResolvedValue(null);
+      getTenantIdBySlugMock.mockResolvedValue('tenant-a');
+      getTenantDisplayNameBySlugMock.mockResolvedValue(null);
+
+      const result = await MspSignInPage({ searchParams: Promise.resolve({ tenant: SLUG }) });
+
+      expect(redirectMock).not.toHaveBeenCalled();
+      expect(inner(result)?.props.scopedTenant).toEqual({ slug: SLUG });
+    });
+
     it('normalizes slug case before resolving it', async () => {
       getSessionMock.mockResolvedValue(null);
       getTenantIdBySlugMock.mockResolvedValue('tenant-a');

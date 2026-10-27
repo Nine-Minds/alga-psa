@@ -33,7 +33,7 @@ export default async function MspSignInPage({
   // unknown slugs behave identically (silent redirect, no name rendered). Whether
   // the email belongs to that tenant is checked at submit time by the credentials
   // provider and by the scoped SSO resolution.
-  let scopedTenant: { slug: string; name: string } | undefined;
+  let scopedTenant: { slug: string; name?: string } | undefined;
   let scopedTenantId: string | undefined;
   if (params?.tenant !== undefined) {
     const slug = typeof params.tenant === 'string' ? params.tenant.trim().toLowerCase() : '';
@@ -47,7 +47,10 @@ export default async function MspSignInPage({
       redirect(query ? `/auth/msp/signin?${query}` : '/auth/msp/signin');
     }
     scopedTenantId = tenantId;
-    scopedTenant = { slug, name: (await getTenantDisplayNameBySlug(slug)) ?? slug };
+    // Never render the slug as a stand-in for a missing name: it is derived
+    // from the tenant id.
+    const name = await getTenantDisplayNameBySlug(slug);
+    scopedTenant = name ? { slug, name } : { slug };
   }
   const cookieStore = await cookies();
   const rememberedEmail = normalizeRememberedEmail(

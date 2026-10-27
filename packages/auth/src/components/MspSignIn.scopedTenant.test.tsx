@@ -143,6 +143,14 @@ describe('MSP sign-in scoped organization', () => {
     expect(loginFormProps).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: 'abc123def456' }));
   });
 
+  it('keeps the banner generic, never showing the slug, when the organization has no name', () => {
+    render(<MspSignIn scopedTenant={{ slug: 'abc123def456' }} />);
+
+    expect(screen.getByText('Signing in to the organization from your link')).toBeTruthy();
+    expect(screen.queryByText(/abc123def456/)).toBeNull();
+    expect(loginFormProps).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: 'abc123def456' }));
+  });
+
   it('renders no organization banner on the unscoped page', () => {
     render(<MspSignIn />);
     expect(screen.queryByText(/Signing in to/)).toBeNull();

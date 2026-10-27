@@ -14,7 +14,7 @@ import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from
 interface MspSignInProps {
   initialEmail?: string;
   /** Organization the page is scoped to by a validated `?tenant=<slug>`. */
-  scopedTenant?: { slug: string; name: string };
+  scopedTenant?: { slug: string; name?: string };
 }
 
 // Marketing panel. Kept as data so each entry carries its own key rather than
@@ -213,10 +213,12 @@ export default function MspSignIn({ initialEmail, scopedTenant }: MspSignInProps
               {scopedTenant && (
                 <div className="text-center space-y-1 pt-2" id="msp-scoped-tenant-banner">
                   <p className="text-sm font-medium text-[rgb(var(--color-text-800))]">
-                    {t('signIn.scopedTenant.signingInTo', {
-                      name: scopedTenant.name,
-                      defaultValue: 'Signing in to {{name}}',
-                    })}
+                    {scopedTenant.name
+                      ? t('signIn.scopedTenant.signingInTo', {
+                          name: scopedTenant.name,
+                          defaultValue: 'Signing in to {{name}}',
+                        })
+                      : t('signIn.scopedTenant.signingInToUnnamed', 'Signing in to the organization from your link')}
                   </p>
                   <a
                     id="msp-scoped-tenant-back-link"
