@@ -880,5 +880,68 @@
     "prdRefs": [
       "FR8"
     ]
+  },
+  {
+    "id": "F099",
+    "description": "POST /api/v1/tickets accepts asset_ids[] and links every named device in the SAME transaction as the insert (asset_associations, entity_type 'ticket', relationship 'affected'); an asset outside the tenant is rejected before the ticket exists, so a failed link never leaves an orphan",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Exactly one named asset makes the ticket inherit that asset's billing profile the way POST /tickets/from-asset does; several assets leave billing_profile_id to the normal client default. The rule lives once in shared/models/ticketAssetLinkModel.ts and is used by the REST service and the web addTicket action",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "addTicket (the server action behind QuickAddTicket) reads repeated asset_ids form entries, still accepts the legacy single asset_id, de-duplicates, and links them all in its own transaction",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "QuickAddTicket renders a real client-scoped multi-asset picker below the client/location fields instead of the single pre-set asset banner: disabled until a client is chosen, cleared on client change, pre-filled when opened from an asset. The control is ClientAssetMultiSelect, provided through a TicketAssetPicker seam so the tickets package still does not import the assets package",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Mobile CreateTicketScreen gains an Assets field (gated by the assets capability): disabled until a client is chosen, lists that client's assets through listAssets with search, multi-selects through EntityPickerModal's selectedIds mode, clears on client change, and posts asset_ids",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Starting from an asset on mobile (asset detail, link-ticket escape hatch, audit summary missing row) navigates to the one CreateTicket form with that client and device pre-selected; the separate create-from-asset modal is gone. The linked devices show on TicketDetail through the existing AssetsSection",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "asset_ids is documented on the v1 create-ticket request body (WorkV1CreateTicketBody) and the CE/EE specs plus the MCP/chat registries are regenerated with the repo tooling",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "prdRefs": [
+      "alga-2026-0002785"
+    ]
   }
 ]

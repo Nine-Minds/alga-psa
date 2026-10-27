@@ -1284,5 +1284,43 @@
       "F095",
       "F097"
     ]
+  },
+  {
+    "id": "T143",
+    "description": "TicketService.create with asset_ids writes one asset_associations row per device on the ticket's own transaction handle, inherits the billing profile for exactly one asset, leaves it to the client default for several, consults the resolver for none, rejects an asset from outside the tenant before TicketModel is called, and de-duplicates repeats/blanks",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "featureIds": [
+      "F099",
+      "F100"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "QuickAddTicket offers no device picker until a client is chosen, scopes it to that client, submits one asset_ids entry per picked device (and no legacy asset_id), clears the selection on a client change, and pre-fills from the asset the dialog was opened with (banner replaced, not duplicated)",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "featureIds": [
+      "F101",
+      "F102"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "Mobile CreateTicketScreen's Assets field is disabled with 'Select a client first' until a client is picked, requests only that client's assets, toggles devices on repeated taps, clears on client change while keeping the route's preset, sends asset_ids on save, and disappears when the assets capability is off",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "Mobile asset detail (direct button and the link-picker escape hatch) and the audit summary's missing row open CreateTicket with the client and that device pre-selected instead of a create-from-asset modal",
+    "implemented": true,
+    "commitGroup": "ticket-assets",
+    "featureIds": [
+      "F104"
+    ]
   }
 ]
