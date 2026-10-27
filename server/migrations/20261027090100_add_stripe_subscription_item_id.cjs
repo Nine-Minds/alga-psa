@@ -10,6 +10,7 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
+  // Trade-off: this may drop data on installs that already had the column before this migration.
   if (!(await knex.schema.hasTable('stripe_subscriptions'))) return;
   await knex.raw('ALTER TABLE stripe_subscriptions DROP COLUMN IF EXISTS stripe_subscription_item_id');
 };
