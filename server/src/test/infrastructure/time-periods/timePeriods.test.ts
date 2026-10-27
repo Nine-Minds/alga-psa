@@ -300,7 +300,7 @@ describe('Time Periods Infrastructure', () => {
       },
       {
         time_period_settings_id: uuidv4(),
-        start_day: 15,
+        start_day: 16,
         end_day: 0,
         frequency: 1,
         frequency_unit: 'month',
@@ -330,17 +330,17 @@ describe('Time Periods Infrastructure', () => {
     const janFirstPeriod = findPeriodByStartDate(periods, '2023-01-01');
     expect(janFirstPeriod).toBeDefined();
     expect(toPlainDate(janFirstPeriod.start_date).toString()).toBe('2023-01-01');
-    expect(toPlainDate(janFirstPeriod.end_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(janFirstPeriod.end_date).toString()).toBe('2023-01-16');
 
     const febFirstPeriod = findPeriodByStartDate(periods, '2023-02-01');
     expect(febFirstPeriod).toBeDefined();
     expect(toPlainDate(febFirstPeriod.start_date).toString()).toBe('2023-02-01');
-    expect(toPlainDate(febFirstPeriod.end_date).toString()).toBe('2023-02-15');
+    expect(toPlainDate(febFirstPeriod.end_date).toString()).toBe('2023-02-16');
 
     const aprFirstPeriod = findPeriodByStartDate(periods, '2023-04-01');
     expect(aprFirstPeriod).toBeDefined();
     expect(toPlainDate(aprFirstPeriod.start_date).toString()).toBe('2023-04-01');
-    expect(toPlainDate(aprFirstPeriod.end_date).toString()).toBe('2023-04-15');
+    expect(toPlainDate(aprFirstPeriod.end_date).toString()).toBe('2023-04-16');
   });
 
   describe('generateTimePeriods cadence (T0-3)', () => {
@@ -398,13 +398,44 @@ describe('Time Periods Infrastructure', () => {
 
     it('aligns a yearly profile to its configured start month', async () => {
       const periods = await generateTimePeriods(
-        [base({ frequency_unit: 'year', start_day: undefined, start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 })],
+        [base({ frequency_unit: 'year', start_day: undefined, start_month: 7, start_day_of_month: 1, end_month: 6, end_day_of_month: 0 })],
         '2023-01-01',
         '2025-07-01'
       );
       expect(pairs(periods)).toEqual([
         ['2023-07-01', '2024-07-01'],
         ['2024-07-01', '2025-07-01'],
+      ]);
+    });
+
+    it('ends a seasonal yearly profile at end_month and restarts on start_month', async () => {
+      const periods = await generateTimePeriods(
+        [base({ frequency_unit: 'year', start_day: undefined, start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 })],
+        '2023-01-01',
+        '2025-01-01'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2023-07-01', '2024-01-01'],
+        ['2024-07-01', '2025-01-01'],
+      ]);
+    });
+
+    it('reads a monthly end_day as the last included day, so 1-15 / 16-end tile', async () => {
+      const periods = await generateTimePeriods(
+        [
+          base({ frequency_unit: 'month', start_day: 1, end_day: 15 }),
+          base({ frequency_unit: 'month', start_day: 16, end_day: 0 }),
+        ],
+        '2026-01-01',
+        '2026-04-01'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2026-01-01', '2026-01-16'],
+        ['2026-01-16', '2026-02-01'],
+        ['2026-02-01', '2026-02-16'],
+        ['2026-02-16', '2026-03-01'],
+        ['2026-03-01', '2026-03-16'],
+        ['2026-03-16', '2026-04-01'],
       ]);
     });
   });

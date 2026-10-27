@@ -49,14 +49,18 @@ describe('endOfConfiguredTimePeriod', () => {
     expect(end('2026-03-02', { frequency_unit: 'day', frequency: 10 })).toBe('2026-03-12');
   });
 
-  test('yearly cells run from one configured start to the next, not to a seasonal end', () => {
-    const july = { frequency_unit: 'year' as const, start_month: 7, start_day_of_month: 1 };
-    expect(end('2026-07-01', july)).toBe('2027-07-01');
-    // end_month / end_day_of_month never shorten the cell (no seasonal yearly cells).
-    expect(end('2026-07-01', { ...july, end_month: 12, end_day_of_month: 0 })).toBe('2027-07-01');
-    expect(end('2026-07-01', { ...july, end_month: 9, end_day_of_month: 30 })).toBe('2027-07-01');
+  test('yearly cells end at end_month / end_day_of_month (exclusive), so a profile can be seasonal', () => {
+    // A July fiscal year is configured as July 1 .. end of June.
+    const fiscal = { frequency_unit: 'year' as const, start_month: 7, start_day_of_month: 1, end_month: 6, end_day_of_month: 0 };
+    expect(end('2026-07-01', fiscal)).toBe('2027-07-01');
+    expect(end('2026-07-01', { ...fiscal, frequency: 2 })).toBe('2028-07-01');
+    // July 1 .. end of December is a half-year profile; a sibling can cover January .. June.
+    expect(end('2026-07-01', { frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 })).toBe('2027-01-01');
+    expect(end('2026-01-01', { frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 6, end_day_of_month: 0 })).toBe('2026-07-01');
+    // end_day_of_month is an exclusive boundary.
+    expect(end('2026-01-01', { frequency_unit: 'year', end_month: 3, end_day_of_month: 15 })).toBe('2026-03-15');
+    // Defaults (end_month unset) are the calendar year.
     expect(end('2026-01-01', { frequency_unit: 'year' })).toBe('2027-01-01');
-    expect(end('2026-07-01', { ...july, frequency: 2 })).toBe('2028-07-01');
   });
 
   test('rejects an unsupported unit', () => {
@@ -70,9 +74,24 @@ describe('suggester agrees with the shared cadence and skips inactive settings',
       frequency_unit: 'year',
       start_month: 7,
       start_day_of_month: 1,
+      end_month: 6,
+      end_day_of_month: 0,
       effective_from: '2025-07-01T00:00:00.000Z',
     });
     expect(periodContaining(yearly, d('2026-03-10'))).toEqual({ start: d('2025-07-01'), end: d('2026-07-01') });
+  });
+
+  test('a seasonal yearly profile has no cell outside its season', () => {
+    const secondHalf = makeSettings({
+      frequency_unit: 'year',
+      start_month: 7,
+      start_day_of_month: 1,
+      end_month: 12,
+      end_day_of_month: 0,
+      effective_from: '2025-07-01T00:00:00.000Z',
+    });
+    expect(periodContaining(secondHalf, d('2025-10-10'))).toEqual({ start: d('2025-07-01'), end: d('2026-01-01') });
+    expect(periodContaining(secondHalf, d('2026-03-10'))).toBeNull();
   });
 
   test('semi-monthly profiles tile without gap or overlap', () => {

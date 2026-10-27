@@ -12,7 +12,7 @@ import {
   ITimePeriodSettings
 } from '@alga-psa/types';
 import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
-import { yearBoundary } from '../lib/timePeriodCadence';
+import { endOfConfiguredTimePeriod, yearBoundary } from '../lib/timePeriodCadence';
 import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '@alga-psa/validation';
@@ -36,7 +36,6 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 // Special value to indicate end of period
-const END_OF_PERIOD = 0;
 
 // These actions are also driven from background jobs and from the billing
 // bootstrap, where there is no Next.js request context and revalidatePath
@@ -375,51 +374,11 @@ export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promi
 
 // Helper function to get the end of a period based on frequency unit
 // LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
+// The generator and the suggester read a setting through the same cadence function, so a
+// monthly end_day is the last included day and a yearly profile ends at end_month /
+// end_day_of_month, on both paths.
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
-  const frequency = setting.frequency || 1;
-  const startDatePlain = Temporal.PlainDate.from(startDate);
-
-  // Special handling for frequency = 0 (end of period)
-  if (frequency === END_OF_PERIOD) {
-    switch (setting.frequency_unit) {
-      case 'week': {
-        // End of week (Sunday) + 1 day
-        const daysUntilEndOfWeek = 7 - startDatePlain.dayOfWeek;
-        return startDatePlain.add({ days: daysUntilEndOfWeek + 1 });
-      }
-
-      case 'month': {
-        // End of month + 1 day
-        return startDatePlain.add({ months: 1 }).with({ day: 1 });
-      }
-      case 'year': {
-        return startDatePlain.add({ years: 1 }).with({ month: 1, day: 1 });
-      }
-
-      default: // day
-        return startDatePlain.add({ days: 1 });
-    }
-  }
-
-  // Regular frequency handling
-  switch (setting.frequency_unit) {
-    case 'week':
-      return startDatePlain.add({ days: 7 * frequency });
-
-    case 'month': {
-      if (setting.end_day && setting.end_day !== END_OF_PERIOD) {
-        return startDatePlain.add({ months: frequency - 1 }).with({ day: setting.end_day });
-      }
-      return startDatePlain.add({ months: frequency }).with({ day: 1 });
-    }
-
-    case 'year': {
-      return startDatePlain.add({ years: frequency });
-    }
-
-    default: // day
-      return startDatePlain.add({ days: frequency });
-  }
+  return endOfConfiguredTimePeriod(Temporal.PlainDate.from(startDate), setting);
 }
 
 // Start of the period that follows the one beginning at currentStart, for
@@ -435,10 +394,9 @@ function getNextPeriodStart(
       return currentStart.add({ days: 7 * frequency });
 
     case 'month': {
-      const next = currentStart.add({ months: frequency });
-      return setting.start_day
-        ? next.with({ day: Math.min(setting.start_day, next.daysInMonth) })
-        : next;
+      // start_day defaults to the 1st, as in timePeriodCadence and the suggester.
+      const next = currentStart.with({ day: 1 }).add({ months: frequency });
+      return next.with({ day: Math.min(setting.start_day || 1, next.daysInMonth) });
     }
 
     case 'year':
@@ -521,12 +479,11 @@ export async function generateTimePeriods(
       };
       periods.push(newPeriod);
 
-      // A period that ends on a fixed day of the month (the 15th, say) does not
-      // chain: the next one starts at the next occurrence of start_day. Walking
-      // to periodEndDate instead recomputed the same end date from the same
-      // date forever — an infinite loop that filled the heap.
-      const chainsToItsEnd = setting.end_day === undefined || setting.end_day === END_OF_PERIOD;
-      const nextDate = chainsToItsEnd ? periodEndDate : getNextPeriodStart(currentDate, setting);
+      // The next period starts at the setting's next start (start_day / start_month), never at
+      // this period's end: a 16th-to-month-end profile restarts on the 16th, a seasonal yearly
+      // profile on its start_month. For day and week cadences the two coincide. (Walking to
+      // periodEndDate for a fixed end_day once recomputed the same end forever.)
+      const nextDate = getNextPeriodStart(currentDate, setting);
 
       if (Temporal.PlainDate.compare(nextDate, currentDate) <= 0) {
         break;

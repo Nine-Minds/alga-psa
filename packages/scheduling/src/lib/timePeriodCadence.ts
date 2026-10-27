@@ -18,12 +18,30 @@ function clampedDayOfMonth(from: Temporal.PlainDate, monthsFromFirst: number, da
 
 /**
  * Start of the yearly cell that begins in `year`: start_month / start_day_of_month (default Jan 1).
- * Yearly profiles are always whole cells from one start to the next. end_month and
- * end_day_of_month do not create a seasonal (shorter than a year) cell.
  */
 export function yearBoundary(setting: ITimePeriodSettings, year: number): Temporal.PlainDate {
   const first = Temporal.PlainDate.from({ year, month: setting.start_month || 1, day: 1 });
   return first.with({ day: Math.min(setting.start_day_of_month || 1, first.daysInMonth) });
+}
+
+/**
+ * EXCLUSIVE end of the yearly cell starting at `start`. A yearly profile is a range inside the
+ * year, start_month/start_day_of_month to end_month/end_day_of_month (the same reading the
+ * settings overlap check uses), so two profiles can split a year. end_day_of_month is an
+ * exclusive boundary; 0 or unset means the first day after end_month. Stored settings default
+ * to end_month 12 / end_day_of_month 0. A range that wraps the new year ends in the next year.
+ */
+function endOfYearlyCell(start: Temporal.PlainDate, setting: ITimePeriodSettings, frequency: number): Temporal.PlainDate {
+  const endIn = (year: number) => {
+    const month = Temporal.PlainDate.from({ year, month: setting.end_month || 12, day: 1 });
+    return setting.end_day_of_month
+      ? month.with({ day: Math.min(setting.end_day_of_month, month.daysInMonth) })
+      : month.add({ months: 1 });
+  };
+  // First configured end after the start (next calendar year when the range wraps), then
+  // frequency - 1 further years. Re-clamp by recomputing in the target year (Feb 29).
+  const firstEndYear = Temporal.PlainDate.compare(endIn(start.year), start) > 0 ? start.year : start.year + 1;
+  return endIn(firstEndYear + frequency - 1);
 }
 
 /**
@@ -51,7 +69,7 @@ export function endOfConfiguredTimePeriod(start: Temporal.PlainDate, setting: IT
       return clampedDayOfMonth(start, monthOffset, endDay).add({ days: 1 });
     }
     case 'year':
-      return yearBoundary(setting, start.year + frequency);
+      return endOfYearlyCell(start, setting, frequency);
     default:
       throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
   }
