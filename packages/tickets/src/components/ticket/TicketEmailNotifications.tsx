@@ -5,7 +5,8 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
-import { getEmailLogsForTicket, type EmailSendingLogRecord } from '@alga-psa/email/actions';
+import type { EmailSendingLogRecord } from '@alga-psa/email/actions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Mail } from 'lucide-react';
@@ -57,6 +58,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   variant = 'card',
 }) => {
   const { t, i18n } = useTranslation('features/tickets');
+  const { getEmailLogsForTicket } = useTicketDataSource().email;
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<EmailSendingLogRecord[]>([]);
   const [limit, setLimit] = useState(INITIAL_LIMIT);
@@ -78,7 +80,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [ticketId, limit]);
+  }, [ticketId, limit, getEmailLogsForTicket]);
 
   useEffect(() => {
     void fetchLogs();

@@ -84,6 +84,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
