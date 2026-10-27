@@ -1,5 +1,6 @@
 'use server';
 
+import { MICROSOFT_MULTI_TENANT_AUTHORITY } from '@alga-psa/shared/services/email/microsoftAuthority';
 import axios, { type AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -145,7 +146,7 @@ function buildBootstrapAuthorizationUrl(input: {
     code_challenge_method: 'S256',
     prompt: 'select_account',
   });
-  return `${getMicrosoftAuthorizeUrl('common')}?${params.toString()}`;
+  return `${getMicrosoftAuthorizeUrl(MICROSOFT_MULTI_TENANT_AUTHORITY)}?${params.toString()}`;
 }
 
 function getGraphErrorMessage(error: unknown, operation: string): string {
@@ -540,7 +541,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
     const tokenResponse = await axios.post<{
       access_token?: string;
       id_token?: string;
-    }>(getMicrosoftTokenUrl('common'), tokenParams.toString(), {
+    }>(getMicrosoftTokenUrl(MICROSOFT_MULTI_TENANT_AUTHORITY), tokenParams.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       timeout: 20_000,
     });

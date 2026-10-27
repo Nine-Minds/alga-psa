@@ -1,3 +1,4 @@
+import { resolveMicrosoftOAuthAuthority } from '../microsoftAuthority';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { randomBytes, randomUUID } from 'crypto';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
@@ -19,6 +20,12 @@ import {
   toDiagnosticsErrorMeta,
   type GraphFailure,
 } from '../../diagnostics/graphFailure';
+import {
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  classifySafeMicrosoftOAuthFailure,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '../microsoftOAuthErrors';
 import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
@@ -395,29 +402,33 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
-      // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
-      // tenant-independent authority used when the refresh grant was issued.
-      // Appliance deployments use a customer-owned, normally single-tenant app
-      // and therefore require that app's concrete tenant authority.
-      let tenantAuthority = isHosted
-        ? 'common'
-        : vendorTenantId
-          || getAccessTokenTenantId(this.accessToken)
-          || process.env.MICROSOFT_TENANT_ID;
-      if (!tenantAuthority) {
-        try {
-          const secretProvider = await getSecretProviderInstance();
-          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
-            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
-            || 'common';
-        } catch {
-          tenantAuthority = 'common';
+      // The authority must match the one the refresh token was issued under, so
+      // the issuer kind decides (see microsoftAuthority.ts): platform-managed ->
+      // common; tenant-owned -> the profile's directory ID. Config built by
+      // buildMicrosoftEmailProviderConfig carries `resolved_issuer_kind`;
+      // callers that have not migrated fall back to the deployment capability.
+      const issuerKind =
+        vendorConfig.resolved_issuer_kind ??
+        (resolveDeploymentCapabilities().microsoftOAuth.sharedApp ? 'platform-managed' : 'tenant-owned');
+      let profileTenantId: string | undefined;
+      if (issuerKind === 'tenant-owned') {
+        // Only values that belong to this mailbox's own app. The deployment-wide
+        // MICROSOFT_TENANT_ID (env or app secret) is the hosting tenant, never a
+        // tenant-owned app's directory, so it is deliberately not consulted.
+        profileTenantId = vendorTenantId || getAccessTokenTenantId(this.accessToken) || undefined;
+        if (!profileTenantId) {
+          try {
+            const secretProvider = await getSecretProviderInstance();
+            profileTenantId = (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')) || undefined;
+          } catch {
+            profileTenantId = undefined;
+          }
         }
       }
+      const tenantAuthority = resolveMicrosoftOAuthAuthority({ issuerKind, profileTenantId });
 
-      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority || 'common');
+      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -447,6 +458,21 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
+      // Microsoft's token endpoint answers with an OAuth body (error /
+      // error_codes / error_description), not a Graph error, so classify that
+      // first. Only safe fields are carried; never the axios config/body.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind) {
+        const wrapped = new Error(formatMicrosoftOAuthFailureForMailboxFlow(failureKind));
+        Object.assign(wrapped, {
+          status: safeFailure.status,
+          code: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+          microsoftOAuthFailureKind: failureKind,
+          microsoftOAuthFailure: safeFailure,
+        });
+        throw wrapped;
+      }
       throw this.toSanitizedGraphError(error, 'refreshAccessToken');
     }
   }
@@ -1050,7 +1076,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         .join(' ');
       return {
         success: false,
-        error: detail
+        error: (error as any)?.microsoftOAuthFailureKind
+          ? failure.message
+          : detail
           ? `${failure.message} (${detail})`
           : failure.message || 'Connection test failed',
         status: failure.status,

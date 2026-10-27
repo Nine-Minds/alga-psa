@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { buildEntraCallbackErrorKey } from '@ee/components/settings/integrations/entra/entraCallbackErrors';
 
 const axiosPostMock = vi.fn();
 const axiosGetMock = vi.fn();
@@ -322,5 +323,101 @@ describe('Entra OAuth callback validation', () => {
     expect(axiosPostMock).not.toHaveBeenCalled();
     expect(axiosGetMock).not.toHaveBeenCalled();
     expect(saveEntraDirectTokenSetMock).not.toHaveBeenCalled();
+  });
+
+  describe('token-exchange failures', () => {
+    function axiosTokenFailure(description: string, codes: number[]) {
+      return Object.assign(new Error('Request failed with status code 400'), {
+        isAxiosError: true,
+        // The shape that used to leak: axios keeps the urlencoded request body.
+        config: { data: 'client_id=client-id-1&client_secret=LEAK-ME-SECRET&code=code-34' },
+        response: {
+          status: 400,
+          config: { data: 'client_secret=LEAK-ME-SECRET' },
+          data: { error: 'invalid_request', error_description: description, error_codes: codes, trace_id: 't-1', correlation_id: 'c-1' },
+        },
+      });
+    }
+
+    it('never logs client_secret and maps AADSTS50194 to the single-tenant error code', async () => {
+      const knex = knexDouble();
+      createTenantKnexMock.mockResolvedValue({ knex: knex.knexMock });
+      runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
+      axiosPostMock.mockRejectedValue(
+        axiosTokenFailure(
+          "AADSTS50194: Application 'x' is not configured as a multi-tenant application. Usage of the /common endpoint is not supported.",
+          [50194]
+        )
+      );
+
+      const logged: string[] = [];
+      const capture = (...args: unknown[]) => {
+        logged.push(args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a, Object.getOwnPropertyNames(Object(a))))).join(' '));
+      };
+      const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+        vi.spyOn(console, m).mockImplementation(capture)
+      );
+
+      try {
+        const { GET } = await import('@ee/app/api/auth/microsoft/entra/callback/route');
+        const response = await GET(callbackRequest(encodeState()));
+        const location = new URL(response.headers.get('location') as string);
+        expect(location.searchParams.get('error')).toBe('aadsts_50194_single_tenant');
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+      }
+
+      const output = logged.join('\n');
+      expect(output).not.toContain('LEAK-ME-SECRET');
+      expect(output).not.toContain('client_secret');
+    });
+
+    it('maps an AADSTS7000215 invalid client secret (HTTP 401) to its error code and message', async () => {
+      const knex = knexDouble();
+      createTenantKnexMock.mockResolvedValue({ knex: knex.knexMock });
+      runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
+      axiosPostMock.mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 401'), {
+          isAxiosError: true,
+          config: { data: 'client_secret=LEAK-ME-SECRET' },
+          response: {
+            status: 401,
+            data: {
+              error: 'invalid_client',
+              error_codes: [7000215],
+              error_description: 'AADSTS7000215: Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID.',
+            },
+          },
+        })
+      );
+      const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+        vi.spyOn(console, m).mockImplementation(() => undefined)
+      );
+      try {
+        const { GET } = await import('@ee/app/api/auth/microsoft/entra/callback/route');
+        const response = await GET(callbackRequest(encodeState()));
+        const location = new URL(response.headers.get('location') as string);
+        const code = location.searchParams.get('error');
+        expect(code).toBe('aadsts_7000215_invalid_secret');
+        expect(buildEntraCallbackErrorKey(code)).toBe('integrations.entra.settings.connection.callbackErrors.invalidClientSecret');
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+      }
+    });
+
+    it('keeps Entra on the /common authority', async () => {
+      const knex = knexDouble();
+      createTenantKnexMock.mockResolvedValue({ knex: knex.knexMock });
+      runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
+      resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+        clientId: 'client-id-1',
+        clientSecret: 'client-secret-1',
+        tenantId: '5b7c1d0e-1111-4222-8333-944455556666',
+        source: 'profile', profileId: 'profile-1', profileDisplayName: 'MSP app',
+      });
+      const { GET } = await import('@ee/app/api/auth/microsoft/entra/callback/route');
+      await GET(callbackRequest(encodeState()));
+      expect(String(axiosPostMock.mock.calls[0]?.[0])).toContain('/common/oauth2/v2.0/token');
+    });
   });
 });

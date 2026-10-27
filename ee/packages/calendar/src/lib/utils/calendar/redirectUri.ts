@@ -1,3 +1,4 @@
+import { MICROSOFT_CALENDAR_CALLBACK_PATH } from '@alga-psa/shared/services/email/microsoftRedirectUris';
 import type { CalendarOAuthState } from '@alga-psa/types';
 
 type CalendarProviderType = CalendarOAuthState['provider'];
@@ -18,7 +19,7 @@ interface ResolveCalendarRedirectOptions {
 
 const PROVIDER_CALLBACK_PATH: Record<CalendarProviderType, string> = {
   google: '/api/auth/google/calendar/callback',
-  microsoft: '/api/auth/microsoft/calendar/callback',
+  microsoft: MICROSOFT_CALENDAR_CALLBACK_PATH,
 };
 
 export async function resolveCalendarRedirectUri(
