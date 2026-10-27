@@ -1000,7 +1000,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // off the profile, which moves, so its redundant client_id has to follow.
     // A CE database gets the real enterprise migration for the length of this
     // case, so the re-stamp is exercised in every edition rather than skipped.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const autopayMigration = require('../../../../ee/server/migrations/20260926091000_create_autopay_tables.cjs');
     const installedHere = !(await db.schema.hasTable('billing_profile_autopay'));
     if (installedHere) await autopayMigration.up(db);
