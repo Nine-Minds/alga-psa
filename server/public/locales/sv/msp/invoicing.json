@@ -323,6 +323,21 @@
       "any": "alla",
       "clear": "Rensa",
       "countSummary": "Grupper: {{groups}} · rader: {{obligations}}"
+    },
+    "lateTime": {
+      "title": "Sent godkänd timtid",
+      "description": "Den här tiden godkändes efter att fakturan för dess tjänsteperiod hade utfärdats. Poster som väntar på fakturering läggs till på nästa faktura en enda gång och markeras som sen tid. Poster utanför tillbakablicksperioden faktureras inte.",
+      "columns": {
+        "client": "Kund",
+        "technician": "Tekniker",
+        "service": "Tjänst",
+        "workDate": "Arbetsdatum",
+        "hours": "Timmar",
+        "closedPeriod": "Stängd tjänsteperiod",
+        "status": "Status"
+      },
+      "nextInvoice": "Faktureras på nästa faktura",
+      "outsideLookback": "Utanför tillbakablicksperioden — faktureras inte"
     }
   },
   "manualInvoices": {

@@ -323,6 +323,21 @@
       "any": "any",
       "clear": "Clear",
       "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "lateTime": {
+      "title": "Late approved hourly time",
+      "description": "This time was approved after the invoice for its service period was issued. Entries waiting to bill are added to the next invoice, once, marked as late time. Entries outside the lookback are not billed.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technician",
+        "service": "Service",
+        "workDate": "Work date",
+        "hours": "Hours",
+        "closedPeriod": "Closed service period",
+        "status": "Status"
+      },
+      "nextInvoice": "Bills on next invoice",
+      "outsideLookback": "Outside lookback — not billed"
     }
   },
   "manualInvoices": {

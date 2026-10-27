@@ -58,7 +58,9 @@ exports.up = async function up(knex) {
     if (rows.length > 0) {
       await run(`ALTER TABLE users VALIDATE CONSTRAINT ${CONSTRAINT}`);
     }
+    // migration-lint: allow 3 - SET NOT NULL runs only after VALIDATE CONSTRAINT proved the column (PostgreSQL 12+ skips the rescan), on one connection with no other lock held
     await run(`ALTER TABLE users ALTER COLUMN is_inactive SET NOT NULL`);
+    // migration-lint: allow 3 - drops the redundant check this migration pair added NOT VALID in 20261026090000; NOT NULL now enforces the invariant
     await run(`ALTER TABLE users DROP CONSTRAINT IF EXISTS ${CONSTRAINT}`);
   });
 };

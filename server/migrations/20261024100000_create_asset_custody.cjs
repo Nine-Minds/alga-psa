@@ -33,12 +33,14 @@ exports.up = async function up(knex) {
     });
   }
   await knex.raw('ALTER TABLE assets DROP CONSTRAINT IF EXISTS assets_ownership_check');
+  // migration-lint: allow 2 - retroactive: ownership CHECK re-created after DROP IF EXISTS on assets in the same migration that introduces the column values; merged before the lint existed
   await knex.raw(`ALTER TABLE assets ADD CONSTRAINT assets_ownership_check CHECK (ownership IN ('client', 'msp'))`);
 
   // --- held_by_msp status for existing tenants ---
   if (await knex.schema.hasTable('asset_statuses')) {
     const tenants = await knex('tenants').select('tenant');
     for (const { tenant } of tenants) {
+      // migration-lint: allow 5 - retroactive: one held_by_msp status row per tenant (bounded by tenant count), idempotent insert; merged before the lint existed
       await knex('asset_statuses')
         .insert({
           tenant,
