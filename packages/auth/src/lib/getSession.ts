@@ -17,6 +17,7 @@ import { isInteractiveUserType } from '@alga-psa/types';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
+import { isSessionRevokedByLoginPolicy } from './passwordLoginGate';
 
 /**
  * Decoding a session cookie only proves the JWT is authentic; it says nothing
@@ -77,6 +78,22 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
   } catch {
     await logSessionRejection('durable_session_lookup_unavailable');
     logger.error('[auth] Session revocation check failed closed');
+    return null;
+  }
+
+  // The edge-decoded path never runs the jwt callback, so the SSO-required
+  // cutoff is enforced here too. Uses the cached policy and fails open on an
+  // unreadable policy (same as the jwt callback).
+  if (
+    await isSessionRevokedByLoginPolicy({
+      tenant,
+      userId,
+      userType,
+      loginMethod: (session as { login_method?: unknown }).login_method,
+      authIssuedAtMs: (session as { auth_issued_at?: unknown }).auth_issued_at,
+    })
+  ) {
+    await logSessionRejection('login_policy_sso_required');
     return null;
   }
 

@@ -253,7 +253,22 @@
       "verify": "Verifica",
       "title": "Facilissimo",
       "instructions": "Inserisci il codice a 6 cifre dell’app di autenticazione.",
-      "digitsLeft": "{{count}} cifre rimanenti"
+      "digitsLeft": "{{count}} cifre rimanenti",
+      "enroll": {
+        "title": "Configura l’autenticazione a due fattori",
+        "instructions": "La tua organizzazione richiede l’autenticazione a due fattori. Scansiona il codice QR con un’app di autenticazione, quindi inserisci il codice a 6 cifre.",
+        "qrAlt": "Codice QR per la tua app di autenticazione",
+        "manualKey": "Oppure inserisci questa chiave manualmente:",
+        "cancel": "Annulla",
+        "errors": {
+          "invalid_credentials": "L’e-mail o la password non sono più valide. Accedi di nuovo.",
+          "enrollment_not_required": "La configurazione non è necessaria per questo account. Accedi di nuovo.",
+          "invalid_code": "Questo codice non è valido. Riprova.",
+          "rate_limited": "Troppi tentativi. Attendi qualche minuto e riprova.",
+          "captcha_required": "Completa prima la verifica nella pagina di accesso.",
+          "unavailable": "La configurazione non è al momento disponibile. Riprova."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",

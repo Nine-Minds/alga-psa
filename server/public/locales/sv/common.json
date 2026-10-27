@@ -297,7 +297,22 @@
       "verify": "Verifiera",
       "title": "Enkelt",
       "instructions": "Ange den sexsiffriga koden från din app för tvåfaktorsautentisering.",
-      "digitsLeft": "Siffror kvar: {{count}}"
+      "digitsLeft": "Siffror kvar: {{count}}",
+      "enroll": {
+        "title": "Konfigurera tvåfaktorsautentisering",
+        "instructions": "Din organisation kräver tvåfaktorsautentisering. Skanna QR-koden med en autentiseringsapp och ange sedan den sexsiffriga koden.",
+        "qrAlt": "QR-kod för din autentiseringsapp",
+        "manualKey": "Eller ange den här nyckeln manuellt:",
+        "cancel": "Avbryt",
+        "errors": {
+          "invalid_credentials": "Din e-postadress eller ditt lösenord är inte längre giltigt. Logga in igen.",
+          "enrollment_not_required": "Det här kontot behöver ingen konfiguration. Logga in igen.",
+          "invalid_code": "Koden är ogiltig. Försök igen.",
+          "rate_limited": "För många försök. Vänta några minuter och försök igen.",
+          "captcha_required": "Slutför först verifieringen på inloggningssidan.",
+          "unavailable": "Konfigurationen är inte tillgänglig just nu. Försök igen."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Token för överlämning av inloggningen saknas eller är ogiltig. Logga in igen.",

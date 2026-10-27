@@ -3748,6 +3748,50 @@
   "common": {
     "saving": "A guardar…"
   },
+  "loginPolicy": {
+    "title": "Política de início de sessão",
+    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão com palavra-passe. Estas regras são aplicadas no servidor.",
+    "requireSso": {
+      "title": "Exigir início de sessão único para a equipa do MSP",
+      "body": "Os utilizadores internos têm de iniciar sessão com Google, Microsoft ou o seu fornecedor Keycloak. O início de sessão com palavra-passe e a redefinição de palavra-passe ficam bloqueados, exceto para os administradores de emergência abaixo.",
+      "signOutWarning": "Ao ativar «Exigir início de sessão único», todos os utilizadores internos que iniciaram sessão com palavra-passe são desligados, exceto os administradores de emergência. Ativar um requisito de dois fatores não desliga ninguém; aplica-se no próximo início de sessão."
+    },
+    "require2faInternal": {
+      "title": "Exigir autenticação de dois fatores no início de sessão com palavra-passe da equipa do MSP",
+      "body": "À equipa sem autenticador será pedido que configure um no próximo início de sessão."
+    },
+    "require2faClient": {
+      "title": "Exigir autenticação de dois fatores no início de sessão com palavra-passe do portal do cliente",
+      "body": "Aos utilizadores do portal do cliente sem autenticador será pedido que configurem um no próximo início de sessão. O requisito de início de sessão único nunca se aplica aos utilizadores do portal do cliente."
+    },
+    "knownDeviceSkip": {
+      "title": "Permitir que dispositivos conhecidos dispensem o código",
+      "body": "Aos utilizadores que confiaram num dispositivo não é pedido código nesse dispositivo. Os administradores de emergência precisam sempre de um código."
+    },
+    "breakGlass": {
+      "title": "Administradores de emergência",
+      "body": "Estes administradores podem continuar a iniciar sessão com palavra-passe quando o início de sessão único é exigido. Têm de ser administradores ativos com a autenticação de dois fatores ativada e precisam sempre de um código.",
+      "noEligible": "Sem administradores elegíveis. Um administrador tem de estar ativo e ter a autenticação de dois fatores ativada.",
+      "noLongerEligible": "Já não é elegível.",
+      "remove": "Remover",
+      "reasons": {
+        "no_two_factor": "A autenticação de dois fatores foi redefinida ou está em falta.",
+        "inactive": "O usuário está desativado.",
+        "not_admin": "O usuário não é mais administrador.",
+        "not_internal": "O usuário não é um usuário interno.",
+        "not_found": "O usuário não existe mais."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Configure pelo menos um fornecedor de início de sessão único antes de o exigir.",
+      "break_glass_required": "Selecione pelo menos um administrador de emergência antes de exigir o início de sessão único.",
+      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada."
+    },
+    "errors": {
+      "load": "Não foi possível carregar a política de início de sessão.",
+      "save": "Não foi possível guardar a política de início de sessão."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {

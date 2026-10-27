@@ -3748,6 +3748,50 @@
   "common": {
     "saving": "Enregistrement…"
   },
+  "loginPolicy": {
+    "title": "Politique de connexion",
+    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter avec un mot de passe. Ces règles sont appliquées côté serveur.",
+    "requireSso": {
+      "title": "Exiger l’authentification unique pour le personnel du MSP",
+      "body": "Les utilisateurs internes doivent se connecter avec Google, Microsoft ou votre fournisseur Keycloak. La connexion par mot de passe et la réinitialisation du mot de passe sont bloquées, sauf pour les administrateurs d’urgence ci-dessous.",
+      "signOutWarning": "L’activation de « Exiger l’authentification unique » déconnecte tous les utilisateurs internes connectés avec un mot de passe, sauf les administrateurs d’urgence. L’activation d’une exigence à deux facteurs ne déconnecte personne ; elle s’applique à la prochaine connexion."
+    },
+    "require2faInternal": {
+      "title": "Exiger l’authentification à deux facteurs pour la connexion par mot de passe du personnel du MSP",
+      "body": "Le personnel sans application d’authentification devra en configurer une à sa prochaine connexion."
+    },
+    "require2faClient": {
+      "title": "Exiger l’authentification à deux facteurs pour la connexion par mot de passe du portail client",
+      "body": "Les utilisateurs du portail client sans application d’authentification devront en configurer une à leur prochaine connexion. L’exigence d’authentification unique ne s’applique jamais aux utilisateurs du portail client."
+    },
+    "knownDeviceSkip": {
+      "title": "Autoriser les appareils connus à ignorer le code",
+      "body": "Les utilisateurs qui ont choisi de faire confiance à un appareil n’ont pas à saisir de code sur cet appareil. Les administrateurs d’urgence ont toujours besoin d’un code."
+    },
+    "breakGlass": {
+      "title": "Administrateurs d’urgence",
+      "body": "Ces administrateurs peuvent toujours se connecter avec un mot de passe lorsque l’authentification unique est exigée. Ils doivent être des administrateurs actifs avec l’authentification à deux facteurs activée et ont toujours besoin d’un code.",
+      "noEligible": "Aucun administrateur éligible. Un administrateur doit être actif et avoir activé l’authentification à deux facteurs.",
+      "noLongerEligible": "N'est plus éligible.",
+      "remove": "Retirer",
+      "reasons": {
+        "no_two_factor": "L'authentification à deux facteurs a été réinitialisée ou est absente.",
+        "inactive": "L'utilisateur est désactivé.",
+        "not_admin": "L'utilisateur n'est plus administrateur.",
+        "not_internal": "L'utilisateur n'est pas un utilisateur interne.",
+        "not_found": "L'utilisateur n'existe plus."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",
+      "break_glass_required": "Sélectionnez au moins un administrateur d’urgence avant d’exiger l’authentification unique.",
+      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée."
+    },
+    "errors": {
+      "load": "Impossible de charger la politique de connexion.",
+      "save": "Impossible d’enregistrer la politique de connexion."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {

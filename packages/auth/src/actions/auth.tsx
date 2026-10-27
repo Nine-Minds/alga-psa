@@ -15,6 +15,15 @@ interface AuthenticateUserOptions {
     /** Vanity client-portal host the attempt arrived on, when no slug came with it. */
     portalDomain?: string;
     requireTenantMatch?: boolean;
+    /**
+     * `login` (default) is a password sign-in that may become a session, so the
+     * tenant login policy (SSO-required / 2FA enrollment) is enforced here.
+     * `reauthenticate` only re-verifies the password of someone who is ALREADY
+     * signed in (e.g. confirming an SSO link) and never mints a session, so the
+     * login policy does not apply. Never use it on a path that issues a session.
+     */
+    // LEVERAGE: friction authenticate-user-purpose — authenticateUser is both "verify a password" and "gate a sign-in"; a flag was needed to separate them. A pure verifyCredentials() layer under it would remove the flag.
+    purpose?: 'login' | 'reauthenticate';
 }
 
 async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
@@ -218,6 +227,15 @@ export async function authenticateUser(
         return null;
     }
 
+    // Single choke point for the tenant login policy. Runs only after the password
+    // has verified, so a refusal never reveals anything to someone who does not
+    // already know the password. The NextAuth CredentialsProvider reaches
+    // this function; throws SsoRequiredError / TwoFactorEnrollmentRequiredError.
+    if ((options.purpose ?? 'login') === 'login') {
+        const { enforcePasswordLoginPolicy, surfaceForUserType } = await import('../lib/passwordLoginGate');
+        await enforcePasswordLoginPolicy(user, surfaceForUserType(user.user_type));
+    }
+
     return user;
 }
 
@@ -225,7 +243,7 @@ export async function authenticateUser(
 
 export async function have_two_factor_enabled( password: string, email: string, userType: 'internal' | 'client'): Promise<boolean> {
     logger.system(`Checking if user has 2FA enabled for email ${email}`);
-    const user = await authenticateUser(email, password, userType);
+    const user = await authenticateUser(email, password, userType, { purpose: 'reauthenticate' });
     if (!user || !user.two_factor_enabled) { return false; }
     return true;
 }

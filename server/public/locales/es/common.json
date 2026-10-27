@@ -189,7 +189,22 @@
       "verify": "Verificar",
       "title": "Muy fácil",
       "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
-      "digitsLeft": "{{count}} dígitos restantes"
+      "digitsLeft": "{{count}} dígitos restantes",
+      "enroll": {
+        "title": "Configurar la autenticación de dos factores",
+        "instructions": "Su organización exige autenticación de dos factores. Escanee el código QR con una aplicación de autenticación y luego introduzca el código de 6 dígitos.",
+        "qrAlt": "Código QR para su aplicación de autenticación",
+        "manualKey": "O introduzca esta clave manualmente:",
+        "cancel": "Cancelar",
+        "errors": {
+          "invalid_credentials": "Su correo electrónico o contraseña ya no es válido. Inicie sesión de nuevo.",
+          "enrollment_not_required": "Esta cuenta no necesita configuración. Inicie sesión de nuevo.",
+          "invalid_code": "Ese código no es válido. Inténtelo de nuevo.",
+          "rate_limited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.",
+          "captcha_required": "Complete primero la verificación en la página de inicio de sesión.",
+          "unavailable": "La configuración no está disponible en este momento. Inténtelo de nuevo."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",

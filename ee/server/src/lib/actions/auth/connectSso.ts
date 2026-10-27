@@ -228,6 +228,9 @@ export async function authorizeSsoLinkingAction(
     {
       tenantId,
       requireTenantMatch: Boolean(tenantId),
+      // Re-verification of an already signed-in session; no session is minted here, so the
+      // login policy (SSO-required / 2FA enrollment) is not applied. The TOTP step below still runs.
+      purpose: "reauthenticate",
     }
   );
 

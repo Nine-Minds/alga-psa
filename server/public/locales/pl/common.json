@@ -253,7 +253,22 @@
       "verify": "Zweryfikuj",
       "title": "To proste",
       "instructions": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej.",
-      "digitsLeft": "Pozostało cyfr: {{count}}"
+      "digitsLeft": "Pozostało cyfr: {{count}}",
+      "enroll": {
+        "title": "Skonfiguruj uwierzytelnianie dwuskładnikowe",
+        "instructions": "Twoja organizacja wymaga uwierzytelniania dwuskładnikowego. Zeskanuj kod QR aplikacją uwierzytelniającą, a następnie wpisz 6-cyfrowy kod.",
+        "qrAlt": "Kod QR dla Twojej aplikacji uwierzytelniającej",
+        "manualKey": "Lub wpisz ten klucz ręcznie:",
+        "cancel": "Anuluj",
+        "errors": {
+          "invalid_credentials": "Twój adres e-mail lub hasło nie jest już prawidłowe. Zaloguj się ponownie.",
+          "enrollment_not_required": "To konto nie wymaga konfiguracji. Zaloguj się ponownie.",
+          "invalid_code": "Ten kod jest nieprawidłowy. Spróbuj ponownie.",
+          "rate_limited": "Zbyt wiele prób. Odczekaj kilka minut i spróbuj ponownie.",
+          "captcha_required": "Najpierw ukończ weryfikację na stronie logowania.",
+          "unavailable": "Konfiguracja jest teraz niedostępna. Spróbuj ponownie."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Brak lub nieprawidłowy token przekazania logowania. Zaloguj się ponownie.",

@@ -856,7 +856,22 @@
       "verify": "Bestätigen",
       "title": "Ganz einfach",
       "instructions": "Geben Sie den sechsstelligen Code aus Ihrer Authenticator-App ein.",
-      "digitsLeft": "Noch {{count}} Stellen"
+      "digitsLeft": "Noch {{count}} Stellen",
+      "enroll": {
+        "title": "Zwei-Faktor-Authentifizierung einrichten",
+        "instructions": "Ihre Organisation verlangt Zwei-Faktor-Authentifizierung. Scannen Sie den QR-Code mit einer Authenticator-App und geben Sie dann den 6-stelligen Code ein.",
+        "qrAlt": "QR-Code für Ihre Authenticator-App",
+        "manualKey": "Oder geben Sie diesen Schlüssel manuell ein:",
+        "cancel": "Abbrechen",
+        "errors": {
+          "invalid_credentials": "Ihre E-Mail-Adresse oder Ihr Passwort ist nicht mehr gültig. Bitte melden Sie sich erneut an.",
+          "enrollment_not_required": "Für dieses Konto ist keine Einrichtung erforderlich. Bitte melden Sie sich erneut an.",
+          "invalid_code": "Dieser Code ist ungültig. Bitte versuchen Sie es erneut.",
+          "rate_limited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut.",
+          "captcha_required": "Bitte schließen Sie zuerst die Überprüfung auf der Anmeldeseite ab.",
+          "unavailable": "Die Einrichtung ist derzeit nicht verfügbar. Bitte versuchen Sie es erneut."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Das Anmelde-Übergabe-Token fehlt oder ist ungültig. Bitte erneut anmelden.",
