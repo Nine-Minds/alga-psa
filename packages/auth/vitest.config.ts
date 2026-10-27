@@ -24,6 +24,9 @@ export default defineConfig({
         __dirname,
         '../client-portal/src/models/PortalDomainModel.ts'
       ),
+      // The tenant-discovery engine loads these lazily (they import @alga-psa/auth); resolve to source so tests need no built dist.
+      '@alga-psa/tenancy/server': path.resolve(__dirname, '../tenancy/src/server.ts'),
+      '@alga-psa/email': path.resolve(__dirname, '../email/src/index.ts'),
       '@alga-psa/shared': path.resolve(__dirname, '../../shared'),
       '@shared': path.resolve(__dirname, '../../shared'),
       '@ee': path.resolve(__dirname, '../ee/src'),

@@ -16,11 +16,47 @@ interface TenantLoginInfo {
   source: 'vanity' | 'canonical';
 }
 
-interface SendTenantRecoveryEmailParams {
-  email: string;
-  tenantLoginInfos: TenantLoginInfo[];
+export type TenantRecoveryTemplateName = 'tenant-recovery' | 'msp-tenant-recovery';
+
+export interface SendTenantRecoveryEmailOptions {
+  /** Which recovery template to render. Defaults to the client-portal one. */
+  templateName?: TenantRecoveryTemplateName;
   locale?: SupportedLocale;
 }
+
+/**
+ * Emergency English copy used only when the template row is missing from the
+ * database. Chosen by template so the MSP email never says "client portal".
+ */
+const FALLBACK_COPY: Record<
+  TenantRecoveryTemplateName,
+  {
+    subject: (platformName: string) => string;
+    heading: string;
+    intro: (count: number) => string;
+    help: string;
+  }
+> = {
+  'tenant-recovery': {
+    subject: (platformName) => `${platformName} - Your Login Links`,
+    heading: 'Your Login Links',
+    intro: (count) =>
+      `You requested access to your client portal${count > 1 ? 's' : ''}.\n` +
+      (count > 1
+        ? `We found ${count} organizations associated with your email address.`
+        : 'Here is your login link:'),
+    help: "If you have any questions or need assistance, please contact your organization's support team.",
+  },
+  'msp-tenant-recovery': {
+    subject: (platformName) => `${platformName} - Your Sign-in Links`,
+    heading: 'Your Sign-in Links',
+    intro: (count) =>
+      count > 1
+        ? `You asked to sign in. Your email address is used in ${count} organizations. Choose the one you want to sign in to:`
+        : 'You asked to sign in. Here is your sign-in link:',
+    help: "If you have any questions or need assistance, please contact your organization's administrator.",
+  },
+};
 
 /**
  * Fetch email template from database with language fallback
@@ -123,13 +159,14 @@ async function determineLocale(
  */
 async function generateEmailContent(
   tenantLoginInfos: TenantLoginInfo[],
-  locale: SupportedLocale
+  locale: SupportedLocale,
+  templateName: TenantRecoveryTemplateName
 ): Promise<{ subject: string; html: string; text: string }> {
   const currentYear = new Date().getFullYear();
   const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
 
   // Try to fetch template from database
-  const dbTemplate = await fetchTemplate('tenant-recovery', locale);
+  const dbTemplate = await fetchTemplate(templateName, locale);
 
   if (dbTemplate) {
     // Generate dynamic tenant links
@@ -154,9 +191,10 @@ async function generateEmailContent(
   }
 
   // Fallback to hardcoded English template (emergency only)
-  logger.warn('[generateEmailContent] Using emergency fallback template for tenant-recovery');
+  logger.warn(`[generateEmailContent] Using emergency fallback template for ${templateName}`);
 
-  const subject = `${platformName} - Your Login Links`;
+  const copy = FALLBACK_COPY[templateName];
+  const subject = copy.subject(platformName);
   const tenantLinksHtml = generateTenantLinksHtml(tenantLoginInfos);
   const tenantLinksText = generateTenantLinksText(tenantLoginInfos);
 
@@ -178,7 +216,7 @@ async function generateEmailContent(
                 ${platformName}
               </h1>
               <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
-                Your Login Links
+                ${copy.heading}
               </p>
             </td>
           </tr>
@@ -188,10 +226,7 @@ async function generateEmailContent(
                 Hello,
               </p>
               <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                You requested access to your client portal${tenantLoginInfos.length > 1 ? 's' : ''}.
-                ${tenantLoginInfos.length > 1
-                  ? `We found ${tenantLoginInfos.length} organizations associated with your email address.`
-                  : 'Here is your login link:'}
+                ${copy.intro(tenantLoginInfos.length).replace('\n', ' ')}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin: 25px 0;">
                 ${tenantLinksHtml}
@@ -202,7 +237,7 @@ async function generateEmailContent(
                 </p>
               </div>
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 25px 0 0 0;">
-                If you have any questions or need assistance, please contact your organization's support team.
+                ${copy.help}
               </p>
             </td>
           </tr>
@@ -225,21 +260,18 @@ async function generateEmailContent(
   `;
 
   const text = `
-${platformName} - Your Login Links
+${platformName} - ${copy.heading}
 
 Hello,
 
-You requested access to your client portal${tenantLoginInfos.length > 1 ? 's' : ''}.
-${tenantLoginInfos.length > 1
-  ? `We found ${tenantLoginInfos.length} organizations associated with your email address.`
-  : 'Here is your login link:'}
+${copy.intro(tenantLoginInfos.length)}
 
-Your Login Links:
+${copy.heading}:
 ${tenantLinksText}
 
 Security Note: If you didn't request these login links, you can safely ignore this email. Your account remains secure.
 
-If you have any questions or need assistance, please contact your organization's support team.
+${copy.help}
 
 ---
 © ${currentYear} ${platformName}. All rights reserved.
@@ -417,14 +449,16 @@ export async function sendNoAccountFoundEmail(
 export async function sendTenantRecoveryEmail(
   email: string,
   tenantLoginInfos: TenantLoginInfo[],
-  locale?: SupportedLocale
+  options: SendTenantRecoveryEmailOptions = {}
 ): Promise<boolean> {
+  const templateName = options.templateName ?? 'tenant-recovery';
+  const locale = options.locale;
   try {
     logger.info('[sendTenantRecoveryEmail] Sending recovery email to:', email);
     logger.info('[sendTenantRecoveryEmail] Number of tenants:', tenantLoginInfos.length);
 
     const resolvedLocale = await determineLocale(email, locale);
-    const { subject, html, text } = await generateEmailContent(tenantLoginInfos, resolvedLocale);
+    const { subject, html, text } = await generateEmailContent(tenantLoginInfos, resolvedLocale, templateName);
 
     // Use SystemEmailService for sending
     const systemEmailService = await getSystemEmailService();
