@@ -98,12 +98,12 @@ describe('ticket room validation', () => {
 
   it('T016: notifications rooms are refused by default instead of bypassing validation', () => {
     delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
-    expect(() =>
+    return expect(
       validateDocumentRoomAccess(
         'notifications:tenant-1:user-1',
         new Request('http://localhost/hocuspocus')
       )
-    ).toThrow('Legacy notification rooms');
+    ).rejects.toThrow('Legacy notification rooms');
   });
 
   it('T017: document room validation still uses tenantId from the request query', () => {
@@ -230,16 +230,27 @@ describe('notification signal room validation', () => {
     const legacy = `notifications:${tenant}:${user}`;
     afterEach(() => { delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS; });
 
-    it('are refused with the flag unset, even with a valid token', () => {
-      expect(() => validate(req(), legacy)).toThrow('Legacy notification rooms');
+    it('are refused with the flag unset, even with a valid token', async () => {
+      await expect(validate(req(), legacy)).rejects.toThrow('Legacy notification rooms');
     });
 
-    it('are admitted only with the flag, valid UUID segments and (if presented) a matching token', () => {
+    it('with the flag, are admitted only for a token that verifies and names this room', async () => {
       process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
-      expect(validate(req(), legacy)).toMatchObject({ status: 'ok', legacy: true });
-      expect(() => validate(req(), `notifications:${tenant}:44444444-4444-4444-8444-444444444444`)).toThrow('scope mismatch');
-      expect(() => validate(req({}, 'wrong-secret'), legacy)).toThrow();
-      expect(() => validate(req(), 'notifications:t:u')).toThrow('Invalid legacy notification room');
+      await expect(validate(req(), legacy)).resolves.toMatchObject({ status: 'ok', legacy: true, sessionId, expiresAt: (now + 300) * 1000 });
+      await expect(validate(req(), `notifications:${tenant}:44444444-4444-4444-8444-444444444444`)).rejects.toThrow('scope mismatch');
+      await expect(validate(req(), `notifications:44444444-4444-4444-8444-444444444444:${user}`)).rejects.toThrow('scope mismatch');
+      await expect(validate(req({}, 'wrong-secret'), legacy)).rejects.toThrow();
+      // The same skew rule as signal rooms.
+      await expect(validate(req({ iat: now - 361, exp: now - 61 }), legacy)).rejects.toThrow();
+      await expect(validate(req(), 'notifications:t:u')).rejects.toThrow('Invalid legacy notification room');
+    });
+
+    it('with the flag, refuse a tokenless join that carries no session', async () => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      process.env.NOTIFICATION_LIVE_TOKEN_URL = 'http://web.internal/api/notifications/live-token';
+      try {
+        await expect(validate(new Request('http://localhost/hocuspocus'), legacy)).rejects.toThrow('missing session');
+      } finally { delete process.env.NOTIFICATION_LIVE_TOKEN_URL; }
     });
   });
 });

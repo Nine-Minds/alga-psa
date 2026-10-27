@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import jwt from 'jsonwebtoken';
 
 vi.mock('redis', () => ({ createClient: vi.fn() }));
 
@@ -97,8 +98,17 @@ describe('NotificationExtension legacy notifications: room relay (rollout window
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+    process.env.HOCUSPOCUS_JWT_SECRET = 'legacy-relay-secret';
   });
   afterEach(() => { delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS; });
+
+  // The owner's own token: legacy rooms admit nobody else, even with the window open.
+  const ownerRequest = () => {
+    const token = jwt.sign({ scope: 'notification-signals', tenantId: '11111111-1111-4111-8111-111111111111',
+      userId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333' },
+    'legacy-relay-secret', { expiresIn: 300, algorithm: 'HS256', audience: 'notification-signals' });
+    return new Request(`http://localhost/hocuspocus?token=${token}`);
+  };
 
   async function connectRoom() {
     const extension: any = new NotificationExtension({ redisPrefix: 'test:', createClient: () => ({}) });
@@ -109,7 +119,7 @@ describe('NotificationExtension legacy notifications: room relay (rollout window
       subscribe: vi.fn(async (_channel: string, callback: (message: string) => void) => { handler = callback; }),
       unsubscribe: vi.fn(),
     };
-    await extension.onConnect({ documentName: legacyRoom, request: new Request('http://localhost/hocuspocus') });
+    await extension.onConnect({ documentName: legacyRoom, request: ownerRequest() });
     expect(extension.subscriber.subscribe).toHaveBeenCalledWith(channel, expect.any(Function));
     return { doc, deliver: (message: unknown) => handler!(JSON.stringify(message)) };
   }
@@ -133,7 +143,7 @@ describe('NotificationExtension legacy notifications: room relay (rollout window
     delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
     const extension: any = new NotificationExtension({ redisPrefix: 'test:', createClient: () => ({}) });
     extension.subscriber = { subscribe: vi.fn(), unsubscribe: vi.fn() };
-    await expect(extension.onConnect({ documentName: legacyRoom, request: new Request('http://localhost/hocuspocus') })).rejects.toThrow();
+    await expect(extension.onConnect({ documentName: legacyRoom, request: ownerRequest() })).rejects.toThrow('Legacy notification rooms');
     expect(extension.subscriber.subscribe).not.toHaveBeenCalled();
   });
 });

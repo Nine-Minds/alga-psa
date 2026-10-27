@@ -47,6 +47,10 @@ export function getTenantFromRequest(request) {
   }
 }
 
+/**
+ * The single room gate. Synchronous for every room type except the legacy
+ * `notifications:` room, whose session check is asynchronous; callers await it.
+ */
 export function validateDocumentRoomAccess(roomName, request, options) {
   // LEVERAGE: friction legacy-notification-room-window — the only reason the old
   // Yjs relay survives; delete this branch, the flag and the relay together when
@@ -197,19 +201,80 @@ export function isLegacyNotificationRoomsEnabled() {
   return process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS === 'true';
 }
 
+const SESSION_EXCHANGE_TIMEOUT_MS = 5000;
+
+function getRequestHeader(request, name) {
+  const headers = request?.headers;
+  if (!headers) return null;
+  if (typeof headers.get === 'function') return headers.get(name);
+  const value = headers[name];
+  return Array.isArray(value) ? value.join('; ') : value ?? null;
+}
+
+/**
+ * Proves who opened a legacy socket. Pre-signal bundles send no token, but the
+ * upgrade request carries the browser's session cookie. The web's own
+ * live-token endpoint resolves that cookie (revocation, owner and user type
+ * included) and mints a signal token for the session's user, which is then
+ * verified against the room exactly like a signal-room token. Nothing here
+ * trusts the room name or any other client input for identity.
+ */
+async function exchangeSessionForToken(request) {
+  const url = process.env.NOTIFICATION_LIVE_TOKEN_URL;
+  if (!url) throw new Error('Legacy notification validation failed: NOTIFICATION_LIVE_TOKEN_URL is not set');
+  const cookie = getRequestHeader(request, 'cookie');
+  if (!cookie) throw new Error('Legacy notification validation failed: missing session');
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { cookie, accept: 'application/json' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(SESSION_EXCHANGE_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw new Error(`Legacy notification validation failed: session check unavailable (${error instanceof Error ? error.message : 'error'})`);
+  }
+  if (!response.ok) throw new Error(`Legacy notification validation failed: session refused (${response.status})`);
+  const body = await response.json().catch(() => null);
+  if (typeof body?.token !== 'string') throw new Error('Legacy notification validation failed: invalid session response');
+  return body.token;
+}
+
+// One verdict per (upgrade request, room), so the server gate and
+// NotificationExtension share a single session exchange. Keyed by room as well:
+// one hocuspocus socket can multiplex several documents, and a verdict for the
+// caller's own room must never answer for another.
+const legacyVerdicts = new WeakMap();
+
 /**
  * Legacy `notifications:<tenant>:<user>` rooms. Denied unless the rollout
- * window flag is set. Bundles that predate the signal rooms hold no credential,
- * so an open window admits a tokenless join (UUID segments only); a join that
- * does present a token must still verify and match the room.
+ * window flag is set. With the window open, the caller must still prove the
+ * room is their own: a presented token is verified as-is; otherwise the
+ * session cookie is exchanged for one (see exchangeSessionForToken). Either way
+ * the token's tenant and user must equal the room's. Returns a promise.
  */
-export function validateLegacyNotificationRoom(roomName, request, { now = Date.now() } = {}) {
-  if (!isLegacyNotificationRoomsEnabled()) {
-    throw new Error('Legacy notification rooms are no longer supported');
-  }
-  const room = parseNotificationRoom(roomName, 'notifications');
-  if (!room) throw new Error('Invalid legacy notification room');
-  const token = getRequestToken(request);
-  if (token) verifyNotificationToken(token, room, now);
-  return { status: 'ok', legacy: true, tenantId: room.tenantId, userId: room.userId };
+export function validateLegacyNotificationRoom(roomName, request, { now } = {}) {
+  const memo = request && typeof request === 'object'
+    ? legacyVerdicts.get(request) ?? legacyVerdicts.set(request, new Map()).get(request)
+    : null;
+  if (memo?.has(roomName)) return memo.get(roomName);
+  const verdict = (async () => {
+    if (!isLegacyNotificationRoomsEnabled()) {
+      throw new Error('Legacy notification rooms are no longer supported');
+    }
+    const room = parseNotificationRoom(roomName, 'notifications');
+    if (!room) throw new Error('Invalid legacy notification room');
+    const token = getRequestToken(request) || await exchangeSessionForToken(request);
+    const claims = verifyNotificationToken(token, room, now ?? Date.now());
+    return {
+      status: 'ok',
+      legacy: true,
+      tenantId: room.tenantId,
+      userId: room.userId,
+      sessionId: claims.sessionId,
+      expiresAt: claims.exp * 1000,
+    };
+  })();
+  memo?.set(roomName, verdict);
+  return verdict;
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import * as Y from 'yjs';
@@ -64,6 +64,8 @@ describe('authenticated notification refresh signals', () => {
     const access = { tenantId: tenant, userId: user, expiresAt: Date.now() + 5000, deadline: Date.now() + 65000 };
     expect(filter({ context: { notificationSignals: access } })).toBe(true);
     expect(filter({ context: { notificationSignals: { ...access, userId: randomUUID() } } })).toBe(false);
+    // Same user id, other tenant: the tenant half of the binding must hold on its own.
+    expect(filter({ context: { notificationSignals: { ...access, tenantId: randomUUID() } } })).toBe(false);
     expect(filter({ context: { notificationSignals: { ...access, deadline: Date.now() - 1 } } })).toBe(false);
     expect(filter({ context: {} })).toBe(false);
     expect(document.getMap).not.toHaveBeenCalled();
@@ -133,7 +135,14 @@ describe('authenticated notification refresh signals', () => {
   });
   describe('legacy notifications: rooms (rollout window)', () => {
     const legacyRoom = `notifications:${tenant}:${user}`;
-    const legacyRequest = new Request('http://localhost/hocuspocus');
+    const liveTokenUrl = 'http://web.internal/api/notifications/live-token';
+    const sign = (overrides = {}) => jwt.sign({ scope: 'notification-signals', tenantId: tenant, userId: user, sessionId, ...overrides }, secret,
+      { expiresIn: 300, algorithm: 'HS256', audience: 'notification-signals' });
+    // A pre-signal bundle sends no token; its upgrade request carries the session cookie.
+    const browser = (cookie: string | null = 'authjs.session-token=owner') =>
+      new Request('http://localhost/hocuspocus', cookie ? { headers: { cookie } } : undefined);
+    const webAnswers = (body: unknown, status = 200) =>
+      vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
     function legacyHarness() {
       const subscribe = vi.fn(async () => {});
       const unsubscribe = vi.fn(async () => {});
@@ -143,33 +152,115 @@ describe('authenticated notification refresh signals', () => {
       extension.instance = { documents: new Map([[legacyRoom, doc]]) };
       return { extension, subscribe, unsubscribe, doc };
     }
-    beforeEach(() => { delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS; });
+    beforeEach(() => {
+      delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
+      process.env.NOTIFICATION_LIVE_TOKEN_URL = liveTokenUrl;
+    });
+    afterEach(() => {
+      delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
+      delete process.env.NOTIFICATION_LIVE_TOKEN_URL;
+      vi.unstubAllGlobals();
+    });
 
-    it('refuses the room and never subscribes while the flag is unset', async () => {
+    it('refuses the room, never asks the web and never subscribes while the flag is unset', async () => {
+      const fetch = webAnswers({ token: sign() }); vi.stubGlobal('fetch', fetch);
       const { extension, subscribe } = legacyHarness();
-      expect(() => validateDocumentRoomAccess(legacyRoom, legacyRequest)).toThrow('Legacy notification rooms');
-      await expect(extension.onConnect({ documentName: legacyRoom, request: legacyRequest })).rejects.toThrow('Legacy notification rooms');
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('Legacy notification rooms');
+      await expect(extension.onConnect({ documentName: legacyRoom, request: browser() })).rejects.toThrow('Legacy notification rooms');
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'yes';
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('Legacy notification rooms');
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('with the flag open, admits only the owner proven by their own session cookie', async () => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      const fetch = webAnswers({ token: sign() }); vi.stubGlobal('fetch', fetch);
+      const { extension } = legacyHarness();
+      const connection = { readOnly: false };
+      const context = await extension.onConnect({ documentName: legacyRoom, request: browser(), connection });
+      expect(connection.readOnly).toBe(true);
+      expect(context.notificationSignals).toMatchObject({ legacy: true, tenantId: tenant, userId: user, sessionId });
+      expect(context.notificationSignals.deadline).toBe(context.notificationSignals.expiresAt + 60_000);
+      // The cookie, and nothing else from the socket, is what the web resolves.
+      expect(fetch).toHaveBeenCalledWith(liveTokenUrl, expect.objectContaining({
+        headers: expect.objectContaining({ cookie: 'authjs.session-token=owner' }), redirect: 'manual',
+      }));
+    });
+
+    it('refuses a tokenless join with no session, a refused session, an unreachable web or no exchange URL', async () => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      vi.stubGlobal('fetch', webAnswers({ token: sign() }));
+      await expect(validateDocumentRoomAccess(legacyRoom, browser(null))).rejects.toThrow('missing session');
+      vi.stubGlobal('fetch', webAnswers({ error: 'Unauthorized' }, 401));
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('session refused (401)');
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNREFUSED'); }));
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('session check unavailable');
+      vi.stubGlobal('fetch', webAnswers({ nope: true }));
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('invalid session response');
+      delete process.env.NOTIFICATION_LIVE_TOKEN_URL;
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('NOTIFICATION_LIVE_TOKEN_URL');
+    });
+
+    // Fixed ids: test names must be stable between collection and execution.
+    it.each([
+      ['another user', { userId: '00000000-0000-4000-8000-0000000000bb' }],
+      ['the same user id in another tenant', { tenantId: '00000000-0000-4000-8000-0000000000aa' }],
+    ])('refuses a forged join whose session belongs to %s', async (_label, claims) => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      vi.stubGlobal('fetch', webAnswers({ token: sign(claims) }));
+      const { extension, subscribe } = legacyHarness();
+      await expect(validateDocumentRoomAccess(legacyRoom, browser())).rejects.toThrow('scope mismatch');
+      await expect(extension.onConnect({ documentName: legacyRoom, request: browser() })).rejects.toThrow('scope mismatch');
       expect(subscribe).not.toHaveBeenCalled();
     });
 
-    it('admits the room only with the flag, still refusing malformed names and forged tokens', async () => {
+    it('verifies a presented token without asking the web, and refuses malformed rooms', async () => {
       process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
-      expect(validateDocumentRoomAccess(legacyRoom, legacyRequest)).toMatchObject({ status: 'ok', legacy: true, tenantId: tenant, userId: user });
-      expect(() => validateDocumentRoomAccess('notifications:tenant-1:user-1', legacyRequest)).toThrow();
-      expect(() => validateDocumentRoomAccess(`notifications:${tenant}`, legacyRequest)).toThrow();
-      // A token that is presented must verify and match the room.
-      expect(() => validateDocumentRoomAccess(legacyRoom, request({ userId: randomUUID() }))).toThrow();
-      expect(() => validateDocumentRoomAccess(legacyRoom, request({}, 300, 'wrong'))).toThrow();
-      expect(validateDocumentRoomAccess(legacyRoom, request())).toMatchObject({ legacy: true });
-      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'yes';
-      expect(() => validateDocumentRoomAccess(legacyRoom, legacyRequest)).toThrow('Legacy notification rooms');
+      const fetch = webAnswers({ token: sign() }); vi.stubGlobal('fetch', fetch);
+      await expect(validateDocumentRoomAccess(legacyRoom, request())).resolves.toMatchObject({ legacy: true });
+      await expect(validateDocumentRoomAccess(legacyRoom, request({ userId: randomUUID() }))).rejects.toThrow('scope mismatch');
+      await expect(validateDocumentRoomAccess(legacyRoom, request({}, 300, 'wrong'))).rejects.toThrow();
+      expect(fetch).not.toHaveBeenCalled();
+      await expect(validateDocumentRoomAccess('notifications:tenant-1:user-1', browser())).rejects.toThrow('Invalid legacy notification room');
+      await expect(validateDocumentRoomAccess(`notifications:${tenant}`, browser())).rejects.toThrow('Invalid legacy notification room');
+    });
+
+    it('shares one session check between the gate and the extension, but never across rooms on one socket', async () => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      const fetch = webAnswers({ token: sign() }); vi.stubGlobal('fetch', fetch);
+      const { extension } = legacyHarness();
+      const socket = browser();
+      await validateDocumentRoomAccess(legacyRoom, socket);
+      await extension.onConnect({ documentName: legacyRoom, request: socket });
+      expect(fetch).toHaveBeenCalledTimes(1);
+      // A second document multiplexed on the same socket is judged on its own.
+      await expect(validateDocumentRoomAccess(`notifications:${tenant}:${randomUUID()}`, socket)).rejects.toThrow('scope mismatch');
+    });
+
+    it('closes a legacy socket at its deadline so it re-proves the session on reconnect', async () => {
+      process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      vi.useFakeTimers();
+      try {
+        vi.stubGlobal('fetch', webAnswers({ token: sign() }));
+        const { extension } = legacyHarness();
+        const connection = { readOnly: false, close: vi.fn() };
+        const context = await extension.onConnect({ documentName: legacyRoom, request: browser(), connection });
+        await extension.connected({ documentName: legacyRoom, context, connectionInstance: connection });
+        await vi.advanceTimersByTimeAsync(359_000);
+        expect(connection.close).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(2_000);
+        expect(connection.close).toHaveBeenCalledOnce();
+        await expect(extension.beforeHandleMessage({ documentName: legacyRoom, context })).rejects.toThrow('expired');
+      } finally { vi.useRealTimers(); }
     });
 
     it('relays into the Yjs maps only for admitted legacy rooms, and unsubscribes with the last connection', async () => {
       process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS = 'true';
+      vi.stubGlobal('fetch', webAnswers({ token: sign() }));
       const { extension, subscribe, unsubscribe, doc } = legacyHarness();
-      await extension.onConnect({ documentName: legacyRoom, request: legacyRequest });
-      await extension.onConnect({ documentName: legacyRoom, request: legacyRequest });
+      await extension.onConnect({ documentName: legacyRoom, request: browser() });
+      await extension.onConnect({ documentName: legacyRoom, request: browser() });
       expect(subscribe).toHaveBeenCalledTimes(1);
       expect(subscribe).toHaveBeenCalledWith(`test:internal-notifications:${tenant}:${user}`, expect.any(Function));
       const deliver = (subscribe.mock.calls[0] as any)[1];

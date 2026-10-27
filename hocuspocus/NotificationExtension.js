@@ -30,11 +30,16 @@ const EXPIRED_CLOSE = { code: 4401, reason: 'Notification signal token expired' 
 /** The one instant after which a signal connection is dead: exp plus the same
  * leeway the join gate grants. Every post-join check and the close timer use it. */
 const isLive = access => Boolean(access) && Date.now() <= access.deadline
+const withDeadline = access => ({ ...access, deadline: access.expiresAt + SIGNAL_CLOCK_TOLERANCE_SECONDS * 1000 })
+/** Both room types are bound to a verified token and expire the same way. */
+const isNotificationRoom = name => Boolean(name?.startsWith('notification-signals:') || name?.startsWith('notifications:'))
 
 /** Signal rooms contain no inbox data. Redis events only wake the browser's
  * session-authorized reader; Yjs documents never cache message bodies, links,
  * counts or metadata for a later connection to reuse. The one exception is the
- * flag-gated legacy `notifications:` relay below, kept only for the rollout window. */
+ * flag-gated legacy `notifications:` relay below, kept only for the rollout window;
+ * its rooms admit only the owner's own verified session, so the maps are read
+ * by nobody else. */
 export class NotificationExtension {
   constructor(config = {}) {
     this.config = config
@@ -71,14 +76,15 @@ export class NotificationExtension {
     if (!data.documentName?.startsWith('notification-signals:')) return
     const access = validateNotificationSignalRoom(data.documentName, data.request)
     data.connection.readOnly = true
-    return { notificationSignals: { ...access, deadline: access.expiresAt + SIGNAL_CLOCK_TOLERANCE_SECONDS * 1000 } }
+    return { notificationSignals: withDeadline(access) }
   }
 
   /** hocuspocus v2 `connected` is the first hook that has both the Connection and
    * the context. The server closes the socket at the deadline so a socket never
-   * reports connected while its signals are being dropped. */
+   * reports connected while its signals are being dropped, and so a legacy
+   * socket re-proves its session on reconnect. */
   async connected(data) {
-    if (!data.documentName?.startsWith('notification-signals:')) return
+    if (!isNotificationRoom(data.documentName)) return
     const access = data.context?.notificationSignals
     const connection = data.connectionInstance
     if (!access || !connection) return
@@ -95,7 +101,7 @@ export class NotificationExtension {
   }
 
   async beforeHandleMessage(data) {
-    if (!data.documentName?.startsWith('notification-signals:')) return
+    if (!isNotificationRoom(data.documentName)) return
     if (!isLive(data.context?.notificationSignals)) {
       throw new Error('Notification signal token expired')
     }
@@ -135,13 +141,17 @@ export class NotificationExtension {
 
   async onLegacyConnect(data) {
     // Re-validated here (not only in server.js) so this path can never subscribe
-    // for a room the gate refused, whatever the hook order.
-    validateLegacyNotificationRoom(data.documentName, data.request)
+    // for a room the gate refused, whatever the hook order. The verdict is
+    // memoised per request and room, so this costs no second session check.
+    const access = await validateLegacyNotificationRoom(data.documentName, data.request)
+    if (data.connection) data.connection.readOnly = true
+    const context = { notificationSignals: withDeadline(access) }
     const channel = this.legacyChannel(data.documentName)
     const existing = this.legacySubscriptions.get(channel)
-    if (existing) { existing.connections++; return }
+    if (existing) { existing.connections++; return context }
     this.legacySubscriptions.set(channel, { connections: 1, roomName: data.documentName })
     await this.subscriber.subscribe(channel, message => this.relayLegacy(data.documentName, message))
+    return context
   }
 
   async onLegacyDisconnect(data) {

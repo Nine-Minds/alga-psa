@@ -127,8 +127,12 @@ it('treats a response without a positive expiresInMs as invalid', async () => {
   expect(mocks.providers).toHaveLength(0);
 });
 
-it('does not open a socket when the token response names another user', async () => {
-  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'x', tenant, userId: 'someone-else', expiresAt: Date.now() + 60000, expiresInMs: 60000 }) });
+it.each([
+  ['another user', { tenant, userId: 'someone-else' }],
+  // The same user id under another tenant: the tenant half of the check must hold on its own.
+  ['another tenant', { tenant: 'other-tenant', userId }],
+])('does not open a socket when the token response names %s', async (_label, identity) => {
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ token: 'x', ...identity, expiresAt: Date.now() + 60000, expiresInMs: 60000 }) });
   const { result } = renderHook(() => useInternalNotifications({ tenant, userId }));
   await waitFor(() => expect(mocks.fetch).toHaveBeenCalled());
   expect(mocks.providers).toHaveLength(0);
