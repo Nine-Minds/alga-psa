@@ -323,6 +323,21 @@
       "any": "qualquer",
       "clear": "Limpar",
       "countSummary": "Grupo(s) {{groups}} · Item(s) de linha {{obligations}}"
+    },
+    "lateTime": {
+      "title": "Tempo por hora aprovado com atraso",
+      "description": "Este tempo foi aprovado depois que a fatura do seu período de serviço foi emitida. As entradas aguardando faturamento são adicionadas uma única vez à próxima fatura, marcadas como tempo atrasado. As entradas fora do período de retroação não são faturadas.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Técnico",
+        "service": "Serviço",
+        "workDate": "Data do trabalho",
+        "hours": "Horas",
+        "closedPeriod": "Período de serviço encerrado",
+        "status": "Status"
+      },
+      "nextInvoice": "Será faturado na próxima fatura",
+      "outsideLookback": "Fora do período de retroação — não faturado"
     }
   },
   "manualInvoices": {

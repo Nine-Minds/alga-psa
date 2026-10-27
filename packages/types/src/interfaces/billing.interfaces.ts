@@ -258,6 +258,45 @@ export interface IBillingCharge extends TenantEntity {
    * instead of duplicating on regeneration.
    */
   contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+  /**
+   * Set when the charge's source evidence (approved time) is dated inside a
+   * service period that an issued invoice already closed. The charge bills on
+   * this invoice and reports the period of the invoice that closed it; it never
+   * claims this invoice's recurring service period.
+   */
+  lateForServicePeriod?: ILateServicePeriodSource | null;
+}
+
+/**
+ * Approved, uninvoiced hourly time dated inside a service period an issued
+ * invoice already closed. `next_invoice`: bills on the line's next invoice.
+ * `outside_lookback`: older than the lookback; listed for the operator but not billed.
+ */
+export interface ILateHourlyTimeNotice {
+  entryId: string;
+  clientId: string;
+  clientName: string | null;
+  contractLineId: string;
+  contractLineName: string | null;
+  serviceName: string | null;
+  workItemLabel: string | null;
+  technicianName: string | null;
+  workDate: ISO8601String;
+  billableMinutes: number;
+  closedPeriodStart: ISO8601String;
+  closedPeriodEnd: ISO8601String;
+  closedByInvoiceNumber: string | null;
+  closedByInvoiceStatus: string | null;
+  disposition: 'next_invoice' | 'outside_lookback';
+}
+
+export interface ILateServicePeriodSource {
+  /** Inclusive start of the closed service period the evidence is dated in. */
+  servicePeriodStart: ISO8601String;
+  /** Inclusive end of that period. */
+  servicePeriodEnd: ISO8601String;
+  /** The invoice that closed that period. */
+  closedByInvoiceId: string | null;
 }
 
 export interface IContractChangeAdjustmentSource {

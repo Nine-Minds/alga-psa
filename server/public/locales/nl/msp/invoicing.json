@@ -323,6 +323,21 @@
       "any": "alle",
       "clear": "Wissen",
       "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "lateTime": {
+      "title": "Laat goedgekeurde uurtijd",
+      "description": "Deze tijd is goedgekeurd nadat de factuur voor de bijbehorende serviceperiode al was uitgegeven. Invoer die wacht op facturering wordt eenmalig aan de volgende factuur toegevoegd, gemarkeerd als late tijd. Invoer buiten de terugkijkperiode wordt niet gefactureerd.",
+      "columns": {
+        "client": "Klant",
+        "technician": "Technicus",
+        "service": "Dienst",
+        "workDate": "Werkdatum",
+        "hours": "Uren",
+        "closedPeriod": "Afgesloten serviceperiode",
+        "status": "Status"
+      },
+      "nextInvoice": "Wordt gefactureerd op de volgende factuur",
+      "outsideLookback": "Buiten de terugkijkperiode — niet gefactureerd"
     }
   },
   "manualInvoices": {
