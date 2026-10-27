@@ -4,10 +4,35 @@
 // (PostgreSQL 12+), and the check is dropped as redundant.
 //
 // Runs outside a transaction so the scan's lock is not held with anything else.
+// Without a transaction knex hands each statement whatever pooled connection is
+// free, so a session-level SET would not reliably reach the DDL after it. Every
+// statement here therefore runs on one connection acquired for the migration,
+// and the setting is reset before that connection goes back to the pool.
 const CONSTRAINT = 'users_is_inactive_not_null';
 
-async function ensureSequentialMode(knex) {
-  await knex.raw(`
+async function onOneConnection(knex, work) {
+  const connection = await knex.client.acquireConnection();
+  const run = (sql, bindings) => knex.raw(sql, bindings ?? []).connection(connection);
+  try {
+    return await work(run);
+  } finally {
+    try {
+      await run(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') THEN
+            EXECUTE 'RESET citus.multi_shard_modify_mode';
+          END IF;
+        END $$;
+      `);
+    } finally {
+      await knex.client.releaseConnection(connection);
+    }
+  }
+}
+
+async function ensureSequentialMode(run) {
+  await run(`
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') THEN
@@ -20,20 +45,22 @@ async function ensureSequentialMode(knex) {
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
-  await ensureSequentialMode(knex);
   if (!(await knex.schema.hasTable('users')) || !(await knex.schema.hasColumn('users', 'is_inactive'))) {
     return;
   }
 
-  const { rows } = await knex.raw(
-    `SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = 'users'::regclass`,
-    [CONSTRAINT]
-  );
-  if (rows.length > 0) {
-    await knex.raw(`ALTER TABLE users VALIDATE CONSTRAINT ${CONSTRAINT}`);
-  }
-  await knex.raw(`ALTER TABLE users ALTER COLUMN is_inactive SET NOT NULL`);
-  await knex.raw(`ALTER TABLE users DROP CONSTRAINT IF EXISTS ${CONSTRAINT}`);
+  await onOneConnection(knex, async (run) => {
+    await ensureSequentialMode(run);
+    const { rows } = await run(
+      `SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = 'users'::regclass`,
+      [CONSTRAINT]
+    );
+    if (rows.length > 0) {
+      await run(`ALTER TABLE users VALIDATE CONSTRAINT ${CONSTRAINT}`);
+    }
+    await run(`ALTER TABLE users ALTER COLUMN is_inactive SET NOT NULL`);
+    await run(`ALTER TABLE users DROP CONSTRAINT IF EXISTS ${CONSTRAINT}`);
+  });
 };
 
 exports.down = async function down() {
