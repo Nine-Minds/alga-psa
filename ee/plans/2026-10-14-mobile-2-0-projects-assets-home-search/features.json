@@ -943,5 +943,14 @@
     "prdRefs": [
       "alga-2026-0002785"
     ]
+  },
+  {
+    "id": "F106",
+    "description": "The close-rule pre-check evaluates the required fields a batch save is about to write: checkTicketClosure takes the pending changes, pickCloseRulePendingFields narrows them to CLOSE_RULE_REQUIRED_FIELDS, and TicketDetails' batch path (TicketInfo Save Changes and BentoHero) passes them, so setting the classification and the closing status together is no longer blocked",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "alga-2026-0002627"
+    ]
   }
 ]

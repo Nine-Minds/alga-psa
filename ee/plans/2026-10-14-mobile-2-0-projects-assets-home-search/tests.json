@@ -1322,5 +1322,23 @@
     "featureIds": [
       "F104"
     ]
+  },
+  {
+    "id": "T147",
+    "description": "checkTicketClosure evaluates the gates against the pending batch: merged classification reaches the evaluator, untouched fields keep the stored value, a cleared assignee still fails, non-required keys are ignored, and a non-closing status skips evaluation",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "pickCloseRulePendingFields keeps only the close-rule required fields, normalizes '' and 'unassigned' to null, and omits untouched fields; TicketDetails' batch save forwards it to the pre-close check",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F106"
+    ]
   }
 ]
