@@ -18,20 +18,56 @@ import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 
 export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows'] as const;
 
-export const ENTRY_POINT_GLOBS = [
-  'server/src/app/msp/co-manag*/**',
-  'server/src/app/api/**/co-management/**',
-  'server/src/lib/actions/coManaged*',
-  'packages/co-managed/src/**/actions*',
-  'packages/jobs/**/coManaged*',
-  'server/src/lib/eventBus/subscribers/coManaged*',
-  'ee/temporal-workflows/src/activities/coManaged*',
-  'ee/temporal-workflows/src/workflows/coManaged*',
-  'shared/services/**/coManaged*',
-] as const;
+/**
+ * The registry later cards extend. One entry per surface family in plan 2.7 / 4.
+ * `ruleA: false` only for UI component trees: they are gated where they are
+ * mounted (an RSC page adapter or `resolveUiSlots`), so a presentational child
+ * need not re-gate; Rule C (no raw flag read) still applies to every file.
+ */
+export interface EntryPointFamily {
+  id: string;
+  glob: string;
+  ruleA: boolean;
+}
 
-/** Every family 2.7 requires; registry sanity asserts each is still present. */
-export const REQUIRED_GLOB_FAMILIES = [...ENTRY_POINT_GLOBS];
+export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
+  { id: 'rsc-pages', glob: 'server/src/app/msp/co-manag*/**', ruleA: true },
+  { id: 'rest-routes', glob: 'server/src/app/api/**/co-management/**', ruleA: true },
+  { id: 'server-actions', glob: 'server/src/lib/actions/coManaged*', ruleA: true },
+  { id: 'package-actions', glob: 'packages/co-managed/src/**/actions*', ruleA: true },
+  { id: 'jobs', glob: 'packages/jobs/**/coManaged*', ruleA: true },
+  { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', ruleA: true },
+  { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
+  { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
+  { id: 'shared-services', glob: 'shared/services/**/coManaged*', ruleA: true },
+  // Co-managed UI mounts (plan 4). DO-NOT-PORT 24's raw-flag boundary lived at
+  // server/src/components/co-managed/CoManagedFeatureBoundary.tsx.
+  { id: 'server-ui', glob: 'server/src/components/co-managed/**', ruleA: false },
+  { id: 'package-ui', glob: 'packages/co-managed/src/components/**', ruleA: false },
+];
+
+export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f) => f.glob);
+
+/**
+ * Registry sanity, written out literally (not derived from the registry): the
+ * exact family set and, per family, how many production files it matches at
+ * HEAD. Deleting a family, swapping one for another, or narrowing a glob so it
+ * stops matching files all fail. A card that adds co-managed entry points
+ * updates the count in the same diff.
+ */
+export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 0 },
+  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 0 },
+  'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
+  jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
+  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
+  'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
+  'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
+  'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 0 },
+  'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
+};
 
 /** The six adapters (plus the three Next-free guard names they export). */
 export const ADAPTER_EXPORTS = new Set([
@@ -99,10 +135,12 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${re}$`);
 }
 
-const GLOB_RES = ENTRY_POINT_GLOBS.map((g) => [g, globToRegExp(g)] as const);
+const FAMILY_RES = ENTRY_POINT_FAMILIES.map((f) => [f, globToRegExp(f.glob)] as const);
 
-export const matchesEntryPointGlob = (path: string): string | null =>
-  GLOB_RES.find(([, re]) => re.test(path))?.[0] ?? null;
+export const entryPointFamily = (path: string): EntryPointFamily | null =>
+  FAMILY_RES.find(([, re]) => re.test(path))?.[0] ?? null;
+
+export const matchesEntryPointGlob = (path: string): string | null => entryPointFamily(path)?.glob ?? null;
 
 const isTestPath = (p: string) => /\.(test|spec)\.[tj]sx?$|(^|\/)__tests__\/|(^|\/)test\//.test(p) || p.startsWith('docs/');
 const isSourcePath = (p: string) => /\.(ts|tsx|mjs|cjs|js)$/.test(p) && !p.endsWith('.d.ts');
@@ -113,7 +151,8 @@ const isSourcePath = (p: string) => /\.(ts|tsx|mjs|cjs|js)$/.test(p) && !p.endsW
  */
 export function isEntryPoint(path: string): boolean {
   if (!isSourcePath(path) || isTestPath(path)) return false;
-  if (!matchesEntryPointGlob(path)) return false;
+  const family = entryPointFamily(path);
+  if (!family || !family.ruleA) return false;
   if (path.startsWith('server/src/app/')) return /(^|\/)(page\.tsx?|route\.ts|layout\.tsx?)$/.test(path);
   return true;
 }
@@ -295,6 +334,33 @@ export function ruleD(
   return out;
 }
 
+/** Registry sanity: the registry must equal the literal expectation, family by family. */
+export function registrySanity(families: readonly EntryPointFamily[], files: SourceFile[]): string[] {
+  const out: string[] = [];
+  const expectedIds = Object.keys(EXPECTED_FAMILY_FILE_COUNTS).sort();
+  const actualIds = families.map((f) => f.id).sort();
+  if (JSON.stringify(expectedIds) !== JSON.stringify(actualIds)) {
+    out.push(`capabilityEntryPoints: registry families [${actualIds.join(', ')}] != expected [${expectedIds.join(', ')}]`);
+  }
+  for (const fam of families) {
+    const expected = EXPECTED_FAMILY_FILE_COUNTS[fam.id];
+    if (!expected) continue;
+    if (fam.glob !== expected.glob) out.push(`capabilityEntryPoints: family ${fam.id} glob ${fam.glob} != expected ${expected.glob}`);
+    let re: RegExp;
+    try {
+      re = globToRegExp(fam.glob);
+    } catch {
+      out.push(`capabilityEntryPoints: family ${fam.id} glob ${fam.glob} is malformed`);
+      continue;
+    }
+    const matched = files.filter((f) => re.test(f.path)).length;
+    if (matched !== expected.files) {
+      out.push(`capabilityEntryPoints: family ${fam.id} matches ${matched} production files, expected ${expected.files}`);
+    }
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -338,10 +404,8 @@ describe('capability gate coverage (AST) — branch is green', () => {
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
   });
 
-  it('registry sanity: every required family is present, and globs are well-formed', () => {
-    for (const fam of REQUIRED_GLOB_FAMILIES) expect(ENTRY_POINT_GLOBS).toContain(fam);
-    expect(ENTRY_POINT_GLOBS.length).toBeGreaterThanOrEqual(9);
-    for (const g of ENTRY_POINT_GLOBS) expect(() => globToRegExp(g)).not.toThrow();
+  it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
+    expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);
   });
 
   it('allowlist has no stale entries', () => {
@@ -377,6 +441,10 @@ describe('glob matching', () => {
     ['ee/temporal-workflows/src/activities/coManagedActivities.ts', true],
     ['ee/temporal-workflows/src/workflows/coManagedWorkflow.ts', true],
     ['shared/services/x/y/coManagedService.ts', true],
+    ['server/src/components/co-managed/CoManagedFeatureBoundary.tsx', true],
+    ['server/src/components/co-managed/nested/Panel.tsx', true],
+    ['packages/co-managed/src/components/Workspace.tsx', true],
+    ['server/src/components/tickets/TicketDetails.tsx', false],
   ])('%s -> %s', (path, expected) => {
     expect(matchesEntryPointGlob(path) !== null).toBe(expected);
   });
@@ -455,6 +523,33 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
   it("Rule C fails on useFeatureFlag('capability:*') and ignores the same call outside entry points", () => {
     expect(ruleC([file(ACTION, `useFeatureFlag('capability:co-managed');`)])).toHaveLength(1);
     expect(ruleC([file('packages/projects/src/components/ProjectDetail.tsx', `useFeatureFlag('release-v2-0-feature');`)])).toEqual([]);
+  });
+
+  it('Rule C catches DO-NOT-PORT 24 at its own path: a raw-flag CoManagedFeatureBoundary', () => {
+    const boundary = file(
+      'server/src/components/co-managed/CoManagedFeatureBoundary.tsx',
+      `export function CoManagedFeatureBoundary({ children }) {\n  const { enabled } = useFeatureFlag('release-v2-0-feature');\n  return enabled ? children : null;\n}`,
+    );
+    expect(ruleC([boundary])).toHaveLength(1);
+    expect(ruleC([file('packages/co-managed/src/components/Tab.tsx', `useFeatureFlag('capability:co-managed');`)])).toHaveLength(1);
+    // UI component trees are gated at their mount; a child without an adapter is not a Rule A failure.
+    expect(ruleA([file('server/src/components/co-managed/Panel.tsx', `export const Panel = () => null;`)])).toEqual([]);
+  });
+
+  it('registry sanity fails when a family is dropped, swapped for another, or narrowed', () => {
+    const dropped = ENTRY_POINT_FAMILIES.filter((f) => f.id !== 'server-ui');
+    expect(registrySanity(dropped, repoFiles).some((m) => m.includes('!= expected ['))).toBe(true);
+
+    const swapped = [...dropped, { id: 'something-else', glob: 'server/src/elsewhere/**', ruleA: true }];
+    expect(registrySanity(swapped, repoFiles).some((m) => m.includes('!= expected ['))).toBe(true);
+
+    const narrowed = ENTRY_POINT_FAMILIES.map((f) => (f.id === 'server-actions' ? { ...f, glob: 'server/src/lib/actions/coManagedX*' } : f));
+    expect(registrySanity(narrowed, repoFiles).some((m) => m.includes('family server-actions glob'))).toBe(true);
+
+    const withFile = [...repoFiles, file('server/src/lib/actions/coManagedProviders.ts', 'export {}')];
+    expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
+      'capabilityEntryPoints: family server-actions matches 1 production files, expected 0',
+    ]);
   });
 
   it('serves-has-no-flag rule fails when serves references the flag evaluator', () => {
