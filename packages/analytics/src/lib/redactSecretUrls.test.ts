@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { redactCaptureResult, redactSecretQueryValues } from './redactSecretUrls';
+import { posthogConfig } from '../config/posthog.config';
 
 // The team invitation link carried its live token into every pageview, so
 // anyone with access to analytics could claim a workspace.
@@ -66,5 +67,9 @@ describe('analytics URL redaction', () => {
       },
     };
     expect(redactCaptureResult({ properties })).toBeNull();
+  });
+
+  it('is the before_send hook of the shipped PostHog config', () => {
+    expect(posthogConfig.defaultConfig.before_send).toBe(redactCaptureResult);
   });
 });
