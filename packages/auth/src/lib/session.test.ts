@@ -57,6 +57,13 @@ describe('session utilities', () => {
     expect(withDevPortSuffix('other-cookie')).toBe('other-cookie-port-3001');
   });
 
+  it('places the port marker after a __Host- prefix and before authjs', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.NEXTAUTH_URL = 'https://example.com:8443';
+    process.env.PORT = '3000';
+    expect(withDevPortSuffix('__Host-authjs.csrf-token')).toBe('__Host-authjs-port-8443.csrf-token');
+  });
+
   it('lets the public URL port beat the listener port', () => {
     process.env.NODE_ENV = 'production';
     process.env.NEXTAUTH_URL = 'https://example.com:8443';
