@@ -79,10 +79,11 @@ console.log(`fixtures: tenant=${tenant} actor=${actor.username} priority=${prior
 // ---- Session cookie ----------------------------------------------------
 const { encode } = await import(`${REPO}/node_modules/@auth/core/jwt.js`);
 const secret = env.AUTH_SECRET || env.NEXTAUTH_SECRET;
-// Dev cookie names carry the app port (see packages/auth/src/lib/session.ts);
-// Auth.js uses the cookie name as the JWE salt.
-const port = new URL(env.NEXTAUTH_URL || BASE).port || '3232';
-const cookieName = `authjs.session-token.${port}`;
+// Mirrors withDevPortSuffix/getSessionCookieName in
+// packages/auth/src/lib/session.ts: the public URL's port, when it has one,
+// goes before the authjs name. Auth.js uses the cookie name as the JWE salt.
+const port = new URL(env.NEXTAUTH_URL || BASE).port;
+const cookieName = port ? `authjs-port-${port}.session-token` : 'authjs.session-token';
 const sessionToken = await encode({
   token: {
     id: actor.user_id,
