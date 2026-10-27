@@ -1,10 +1,13 @@
 /**
  * Links in this product carry credentials in their query string: invitation
- * and password-reset tokens, one-time sign-in codes, OAuth state. Analytics
- * records page URLs, referrers and clicked links, so every such value is
- * replaced before an event leaves the browser.
+ * and password-reset tokens, one-time sign-in codes, OAuth state, and signed
+ * storage links (S3 SigV4 `X-Amz-Signature` / `X-Amz-Credential` /
+ * `X-Amz-Security-Token`, and the same prefixed form other providers use).
+ * Analytics records page URLs, referrers and clicked links, so every such
+ * value is replaced before an event leaves the browser.
  */
-const SECRET_QUERY_VALUE = /([?&](?:[\w.-]*token|ott|otp|code|state|secret|password|signature|sig|key|api_key)=)[^&#"'\s]*/gi;
+const SECRET_QUERY_VALUE =
+  /([?&](?:[\w.-]*(?:token|signature|credential)|ott|otp|code|state|secret|password|sig|key|api_key)=)[^&#"'\s]*/gi;
 
 const MAX_DEPTH = 12;
 
