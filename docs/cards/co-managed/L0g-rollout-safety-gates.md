@@ -1,6 +1,6 @@
 # L0g — Rollout safety gates
 Reviewer question: "If this PR ships, can CI stop an unsafe migration, an N-1 incompatible schema, a stale generated artifact or a hot-path query regression, without any flag or product code change?"
-Base: main @ 058d45c388   Reference: none (new work; nothing is ported from feature/co-managed-it)
+Base: main @ 8d7e656679   Reference: none (new work; nothing is ported from feature/co-managed-it)
 Ticket: alga-2026-0002848   Design: docs/plans/2026-10-26-cm-l0g-plan.md
 
 ## 1. Scope paths (owned)
