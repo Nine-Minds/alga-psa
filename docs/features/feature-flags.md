@@ -207,11 +207,15 @@ Controls discovery of the Contract Simulator while it is being rolled out.
   flag controls only the Contract Details tab and is not an authorization boundary.
 
 ### 14. `release-v2-0-feature`
-Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared. It has two
+consumers: the Timeline view (below) and the `co-managed` capability gate (see
+[Capabilities](#capabilities)), which admits a tenant only when this flag is on **and** the
+tenant is eligible.
 
 **Affected Areas:**
 - **MSP Portal:**
   - Project Details → view switcher → Timeline
+- **Capability `co-managed`:** flag term of the admission decision. No co-managed UI exists yet.
 
 **Behavior:**
 - When disabled (default): The Timeline option is not offered in the project view switcher.
@@ -221,6 +225,38 @@ Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
 - Task start dates, the dependency warnings, CSV, API, templates, mobile and client portal
   changes that shipped with the timeline are not gated. This flag controls only the view's
   entry point and is not an authorization boundary.
+- The server evaluates the flag per tenant (distinct id `tenant_<id>`, group `tenant`) in the
+  root layout and passes it through `PostHogProvider initialFeatureFlags`, so the Timeline
+  follows the flag even when posthog-js is blocked in the browser. A flag evaluation failure
+  omits the value and the Timeline falls back to posthog-js, as before.
+
+## Capabilities
+
+`@alga-psa/core/capability` is a registry of capability gates. `co-managed` is keyed on
+`release-v2-0-feature`.
+
+- `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
+  Eligibility defaults to false until a resolver is registered.
+- `serves(capability, tenantId)` / `filterServed`: keep serving existing state (workers,
+  reads, inbound). Forced value, else participation. Never evaluates the flag.
+- Every branch fails closed; errors never escape the gate. Decisions are cached for
+  `CAPABILITY_CACHE_TTL_MS` (default 30000).
+- Adapters: server action (`CapabilityUnavailableError`), REST (the standard 404
+  `NotFoundError` body), RSC (`notFound()`), job (`job_skipped_capability_closed`), subscriber
+  (fall-through), Temporal (`CapabilitySkip`). Next-bound adapters are in
+  `@alga-psa/core/capability/server`; workers import only `@alga-psa/core/capability`.
+- Browser: `useCapability('co-managed')` reads the server bootstrap and never evaluates
+  anything itself.
+
+**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session) returns the
+caller's own tenant decision and reasons with `Cache-Control: no-store`, or the standard 404
+while the gate is closed. It accepts no parameters.
+
+**Kill switch `FORCE_CAPABILITIES`** (server env): comma-separated `key:on|off`, e.g.
+`co-managed:off`. A malformed value on a known key forces that capability off. It overrides
+the flag and resolvers for that capability only; `release-v2-0-feature` and the Timeline are
+unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
+the bootstrap key is absent, and is ignored in production builds.
 
 ## Implementation Details
 

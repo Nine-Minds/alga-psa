@@ -53,6 +53,33 @@ describe('useFeatureFlag', () => {
     expect(posthog.isFeatureEnabled).not.toHaveBeenCalled();
   });
 
+  it('reports an unresolved flag when PostHog has not loaded flags, and resolved once it answers', async () => {
+    // A blocked or unreachable PostHog answers undefined; that is not the flag being off.
+    posthog.isFeatureEnabled.mockReturnValueOnce(undefined as unknown as boolean);
+    const { result } = renderHook(() => useFeatureFlag('sample-unbootstrapped-flag', { defaultValue: false }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(result.current).toMatchObject({ enabled: false, loading: false, resolved: false });
+
+    posthog.isFeatureEnabled.mockReturnValueOnce(false);
+    const answered = renderHook(() => useFeatureFlag('sample-unbootstrapped-flag', { defaultValue: false }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(answered.result.current).toMatchObject({ enabled: false, loading: false, resolved: true });
+  });
+
+  it('treats a bootstrapped flag as resolved', () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'sample-bootstrapped-flag': false }}>
+        {children}
+      </FeatureFlagBootstrapProvider>
+    );
+    const { result } = renderHook(() => useFeatureFlag('sample-bootstrapped-flag', { defaultValue: true }), { wrapper });
+    expect(result.current).toMatchObject({ enabled: false, resolved: true });
+  });
+
   it('accepts later PostHog flag updates after the bootstrapped render', async () => {
     let deliverFeatureFlags: (() => void) | undefined;
     posthog.onFeatureFlags.mockImplementationOnce((callback: () => void) => {
