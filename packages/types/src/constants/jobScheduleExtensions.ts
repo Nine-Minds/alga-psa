@@ -5,7 +5,8 @@
  *
  * Dependency-free like `maintenanceFanoutSchedules.ts`, so both schedulers can
  * read it: the EE Temporal worker (`setupSchedules.ts`, via
- * `listMaintenanceFanoutSchedules('ee')`) and the CE pg-boss converger (via
+ * `listMaintenanceFanoutSchedules()`, which is EE-only and appends
+ * `listExtensionMaintenanceSchedules('ee')`) and the CE pg-boss converger (via
  * `resolveCeMaintenanceSchedules`, which appends `listExtensionMaintenanceSchedules('ce')`).
  * A scheduler only sees rows registered in its own process, so the module that
  * calls `defineJob` must be loaded by both the server and the scheduling process.

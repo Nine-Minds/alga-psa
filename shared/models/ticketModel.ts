@@ -1708,6 +1708,8 @@ export class TicketModel {
           ticketId: validatedData.ticket_id,
           commentId,
           userId: event.userId,
+          actor: event.actor,
+          metadata: event.metadata,
           eventType: 'TICKET_COMMENT_ADDED',
         }, async () => {
           if ((eventPublisher as any).__inboundOutboxPublisher === true) {

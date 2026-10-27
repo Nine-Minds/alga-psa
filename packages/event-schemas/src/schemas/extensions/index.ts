@@ -82,16 +82,37 @@ export type ExtensionEventType = ExtensionEventTypeOf<typeof eventExtensions>;
 /** Registered extension payload schemas (empty natively). */
 export type ExtensionPayloadSchemas = ExtensionPayloadSchemasOf<typeof eventExtensions>;
 
-const registered: readonly EventPayloadExtension<ExtensionEventType>[] = eventExtensions;
+/** The composed result of a tuple of extensions, typed from that tuple. */
+export interface ComposedEventExtensions<TExtensions extends readonly EventPayloadExtension[]> {
+  readonly eventTypes: readonly ExtensionEventTypeOf<TExtensions>[];
+  readonly payloadSchemas: ExtensionPayloadSchemasOf<TExtensions>;
+}
 
-export const EXTENSION_EVENT_TYPES: readonly ExtensionEventType[] = registered.flatMap((e) => e.eventTypes);
+/**
+ * Compose extensions into one event-type list and one payload map. This is what
+ * builds EXTENSION_EVENT_TYPES and EXTENSION_PAYLOAD_SCHEMAS below. Each extension
+ * only carries its own payload schemas, so the list is held as
+ * `EventPayloadExtension<string>[]`; the result types come from the tuple itself.
+ */
+export function composeEventExtensions<const TExtensions extends readonly EventPayloadExtension[]>(
+  extensions: TExtensions,
+): ComposedEventExtensions<TExtensions> {
+  const list: readonly EventPayloadExtension<string>[] = extensions;
+  // TS cannot relate a runtime flatMap/Object.assign to the conditional types over a
+  // generic tuple; both result types are derived from that same tuple, and
+  // assertEventExtensionsCompose guarantees the payload keys are disjoint.
+  return {
+    eventTypes: list.flatMap((e) => e.eventTypes) as readonly string[] as unknown as readonly ExtensionEventTypeOf<TExtensions>[],
+    payloadSchemas: Object.assign({}, ...list.map((e) => e.payloadSchemas)) as ExtensionPayloadSchemasOf<TExtensions>,
+  };
+}
 
-// Object.assign over a runtime list cannot express the intersection; the type is
-// derived from the same tuple, and assertEventExtensionsCompose guarantees disjoint keys.
-export const EXTENSION_PAYLOAD_SCHEMAS = Object.assign(
-  {},
-  ...registered.map((e) => e.payloadSchemas),
-) as ExtensionPayloadSchemas;
+const registered: readonly EventPayloadExtension<string>[] = eventExtensions;
+const composed = composeEventExtensions(eventExtensions);
+
+export const EXTENSION_EVENT_TYPES: readonly ExtensionEventType[] = composed.eventTypes;
+
+export const EXTENSION_PAYLOAD_SCHEMAS: ExtensionPayloadSchemas = composed.payloadSchemas;
 
 /**
  * Throws when an extension event type collides with a core event type or with

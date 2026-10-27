@@ -12,8 +12,10 @@ import {
   EXTENSION_EVENT_TYPES,
   EXTENSION_PAYLOAD_SCHEMAS,
   assertEventExtensionsCompose,
+  composeEventExtensions,
   defineEventExtension,
   eventExtensions,
+  type EventPayloadExtension,
   type ExtensionEventType,
   type ExtensionEventTypeOf,
   type ExtensionPayloadSchemasOf,
@@ -71,15 +73,37 @@ describe('event schema extensions', () => {
     expect(() => assertEventExtensionsCompose(EVENT_TYPES, [a])).not.toThrow();
   });
 
-  it('types: a registered tuple widens the event type union and the payload map', () => {
+  it('composes several extensions through the real composition entry point', () => {
     const one = z.object({ one: z.string() });
     const two = z.object({ two: z.number() });
+    const three = z.object({ three: z.boolean() });
+    // Each extension carries only its own payload schemas, as a real extension module would.
     const exts = [
       defineEventExtension({ name: 'p', eventTypes: ['P_ONE'], payloadSchemas: { P_ONE: one } }),
-      defineEventExtension({ name: 'q', eventTypes: ['Q_TWO'], payloadSchemas: { Q_TWO: two } }),
-    ] as const;
-    expectTypeOf<ExtensionEventTypeOf<typeof exts>>().toEqualTypeOf<'P_ONE' | 'Q_TWO'>();
-    expectTypeOf<ExtensionPayloadSchemasOf<typeof exts>>().toMatchTypeOf<{ P_ONE: typeof one; Q_TWO: typeof two }>();
+      defineEventExtension({ name: 'q', eventTypes: ['Q_TWO', 'Q_THREE'], payloadSchemas: { Q_TWO: two, Q_THREE: three } }),
+    ] as const satisfies readonly EventPayloadExtension[];
+
+    // Same checks eventBusSchema.ts runs at load, then the same composition it consumes.
+    expect(() => assertEventExtensionsCompose(EVENT_TYPES, exts)).not.toThrow();
+    const composed = composeEventExtensions(exts);
+
+    expect(composed.eventTypes).toEqual(['P_ONE', 'Q_TWO', 'Q_THREE']);
+    expect(composed.payloadSchemas.P_ONE).toBe(one);
+    expect(composed.payloadSchemas.Q_TWO).toBe(two);
+    expect(composed.payloadSchemas.Q_THREE).toBe(three);
+    expect(Object.keys(composed.payloadSchemas)).toEqual(['P_ONE', 'Q_TWO', 'Q_THREE']);
+
+    expectTypeOf(composed.eventTypes).toEqualTypeOf<readonly ('P_ONE' | 'Q_TWO' | 'Q_THREE')[]>();
+    expectTypeOf(composed.payloadSchemas.Q_TWO).toEqualTypeOf<typeof two>();
+    expectTypeOf<ExtensionEventTypeOf<typeof exts>>().toEqualTypeOf<'P_ONE' | 'Q_TWO' | 'Q_THREE'>();
+    expectTypeOf<ExtensionPayloadSchemasOf<typeof exts>>().toMatchTypeOf<{ P_ONE: typeof one; Q_TWO: typeof two; Q_THREE: typeof three }>();
+  });
+
+  it('the native composition is the empty composition', () => {
+    const composed = composeEventExtensions(eventExtensions);
+    expect(composed.eventTypes).toEqual([]);
+    expect(composed.payloadSchemas).toEqual({});
+    expect(EXTENSION_EVENT_TYPES).toEqual(composed.eventTypes);
     expectTypeOf<ExtensionEventTypeOf<readonly []>>().toBeNever();
     expectTypeOf<'TICKET_CREATED'>().toMatchTypeOf<EventType>();
   });
