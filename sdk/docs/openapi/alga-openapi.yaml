@@ -3590,6 +3590,119 @@ components:
             - "true"
             - "false"
           description: true also returns archived (is_active false) statuses.
+    AssetCustodyEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+      description: Custody data wrapped in the standard envelope.
+    OpenAssetCustodyRequest:
+      type: object
+      properties:
+        ticket_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Ticket the equipment was received for; its client must match the
+            asset.
+        location_id:
+          type: string
+          format: uuid
+          description: Active stock location the item is shelved at.
+        bin:
+          type: string
+          maxLength: 64
+          description: Free-text bin or shelf label.
+        purpose:
+          type: string
+          enum:
+            - repair
+            - warranty_evaluation
+            - loaner_prep
+            - staging
+        next_action_party:
+          type: string
+          enum:
+            - msp
+            - client
+            - vendor
+        next_action_note:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        follow_up_on:
+          type:
+            - string
+            - "null"
+          description: Date only, YYYY-MM-DD.
+        condition_note:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - location_id
+        - bin
+        - purpose
+    AssetCustodyEventRequest:
+      type: object
+      properties:
+        event_type:
+          type: string
+          enum:
+            - moved
+            - handed_off
+            - shipped
+            - received
+            - returned
+      required:
+        - event_type
+      description: "Fields depend on event_type: moved {location_id?, bin?},
+        handed_off {to_holder_user_id}, shipped {counterparty}, received
+        {location_id, bin}, returned {counterparty?}."
+    AssetCustodyQueueQuery:
+      type: object
+      properties:
+        tab:
+          type: string
+        client_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        holder_user_id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+            - repair
+            - warranty_evaluation
+            - loaner_prep
+            - staging
+        next_action_party:
+          type: string
+          enum:
+            - msp
+            - client
+            - vendor
+        mine:
+          type: string
+          enum:
+            - "true"
+            - "false"
+        page:
+          type: string
+        pageSize:
+          type: string
+      required:
+        - purpose
     AssetGroupListQuery:
       type: object
       properties:
@@ -27982,6 +28095,330 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetStatusListResponse"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/custody:
+    get:
+      summary: Get asset custody
+      description: Returns the open custody episode (if any), the episode history and
+        the append-only event timeline of the asset. An asset the caller cannot
+        read answers 404 with no data.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Custody returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+    post:
+      summary: Receive an asset into custody
+      description: Opens a custody episode for the asset. Never touches stock, billing
+        or time. 409 when an episode is already open.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: Where the item is shelved and who acts next.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAssetCustodyRequest"
+            description: Where the item is shelved and who acts next.
+      responses:
+        "201":
+          description: Custody episode opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Validation failed (inactive location, client mismatch, invalid date).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: An episode is already open for this asset.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/custody/events:
+    post:
+      summary: Record a custody step
+      description: Appends a moved, handed_off, shipped, received or returned step to
+        the asset’s open episode. Invalid transitions answer 409.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: The step to record.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetCustodyEventRequest"
+            description: The step to record.
+      responses:
+        "201":
+          description: Step recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: The asset is not in custody, or the step is not allowed from the
+            current state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/asset-custody:
+    get:
+      summary: List equipment in custody
+      description: The custody queue. Rows and tab counts exclude assets the caller
+        cannot read.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-no-asset-existence-check: true
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: tab
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: client_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: holder_user_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - repair
+              - warranty_evaluation
+              - loaner_prep
+              - staging
+          required: true
+          name: purpose
+          in: query
+        - schema:
+            type: string
+            enum:
+              - msp
+              - client
+              - vendor
+          required: false
+          name: next_action_party
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: mine
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: Queue returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Invalid filter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "401":
           description: x-api-key is missing at middleware.
           content:

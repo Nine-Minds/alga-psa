@@ -54,6 +54,7 @@ test('identities outside the workspace cannot be counted as discovered tests', (
 test('DB-less unit exclusions receive a dedicated DB lane without taking over other lanes', () => {
   for (const file of [
     'server/src/test/unit/migrations/rollback.db.test.ts',
+    'server/src/test/contract/hotPathQueryBudget.db.test.ts',
     'server/migrations/__tests__/rollback.integration.test.ts',
     'packages/billing/tests/eligibility.db.test.ts',
     'shared/workflow/tests/identity.db.test.ts',
@@ -64,6 +65,7 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
   for (const file of [
     'server/src/test/integration/rollback.db.test.ts',
     'server/src/test/infrastructure/fixture.db.test.ts',
+    'server/src/test/contract/hotPathScenario.test.ts',
     'packages/billing/tests/eligibility.test.ts',
     'tools/fixture.db.test.ts',
     'services/workflow-worker/dist/v2/launchSkips.db.test.js',
