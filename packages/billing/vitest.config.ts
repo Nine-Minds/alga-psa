@@ -192,6 +192,17 @@ export default defineConfig({
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
+      // Same shape as the logger rule: `./capability` is exported from
+      // src/lib, while its server/testing subpaths live under src/capability.
+      // Reached through @alga-psa/ui's hooks barrel (useCapability).
+      {
+        find: /^@alga-psa\/core\/capability$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/capability.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/capability\/(server|testing)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/capability')}/$1.ts`,
+      },
       // Same shape as the logger rule: core's i18n exports sit under src/lib, so
       // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
       // through @alga-psa/ui's date formatter.
