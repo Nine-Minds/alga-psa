@@ -261,6 +261,25 @@ describe('C2 label integration (real providers, real storage)', () => {
       }
     });
 
+    it('mixed classes in one request: order kept, skips counted per subject, templateId is a 400', async () => {
+      const t = world.tickets;
+      const a = world.assets;
+      const { deps, printed } = await capture();
+      const { printLabels } = await import('../../lib/labels/printLabels');
+      const labels = [
+        { labelClass: 'ticket-work-tag', recordId: t.a2 },
+        { labelClass: 'asset-identity', recordId: a.a3 },
+        { labelClass: 'ticket-work-tag', recordId: t.foreign },
+        { labelClass: 'asset-identity', recordId: a.foreign },
+        { labelClass: 'ticket-work-tag', recordId: t.a1 },
+      ];
+      const result = await asRequest(world.tenant, () => printLabels(deps, ctx(world.tech), { labels }));
+      expect(result).toMatchObject({ ok: true, labels: 3, skipped: 2 });
+      expect(printed).toEqual([t.a2, a.a3, t.a1]);
+      const refused = await asRequest(world.tenant, () => printLabels(deps, ctx(world.tech), { labels, templateId: 'standard-ticket-work-tag' }));
+      expect(refused).toMatchObject({ ok: false, status: 400 });
+    });
+
     it('a user who can read 2 of 3 gets 2 labels and skipped 1', async () => {
       const t = world.tickets;
       const { result, printed } = await run(world.tech, 'ticket-work-tag', [t.a1, t.foreign, t.a2]);

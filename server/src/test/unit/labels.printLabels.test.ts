@@ -129,9 +129,13 @@ describe('printLabels', () => {
     expect(r).toMatchObject({ ok: true });
   });
 
-  it('the removed `ids` field and top-level `linkedAssetId` are not accepted', async () => {
+  it('the removed `ids` and `items` fields are rejected, and top-level `linkedAssetId` is ignored', async () => {
     const s = setup([A]);
     expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A] } as never)).toMatchObject({ ok: false, status: 400 });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]), ids: [A] } as never)).toMatchObject({ ok: false, status: 400 });
+    expect(await printLabels(s.deps, s.caller, { items: [{ labelClass: 'ticket-work-tag', id: A }] } as never)).toMatchObject({ ok: false, status: 400 });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]), items: [] } as never)).toMatchObject({ ok: false, status: 400 });
+    expect(s.provider.getLabelViewModels).not.toHaveBeenCalled();
     const r = await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]), linkedAssetId: C } as never);
     expect((s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>).mock.calls[0][1]).toEqual([{ recordId: A }]);
     expect(r).toMatchObject({ ok: true });
@@ -239,10 +243,10 @@ describe('printLabels', () => {
     it('keeps request order across classes, one provider call per class, each with its own template', async () => {
       const s = mixedSetup([A, B], [C]);
       const r = await printLabels(s.deps, s.caller, {
-        items: [
-          { labelClass: 'staging-container', id: A },
-          { labelClass: 'ticket-work-tag', id: C },
-          { labelClass: 'staging-container', id: B },
+        labels: [
+          { labelClass: 'staging-container', recordId: A },
+          { labelClass: 'ticket-work-tag', recordId: C },
+          { labelClass: 'staging-container', recordId: B },
         ],
       });
       expect(r).toMatchObject({ ok: true, skipped: 0 });
@@ -259,27 +263,58 @@ describe('printLabels', () => {
     it('skips and counts unreadable records; nothing readable is the uniform 404', async () => {
       const s = mixedSetup([A], []);
       const partial = await printLabels(s.deps, s.caller, {
-        items: [{ labelClass: 'staging-container', id: A }, { labelClass: 'ticket-work-tag', id: B }],
+        labels: [{ labelClass: 'staging-container', recordId: A }, { labelClass: 'ticket-work-tag', recordId: B }],
       });
       expect(partial).toMatchObject({ ok: true, skipped: 1 });
-      const none = await printLabels(s.deps, s.caller, { items: [{ labelClass: 'staging-container', id: B }] });
+      const none = await printLabels(s.deps, s.caller, { labels: [{ labelClass: 'staging-container', recordId: B }] });
       expect(none).toEqual({ ok: false, status: 404, message: 'Not found.' });
     });
 
-    it('validates items, the shared cap, and refuses single-class options before any data read', async () => {
+    it('validates labels and the shared cap, and refuses template/overrides on a mixed request before any data read', async () => {
       const s = mixedSetup([A], [A]);
+      const mix = [{ labelClass: 'staging-container', recordId: A }, { labelClass: 'ticket-work-tag', recordId: A }];
       for (const body of [
-        { items: [] },
-        { items: Array(201).fill({ labelClass: 'staging-container', id: A }) },
-        { items: [{ labelClass: 'nope', id: A }] },
-        { items: [{ labelClass: 'staging-container', id: 'x' }] },
-        { items: [{ labelClass: 'staging-container', id: A }], labelClass: 'ticket-work-tag', ids: [A] },
-        { items: [{ labelClass: 'staging-container', id: A }], templateId: 'standard-staging-container' },
-        { items: [{ labelClass: 'ticket-work-tag', id: A }], overrides: { title: 'x' } },
+        { labels: [] },
+        { labels: Array(201).fill({ labelClass: 'staging-container', recordId: A }) },
+        { labels: [{ labelClass: 'nope', recordId: A }] },
+        { labels: [{ labelClass: 'staging-container', recordId: 'x' }] },
+        { labels: mix, templateId: 'standard-staging-container' },
+        { labels: mix, overrides: { title: 'x' } },
       ]) {
         expect(await printLabels(s.deps, s.caller, body)).toMatchObject({ ok: false, status: 400 });
       }
       expect(s.boxes.getLabelViewModels).not.toHaveBeenCalled();
+      expect(s.provider.getLabelViewModels).not.toHaveBeenCalled();
+    });
+
+    it('a subject class wins over the request default; the default fills subjects without one', async () => {
+      const s = mixedSetup([A], [C]);
+      const r = await printLabels(s.deps, s.caller, {
+        labelClass: 'ticket-work-tag',
+        labels: [{ recordId: C }, { labelClass: 'staging-container', recordId: A }],
+      });
+      expect(r).toMatchObject({ ok: true, skipped: 0 });
+      const items = (s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>;
+      expect(items.map((i) => i.viewModel.recordId)).toEqual([C, A]);
+    });
+
+    it('a mixed request counts skips per subject', async () => {
+      const s = mixedSetup([A], [C]);
+      const r = await printLabels(s.deps, s.caller, {
+        labels: [
+          { labelClass: 'staging-container', recordId: A },
+          { labelClass: 'ticket-work-tag', recordId: B },
+          { labelClass: 'ticket-work-tag', recordId: B },
+          { labelClass: 'ticket-work-tag', recordId: C },
+        ],
+      });
+      expect(r).toMatchObject({ ok: true, skipped: 2 });
+    });
+
+    it('a subject with no class and no request default is a 400', async () => {
+      const s = mixedSetup([A], [A]);
+      expect(await printLabels(s.deps, s.caller, { labels: [{ recordId: A }] })).toMatchObject({ ok: false, status: 400 });
+      expect(await printLabels(s.deps, s.caller, { labels: [{ labelClass: 'ticket-work-tag', recordId: A }, { recordId: B }] })).toMatchObject({ ok: false, status: 400 });
       expect(s.provider.getLabelViewModels).not.toHaveBeenCalled();
     });
 
@@ -288,7 +323,7 @@ describe('printLabels', () => {
       s.renderPdf.mockRejectedValueOnce(new Error('1 of 2 labels cannot be printed'));
       s.deps.describeClientError = (e) => ({ message: (e as Error).message });
       expect(await printLabels(s.deps, s.caller, {
-        items: [{ labelClass: 'staging-container', id: A }, { labelClass: 'ticket-work-tag', id: C }],
+        labels: [{ labelClass: 'staging-container', recordId: A }, { labelClass: 'ticket-work-tag', recordId: C }],
       })).toEqual({ ok: false, status: 422, message: '1 of 2 labels cannot be printed' });
     });
   });

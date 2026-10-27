@@ -24,12 +24,15 @@ export interface LinkedAssetChoice {
 
 /** One label: a record and, for a ticket work tag, the linked item the label is about. */
 export interface LabelSubject {
+  /** Wins over the request's default `labelClass`; required when the request has none. */
+  labelClass?: LabelClass;
   recordId: string;
   linkedAssetId?: string;
 }
 
 export interface LabelPrintRequest {
-  labelClass: LabelClass;
+  /** Default class for subjects that name none. Subjects of several classes print in one PDF, in order. */
+  labelClass?: LabelClass;
   labels: LabelSubject[];
   templateId?: string;
   layout?: unknown;
@@ -73,14 +76,14 @@ export function useLabelPrint() {
     return body.assets ?? [];
   }, []);
 
-  const print = useCallback(async (request: LabelPrintRequest): Promise<LabelPrintOutcome> => {
+  const send = useCallback(async (body: LabelPrintRequest): Promise<LabelPrintOutcome> => {
     setIsPrinting(true);
     try {
       const response = await fetch('/api/labels/pdf', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         const { message, failures } = await readError(response);
@@ -92,7 +95,7 @@ export function useLabelPrint() {
       const opened = window.open(blobUrl, '_blank');
       return {
         status: 'printed',
-        printed: request.labels.length - skipped,
+        printed: body.labels.length - skipped,
         skipped,
         blobUrl,
         popupBlocked: !opened,
@@ -109,5 +112,5 @@ export function useLabelPrint() {
     }
   }, []);
 
-  return { print, loadTemplates, loadLinkedAssets, isPrinting };
+  return { print: send, loadTemplates, loadLinkedAssets, isPrinting };
 }

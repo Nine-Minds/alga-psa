@@ -2,7 +2,10 @@
  * Label PDF API Route (session-authenticated; the composition root for label printing)
  * POST /api/labels/pdf — render one or more records as a label PDF (one label per page, or n-up).
  *
- * Body: { labelClass, labels: [{ recordId, linkedAssetId? }], templateId?, templateCode?, layout?, overrides? }
+ * Body: { labelClass?, labels: [{ labelClass?, recordId, linkedAssetId? }], templateId?, templateCode?, layout?, overrides? }
+ *   labelClass: default for subjects that name none; a subject's own labelClass wins. A subject with no
+ *     class at all is a 400. Labels of several classes print in ONE PDF in request order (C6 bulk print);
+ *     templateId/overrides are then a 400. `ids` / `items` are not accepted (400).
  *   templateId: a tenant custom work-tag template id or a standard code (supersedes templateCode).
  *   labels: one label per subject, in order. The same ticket may appear several times with different
  *     `linkedAssetId` picks (ticket-work-tag only; dropped silently for other classes).
@@ -33,17 +36,19 @@ import { getTicketLinkedAssetLabelParts } from '@alga-psa/assets/lib/ticketLinke
 import { assetLabelViewModelProvider } from '@alga-psa/assets/lib/labelViewModelProvider';
 import { stockUnitLabelViewModelProvider } from '@alga-psa/inventory/lib/labelViewModelProvider';
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
+import { stagingContainerLabelViewModelProvider } from '@alga-psa/projects/lib/stagingLabelViewModelProvider';
 import { BarcodeError } from '@alga-psa/billing/lib/invoice-template-ast/barcode/constraints';
 import type { LabelClass, LabelViewModelProvider } from '@alga-psa/types';
 
 import { printLabels, type PrintLabelsDeps } from '../../../../lib/labels/printLabels';
 
-// C1 ships providers for ticket, asset and stock unit. RMA / project / project-task have no label
-// class and no data access yet (see ee/docs/plans/2026-10-20-label-rendering-foundation).
+// C1 ships providers for ticket, asset and stock unit; C6 adds project staging boxes. RMA / project /
+// project-task have no label class yet (see ee/docs/plans/2026-10-20-label-rendering-foundation).
 const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
   'ticket-work-tag': ticketLabelViewModelProvider,
   'asset-identity': assetLabelViewModelProvider,
   'stock-unit-identity': stockUnitLabelViewModelProvider,
+  'staging-container': stagingContainerLabelViewModelProvider,
 };
 
 const deps: PrintLabelsDeps = {
