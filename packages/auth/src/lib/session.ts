@@ -12,11 +12,7 @@ const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 24 hours
 
 let cachedSecret: string | null = null;
 
-function getDevCookiePortSuffix(): string | null {
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
-
+function getCookiePortSuffix(): string | null {
   const urlCandidates = [
     process.env.NEXTAUTH_URL,
     process.env.APP_URL,
@@ -25,13 +21,19 @@ function getDevCookiePortSuffix(): string | null {
 
   for (const candidate of urlCandidates) {
     try {
-      const parsed = new URL(candidate);
-      if (parsed.port) {
-        return parsed.port;
-      }
+      // The first valid public URL is authoritative. A portless URL means
+      // the browser uses the scheme's standard port, even when a reverse
+      // proxy forwards to an internal listener such as PORT=3000.
+      return new URL(candidate).port || null;
     } catch {
-      // Ignore invalid URLs and fall through to other candidates.
+      // Ignore invalid URLs and fall through to the next public URL.
     }
+  }
+
+  // A production listener port is an implementation detail. Only development
+  // runtimes without a public URL need PORT to keep worktree cookies separate.
+  if (process.env.NODE_ENV === 'production') {
+    return null;
   }
 
   const portCandidate =
@@ -40,16 +42,25 @@ function getDevCookiePortSuffix(): string | null {
 }
 
 /**
- * Cookies are shared across localhost ports. In development, suffix cookie names with the dev port
- * so multiple worktrees (each with their own NEXTAUTH_SECRET) can coexist without clobbering.
+ * Cookies are shared across ports. Scope each explicitly-port-bound runtime's
+ * auth cookies to its port. Auth.js reads every cookie whose name starts with
+ * its session-cookie name as a token chunk, not only `.0`/`.1` chunks. Put
+ * the port marker before the `authjs` cookie name so another runtime cannot
+ * consume or clear this runtime's session cookie.
  */
 export function withDevPortSuffix(cookieName: string): string {
-  const portSuffix = getDevCookiePortSuffix();
+  const portSuffix = getCookiePortSuffix();
   if (!portSuffix) {
     return cookieName;
   }
 
-  return `${cookieName}.${portSuffix}`;
+  const authCookiePrefix = cookieName.match(/^(__Secure-|__Host-)?authjs\.(.*)$/);
+  if (authCookiePrefix) {
+    const [, securityPrefix = '', cookieNameRemainder] = authCookiePrefix;
+    return `${securityPrefix}authjs-port-${portSuffix}.${cookieNameRemainder}`;
+  }
+
+  return `${cookieName}-port-${portSuffix}`;
 }
 
 /**
