@@ -125,8 +125,8 @@ export const API_RULES: readonly ApiRule[] = [
     // notification-signals token. Not part of the public v1 metadata surface.
     group: 'api_notification_stream',
     staticPrefixes: ['/api/notifications'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     group: 'api_ticket_psa_only_subroutes',
