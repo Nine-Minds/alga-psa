@@ -11,7 +11,8 @@ import {
   ITimePeriodView,
   ITimePeriodSettings
 } from '@alga-psa/types';
-import { createTimePeriodsThrough, ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
+import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
+import { yearBoundary } from '../lib/timePeriodCadence';
 import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '@alga-psa/validation';
@@ -19,7 +20,7 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '@alga-psa/core';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSession, hasPermission, withAuth } from '@alga-psa/auth';
@@ -441,7 +442,7 @@ function getNextPeriodStart(
     }
 
     case 'year':
-      return currentStart.add({ years: frequency });
+      return yearBoundary(setting, currentStart.year + frequency);
 
     default:
       return currentStart.add({ days: frequency });
@@ -460,6 +461,7 @@ export async function generateTimePeriods(
   const endDate = toPlainDate(endDateStr);
 
   for (const setting of settings) {
+    if (setting.is_active === false) continue;
     let currentDate = startDate;
 
     if (setting.effective_from) {
@@ -481,6 +483,13 @@ export async function generateTimePeriods(
       }
     }
 
+    // Yearly profiles start on start_month / start_day_of_month, not on the range start.
+    if (setting.frequency_unit === 'year') {
+      let aligned = yearBoundary(setting, currentDate.year);
+      if (Temporal.PlainDate.compare(aligned, currentDate) < 0) aligned = yearBoundary(setting, currentDate.year + 1);
+      currentDate = aligned;
+    }
+
     while (Temporal.PlainDate.compare(currentDate, endDate) < 0) {
       if (setting.effective_to) {
         const effectiveTo = toPlainDate(setting.effective_to);
@@ -491,13 +500,15 @@ export async function generateTimePeriods(
 
       const periodEndDate = getEndOfPeriod(currentDate.toString(), setting);
 
-      if (Temporal.PlainDate.compare(periodEndDate, endDate) >= 0) {
+      // Stored ends are exclusive, so a period whose end equals the range end (or effective_to)
+      // still fits inside it.
+      if (Temporal.PlainDate.compare(periodEndDate, endDate) > 0) {
         break;
       }
 
       if (setting.effective_to) {
         const effectiveTo = toPlainDate(setting.effective_to);
-        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) >= 0) {
+        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) > 0) {
           break;
         }
       }
@@ -806,40 +817,3 @@ export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, star
     }
   });
 });
-
-/**
- * Creates the next time period(s) based on settings, filling any gaps up to the threshold.
- *
- * Manages its own transaction (all-or-nothing) and takes the per-tenant time-period advisory lock.
- * The work lives in createTimePeriodsThrough, shared with ensureTimePeriodCoversDate.
- *
- * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
- * For background jobs, wrap calls with runWithTenant(tenantId, ...).
- *
- * @param settings - Time period settings to use for generation
- * @param daysThreshold - How many days ahead to create periods (default: 5)
- * @param options.today - The date to treat as today (default: today in UTC)
- */
-export async function createNextTimePeriod(
-  settings: ITimePeriodSettings[],
-  daysThreshold: number = 5,
-  options: { today?: Temporal.PlainDate } = {}
-): Promise<ITimePeriod | null> {
-  const tenant = getTenantContext();
-  if (!tenant) {
-    throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
-  }
-
-  const { knex: db } = await createTenantKnex();
-
-  try {
-    // Use UTC for background jobs since there's no user session
-    const today = options.today ?? getCurrentDate('UTC');
-    return await withTransaction(db, (trx) =>
-      createTimePeriodsThrough(trx, tenant, settings, today, daysThreshold)
-    );
-  } catch (error) {
-    logger.error('Error creating next time period:', error);
-    throw error;
-  }
-}
