@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   addSingleTeamMember: vi.fn(),
 }));
 
-vi.mock('@alga-psa/onboarding/actions', () => ({
+vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () => ({
   getOnboardingLicenseUsage: vi.fn(async () => ({ success: true, data: { limit: null, used: 1 } })),
   getAvailableRoles: vi.fn(async () => ({ success: true, data: [{ value: 'Technician', label: 'Technician', roleId: 'role-tech' }] })),
   addSingleTeamMember: mocks.addSingleTeamMember,

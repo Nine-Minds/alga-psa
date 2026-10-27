@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { isLicensedUserType } from "@alga-psa/types";
 import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
-import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions";
+import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCurrentTenantProduct } from "@/lib/productAccess";

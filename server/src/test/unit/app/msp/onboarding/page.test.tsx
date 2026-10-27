@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: mocks.replace, 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('@/context/ProductContext', () => ({ useProduct: () => ({ productCode: 'psa' }) }));
 vi.mock('@alga-psa/tenancy/actions', () => ({ getTenantSettings: vi.fn(async () => mocks.settings) }));
-vi.mock('@alga-psa/onboarding/actions', () => ({
+vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () => ({
   getWorkspaceSetupAccess: vi.fn(async () => ({ canRun: mocks.canRun })),
   getOnboardingInitialData: vi.fn(async () => ({ success: true, data: { firstName: 'Ada', lastName: 'Admin', email: 'ada@example.test' } })),
 }));

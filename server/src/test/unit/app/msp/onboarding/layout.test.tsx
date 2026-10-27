@@ -22,7 +22,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   getTenantSettings: vi.fn(async () => ({ onboarding_completed: mocks.onboardingCompleted, onboarding_skipped: false })),
 }));
-vi.mock('@alga-psa/onboarding/actions', () => ({
+vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () => ({
   getWorkspaceSetupAccess: vi.fn(async () => {
     if (mocks.canRun === 'throw') throw new Error('boom');
     return { canRun: mocks.canRun };
