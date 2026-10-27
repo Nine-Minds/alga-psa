@@ -8,7 +8,9 @@ import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
 import TaskTypeModel from '../models/taskType';
 import TaskDependencyModel from '../models/taskDependency';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+// Aliased on purpose: inside a withTransaction callback only the destructured
+// projectEventsAfterCommit(trx) names may publish; a mismatched destructure then fails to compile.
+import { publishEvent as publishEventNow, publishWorkflowEvent as publishWorkflowEventNow } from '@alga-psa/event-bus/publishers';
 import type {
   DependencyType,
   ICustomTaskType,
@@ -159,18 +161,18 @@ async function withProjectTaskActionErrors<T>(work: () => Promise<T>): Promise<T
 /** Capture event payloads during the write, publish only after its outer commit. */
 function projectEventsAfterCommit(trx: Knex.Transaction) {
     return {
-        publishEvent: async <E extends Parameters<typeof publishEvent>[0]>(
+        publishEvent: async <E extends Parameters<typeof publishEventNow>[0]>(
             event: E,
-            options?: Parameters<typeof publishEvent>[1],
+            options?: Parameters<typeof publishEventNow>[1],
         ): Promise<void> => {
-            registerAfterCommit(trx, () => publishEvent(event, options), event.eventType);
+            registerAfterCommit(trx, () => publishEventNow(event, options), event.eventType);
         },
         // Generic over the event type so the builder-minted payload contract holds.
         publishWorkflowEvent: async <T extends WorkflowCatalogEventType>(
-            params: Parameters<typeof publishWorkflowEvent<T>>[0],
-            options?: Parameters<typeof publishWorkflowEvent<T>>[1],
+            params: Parameters<typeof publishWorkflowEventNow<T>>[0],
+            options?: Parameters<typeof publishWorkflowEventNow<T>>[1],
         ): Promise<void> => {
-            registerAfterCommit(trx, () => publishWorkflowEvent<T>(params, options), params.eventType);
+            registerAfterCommit(trx, () => publishWorkflowEventNow<T>(params, options), params.eventType);
         },
     };
 }
@@ -1460,7 +1462,7 @@ export const addTaskResourceAction = withAuth(async (
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
-            const { publishEvent } = projectEventsAfterCommit(trx);
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
             const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
             if (!projectId) {
@@ -1562,7 +1564,7 @@ export const addTaskResourcesAction = withAuth(async (
 
         // Emit per-agent events after commit so subscribers see the committed rows.
         for (const userId of added) {
-            await publishWorkflowEvent({
+            await publishWorkflowEventNow({
                 eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
                 payload: buildProjectTaskAdditionalAgentAssignedPayload({
                     projectId,
@@ -1697,7 +1699,7 @@ export const assignTeamToProjectTask = withAuth(async (
         // Emit event after transaction commits so subscribers can see the data
         if (eventData?.projectId) {
             const occurredAt = new Date();
-            await publishWorkflowEvent({
+            await publishWorkflowEventNow({
                 eventType: 'PROJECT_TASK_ASSIGNED',
                 ctx: {
                     tenantId: tenant,
@@ -1934,7 +1936,7 @@ export const moveTaskToPhase = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
-            const { publishEvent } = projectEventsAfterCommit(trx);
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
 
             // Get the existing task to preserve its data

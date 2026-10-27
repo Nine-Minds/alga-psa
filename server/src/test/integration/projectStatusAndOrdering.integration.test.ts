@@ -5,7 +5,8 @@
  *    statuses_non_ticket_order_unique_idx.
  *  - C5: task reorder validates neighbour scope and repairs bad keys inside the
  *    same transaction; a cross-phase neighbour is an error.
- *  - C6: ProjectService publishes events only after its transaction commits.
+ *  - C6: ProjectService and the project task actions publish events only after
+ *    their transaction commits.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -49,7 +50,11 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 
 import { withTransaction } from '@alga-psa/db';
 import { reorderTenantProjectStatuses } from '../../../../packages/projects/src/actions/projectTaskStatusActions';
-import { reorderTask } from '../../../../packages/projects/src/actions/projectTaskActions';
+import {
+  addTaskResourceAction,
+  moveTaskToPhase,
+  reorderTask,
+} from '../../../../packages/projects/src/actions/projectTaskActions';
 import { ProjectService } from '../../lib/api/services/ProjectService';
 
 type Fixture = {
@@ -284,6 +289,80 @@ describe('project status and ordering (CM T0-9b)', () => {
 
       expect(publishEventMock).not.toHaveBeenCalled();
       expect(await db('projects').where({ tenant: fx.tenant, project_id: fx.projectId }).first()).toBeTruthy();
+    });
+
+    // The actions open their own transaction on createTenantKnex(). Pointing that at an
+    // outer transaction nests the action's frame inside it, so the test owns the commit or rollback.
+    const insideOuterTransaction = async (work: () => Promise<void>, rollback: boolean) => {
+      const run = withTransaction(db, async (trx) => {
+        dbRef.knex = trx;
+        try {
+          await work();
+        } finally {
+          dbRef.knex = db;
+        }
+        if (rollback) throw new Error('force rollback');
+      });
+      if (rollback) await expect(run).rejects.toThrow('force rollback');
+      else await run;
+    };
+    const workflowEventTypes = () => publishWorkflowEventMock.mock.calls.map((call: any[]) => call[0].eventType);
+    // An additional agent sits beside the task's primary assignee, so give the task one
+    // and return a second internal user to add.
+    const additionalAgent = async () => {
+      const agentId = uuidv4();
+      await db('users').insert({
+        tenant: fx.tenant, user_id: agentId, username: `agent-${agentId.slice(0, 8)}`,
+        email: `agent-${agentId.slice(0, 8)}@example.com`, hashed_password: 'not-used', user_type: 'internal',
+      });
+      await db('project_tasks').where({ tenant: fx.tenant, task_id: fx.tasksA[0] }).update({ assigned_to: fx.userId });
+      return agentId;
+    };
+
+    it('addTaskResourceAction publishes nothing when its transaction rolls back', async () => {
+      const agentId = await additionalAgent();
+      await insideOuterTransaction(async () => {
+        expect(await addTaskResourceAction(fx.tasksA[0], agentId)).toBeUndefined();
+        expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      }, true);
+
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      expect(await db('task_resources').where({ tenant: fx.tenant, task_id: fx.tasksA[0] }).first()).toBeUndefined();
+    });
+
+    it('addTaskResourceAction publishes PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED once, after commit', async () => {
+      const agentId = await additionalAgent();
+      await insideOuterTransaction(async () => {
+        expect(await addTaskResourceAction(fx.tasksA[0], agentId)).toBeUndefined();
+        expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      }, false);
+
+      expect(workflowEventTypes()).toEqual(['PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED']);
+      expect(await db('task_resources').where({ tenant: fx.tenant, task_id: fx.tasksA[0] }).first()).toBeTruthy();
+    });
+
+    it('moveTaskToPhase publishes nothing when its transaction rolls back', async () => {
+      await insideOuterTransaction(async () => {
+        const moved = await moveTaskToPhase(fx.tasksA[0], fx.phaseB, fx.mappingId);
+        expect(moved).toMatchObject({ task_id: fx.tasksA[0], phase_id: fx.phaseB });
+        expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      }, true);
+
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      const row = await db('project_tasks').where({ tenant: fx.tenant, task_id: fx.tasksA[0] }).first();
+      expect(row.phase_id).toBe(fx.phaseA);
+    });
+
+    it('moveTaskToPhase publishes PROJECT_TASK_UPDATED once, after commit', async () => {
+      await insideOuterTransaction(async () => {
+        const moved = await moveTaskToPhase(fx.tasksA[0], fx.phaseB, fx.mappingId);
+        expect(moved).toMatchObject({ task_id: fx.tasksA[0], phase_id: fx.phaseB });
+        expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+      }, false);
+
+      expect(workflowEventTypes()).toEqual(['PROJECT_TASK_UPDATED']);
+      const row = await db('project_tasks').where({ tenant: fx.tenant, task_id: fx.tasksA[0] }).first();
+      expect(row.phase_id).toBe(fx.phaseB);
     });
   });
 });
