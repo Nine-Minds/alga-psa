@@ -200,7 +200,7 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
       },
       {

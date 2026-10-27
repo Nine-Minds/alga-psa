@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { isLicensedUserType } from "@alga-psa/types";
 import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
@@ -110,6 +111,11 @@ export default async function MspLayout({
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
+  // Only an administrator is sent to workspace setup; other users work in the
+  // workspace as configured so far instead of being stuck on a wizard they
+  // cannot complete.
+  const canRunOnboarding = await getWorkspaceSetupAccess().then(access => access.canRun).catch(() => false);
+  needsOnboarding = needsOnboarding && canRunOnboarding;
 
   const locale = await getHierarchicalLocaleAction();
   const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
@@ -135,6 +141,7 @@ export default async function MspLayout({
       dateFormat={dateFormat}
       productCode={productCode}
       needsOnboarding={needsOnboarding}
+      canRunOnboarding={canRunOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
       preloadedLocaleResources={preloadedLocaleResources}

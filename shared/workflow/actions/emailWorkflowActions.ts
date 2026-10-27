@@ -15,6 +15,7 @@ import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBui
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import { ContactModel } from '../../models/contactModel';
+import { createClientWithDefaults } from '../../models/clientCreation';
 import { buildContactCreatedPayload } from '../streams/domainEventBuilders/contactEventBuilders';
 import {
   mergeTicketWatchListRecipients,
@@ -1957,22 +1958,19 @@ export async function createClientFromEmail(
   const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const clientId = uuidv4();
-
-      await tenantDb(trx, tenant).table('clients')
-        .insert({
-          client_id: clientId,
-          tenant,
-          client_name: clientData.client_name,
-          email: clientData.email,
-          source: clientData.source || 'email',
-          created_at: new Date(),
-          updated_at: new Date()
-        });
+      // Neither `email` nor `source` is a clients column: the former lives in
+      // billing_email, the latter in properties. The insert used to name both
+      // and failed outright.
+      const created = await createClientWithDefaults(trx, tenant, {
+        client_id: uuidv4(),
+        client_name: clientData.client_name,
+        billing_email: clientData.email ?? null,
+        properties: { source: clientData.source || 'email' },
+      });
 
       return {
-        client_id: clientId,
-        client_name: clientData.client_name
+        client_id: created.client_id,
+        client_name: created.client_name
       };
     });
 }
