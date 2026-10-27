@@ -35,7 +35,9 @@ function rowCount(result) {
 
 // Runs one statement (SQL text, or an async function of knex) under a short
 // lock_timeout. A lock timeout aborts the statement only (savepoint), so the
-// migration transaction can try again.
+// migration transaction can try again. The bound is LOCK_ATTEMPTS x 2s: a lock
+// held for about 6s or more fails the statement, and the migration with it
+// (its transaction rolls back and the run can simply be repeated).
 //
 // SET LOCAL outlives RELEASE SAVEPOINT, so the timeout is scoped by hand: the
 // transaction's own value is read first and put back on the success path and
@@ -55,9 +57,16 @@ async function withLockRetry(knex, statement) {
       await restore();
       return result;
     } catch (error) {
+      // Every failure leaves the savepoint rolled back and the prior timeout in
+      // place before anything else happens: a retry starts clean, and a final
+      // throw does not leave the transaction aborted or still under 2s.
+      try {
+        await knex.raw(`ROLLBACK TO SAVEPOINT lock_retry`);
+        await restore();
+      } catch {
+        throw error;
+      }
       if (error.code !== '55P03' || attempt >= LOCK_ATTEMPTS) throw error;
-      await knex.raw(`ROLLBACK TO SAVEPOINT lock_retry`);
-      await restore();
     }
   }
 }
@@ -78,7 +87,8 @@ exports.up = async function up(knex) {
     let moved;
     do {
       // Each batch is its own retried unit: a row held by a concurrent write
-      // for more than 2s fails that UPDATE only (it is atomic), not the migration.
+      // for more than 2s fails that attempt only (the UPDATE is atomic) and the
+      // batch is retried; held for ~6s (all attempts) it fails the migration.
       moved = await withLockRetry(knex, (trx) => trx.raw(
         `UPDATE users SET is_inactive = false
           WHERE tenant = ? AND is_inactive IS NULL

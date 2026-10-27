@@ -83,13 +83,18 @@ describe('withLockRetry scopes its lock_timeout', () => {
     }
   }, 30_000);
 
-  it('gives up with 55P03 after the last attempt', async () => {
+  it('gives up with 55P03 after the last attempt, leaving the transaction usable and its timeout restored', async () => {
     const blocker = await db.transaction();
     await blocker.raw(`LOCK TABLE ${scratch} IN ACCESS EXCLUSIVE MODE`);
     const trx = await db.transaction();
     try {
+      await trx.raw(`SET LOCAL lock_timeout = '45s'`);
       await expect(withLockRetry(trx, `ALTER TABLE ${scratch} ADD COLUMN IF NOT EXISTS c int`))
         .rejects.toMatchObject({ code: '55P03' });
+      // The last savepoint was rolled back before the throw: the transaction is
+      // not aborted (25P02) and is no longer under the 2s retry timeout.
+      expect((await trx.raw('SELECT 1 AS ok')).rows[0].ok).toBe(1);
+      expect(await lockTimeout(trx)).toBe('45s');
     } finally {
       await trx.rollback();
       await blocker.rollback();
