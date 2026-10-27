@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isAdditionalWorkspaceTest, isNodeToolingTest, isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
+import { serverUnitSelection } from '../run-server-unit-shard.mjs';
 
 function inspect(overrides = {}) {
   return reconcileDiscovery({
@@ -163,6 +165,63 @@ test('the portal-domain SSO redirect URI gate must execute in Temporal readiness
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
   const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
   assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('every literal temporal readiness include is a temporal-readiness candidate', () => {
+  const config = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  const includes = [...config.matchAll(/'(src\/[^'*]+\.test\.ts)'/g)].map(([, file]) => `ee/temporal-workflows/${file}`);
+  assert.ok(includes.length > 0);
+  for (const file of includes) assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true, file);
+});
+
+// Temporal readiness runs without a database or Temporal server and requires
+// executed assertions in every candidate file, so an env-gated suite there
+// skips and fails the gate. Such suites belong to a lane providing their
+// runtime, or to the manual registry.
+test('no Temporal readiness candidate gates its cases on the environment', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const candidates = repositoryTestFiles(root).filter(file => isAdditionalWorkspaceTest(file, 'temporal-readiness'));
+  assert.ok(candidates.length > 0);
+  for (const file of candidates) {
+    assert.doesNotMatch(readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8'), /\.(skipIf|runIf)\(/, file);
+  }
+});
+
+test('the env-gated tenant deletion query budget is collected only by its manual review runner', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/tenantDeletionQueryBudget.test.ts';
+  for (const lane of ['temporal-readiness', 'temporal-engine', 'temporal-database']) {
+    assert.equal(isAdditionalWorkspaceTest(file, lane), false, lane);
+  }
+  const runners = JSON.parse(readFileSync(new URL('../manual-vitest-runners.json', import.meta.url), 'utf8'));
+  const runner = runners.find(entry => entry.filters?.some(filter => `${entry.cwd}/${filter}` === file));
+  assert.equal(runner?.mandatory, false);
+  // vitest list omits skipped cases; collection must see the gated case.
+  assert.equal(runner.env?.HOTPATH_DB, '1');
+});
+
+// The server unit shards run without a database (SKIP_DB_TESTS=1) and require
+// executed assertions in every collected file, so a suite gated as a whole
+// skips and fails the shard. Per-case gates still leave assertions executing.
+test('no DB-less server unit candidate gates its whole suite on the environment', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const roots = serverUnitSelection.map(selection => path.posix.normalize(`server/${selection}/`));
+  const candidates = repositoryTestFiles(root)
+    .filter(file => roots.some(prefix => file.startsWith(prefix)) && !/\.db\.test\.[cm]?[jt]sx?$/.test(file));
+  assert.ok(candidates.length > 0);
+  for (const file of candidates) {
+    assert.doesNotMatch(readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8'), /\bdescribe\.(skipIf|runIf)\(/, file);
+  }
+});
+
+test('the env-gated server hot-path capture is collected only by its manual review runner', () => {
+  const file = 'server/src/test/contract/hotPathQueryBudget.local.test.ts';
+  assert.ok(!serverUnitSelection.some(selection => file.startsWith(path.posix.normalize(`server/${selection}/`))));
+  assert.equal(isWorkspaceDbTest(file), false);
+  const runners = JSON.parse(readFileSync(new URL('../manual-vitest-runners.json', import.meta.url), 'utf8'));
+  const runner = runners.find(entry => entry.filters?.some(filter => `${entry.cwd}/${filter}` === file));
+  assert.equal(runner?.mandatory, false);
+  // vitest list omits skipped cases; collection must see the gated cases.
+  assert.equal(runner.env?.HOTPATH_DB, '1');
 });
 
 test('worker boot under a failing capability gate must execute in Temporal readiness', () => {
