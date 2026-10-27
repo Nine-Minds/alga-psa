@@ -7,6 +7,7 @@ import {
   normalizeRememberedEmail,
 } from '@alga-psa/auth/lib/mspRememberedEmail';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import { getTenantDisplayNameBySlug, getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import type { Metadata } from 'next';
 import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -26,6 +27,28 @@ export default async function MspSignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/msp/dashboard';
+
+  // `?tenant=<slug>` scopes the sign-in to one organization. The slug is public,
+  // so it is only trusted once it resolves to a real tenant; malformed and
+  // unknown slugs behave identically (silent redirect, no name rendered). Whether
+  // the email belongs to that tenant is checked at submit time by the credentials
+  // provider and by the scoped SSO resolution.
+  let scopedTenant: { slug: string; name: string } | undefined;
+  let scopedTenantId: string | undefined;
+  if (params?.tenant !== undefined) {
+    const slug = typeof params.tenant === 'string' ? params.tenant.trim().toLowerCase() : '';
+    const tenantId = slug && isValidTenantSlug(slug) ? await getTenantIdBySlug(slug) : null;
+    if (!tenantId) {
+      const unscoped = new URLSearchParams();
+      if (typeof params.callbackUrl === 'string') {
+        unscoped.set('callbackUrl', params.callbackUrl);
+      }
+      const query = unscoped.toString();
+      redirect(query ? `/auth/msp/signin?${query}` : '/auth/msp/signin');
+    }
+    scopedTenantId = tenantId;
+    scopedTenant = { slug, name: (await getTenantDisplayNameBySlug(slug)) ?? slug };
+  }
   const cookieStore = await cookies();
   const rememberedEmail = normalizeRememberedEmail(
     cookieStore.get(MSP_REMEMBERED_EMAIL_COOKIE)?.value ?? ''
@@ -48,7 +71,7 @@ export default async function MspSignInPage({
         // Session was revoked, don't redirect - show signin form
         return (
           <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-            <MspSignIn initialEmail={initialEmail} />
+            <MspSignIn initialEmail={initialEmail} scopedTenant={scopedTenant} />
           </I18nWrapper>
         );
       }
@@ -69,11 +92,15 @@ export default async function MspSignInPage({
       );
     }
 
-    redirect(callbackUrl);
+    // A session for a different organization than the one being signed into is
+    // not a reason to skip the form: signing in replaces the session.
+    if (!scopedTenantId || session.user.tenant === scopedTenantId) {
+      redirect(callbackUrl);
+    }
   }
   return (
     <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-      <MspSignIn initialEmail={initialEmail} />
+      <MspSignIn initialEmail={initialEmail} scopedTenant={scopedTenant} />
     </I18nWrapper>
   );
 }

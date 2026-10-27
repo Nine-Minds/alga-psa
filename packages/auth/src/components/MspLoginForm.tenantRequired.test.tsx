@@ -2,11 +2,13 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 const signInMock = vi.fn();
+const requestLinksMock = vi.fn(async () => ({ success: true, message: 'x' }));
+const ssoPropsMock = vi.fn();
 const refreshChallengeMock = vi.fn();
 const requireCaptchaMock = vi.fn(async () => undefined);
 
@@ -45,8 +47,9 @@ vi.mock('@alga-psa/ui/components', () => ({
     children,
     ...props
   }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Alert: ({ children, id }: { children: React.ReactNode; id?: string }) => <div id={id}>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Checkbox: ({
     label,
     id,
@@ -67,12 +70,19 @@ vi.mock('@alga-psa/ui/components', () => ({
 
 vi.mock('@alga-psa/auth/sso/entry', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: Record<string, unknown>) => {
+    ssoPropsMock(props);
+    return null;
+  },
+}));
+
+vi.mock('../actions/tenantDiscoveryActions', () => ({
+  requestMspSignInLinksAction: (...args: unknown[]) => requestLinksMock(...args),
 }));
 
 const { default: MspLoginForm } = await import('./MspLoginForm');
 
-async function submitWith(result: unknown) {
+async function submitWith(result: unknown, props: Record<string, unknown> = {}) {
   signInMock.mockResolvedValue(result);
   const onError = vi.fn();
   const onTwoFactorRequired = vi.fn();
@@ -81,6 +91,7 @@ async function submitWith(result: unknown) {
       callbackUrl="/msp/dashboard"
       onError={onError}
       onTwoFactorRequired={onTwoFactorRequired}
+      {...props}
     />
   );
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'dup@example.com' } });
@@ -90,31 +101,66 @@ async function submitWith(result: unknown) {
   return { onError, onTwoFactorRequired };
 }
 
+const TENANT_REQUIRED = { error: 'CredentialsSignin', code: 'TENANT_REQUIRED' };
+
 describe('MspLoginForm TENANT_REQUIRED handling', () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('sends the user to an administrator instead of reporting bad credentials', async () => {
-    const { onError } = await submitWith({ error: 'CredentialsSignin', code: 'TENANT_REQUIRED' });
+  it('offers to email one sign-in link per organization instead of an error alert', async () => {
+    const { onError } = await submitWith(TENANT_REQUIRED);
 
-    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
-    const alert = onError.mock.calls[0][0] as { type: string; title: string; message: string };
-    expect(alert.type).toBe('error');
-    expect(alert.title).toBe('Contact Your Administrator');
-    expect(alert.message).toContain('more than one organization');
-    expect(alert.message).toContain('Contact your administrator');
-    // MSP sign-in has no per-organization address to send them to.
-    expect(alert.message).not.toContain('sign-in address');
-    expect(alert.message).not.toContain('Invalid email or password');
+    const button = await screen.findByRole('button', { name: 'Email me my sign-in links' });
+    expect(button.id).toBe('msp-send-org-links-button');
+    expect(screen.getByText(/more than one organization/)).toBeTruthy();
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it('does not refresh the captcha, because the password was correct', async () => {
-    const { onError } = await submitWith({ error: 'CredentialsSignin', code: 'TENANT_REQUIRED' });
-    await waitFor(() => expect(onError).toHaveBeenCalled());
+    await submitWith(TENANT_REQUIRED);
+    await screen.findByRole('button', { name: 'Email me my sign-in links' });
     expect(refreshChallengeMock).not.toHaveBeenCalled();
     expect(requireCaptchaMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the typed email and callbackUrl, then shows the generic confirmation and disables the button', async () => {
+    await submitWith(TENANT_REQUIRED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Email me my sign-in links' }));
+
+    await waitFor(() => expect(requestLinksMock).toHaveBeenCalledWith('dup@example.com', '/msp/dashboard'));
+    expect(await screen.findByText('If an account exists with that email, sign-in links have been sent.')).toBeTruthy();
+    expect((document.getElementById('msp-send-org-links-button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('shows the same confirmation when the request throws', async () => {
+    requestLinksMock.mockRejectedValueOnce(new Error('boom'));
+    await submitWith(TENANT_REQUIRED);
+    fireEvent.click(await screen.findByRole('button', { name: 'Email me my sign-in links' }));
+    expect(await screen.findByText('If an account exists with that email, sign-in links have been sent.')).toBeTruthy();
+  });
+
+  it('clears the offer when the email field changes', async () => {
+    await submitWith(TENANT_REQUIRED);
+    await screen.findByRole('button', { name: 'Email me my sign-in links' });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'other@example.com' } });
+    expect(document.getElementById('msp-send-org-links-button')).toBeNull();
+  });
+
+  it('opens with the offer when handed off from SSO', () => {
+    render(
+      <MspLoginForm
+        callbackUrl="/msp/dashboard"
+        initialEmail="sso@example.com"
+        initialTenantRequired
+        onError={vi.fn()}
+        onTwoFactorRequired={vi.fn()}
+      />
+    );
+    expect(document.getElementById('msp-send-org-links-button')).not.toBeNull();
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('sso@example.com');
   });
 
   it('leaves the generic failure branch unchanged and refreshes the captcha', async () => {
@@ -122,6 +168,7 @@ describe('MspLoginForm TENANT_REQUIRED handling', () => {
     await waitFor(() => expect(onError).toHaveBeenCalled());
     expect((onError.mock.calls[0][0] as { title: string }).title).toBe('Sign-in Failed');
     expect(refreshChallengeMock).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('msp-send-org-links-button')).toBeNull();
   });
 
   it('leaves the RATE_LIMITED branch unchanged', async () => {
