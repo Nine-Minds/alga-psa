@@ -46,6 +46,7 @@ import * as actions from '../../../../../packages/onboarding/src/actions/onboard
 
 const user = { user_id: 'technician', user_type: 'internal' } as any;
 const clientAdmin = { user_id: 'client-admin', user_type: 'client', contact_id: 'contact-1' } as any;
+const servicePrincipal = { user_id: 'svc', user_type: 'service' } as any;
 const context = { tenant: 'tenant-1' } as any;
 const member = { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician', password: 'NineMinds1234!' };
 
@@ -88,7 +89,7 @@ describe('workspace setup refuses client-portal principals', () => {
   beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
 
   it('reports no setup access for a service principal', async () => {
-    await expect(actions.getWorkspaceSetupAccess({ user_id: 'svc', user_type: 'service' } as any, context)).resolves.toEqual({ canRun: false });
+    await expect(actions.getWorkspaceSetupAccess(servicePrincipal, context)).resolves.toEqual({ canRun: false });
   });
 
   it('reports no setup access for a client admin', async () => {
@@ -97,6 +98,15 @@ describe('workspace setup refuses client-portal principals', () => {
 
   it.each(SETUP_ACTIONS)('%s refuses an authenticated client admin', async (_name, call) => {
     await expect(call(clientAdmin)).resolves.toEqual({ success: false, error: 'Only an administrator can complete workspace setup.' });
+  });
+
+  // A service principal is an MSP-side type that rbac would grant msp
+  // permissions to, so only the user-type check keeps it out of setup.
+  it.each(SETUP_ACTIONS)('%s refuses a service principal', async (_name, call) => {
+    mocks.addUser.mockResolvedValue({ success: true, user: { user_id: 'new' } });
+    await expect(call(servicePrincipal)).resolves.toEqual({ success: false, error: 'Only an administrator can complete workspace setup.' });
+    expect(mocks.addUser).not.toHaveBeenCalled();
+    expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
   it('never creates an internal user for a client admin', async () => {
