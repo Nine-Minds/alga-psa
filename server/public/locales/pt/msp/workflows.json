@@ -881,6 +881,7 @@
       "add": "Adicionar",
       "remove": "Remover",
       "empty": "Ainda não há mapeamentos.",
+      "nameRequired": "Informe um nome para este mapeamento.",
       "expressionLabel": "Expressão"
     },
     "schemaForm": {
