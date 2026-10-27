@@ -405,14 +405,14 @@ describe('equipment custody (integration)', () => {
       history: Number((await table(fx.tenantId, 'asset_history').count('* as c').first() as any).c),
     });
     const beforePrint = await writes();
-    const first = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+    const first = (await getTicketLinkedAssetLabelParts(ctx as any, [{ recordId: fx.ticketId }]))[0];
     expect(first).toMatchObject({ assetId, custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
     expect(JSON.stringify(first)).not.toMatch(/follow up in 5 days|waiting on vendor, follow/i);
     expect(await writes()).toEqual(beforePrint); // printing writes nothing
 
     // Move to Shelf C1: the tag follows.
     unwrap(await custody.moveCustody(r.custody.custody_id, { bin: 'Shelf C1' }));
-    const second = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+    const second = (await getTicketLinkedAssetLabelParts(ctx as any, [{ recordId: fx.ticketId }]))[0];
     expect(second?.custodyLocation).toBe('Main Office / Shelf C1');
 
     // Both positions and the move are on the timeline and the queue shows the item.
@@ -545,9 +545,9 @@ describe('equipment custody (integration)', () => {
     const a = unwrap<any>(await receiveEquipment(intake(fx)));
     const b = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Second item' }, bin: 'Shelf D4' })));
 
-    // Two held items on one ticket: a count, and no next action.
-    const both = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
-    expect(both).toMatchObject({ custodyLocation: '2 items held', nextAction: null });
+    // Two held items on one ticket, none picked: a count and the earliest follow-up (no party, no note).
+    const both = (await getTicketLinkedAssetLabelParts(ctx as any, [{ recordId: fx.ticketId }]))[0];
+    expect(both).toMatchObject({ custodyLocation: '2 items held', nextAction: 'Follow up Oct 29' });
 
     denied.assetIds.add(a.asset.asset_id);
     try {
@@ -556,7 +556,7 @@ describe('equipment custody (integration)', () => {
       expect(queue.total).toBe(1);
       expect(queue.tabCounts.all_open).toBe(1);
 
-      const parts = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+      const parts = (await getTicketLinkedAssetLabelParts(ctx as any, [{ recordId: fx.ticketId }]))[0];
       expect(parts?.custodyLocation).toBe('Main Office / Shelf D4');
       expect(JSON.stringify(parts)).not.toContain('Shelf B3');
 
@@ -567,6 +567,80 @@ describe('equipment custody (integration)', () => {
     } finally {
       denied.assetIds.clear();
     }
+  });
+
+  it('work tag with three held items: picked, batch and unpicked prints show the right custody and write nothing', async () => {
+    const fx = await seedFixture();
+    const caller = { user: { user_id: fx.userId, user_type: 'internal', roles: [] } as any, tenant: fx.tenantId, baseUrl: 'https://psa.example.com' };
+    const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
+    const { printLabels } = await import('../../lib/labels/printLabels');
+
+    const NOTE = 'NOTE-must-never-print-' + randomUUID().slice(0, 6);
+    const bins = ['Shelf A1', 'Shelf B3', 'Shelf C2'];
+    const dates = ['2026-11-02', '2026-10-29', '2026-12-01'];
+    const assetIds: string[] = [];
+    for (const [i, bin] of bins.entries()) {
+      const r = unwrap<any>(
+        await receiveEquipment(intake(fx, { new_asset: { name: `Item ${i}`, serial_number: `SERIAL-00${i}-WXYZ` }, bin, follow_up_on: dates[i], next_action_note: NOTE }))
+      );
+      assetIds.push(r.asset.asset_id);
+    }
+
+    // The ticket provider has its own record-level checks (covered in labelsProviders); here the ticket is readable.
+    const captured: any[] = [];
+    const deps: any = {
+      providers: {
+        'ticket-work-tag': {
+          entityType: 'ticket', labelClass: 'ticket-work-tag',
+          getLabelViewModels: async (_c: unknown, ids: string[]) =>
+            ids.map((id) => ({
+              labelClass: 'ticket-work-tag', entityType: 'ticket', recordId: id, url: `https://psa.example.com/msp/tickets/${id}`,
+              identifier: 'TIC-1', code128Value: null, title: 'Dock', clientName: null, detail: null, secondaryIdentifier: null, serialSuffix: null,
+            })),
+        },
+      },
+      renderPdf: async (_t: string, items: any[]) => {
+        captured.push(...items);
+        return { pdf: Buffer.from('%PDF'), labels: items.length, sheets: items.length };
+      },
+      resolveTemplate: async () => ({ ok: true, templateCode: 'standard-ticket-work-tag', templateAst: null }),
+      getLinkedAssetParts: (context: any, subjects: any) => getTicketLinkedAssetLabelParts(context, subjects),
+      describeClientError: () => null,
+    };
+    const print = async (labels: Array<{ recordId: string; linkedAssetId?: string }>) => {
+      captured.length = 0;
+      const result = await printLabels(deps, caller, { labelClass: 'ticket-work-tag', labels });
+      expect(result).toMatchObject({ ok: true, skipped: 0 });
+      return captured.map((c) => c.viewModel);
+    };
+
+    const watched = [...FORBIDDEN_TABLES, 'asset_custody', 'asset_custody_events', 'asset_history'];
+    const counts = async () => {
+      const out: Record<string, number> = {};
+      for (const name of watched) {
+        out[name] = Number(((await table(fx.tenantId, name).count('* as c').first().catch(() => ({ c: 0 }))) as any).c);
+      }
+      return out;
+    };
+    const before = await counts();
+
+    // 1. Picked: one label, that item's shelf and next action.
+    const picked = await print([{ recordId: fx.ticketId, linkedAssetId: assetIds[1] }]);
+    expect(picked).toHaveLength(1);
+    expect(picked[0]).toMatchObject({ custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
+
+    // 2. Batch: three labels, each with its own shelf.
+    const batch = await print(assetIds.map((linkedAssetId) => ({ recordId: fx.ticketId, linkedAssetId })));
+    expect(batch.map((v) => v.custodyLocation)).toEqual(bins.map((b) => `Main Office / ${b}`));
+    expect(batch.map((v) => v.nextAction)).toEqual(['Waiting on vendor, Nov 2', 'Waiting on vendor, Oct 29', 'Waiting on vendor, Dec 1']);
+
+    // 3. Unpicked: the count and the earliest follow-up.
+    const unpicked = await print([{ recordId: fx.ticketId }]);
+    expect(unpicked[0]).toMatchObject({ custodyLocation: '3 items held', nextAction: 'Follow up Oct 29' });
+
+    // The internal note is never in what would be rendered, and printing wrote nothing.
+    expect(JSON.stringify([picked, batch, unpicked])).not.toContain(NOTE);
+    expect(await counts()).toEqual(before);
   });
 
   it('the asset identity label view model never carries custody', async () => {
