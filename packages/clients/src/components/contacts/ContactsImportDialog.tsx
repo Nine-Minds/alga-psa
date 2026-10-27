@@ -362,6 +362,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     // Only write a Tags column when the import carried one: re-importing this
     // file must not turn an unmapped Tags column into an explicit blank.
     const includeTags = failedRecords.some((record) => record.originalData.tags !== undefined);
+    const clientNameById = new Map(clients.map((client) => [client.client_id, client.client_name]));
     const fields = [
       'full_name',
       'email',
@@ -388,7 +389,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             ? record.originalData.additional_email_addresses
             : formatContactCsvAdditionalEmailAddresses(record.originalData.additional_email_addresses)),
         phone_number: record.originalData.phone_number || '',
-        client: record.originalData.client || '',
+        // The import payload carries the resolved client_id, not the CSV text;
+        // map it back so the failure file re-imports against the same client.
+        client: (record.originalData.client_id && clientNameById.get(record.originalData.client_id)) || '',
         tags: record.originalData.tags || '',
         role: record.originalData.role || '',
         notes: record.originalData.notes || '',

@@ -3,7 +3,9 @@
  *
  * A CSV import returns both the contacts it created and the ones it updated.
  * The list must fold them in by id: an updated contact replaces its row (no
- * duplicate until reload) and only contacts with new ids are appended.
+ * duplicate until reload) and only contacts with new ids are appended. The
+ * import returns bare contact rows, so the row must keep the list-only fields
+ * the import does not carry (avatar) and stay searchable by client name.
  */
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
@@ -79,7 +81,11 @@ vi.mock('@alga-psa/ui/components/PrintOptionsDialog', () => ({
   }),
 }));
 vi.mock('@alga-psa/ui/components/PrintableTable', () => ({ PrintableTable: () => null }));
-vi.mock('@alga-psa/ui/components/SearchInput', () => ({ SearchInput: () => null }));
+vi.mock('@alga-psa/ui/components/SearchInput', () => ({
+  SearchInput: ({ id, value, onChange }: any) => (
+    <input data-testid={id} value={value} onChange={onChange} />
+  ),
+}));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: () => null }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({ default: () => null }));
@@ -96,7 +102,14 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data }: any) => (
     <div>
       {data.map((row: any) => (
-        <div key={row.id} data-testid={`row-${row.contact_name_id}`}>{row.full_name}</div>
+        <div
+          key={row.id}
+          data-testid={`row-${row.contact_name_id}`}
+          data-avatar={row.avatarUrl ?? ''}
+          data-client-name={row.client_name ?? ''}
+        >
+          {row.full_name}
+        </div>
       ))}
     </div>
   ),
@@ -130,7 +143,7 @@ vi.mock('./ContactsImportDialog', () => ({
 
 import Contacts from './Contacts';
 
-function contact(id: string, fullName: string): IContact {
+function contact(id: string, fullName: string, extra: Partial<IContact> = {}): IContact {
   return {
     contact_name_id: id,
     full_name: fullName,
@@ -139,6 +152,7 @@ function contact(id: string, fullName: string): IContact {
     is_inactive: false,
     phone_numbers: [],
     additional_email_addresses: [],
+    ...extra,
   } as unknown as IContact;
 }
 
@@ -148,7 +162,10 @@ describe('Contacts — CSV import reconciliation', () => {
 
   beforeEach(() => {
     hoisted.getAllContacts.mockResolvedValue([ada, grace]);
-    hoisted.getAllClients.mockResolvedValue([]);
+    hoisted.getAllClients.mockResolvedValue([
+      { client_id: 'client-acme', client_name: 'Acme Corp' },
+      { client_id: 'client-globex', client_name: 'Globex' },
+    ]);
     hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   });
 
@@ -171,5 +188,48 @@ describe('Contacts — CSV import reconciliation', () => {
     expect(
       screen.getAllByTestId(/^row-/).map((row) => row.getAttribute('data-testid')),
     ).toEqual(['row-ada', 'row-grace', 'row-linus']);
+  });
+
+  it('keeps list-only fields the import does not return and re-derives the client name', async () => {
+    // As getAllContacts returns them: with avatarUrl and the joined client_name.
+    const listedAda = contact('ada', 'Ada Lovelace', {
+      client_id: 'client-acme',
+      client_name: 'Acme Corp',
+      avatarUrl: '/avatars/ada.png',
+    });
+    const listedGrace = contact('grace', 'Grace Hopper', {
+      client_id: 'client-acme',
+      client_name: 'Acme Corp',
+      avatarUrl: '/avatars/grace.png',
+    });
+    hoisted.getAllContacts.mockResolvedValue([listedAda, listedGrace]);
+    render(<Contacts initialContacts={[listedAda, listedGrace]} />);
+    await waitFor(() => expect(screen.getByTestId('row-grace')).toBeInTheDocument());
+
+    // As importContactsFromCSV returns them (getContactById): no avatarUrl, no
+    // client_name. Ada is edited in place, Grace moves to another client.
+    hoisted.importedContacts = [
+      contact('ada', 'Ada King', { client_id: 'client-acme' }),
+      contact('grace', 'Grace Hopper', { client_id: 'client-globex' }),
+      contact('linus', 'Linus Torvalds', { client_id: 'client-globex' }),
+    ];
+    await act(async () => {
+      fireEvent.click(screen.getByText('finish-import'));
+    });
+
+    expect(screen.getByTestId('row-ada')).toHaveTextContent('Ada King');
+    expect(screen.getByTestId('row-ada')).toHaveAttribute('data-avatar', '/avatars/ada.png');
+    expect(screen.getByTestId('row-ada')).toHaveAttribute('data-client-name', 'Acme Corp');
+    expect(screen.getByTestId('row-grace')).toHaveAttribute('data-avatar', '/avatars/grace.png');
+    expect(screen.getByTestId('row-grace')).toHaveAttribute('data-client-name', 'Globex');
+    expect(screen.getByTestId('row-linus')).toHaveAttribute('data-client-name', 'Globex');
+
+    // Client-name search still finds the edited contact without a refetch.
+    fireEvent.change(screen.getByTestId('filter-contacts'), { target: { value: 'acme' } });
+    await waitFor(() =>
+      expect(
+        screen.getAllByTestId(/^row-/).map((row) => row.getAttribute('data-testid')),
+      ).toEqual(['row-ada']),
+    );
   });
 });

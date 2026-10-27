@@ -871,14 +871,15 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
   for (const tag of pendingTags) {
     try {
-      const tagText = tag.tag_text?.trim();
-      if (!tagText) continue;
+      if (!tag.tag_text?.trim()) continue;
 
-      // Validate length
-      if (tagText.length > 50) {
-        console.warn(`Tag text "${tagText}" too long, skipping`);
+      // Same rules as createTag: an invalid tag is skipped, not fatal.
+      const validation = validateTagText(tag.tag_text);
+      if (!validation.valid) {
+        console.warn(`Skipping tag "${tag.tag_text}": ${validation.message}`);
         continue;
       }
+      const tagText = validation.text;
 
       if (!userHasTagCreate) {
         const existingDefinition = await TagDefinition.findByTextAndType(
