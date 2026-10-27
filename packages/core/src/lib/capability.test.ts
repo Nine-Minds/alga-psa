@@ -15,7 +15,10 @@ import {
   forcedValue,
   invalidateCapability,
   parseForcedCapabilities,
+  capabilityFeatureFlag,
+  capabilityResolverStatus,
   registerCapabilityEligibility,
+  registerCapabilityGate,
   registerCapabilityParticipation,
   resolveClientCapability,
   serves,
@@ -356,6 +359,45 @@ describe('capabilityGate', () => {
 
   it('an unknown capability is a programmer error and throws', async () => {
     await expect(admits('nope' as CapabilityKey, 't1')).rejects.toBeInstanceOf(UnknownCapabilityError);
+  });
+
+  describe('registerCapabilityGate merges, never replaces', () => {
+    afterEach(() => {
+      registerCapabilityGate({ capability: CAP, featureFlag: FLAG });
+    });
+
+    it('re-registering the gate keeps resolvers registered separately', async () => {
+      wire({ flag: true, eligible: true, participating: ['t1'] });
+      registerCapabilityGate({ capability: CAP, featureFlag: FLAG });
+      expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'registered', participation: 'registered' });
+      expect((await evaluateCapability(CAP, 't1'))).toMatchObject({ admitted: true, served: true });
+      expect(eligibility).toHaveBeenCalled();
+      expect(participation).toHaveBeenCalled();
+    });
+
+    it('explicit undefined resolvers do not clear registered ones; a new flag replaces only the flag', async () => {
+      wire({ flag: true, eligible: true, participating: ['t1'] });
+      registerCapabilityGate({ capability: CAP, featureFlag: 'some-other-flag', eligibility: undefined, participation: undefined });
+      expect(capabilityFeatureFlag(CAP)).toBe('some-other-flag');
+      expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'registered', participation: 'registered' });
+      await admits(CAP, 't1');
+      expect(flagChecker).toHaveBeenCalledWith('some-other-flag', { tenantId: 't1' });
+    });
+
+    it('a resolver passed to the gate replaces that resolver only', async () => {
+      wire({ flag: true, eligible: false, participating: ['t1'] });
+      const replacement = vi.fn(async () => true);
+      registerCapabilityGate({ capability: CAP, featureFlag: FLAG, eligibility: replacement });
+      expect((await admits(CAP, 't1')).admitted).toBe(true);
+      expect(replacement).toHaveBeenCalledWith({ tenantId: 't1' });
+      expect((await serves(CAP, 't1')).served).toBe(true);
+    });
+
+    it('removing a resolver stays explicit', () => {
+      wire({ eligible: true, participating: ['t1'] });
+      registerCapabilityEligibility(CAP, null);
+      expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'unregistered', participation: 'registered' });
+    });
   });
 
   it('activityServesCapability returns the sentinel when closed and null when served', async () => {

@@ -225,8 +225,25 @@ function gateFor(capability: CapabilityKey): CapabilityGateDefinition {
   return gate;
 }
 
-export function registerCapabilityGate(def: CapabilityGateDefinition): void {
-  registry().gates.set(def.capability, { ...def });
+/**
+ * Define or update a gate. Merges into the existing definition: a field the
+ * caller leaves out (or passes as `undefined`) keeps its registered value, so
+ * re-declaring the gate (e.g. a second module load, or changing the flag) never
+ * silently drops eligibility/participation resolvers another module registered.
+ * Removing a resolver is explicit: `registerCapabilityEligibility(key, null)`.
+ */
+export function registerCapabilityGate(
+  def: Pick<CapabilityGateDefinition, 'capability'> & Partial<CapabilityGateDefinition>,
+): void {
+  const existing = registry().gates.get(def.capability);
+  const defined = Object.fromEntries(
+    Object.entries(def).filter(([, value]) => value !== undefined),
+  ) as Partial<CapabilityGateDefinition>;
+  const merged = { ...existing, ...defined } as CapabilityGateDefinition;
+  if (typeof merged.featureFlag !== 'string' || merged.featureFlag.length === 0) {
+    throw new Error(`registerCapabilityGate: capability '${def.capability}' has no featureFlag`);
+  }
+  registry().gates.set(def.capability, merged);
   invalidateCapability(def.capability);
 }
 
