@@ -355,10 +355,18 @@ type SavedTeamMember = Pick<TeamMember, 'firstName' | 'lastName' | 'email' | 'ro
  * merges top-level keys only, so writing this call's members alone replaced
  * teamMembers: after a partial batch was fixed and retried, round one's members
  * vanished from saved progress, a resumed wizard no longer knew they existed,
- * and re-adding them hit EMAIL_ALREADY_EXISTS. The settings row is locked so
- * two saves cannot each drop the other's members. Passwords are never stored,
+ * and re-adding them hit EMAIL_ALREADY_EXISTS. Passwords are never stored,
  * and any a legacy save left behind are dropped here. Emails are keyed by
  * teamMemberEmailKey in both lists, the rule every reader compares with.
+ *
+ * What the lock guarantees: once this tenant's tenant_settings row exists,
+ * FOR UPDATE serialises concurrent saves, so neither drops the other's
+ * members. It locks nothing while the row is absent: two saves that are both
+ * the tenant's first can each read {} and the second write replaces the
+ * first's teamMembers. Those users still exist; the wizard that created them
+ * holds them in createdTeamMemberEmails, and a resumed wizard would report
+ * them as EMAIL_ALREADY_EXISTS. Closing that would need the row to exist
+ * before the first save (or an advisory lock); this card does neither.
  */
 async function recordCreatedTeamMembers(tenant: string, createdNow: TeamMember[]): Promise<void> {
   const { knex } = await createTenantKnex();
