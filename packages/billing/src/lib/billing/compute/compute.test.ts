@@ -555,6 +555,18 @@ describe("computeTimeBasedCharges", () => {
       expect(run([1], { config: perService }).charges[0].total).toBe(2500);
     });
 
+    it("an explicit line 0 means no minimum and no rounding; it does not fall through to the per-service copy", () => {
+      const perService = contractConfig({ minimum_billable_time: 30, round_up_to_nearest: 30 });
+      const { charges, explanations } = run([1], {
+        config: perService,
+        plan: { minimum_billable_time: 0, round_up_to_nearest: 0 },
+      });
+      expect(charges[0]).toMatchObject({ rate: 10000, total: Math.round((1 / 60) * 10000) });
+      expect(charges[0].total).toBe(167);
+      expect(charges[0].workItemSnapshot).toMatchObject({ billedMinutes: 1 });
+      expect(explanations[0].markers).not.toContain("minimum_applied");
+    });
+
     it("a system-managed default line bills raw minutes at the catalog price", () => {
       const { charges } = run([6], { currencyRate: 15000, line: { is_system_managed_default: true } });
       expect(charges[0]).toMatchObject({ quantity: 0.1, rate: 15000, total: 1500 });
