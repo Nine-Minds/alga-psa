@@ -5,7 +5,7 @@
  * - client-portal user of client A cannot read a client-visible document of client B (404)
  * - client-portal user cannot read a document that is not client-visible (404)
  * - positive controls: the owning client and an internal technician still read it (200)
- * - a client-visible document with no associations stays readable by its client
+ * - a client-visible document the client created itself (no associations) stays readable
  */
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -58,15 +58,15 @@ async function createContactAndClientUser(clientId: string) {
   return { contactId, userId };
 }
 
-async function createDocWithContent(name: string, isClientVisible: boolean, clientId?: string) {
+async function createDocWithContent(name: string, isClientVisible: boolean, clientId?: string, createdBy: string = mspUserId) {
   const documentId = uuidv4();
   await table('documents').insert({
     tenant: tenantId, document_id: documentId, document_name: name, content: '',
-    created_by: mspUserId, user_id: mspUserId, entered_at: new Date(), updated_at: new Date(),
+    created_by: createdBy, user_id: createdBy, entered_at: new Date(), updated_at: new Date(),
     is_client_visible: isClientVisible,
   });
   await table('document_content').insert({
-    tenant: tenantId, id: uuidv4(), document_id: documentId, content: SECRET,
+    tenant: tenantId, id: uuidv4(), document_id: documentId, content: SECRET, created_by_id: mspUserId, updated_by_id: mspUserId,
   });
   if (clientId) {
     await table('document_associations').insert({
@@ -124,7 +124,7 @@ describe('document content route authorization', () => {
     const clientB = await createClient(db, tenantId, 'Content Client B');
     created.clientIds.push(clientA, clientB);
     const a = await createContactAndClientUser(clientA);
-    const clientUserA = createMockUser('client', { user_id: a.userId, tenant: tenantId, contact_id: a.contactId });
+    const clientUserA = createMockUser('client', { user_id: a.userId, tenant: tenantId, contact_id: a.contactId, clientId: clientA });
     return { clientA, clientB, clientUserA };
   }
 
@@ -165,9 +165,9 @@ describe('document content route authorization', () => {
     expect(await internalResponse.text()).toContain(SECRET);
   });
 
-  it('does not over-block: a client-visible document with no associations stays readable by its client', async () => {
+  it('does not over-block: a client-visible document the client created itself stays readable', async () => {
     const { clientUserA } = await twoClients();
-    const documentId = await createDocWithContent('Unassociated visible doc', true);
+    const documentId = await createDocWithContent('Own visible doc', true, undefined, clientUserA.user_id);
 
     actAs(clientUserA);
     const response = await callContent(documentId);
