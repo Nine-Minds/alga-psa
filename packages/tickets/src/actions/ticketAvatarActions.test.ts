@@ -14,11 +14,11 @@ vi.mock('@alga-psa/auth', () => ({
         ? action({ user_id: 'u-1', tenant: session.tenant }, { tenant: session.tenant }, ...args)
         : action(null, null, ...args),
 }));
-vi.mock('@alga-psa/user-composition/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
   getUserAvatarUrlsBatchAction: userBatch,
   getContactAvatarUrlAction: contactOne,
 }));
-vi.mock('@alga-psa/teams/actions', () => ({ getTeamAvatarUrlsBatchAction: teamBatch }));
+vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({ getTeamAvatarUrlsBatchAction: teamBatch }));
 
 import {
   getTicketContactAvatarUrl,

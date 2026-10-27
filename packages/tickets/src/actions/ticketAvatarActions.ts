@@ -4,8 +4,8 @@ import { withOptionalAuth } from '@alga-psa/auth';
 import {
   getContactAvatarUrlAction,
   getUserAvatarUrlsBatchAction,
-} from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+} from '@alga-psa/user-composition/actions/avatarActions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
 
 /**
  * Avatar reads for the native ticket screen (`nativeTicketDataSource.avatars`).

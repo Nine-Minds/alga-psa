@@ -291,6 +291,7 @@ async function renderScreen(props: {
   entityType?: 'asset' | 'ticket' | 'contact' | 'document' | 'project_task';
   entityId?: string;
   defaultClientId?: string | null;
+  readOnly?: boolean;
 } = {}) {
   render(<CredentialsScreen {...props} />);
   await waitFor(() => {
@@ -811,6 +812,34 @@ describe('CredentialsScreen — entity-scoped (association-driven) lists', () =>
     expect(document.getElementById(`credentials-row-edit-${id}`)).toBeNull();
     expect(document.getElementById(`credentials-row-delete-${id}`)).toBeNull();
     expect(document.getElementById(`credentials-row-restrict-${id}`)).toBeNull();
+  });
+});
+
+describe('read-only entity embeds (ended workspace ticket)', () => {
+  const id = '22222222-2222-2222-2222-222222222222';
+
+  it('CredentialsScreen readOnly keeps reveal but drops create, link, and detach', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    await renderScreen({ entityType: 'ticket', entityId: 'ticket-1', defaultClientId: CLIENT_ID, readOnly: true });
+
+    expect(document.getElementById(`credentials-row-reveal-${id}`)).toBeTruthy();
+    expect(document.getElementById('credentials-screen-new')).toBeNull();
+    expect(document.getElementById('credentials-screen-link')).toBeNull();
+    expect(document.getElementById(`credentials-row-detach-${id}`)).toBeNull();
+  });
+
+  it('EntityCredentialsSection forwards readOnly to the entity screen', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(
+      <EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} readOnly />
+    );
+
+    await waitFor(() => expect(document.getElementById(`credentials-row-reveal-${id}`)).toBeTruthy());
+    expect(document.getElementById('credentials-screen-new')).toBeNull();
+    expect(document.getElementById('credentials-screen-link')).toBeNull();
+    expect(document.getElementById(`credentials-row-detach-${id}`)).toBeNull();
   });
 });
 
