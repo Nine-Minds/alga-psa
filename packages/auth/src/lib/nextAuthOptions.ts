@@ -445,7 +445,7 @@ function buildAzureADProvider(config: {
     clientId: string;
     clientSecret: string;
     authority: string;
-    checks?: Array<'pkce' | 'state'>;
+    checks: Array<'pkce' | 'state' | 'nonce'>;
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
@@ -456,7 +456,7 @@ function buildAzureADProvider(config: {
             type: 'oauth' as const,
             clientId: config.clientId,
             clientSecret: config.clientSecret,
-            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
+            checks: config.checks,
             authorization: {
                 url: endpoints.authorization,
                 params: {
@@ -477,7 +477,7 @@ function buildAzureADProvider(config: {
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
-        ...(config.checks ? { checks: config.checks } : {}),
+        checks: config.checks,
         profile: config.profile,
     });
 }
@@ -1586,7 +1586,13 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     authority: secrets.microsoftTenantId || 'common',
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session. Auth.js only
+                    // sends and verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
