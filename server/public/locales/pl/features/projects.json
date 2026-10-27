@@ -1536,7 +1536,8 @@
     "addFailed": "Nie udało się dodać komentarza",
     "submitting": "Wysyłanie...",
     "loading": "Ładowanie...",
-    "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!"
+    "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!",
+    "loadError": "Nie udało się wczytać komentarzy."
   },
   "clientPortal": {
     "clientsWillSee": "Klienci zobaczą:",

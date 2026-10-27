@@ -1536,7 +1536,8 @@
     "addFailed": "Kan opmerking niet toevoegen",
     "submitting": "Verzenden...",
     "loading": "Laden...",
-    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
+    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!",
+    "loadError": "Opmerkingen konden niet worden geladen."
   },
   "clientPortal": {
     "clientsWillSee": "Klanten zullen zien:",

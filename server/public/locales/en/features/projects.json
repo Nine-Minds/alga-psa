@@ -1510,7 +1510,8 @@
     "addFailed": "Failed to add comment",
     "submitting": "Submitting...",
     "loading": "Loading...",
-    "empty": "No comments yet. Be the first to comment!"
+    "empty": "No comments yet. Be the first to comment!",
+    "loadError": "Failed to load comments."
   },
   "taskStatusSelect": {
     "ariaLabel": "Task status",

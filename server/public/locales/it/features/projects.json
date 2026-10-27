@@ -1536,7 +1536,8 @@
     "addFailed": "Impossibile aggiungere il commento",
     "submitting": "Invio...",
     "loading": "Caricamento...",
-    "empty": "Nessun commento ancora. Sii il primo a commentare!"
+    "empty": "Nessun commento ancora. Sii il primo a commentare!",
+    "loadError": "Impossibile caricare i commenti."
   },
   "clientPortal": {
     "clientsWillSee": "I clienti vedranno:",
