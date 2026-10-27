@@ -1,9 +1,10 @@
 // Applies patches/ via patch-package after installs.
 //
 // Skips (exit 0) when patch-package isn't installed — production images install with
-// --omit=dev (Dockerfile:32) and don't need the patches: the only patch today,
-// patches/next+16.3.8.patch, is dev-only (its writer change is gated on Turbopack's
-// dev flag; readers no-op on stock manifests). Fails loudly when patch-package IS
+// --omit=dev (Dockerfile:32) and don't need the patches, which are dev-only:
+// patches/next+16.3.8.patch gates its writer change on Turbopack's dev flag (readers
+// no-op on stock manifests), and patches/test-exclude+7.0.2.patch only speeds up
+// coverage include matching (scripts/tests/coverage-exclude-matching.test.mjs). Fails loudly when patch-package IS
 // present but a patch no longer applies — that's the tripwire on Next upgrades:
 // re-validate the patched functions and regenerate the patch, don't skip it
 // (losing it silently brings back the dev-server manifest OOM; see
