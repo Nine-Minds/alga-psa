@@ -5720,10 +5720,12 @@ export class BillingEngine {
         configuration_type: "Hourly",
         quantity: configDetails.baseConfig.quantity ?? null,
         custom_rate: configDetails.baseConfig.custom_rate ?? null,
+        // A stored 0 or unset rate is "no contract rate": null lets it fall
+        // through to the catalog price instead of billing at zero.
         hourly_rate:
-          hourlyDetails.hourly_rate != null
+          hourlyDetails.hourly_rate != null && Number(hourlyDetails.hourly_rate) > 0
             ? Number(hourlyDetails.hourly_rate)
-            : 0,
+            : null,
         minimum_billable_time: hourlyDetails.minimum_billable_time ?? 0,
         round_up_to_nearest: hourlyDetails.round_up_to_nearest ?? 0,
       } as IContractLineServiceConfiguration & IContractLineServiceHourlyConfig;
@@ -5930,6 +5932,8 @@ export class BillingEngine {
           enable_overtime: plan.enable_overtime,
           overtime_threshold: plan.overtime_threshold,
           overtime_rate: plan.overtime_rate,
+          minimum_billable_time: plan.minimum_billable_time,
+          round_up_to_nearest: plan.round_up_to_nearest,
         },
         serviceConfigMap,
         timeEntries,
