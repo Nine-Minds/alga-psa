@@ -32,7 +32,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => nul
 vi.mock('@alga-psa/ui/components/ContactAvatar', () => ({ __esModule: true, default: () => null }));
 vi.mock('@alga-psa/ui/components/ClientAvatar', () => ({ __esModule: true, default: () => null }));
 vi.mock('@alga-psa/ui/components/TeamAvatar', () => ({ __esModule: true, default: () => null }));
-vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({ __esModule: true, default: () => null }));
+vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({ __esModule: true, default: () => <div data-testid="s-team-picker" /> }));
 vi.mock('@alga-psa/ui/components/CallLink', () => ({ CallLink: () => null }));
 
 vi.mock('@alga-psa/ui/components', () => ({
@@ -105,7 +105,7 @@ vi.mock('../TicketStopwatchControls', () => ({
 }));
 vi.mock('../TicketTimeEntries', () => ({ __esModule: true, default: () => null }));
 vi.mock('../TicketMaterialsCard', () => ({ __esModule: true, default: () => <div data-testid="s-materials" /> }));
-vi.mock('../TicketWatchListCard', () => ({ __esModule: true, default: () => null }));
+vi.mock('../TicketWatchListCard', () => ({ __esModule: true, default: () => <div data-testid="s-watch-list" /> }));
 
 function baseProps(overrides: Partial<TicketBentoLayoutProps> = {}): TicketBentoLayoutProps {
   return {
@@ -224,5 +224,35 @@ describe('T002 bento layout capability gating', () => {
     const guarded = createTicketIdGuardDataSource({ capabilities: { ...NO_TICKET_CAPABILITIES } as typeof NATIVE_TICKET_CAPABILITIES });
     renderWith(guarded, { appSection: <div data-testid="s-app-section" /> });
     expect(screen.getByTestId('s-app-section')).toBeTruthy();
+  });
+});
+
+describe('native neutrality: live-conflict fields do not reach the tile gates', () => {
+  const liveFrozenFields = ['additional_agents', 'watch_list', 'client_id', 'contact_name_id'];
+  const props: Partial<TicketBentoLayoutProps> = {
+    liveFrozenFields,
+    onChangeClient: vi.fn(),
+    onChangeContact: vi.fn(),
+    client: { client_id: 'client-1', client_name: 'Acme' } as any,
+    contactInfo: { contact_name_id: 'c-1', full_name: 'Pat' } as any,
+  };
+
+  it('still offers Team, Watch list, change-client and edit-contact on a native ticket', () => {
+    renderWith(nativeTicketDataSource, props);
+    expect(screen.getByTestId('s-watch-list')).toBeTruthy();
+    expect(screen.getByTestId('s-team-picker')).toBeTruthy();
+    expect(document.getElementById('bento-client-edit')).not.toBeNull();
+    expect(document.getElementById('bento-contact-edit')).not.toBeNull();
+  });
+
+  it('hides them only when the screen itself declares the fields frozen', () => {
+    const frozen = composeTicketDataSource(nativeTicketDataSource, {
+      screen: { frozenFields: liveFrozenFields },
+    });
+    renderWith(frozen, props);
+    expect(screen.queryByTestId('s-watch-list')).toBeNull();
+    expect(screen.queryByTestId('s-team-picker')).toBeNull();
+    expect(document.getElementById('bento-client-edit')).toBeNull();
+    expect(document.getElementById('bento-contact-edit')).toBeNull();
   });
 });

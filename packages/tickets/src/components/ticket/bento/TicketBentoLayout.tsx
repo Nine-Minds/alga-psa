@@ -40,6 +40,7 @@ import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { useTicketDataSource } from '../TicketDataSourceContext';
+import { resolveTicketFrozenFields } from '../../../lib/ticketDataSource';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyScope, BentoTileSkeleton, BentoCollapseEmptyTiles } from '@alga-psa/ui/components/bento/BentoTile';
@@ -273,7 +274,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { capabilities } = dataSource;
   // A read-only screen offers no add actions.
   const screenReadOnly = dataSource.screen.readOnly === true;
-  const frozenFieldSet = React.useMemo(() => new Set(props.liveFrozenFields ?? []), [props.liveFrozenFields]);
+  // Screen-declared frozen fields only: live-collaboration conflicts reach BentoHero (liveFrozenFields), never these gates.
+  const frozenFieldSet = React.useMemo(() => new Set(resolveTicketFrozenFields(dataSource.screen)), [dataSource.screen]);
   const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
   const { getClientBillingProfiles } = dataSource.people;
   const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
