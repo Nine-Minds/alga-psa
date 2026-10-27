@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import {
   CLOSE_RULE_REQUIRED_FIELDS,
   evaluateTicketCloseRules,
+  pickCloseRulePendingFields,
   type CloseRuleFailure,
   type CloseRuleRequiredField,
 } from '../../lib/validateTicketClosure';
@@ -384,9 +385,19 @@ export interface TicketClosureCheckResult {
  * change to a closed status. The write paths still enforce the rules — this
  * exists so the blocked-close dialog gets structured failures instead of a
  * serialized error message.
+ *
+ * pendingChanges carries the unsaved required-field values from the same batch
+ * (a Save Changes that sets the category and the closing status at once), so
+ * the check sees what the write will persist instead of the stale row.
  */
 export const checkTicketClosure = withAuth(
-  async (user, { tenant }, ticketId: string, targetStatusId: string): Promise<TicketClosureCheckResult> => {
+  async (
+    user,
+    { tenant },
+    ticketId: string,
+    targetStatusId: string,
+    pendingChanges?: Record<string, unknown> | null
+  ): Promise<TicketClosureCheckResult> => {
     const { knex: db } = await createTenantKnex();
 
     const ticket = await tenantScopedTable(db, 'tickets', tenant).where({ ticket_id: ticketId }).first();
@@ -430,13 +441,19 @@ export const checkTicketClosure = withAuth(
       return { wouldClose, allowed: true, failures: [], canOverride: false };
     }
 
+    const pending = pickCloseRulePendingFields(pendingChanges);
+    const effective = (field: CloseRuleRequiredField): string | null =>
+      Object.prototype.hasOwnProperty.call(pending, field)
+        ? pending[field] ?? null
+        : ticket[field] ?? null;
+
     const failures = await evaluateTicketCloseRules(db, tenant, {
       ticket_id: ticketId,
       board_id: ticket.board_id ?? null,
-      category_id: ticket.category_id ?? null,
-      subcategory_id: ticket.subcategory_id ?? null,
-      priority_id: ticket.priority_id ?? null,
-      assigned_to: ticket.assigned_to ?? null,
+      category_id: effective('category_id'),
+      subcategory_id: effective('subcategory_id'),
+      priority_id: effective('priority_id'),
+      assigned_to: effective('assigned_to'),
     });
 
     const canOverride =

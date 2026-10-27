@@ -111,6 +111,7 @@ import {
     type CommentImageDocumentReference,
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
+import { pickCloseRulePendingFields } from '../../lib/closeRuleConstants';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
@@ -2776,7 +2777,13 @@ const handleClose = () => {
 
         if (targetStatusId && ticket.ticket_id) {
             try {
-                const check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
+                // This batch is written in one update, so the gates must see the
+                // classification it carries — not the row as it stands.
+                const check = await checkTicketClosure(
+                    ticket.ticket_id,
+                    targetStatusId,
+                    pickCloseRulePendingFields(changes),
+                );
                 if (check.wouldClose && !check.allowed) {
                     setCloseOverrideReason('');
                     setCloseBlockedDialog({

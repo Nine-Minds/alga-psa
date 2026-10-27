@@ -18,10 +18,12 @@ import {
   TicketCloseValidationError,
   CLOSE_RULE_REQUIRED_FIELDS,
   CLOSE_RULE_REQUIRED_FIELD_LABELS,
+  pickCloseRulePendingFields,
   type CloseRuleId,
   type CloseRuleFailure,
   type CloseRuleBypassSource,
   type CloseRuleRequiredField,
+  type CloseRulePendingFields,
   type EnforceTicketCloseRulesOptions,
   type EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';
@@ -46,12 +48,14 @@ export {
   TicketCloseValidationError,
   CLOSE_RULE_REQUIRED_FIELDS,
   CLOSE_RULE_REQUIRED_FIELD_LABELS,
+  pickCloseRulePendingFields,
 };
 export type {
   CloseRuleId,
   CloseRuleFailure,
   CloseRuleBypassSource,
   CloseRuleRequiredField,
+  CloseRulePendingFields,
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 };

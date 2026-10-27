@@ -127,12 +127,14 @@ export {
   TicketCloseValidationError,
   CLOSE_RULE_REQUIRED_FIELDS,
   CLOSE_RULE_REQUIRED_FIELD_LABELS,
+  pickCloseRulePendingFields,
 } from './closeRuleConstants';
 export type {
   CloseRuleFailure,
   CloseRuleId,
   CloseRuleBypassSource,
   CloseRuleRequiredField,
+  CloseRulePendingFields,
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';
