@@ -169,3 +169,12 @@ test('every literal temporal readiness include is a temporal-readiness candidate
   assert.ok(includes.length > 0);
   for (const file of includes) assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true, file);
 });
+
+test('worker boot under a failing capability gate must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const readinessConfig = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  assert.ok(readinessConfig.includes("'src/__tests__/worker.capabilityBoot.test.ts'"));
+});

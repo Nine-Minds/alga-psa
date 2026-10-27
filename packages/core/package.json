@@ -10,6 +10,14 @@
       "import": "./dist/index.js",
       "types": "./src/index.ts"
     },
+    "./capability": {
+      "import": "./dist/lib/capability.js",
+      "types": "./src/lib/capability.ts"
+    },
+    "./capability/server": {
+      "import": "./dist/capability/server.js",
+      "types": "./src/capability/server.ts"
+    },
     "./features": {
       "import": "./dist/lib/features.js",
       "types": "./src/lib/features.ts"
@@ -94,6 +102,14 @@
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
     "react": "^19.2.4"
+  },
+  "peerDependencies": {
+    "next": "*"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
