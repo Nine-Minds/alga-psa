@@ -9,6 +9,7 @@ import {
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { getTenantDisplayNameBySlug, getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
+import { requestMspSignInLinksAction } from '../../../actions/tenantDiscoveryActions';
 import type { Metadata } from 'next';
 import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -74,7 +75,7 @@ export default async function MspSignInPage({
         // Session was revoked, don't redirect - show signin form
         return (
           <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-            <MspSignIn initialEmail={initialEmail} scopedTenant={scopedTenant} />
+            <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} />
           </I18nWrapper>
         );
       }
@@ -103,7 +104,7 @@ export default async function MspSignInPage({
   }
   return (
     <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-      <MspSignIn initialEmail={initialEmail} scopedTenant={scopedTenant} />
+      <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} />
     </I18nWrapper>
   );
 }

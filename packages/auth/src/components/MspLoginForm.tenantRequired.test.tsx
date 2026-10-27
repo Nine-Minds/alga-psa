@@ -76,10 +76,6 @@ vi.mock('@alga-psa/auth/sso/entry', () => ({
   },
 }));
 
-vi.mock('../actions/tenantDiscoveryActions', () => ({
-  requestMspSignInLinksAction: (...args: unknown[]) => requestLinksMock(...args),
-}));
-
 const { default: MspLoginForm } = await import('./MspLoginForm');
 
 async function submitWith(result: unknown, props: Record<string, unknown> = {}) {
@@ -88,6 +84,7 @@ async function submitWith(result: unknown, props: Record<string, unknown> = {}) 
   const onTwoFactorRequired = vi.fn();
   render(
     <MspLoginForm
+      requestSignInLinks={requestLinksMock}
       callbackUrl="/msp/dashboard"
       onError={onError}
       onTwoFactorRequired={onTwoFactorRequired}
@@ -152,6 +149,7 @@ describe('MspLoginForm TENANT_REQUIRED handling', () => {
   it('opens with the offer when handed off from SSO', () => {
     render(
       <MspLoginForm
+        requestSignInLinks={requestLinksMock}
         callbackUrl="/msp/dashboard"
         initialEmail="sso@example.com"
         initialTenantRequired
@@ -182,5 +180,23 @@ describe('MspLoginForm TENANT_REQUIRED handling', () => {
     const { onError, onTwoFactorRequired } = await submitWith({ error: '2FA_REQUIRED' });
     await waitFor(() => expect(onTwoFactorRequired).toHaveBeenCalledTimes(1));
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('emails the SSO providerEmail, not a remembered address, when the hand-off supplies it', async () => {
+    // MspSignIn resolves providerEmail over the remembered email (b@x over a@x)
+    // before it reaches the form; the field and the links action then agree.
+    render(
+      <MspLoginForm
+        requestSignInLinks={requestLinksMock}
+        callbackUrl="/msp/dashboard"
+        initialEmail="b@x"
+        initialTenantRequired
+        onError={vi.fn()}
+        onTwoFactorRequired={vi.fn()}
+      />
+    );
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('b@x');
+    fireEvent.click(await screen.findByRole('button', { name: 'Email me my sign-in links' }));
+    await waitFor(() => expect(requestLinksMock).toHaveBeenCalledWith('b@x', '/msp/dashboard'));
   });
 });

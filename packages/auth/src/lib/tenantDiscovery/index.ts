@@ -1,16 +1,37 @@
+import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getTenantSlugForTenant, tenantDb } from '@alga-psa/db';
 import { normalizeLoginEmail } from '../security/loginEmail';
 import { checkPasswordResetLimit } from '../security/rateLimiting';
 import { isValidResolverCallbackUrl } from '../sso/mspSsoResolution';
-import type { TenantDiscoveryProfile } from './profiles';
+import type { TenantDiscoveryProfile, TenantDiscoverySurface, TenantDiscoveryTemplateName } from './profiles';
 
 export {
   CLIENT_TENANT_DISCOVERY_PROFILE,
   INTERNAL_TENANT_DISCOVERY_PROFILE,
 } from './profiles';
 export type { TenantDiscoveryProfile } from './profiles';
+
+/**
+ * Collaborators the engine needs but must not import: the base-URL resolver
+ * lives in @alga-psa/tenancy and the mailer in @alga-psa/email, and both
+ * depend on @alga-psa/auth. A layer above all three (server/) binds them.
+ */
+export interface TenantDiscoveryDeps {
+  /** Origin the sign-in link for `tenant` should use on `surface` (vanity host or canonical). */
+  resolveAppBase(
+    tenant: string,
+    surface: TenantDiscoverySurface,
+    options: { knex: Knex },
+  ): Promise<{ baseUrl?: string | null; source: 'vanity' | 'canonical' }>;
+  /** Sends the recovery email listing one sign-in link per organization. */
+  sendRecoveryEmail(
+    email: string,
+    tenantLoginInfos: TenantLoginInfo[],
+    options: { templateName: TenantDiscoveryTemplateName },
+  ): Promise<unknown>;
+}
 
 const TENANT_DISCOVERY_CONTEXT = 'tenant-recovery-discovery';
 
@@ -84,16 +105,15 @@ async function findDiscoverableTenants(
  */
 export async function buildTenantSignInLink(
   profile: TenantDiscoveryProfile,
+  deps: Pick<TenantDiscoveryDeps, 'resolveAppBase'>,
   tenantId: string,
   callbackUrl?: string,
 ): Promise<{ url: string; source: 'vanity' | 'canonical' }> {
-  // LEVERAGE: friction tenant-link-context — @alga-psa/tenancy depends on @alga-psa/auth, so the base-URL resolver is loaded lazily to avoid a static cycle.
-  const { resolveTenantAppBase } = await import('@alga-psa/tenancy/server');
   const db = await getAdminConnection();
 
   try {
     const tenantSlug = await getTenantSlugForTenant(tenantId);
-    const resolved = await resolveTenantAppBase(tenantId, profile.surface, { knex: db });
+    const resolved = await deps.resolveAppBase(tenantId, profile.surface, { knex: db });
 
     if (!resolved.baseUrl) {
       throw new Error('NEXTAUTH_URL (or NEXT_PUBLIC_BASE_URL) must be configured to compute canonical login links');
@@ -125,6 +145,7 @@ export async function buildTenantSignInLink(
  */
 export async function requestTenantSignInLinks(
   profile: TenantDiscoveryProfile,
+  deps: TenantDiscoveryDeps,
   email: string,
   callbackUrl?: string,
 ): Promise<TenantDiscoveryResponse> {
@@ -155,22 +176,19 @@ export async function requestTenantSignInLinks(
     }
 
     const safeCallbackUrl = sanitizeCallbackUrl(callbackUrl);
-    // Sequential: the first link triggers the lazy module load, and concurrent
-    // first loads of the same module are not worth the saved milliseconds.
-    const tenantLoginInfos: TenantLoginInfo[] = [];
-    for (const row of tenants) {
-      const { url, source } = await buildTenantSignInLink(profile, row.tenant, safeCallbackUrl);
-      tenantLoginInfos.push({
-        tenantId: row.tenant,
-        tenantName: row.client_name || 'Unknown Organization',
-        loginUrl: url,
-        source,
-      });
-    }
+    const tenantLoginInfos: TenantLoginInfo[] = await Promise.all(
+      tenants.map(async (row) => {
+        const { url, source } = await buildTenantSignInLink(profile, deps, row.tenant, safeCallbackUrl);
+        return {
+          tenantId: row.tenant,
+          tenantName: row.client_name || 'Unknown Organization',
+          loginUrl: url,
+          source,
+        };
+      }),
+    );
 
-    // LEVERAGE: friction tenant-link-context — @alga-psa/email depends on @alga-psa/auth; same lazy-load workaround as the base-URL resolver above.
-    const { sendTenantRecoveryEmail } = await import('@alga-psa/email');
-    await sendTenantRecoveryEmail(normalizedEmail, tenantLoginInfos, {
+    await deps.sendRecoveryEmail(normalizedEmail, tenantLoginInfos, {
       templateName: profile.templateName,
     });
 

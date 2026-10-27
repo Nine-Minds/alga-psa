@@ -91,7 +91,7 @@ describe('MSP multi-organization sign-in (same email in two tenants)', () => {
   });
 
   it('the discovery action emails one scoped link per organization', async () => {
-    const { requestMspSignInLinksAction } = await import('../../../../packages/auth/src/actions/tenantDiscoveryActions');
+    const { requestMspSignInLinksAction } = await import('../../app/actions/tenantDiscoveryActions');
     sent.length = 0;
     const result = await requestMspSignInLinksAction(email, '/msp/dashboard');
     expect(result.success).toBe(true);

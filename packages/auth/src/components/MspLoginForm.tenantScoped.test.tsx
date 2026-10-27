@@ -76,10 +76,6 @@ vi.mock('@alga-psa/auth/sso/entry', () => ({
   },
 }));
 
-vi.mock('../actions/tenantDiscoveryActions', () => ({
-  requestMspSignInLinksAction: (...args: unknown[]) => requestLinksMock(...args),
-}));
-
 const { default: MspLoginForm } = await import('./MspLoginForm');
 
 async function submit(props: Record<string, unknown>) {
@@ -87,7 +83,7 @@ async function submit(props: Record<string, unknown>) {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true })));
   Object.defineProperty(window, 'location', { value: { href: '' }, writable: true });
   render(
-    <MspLoginForm callbackUrl="/msp/tickets" onError={vi.fn()} onTwoFactorRequired={vi.fn()} {...props} />
+    <MspLoginForm requestSignInLinks={requestLinksMock} callbackUrl="/msp/tickets" onError={vi.fn()} onTwoFactorRequired={vi.fn()} {...props} />
   );
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'dup@example.com' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pw' } });

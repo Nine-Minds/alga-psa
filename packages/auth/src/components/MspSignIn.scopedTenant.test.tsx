@@ -123,6 +123,8 @@ vi.mock('./Alert', () => ({
 
 const { default: MspSignIn } = await import('./MspSignIn');
 
+const requestSignInLinks = vi.fn(async () => ({ success: true }));
+
 afterEach(() => cleanup());
 
 describe('MSP sign-in scoped organization', () => {
@@ -134,7 +136,7 @@ describe('MSP sign-in scoped organization', () => {
 
   it('names the organization and links back to the unscoped page keeping callbackUrl', () => {
     searchParamsState.value = new URLSearchParams({ callbackUrl: '/msp/tickets?x=1' });
-    render(<MspSignIn scopedTenant={{ slug: 'abc123def456', name: 'Acme MSP' }} />);
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} scopedTenant={{ slug: 'abc123def456', name: 'Acme MSP' }} />);
 
     expect(screen.getByText('Signing in to Acme MSP')).toBeTruthy();
     const back = document.getElementById('msp-scoped-tenant-back-link') as HTMLAnchorElement;
@@ -144,7 +146,7 @@ describe('MSP sign-in scoped organization', () => {
   });
 
   it('keeps the banner generic, never showing the slug, when the organization has no name', () => {
-    render(<MspSignIn scopedTenant={{ slug: 'abc123def456' }} />);
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} scopedTenant={{ slug: 'abc123def456' }} />);
 
     expect(screen.getByText('Signing in to the organization from your link')).toBeTruthy();
     expect(screen.queryByText(/abc123def456/)).toBeNull();
@@ -152,7 +154,7 @@ describe('MSP sign-in scoped organization', () => {
   });
 
   it('renders no organization banner on the unscoped page', () => {
-    render(<MspSignIn />);
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} />);
     expect(screen.queryByText(/Signing in to/)).toBeNull();
     expect(loginFormProps).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: undefined }));
   });
@@ -163,9 +165,39 @@ describe('MSP sign-in scoped organization', () => {
       reason: 'tenant_required',
       providerEmail: 'dual@example.com',
     });
-    render(<MspSignIn />);
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} />);
     expect(loginFormProps).toHaveBeenCalledWith(
       expect.objectContaining({ initialEmail: 'dual@example.com', initialTenantRequired: true })
     );
+  });
+
+  it('passes the injected links action through to the form', () => {
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} />);
+    expect(loginFormProps).toHaveBeenCalledWith(
+      expect.objectContaining({ requestSignInLinks })
+    );
+  });
+
+  it('prefers the SSO providerEmail over a remembered email on the tenant_required hand-off', () => {
+    searchParamsState.value = new URLSearchParams({
+      error: 'AccessDenied',
+      reason: 'tenant_required',
+      providerEmail: 'b@x',
+    });
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} initialEmail="a@x" />);
+    expect(loginFormProps).toHaveBeenCalledWith(
+      expect.objectContaining({ initialEmail: 'b@x', initialTenantRequired: true })
+    );
+    expect(loginFormProps).not.toHaveBeenCalledWith(expect.objectContaining({ initialEmail: 'a@x' }));
+  });
+
+  it('keeps the remembered email when the failure is not tenant_required', () => {
+    searchParamsState.value = new URLSearchParams({
+      error: 'AccessDenied',
+      reason: 'no_match',
+      providerEmail: 'b@x',
+    });
+    render(<MspSignIn requestSignInLinks={requestSignInLinks} initialEmail="a@x" />);
+    expect(loginFormProps).toHaveBeenCalledWith(expect.objectContaining({ initialEmail: 'a@x' }));
   });
 });

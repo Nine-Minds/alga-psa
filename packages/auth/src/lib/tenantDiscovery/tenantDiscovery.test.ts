@@ -37,14 +37,6 @@ vi.mock('../security/rateLimiting', () => ({
   checkPasswordResetLimit: (...args: unknown[]) => limitMock(...args),
 }));
 
-vi.mock('@alga-psa/tenancy/server', () => ({
-  resolveTenantAppBase: (...args: unknown[]) => resolveBaseMock(...args),
-}));
-
-vi.mock('@alga-psa/email', () => ({
-  sendTenantRecoveryEmail: (...args: unknown[]) => sendMock(...args),
-}));
-
 const {
   CLIENT_TENANT_DISCOVERY_PROFILE,
   INTERNAL_TENANT_DISCOVERY_PROFILE,
@@ -52,6 +44,12 @@ const {
   buildTenantSignInLink,
   requestTenantSignInLinks,
 } = await import('./index');
+
+// The engine imports neither tenancy nor email: fakes are injected.
+const deps = {
+  resolveAppBase: (...args: unknown[]) => resolveBaseMock(...args),
+  sendRecoveryEmail: (...args: unknown[]) => sendMock(...args),
+} as unknown as import('./index').TenantDiscoveryDeps;
 
 const GENERIC = { success: true, message: TENANT_DISCOVERY_GENERIC_MESSAGE };
 
@@ -95,7 +93,7 @@ describe('tenant discovery engine', () => {
 
   describe('links', () => {
     it('MSP canonical links carry ?tenant= and a relative callbackUrl', async () => {
-      const { url, source } = await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, 't-a', '/msp/tickets');
+      const { url, source } = await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 't-a', '/msp/tickets');
       const parsed = new URL(url);
       expect(source).toBe('canonical');
       expect(parsed.origin + parsed.pathname).toBe('https://app.example.com/auth/msp/signin');
@@ -105,30 +103,30 @@ describe('tenant discovery engine', () => {
 
     it('MSP vanity links still carry ?tenant=', async () => {
       resolveBaseMock.mockResolvedValue({ baseUrl: 'https://psa.acme.test', source: 'vanity' });
-      const { url, source } = await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, 't-a');
+      const { url, source } = await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 't-a');
       expect(source).toBe('vanity');
       expect(new URL(url).searchParams.get('tenant')).toBe('slug-t-a');
     });
 
     it('client vanity links stay bare, client canonical links carry the slug', async () => {
       resolveBaseMock.mockResolvedValue({ baseUrl: 'https://portal.acme.test', source: 'vanity' });
-      const vanity = await buildTenantSignInLink(CLIENT_TENANT_DISCOVERY_PROFILE, 't-a');
+      const vanity = await buildTenantSignInLink(CLIENT_TENANT_DISCOVERY_PROFILE, deps, 't-a');
       expect(new URL(vanity.url).searchParams.has('tenant')).toBe(false);
 
       resolveBaseMock.mockResolvedValue({ baseUrl: 'https://app.example.com', source: 'canonical' });
-      const canonical = await buildTenantSignInLink(CLIENT_TENANT_DISCOVERY_PROFILE, 't-a');
+      const canonical = await buildTenantSignInLink(CLIENT_TENANT_DISCOVERY_PROFILE, deps, 't-a');
       expect(new URL(canonical.url).searchParams.get('tenant')).toBe('slug-t-a');
     });
 
     it('asks the base resolver for the profile surface', async () => {
-      await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, 't-a');
+      await buildTenantSignInLink(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 't-a');
       expect(resolveBaseMock).toHaveBeenCalledWith('t-a', 'msp', expect.anything());
     });
   });
 
   describe('requestTenantSignInLinks', () => {
     it('emails one link per tenant using the profile template and queries only live users of the type', async () => {
-      const response = await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, '  Dual@Example.com ', '/msp/tickets');
+      const response = await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, '  Dual@Example.com ', '/msp/tickets');
 
       expect(response).toEqual(GENERIC);
       expect(limitMock).toHaveBeenCalledWith('dual@example.com');
@@ -152,60 +150,60 @@ describe('tenant discovery engine', () => {
         { tenant: 't-a', client_name: 'Acme MSP' },
         { tenant: 't-a', client_name: 'Acme MSP' },
       ];
-      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com');
+      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com');
       expect(sendMock.mock.calls[0][1]).toHaveLength(1);
     });
 
     it('drops an absolute or protocol-relative callbackUrl from the links', async () => {
-      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com', 'https://evil.example/x');
+      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com', 'https://evil.example/x');
       expect(new URL(sendMock.mock.calls[0][1][0].loginUrl).searchParams.has('callbackUrl')).toBe(false);
 
       sendMock.mockClear();
-      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com', '//evil.example/x');
+      await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com', '//evil.example/x');
       expect(new URL(sendMock.mock.calls[0][1][0].loginUrl).searchParams.has('callbackUrl')).toBe(false);
     });
 
     describe('one generic response for every outcome', () => {
       it('rate limited', async () => {
         limitMock.mockResolvedValue({ success: false, msBeforeNext: 1000 });
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com')).toEqual(GENERIC);
         expect(sendMock).not.toHaveBeenCalled();
       });
 
       it('precondition fails (client contact gate)', async () => {
         const gated = { ...CLIENT_TENANT_DISCOVERY_PROFILE, precondition: async () => false };
-        expect(await requestTenantSignInLinks(gated, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(gated, deps, 'dual@example.com')).toEqual(GENERIC);
         expect(sendMock).not.toHaveBeenCalled();
       });
 
       it('no user', async () => {
         userRows = [];
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'nobody@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'nobody@example.com')).toEqual(GENERIC);
         expect(sendMock).not.toHaveBeenCalled();
       });
 
       it('sent', async () => {
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com')).toEqual(GENERIC);
         expect(sendMock).toHaveBeenCalled();
       });
 
       it('database error', async () => {
         dbShouldThrow = true;
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com')).toEqual(GENERIC);
       });
 
       it('email send error', async () => {
         sendMock.mockRejectedValue(new Error('smtp down'));
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com')).toEqual(GENERIC);
       });
 
       it('rate limiter error', async () => {
         limitMock.mockRejectedValue(new Error('limiter'));
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, 'dual@example.com')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, 'dual@example.com')).toEqual(GENERIC);
       });
 
       it('empty email', async () => {
-        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, '   ')).toEqual(GENERIC);
+        expect(await requestTenantSignInLinks(INTERNAL_TENANT_DISCOVERY_PROFILE, deps, '   ')).toEqual(GENERIC);
       });
     });
   });

@@ -9,11 +9,21 @@ import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-re
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
-import { requestMspSignInLinksAction } from '../actions/tenantDiscoveryActions';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
 
+/**
+ * Server action that emails the user one sign-in link per organization. Injected
+ * by the app (it needs @alga-psa/tenancy and @alga-psa/email, which depend on
+ * this package), so this component never imports the concrete action.
+ */
+export type RequestSignInLinks = (
+  email: string,
+  callbackUrl?: string,
+) => Promise<{ success: boolean; message?: string; error?: string }>;
+
 interface MspLoginFormProps {
+  requestSignInLinks: RequestSignInLinks;
   callbackUrl: string;
   initialEmail?: string;
   /** Validated organization slug from `?tenant=`; scopes password and SSO sign-in. */
@@ -25,6 +35,7 @@ interface MspLoginFormProps {
 }
 
 export default function MspLoginForm({
+  requestSignInLinks,
   callbackUrl,
   initialEmail,
   tenantSlug,
@@ -74,7 +85,7 @@ export default function MspLoginForm({
   const handleSendOrgLinks = async () => {
     setIsSendingLinks(true);
     try {
-      await requestMspSignInLinksAction(email, callbackUrl);
+      await requestSignInLinks(email, callbackUrl);
     } catch {
       // The confirmation is deliberately identical whatever happened.
     } finally {

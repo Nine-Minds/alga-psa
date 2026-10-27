@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components';
-import MspLoginForm from './MspLoginForm';
+import MspLoginForm, { type RequestSignInLinks } from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
@@ -12,6 +12,8 @@ import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-r
 import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 interface MspSignInProps {
+  /** Server action that emails per-organization sign-in links; bound by the page. */
+  requestSignInLinks: RequestSignInLinks;
   initialEmail?: string;
   /** Organization the page is scoped to by a validated `?tenant=<slug>`. */
   scopedTenant?: { slug: string; name?: string };
@@ -29,7 +31,7 @@ const FEATURES = [
   { key: 'documents', icon: FileText, defaultValue: 'Centralized Document Uploads and Storage' },
 ] as const;
 
-export default function MspSignIn({ initialEmail, scopedTenant }: MspSignInProps) {
+export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTenant }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -232,8 +234,9 @@ export default function MspSignIn({ initialEmail, scopedTenant }: MspSignInProps
             </CardHeader>
             <CardContent>
               <MspLoginForm
+                requestSignInLinks={requestSignInLinks}
                 callbackUrl={callbackUrl}
-                initialEmail={initialEmail || (ssoTenantRequired && providerEmail ? providerEmail : undefined)}
+                initialEmail={ssoTenantRequired && providerEmail ? providerEmail : initialEmail}
                 tenantSlug={scopedTenant?.slug}
                 initialTenantRequired={ssoTenantRequired}
                 onError={handleError}

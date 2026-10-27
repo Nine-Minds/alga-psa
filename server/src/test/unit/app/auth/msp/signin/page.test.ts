@@ -18,6 +18,12 @@ const I18nWrapperMock = ({ children }: { children?: React.ReactNode }) => childr
 // what it wraps.
 const inner = (result: unknown) => (result as any)?.props?.children;
 
+const requestLinksActionMock = vi.hoisted(() => vi.fn());
+vi.mock('@/app/actions/tenantDiscoveryActions', () => ({
+  requestMspSignInLinksAction: requestLinksActionMock,
+  requestClientPortalLoginLinksAction: requestLinksActionMock,
+}));
+
 vi.mock('next/headers', () => ({
   cookies: cookiesMock,
 }));
@@ -126,6 +132,8 @@ describe('MspSignInPage', () => {
     expect(inner(result)?.type).toBe(MspSignInMock);
     expect(inner(result)?.props).toMatchObject({
       initialEmail: 'remembered@example.com',
+      // The page is the injection point for the concrete server action.
+      requestSignInLinks: requestLinksActionMock,
     });
   });
 
