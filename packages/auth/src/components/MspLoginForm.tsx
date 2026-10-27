@@ -89,12 +89,13 @@ export default function MspLoginForm({
         });
       } else if (result?.code === 'TENANT_REQUIRED') {
         // The credentials were right, but the email belongs to internal users in
-        // more than one organization and nothing named which one. Not a failed
-        // attempt, so leave the captcha challenge alone.
+        // more than one organization and the MSP sign-in has no way to name one,
+        // so only an administrator can resolve it. Not a failed attempt, so leave
+        // the captcha challenge alone.
         onError({
           type: 'error',
-          title: t('signIn.errors.tenantRequiredTitle', 'Choose Your Organization'),
-          message: t('signIn.errors.tenantRequiredMessage', "This email is used in more than one organization. Sign in from your organization's sign-in address, or ask your administrator which account to use.")
+          title: t('signIn.errors.tenantRequiredTitle', 'Contact Your Administrator'),
+          message: t('signIn.errors.tenantRequiredMessage', "This email is used in more than one organization, so we can't tell which account to sign you in to. Contact your administrator for help signing in.")
         });
       } else if (result?.error) {
         if (captcha.required) {

@@ -96,14 +96,17 @@ describe('MspLoginForm TENANT_REQUIRED handling', () => {
     vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('asks the user to choose an organization instead of reporting bad credentials', async () => {
+  it('sends the user to an administrator instead of reporting bad credentials', async () => {
     const { onError } = await submitWith({ error: 'CredentialsSignin', code: 'TENANT_REQUIRED' });
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
     const alert = onError.mock.calls[0][0] as { type: string; title: string; message: string };
     expect(alert.type).toBe('error');
-    expect(alert.title).toBe('Choose Your Organization');
+    expect(alert.title).toBe('Contact Your Administrator');
     expect(alert.message).toContain('more than one organization');
+    expect(alert.message).toContain('Contact your administrator');
+    // MSP sign-in has no per-organization address to send them to.
+    expect(alert.message).not.toContain('sign-in address');
     expect(alert.message).not.toContain('Invalid email or password');
   });
 
