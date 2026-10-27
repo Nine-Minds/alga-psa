@@ -39,8 +39,8 @@ import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
+import { resolveTicketFrozenFields } from '../../../lib/ticketDataSource';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyScope, BentoTileSkeleton, BentoCollapseEmptyTiles } from '@alga-psa/ui/components/bento/BentoTile';
@@ -53,7 +53,6 @@ import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import { resolveTicketCallPhone } from './ticketCallPhone';
 import { formatTicketLocationDisplay } from '../../../lib/formatTicketLocation';
-import { getClientBillingProfiles } from '../../../actions/clientLookupActions';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
@@ -85,6 +84,10 @@ export interface TicketBentoLayoutProps {
   onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
+  /** App-layer slot content (`slots.appSection`), rendered as its own tile. */
+  appSection?: React.ReactNode;
+  /** App-layer slot content (`slots.timeSummary`), rendered under the time summary. */
+  timeSummarySlot?: React.ReactNode;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
   hideBilling?: boolean;
   /** Hides the Scheduled work / Appointment requests tiles (AlgaDesk has no scheduling surface). */
@@ -257,7 +260,6 @@ const NO_LOCATION_VALUE = 'none';
 
 // The picker takes its loader as a prop so the single-profile invisibility rule
 // has one implementation across every surface that shows a billing profile.
-const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
 /**
  * The "Grid" ticket layout: hero band on top, unified timeline as the center
@@ -268,6 +270,15 @@ const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles
 export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { id, ticket } = props;
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { capabilities } = dataSource;
+  // A read-only screen offers no add actions.
+  const screenReadOnly = dataSource.screen.readOnly === true;
+  // Screen-declared frozen fields only: live-collaboration conflicts reach BentoHero (liveFrozenFields), never these gates.
+  const frozenFieldSet = React.useMemo(() => new Set(resolveTicketFrozenFields(dataSource.screen)), [dataSource.screen]);
+  const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
+  const { getClientBillingProfiles } = dataSource.people;
+  const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
   const ticketId = ticket.ticket_id ?? '';
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
   const isProcessingAgentsRef = useRef(false);
@@ -329,7 +340,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     openInteractionDetails,
   } = useQuickAddClient();
   const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
-  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId);
+  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId) && !screenReadOnly && !frozenFieldSet.has('contact_name_id');
   const [contactEditOpen, setContactEditOpen] = React.useState(false);
   const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
   const [pickerContacts, setPickerContacts] = React.useState<IContact[]>(props.contacts ?? []);
@@ -338,7 +349,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Repoint the ticket to a different client. Mirrors the legacy Contact Info
   // card: an inline ClientPicker that, on save, resets contact + location
   // (handled by the wired onChangeClient handler in TicketDetails).
-  const canChangeClient = Boolean(props.onChangeClient);
+  // Frozen (read-only screen, or a field the source cannot write) means no change affordance.
+  const canChangeClient = Boolean(props.onChangeClient) && !screenReadOnly && !frozenFieldSet.has('client_id');
   const [clientPickerOpen, setClientPickerOpen] = React.useState(false);
   const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
@@ -358,7 +370,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
-  const canLogInteraction = Boolean(effectiveClientId);
+  const canLogInteraction = Boolean(effectiveClientId) && !screenReadOnly;
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
@@ -377,12 +389,16 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     setContactEditOpen(true);
   }, [props.contactInfo?.contact_name_id]);
 
-  const timerTile = !props.hideTimeEntry ? (
+  // Billing rides in the time tile on this layout, so each half is gated on its own capability
+  // and the tile shows when either is on.
+  const showTime = capabilities.timeEntry && !props.hideTimeEntry;
+  const showBilling = capabilities.billing && !props.hideBilling && !props.hideTimeEntry;
+  const timerTile = showTime || showBilling ? (
     <BentoTile
       id={`${id}-time-tile`}
-      title={props.hideBilling ? t('bento.tiles.timeLogged', 'Time logged') : t('bento.tiles.timeAndBilling', 'Time & billing')}
+      title={!showTime ? t('bento.tiles.billing', 'Billing') : !showBilling ? t('bento.tiles.timeLogged', 'Time logged') : t('bento.tiles.timeAndBilling', 'Time & billing')}
       icon={<Clock className="h-4 w-4" />}
-      action={
+      action={!showTime ? undefined :
         <BentoTileAddButton
           id={`${id}-add-time-entry`}
           label={t('bento.tiles.addTimeEntry', 'Add time entry')}
@@ -391,6 +407,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         />
       }
     >
+      {showTime ? (<>
       <Suspense
         fallback={
           <div
@@ -406,6 +423,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialSummary={props.bentoStreams?.timeEntries}
         />
       </Suspense>
+      {props.timeSummarySlot ?? null}
       {/* The hero chip carries the stopwatch and its description; with the
           board's stopwatch off, the description for manual entries lives here. */}
       {ticketId && !resolveBoardStopwatchEnabled(props.isLiveTicketTimerEnabled) ? (
@@ -443,8 +461,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           />
         </Suspense>
       ) : null}
+      </>) : null}
 
-      {!props.hideBilling ? (
+      {showBilling ? (
         <div className="mt-3 pt-3 border-t border-[rgb(var(--color-border-100))]">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-1.5">
             {t('bento.tiles.billing', 'Billing')}
@@ -455,7 +474,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               ticketId={ticketId}
               refreshKey={props.timeEntriesRefreshKey}
               initialData={props.bentoStreams?.billingRollup}
-              footer={props.quickInvoiceActions ? <ActionSurface kind="tile">{props.quickInvoiceActions}</ActionSurface> : undefined}
+              footer={capabilities.quickInvoice && props.quickInvoiceActions ? <ActionSurface kind="tile">{props.quickInvoiceActions}</ActionSurface> : undefined}
             />
           </Suspense>
         </div>
@@ -463,7 +482,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     </BentoTile>
   ) : null;
 
-  const tasksTile = props.taskActions ? (
+  const tasksTile = capabilities.createProjectTask && props.taskActions ? (
     <BentoTile id={`${id}-tasks-tile`} title={t('bento.tiles.projectTasks', 'Project tasks')} icon={<ClipboardList className="h-4 w-4" />}>
       <ActionSurface kind="tile">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">{props.taskActions}</div>
@@ -862,19 +881,27 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         )}
       </BentoTile>
     ) },
-    !props.hideSlaStatus ? { key: 'sla', zone: 'end', group: 'work', rank: 20, node: (
+    capabilities.sla && !props.hideSlaStatus ? { key: 'sla', zone: 'end', group: 'work', rank: 20, node: (
       <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} />
     ) } : null,
     timerTile ? { key: 'time', zone: 'end', group: 'work', rank: 22, node: timerTile } : null,
-    { key: 'checklist', zone: 'end', group: 'work', rank: 24, node: (
+    capabilities.checklist ? { key: 'checklist', zone: 'end', group: 'work', rank: 24, node: (
       <TicketChecklistSection
         id={`${id}-checklist-section`}
         ticketId={ticketId}
         initialItems={props.checklistItems}
         onItemsChanged={props.onChecklistItemsChanged}
       />
-    ) },
-    props.associatedAssets ? { key: 'assets', zone: 'start', group: 'linked', rank: 40, node: (
+    ) } : null,
+    !timerTile && props.timeSummarySlot ? { key: 'time', zone: 'end', group: 'work', rank: 22, node: (
+      <BentoTile id={`${id}-time-tile`} title={t('bento.tiles.timeLogged', 'Time logged')} icon={<Clock className="h-4 w-4" />}>
+        {props.timeSummarySlot}
+      </BentoTile>
+    ) } : null,
+    props.appSection ? { key: 'app-section', zone: 'start', group: 'customer', rank: 11, node: (
+      <div id={`${id}-app-section`}>{props.appSection}</div>
+    ) } : null,
+    capabilities.assets && props.associatedAssets ? { key: 'assets', zone: 'start', group: 'linked', rank: 40, node: (
 
         <div id={`${id}-assets-container`}>
           <ContentCardFooter
@@ -885,23 +912,23 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </div>
     ) } : null,
     tasksTile ? { key: 'tasks', zone: 'end', group: 'work', rank: 26, node: tasksTile } : null,
-    { key: 'team', zone: 'start', group: 'who', rank: 12, node: teamTile },
-    !props.hideMaterials ? { key: 'materials', zone: 'start', group: 'linked', rank: 44, node: (
+    frozenFieldSet.has('additional_agents') ? null : { key: 'team', zone: 'start', group: 'who', rank: 12, node: teamTile },
+    capabilities.materials && !props.hideMaterials ? { key: 'materials', zone: 'start', group: 'linked', rank: 44, node: (
       <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
     ) } : null,
-    !props.hideScheduling ? { key: 'scheduled', zone: 'end', group: 'work', rank: 28, node: (
+    capabilities.scheduling && !props.hideScheduling ? { key: 'scheduled', zone: 'end', group: 'work', rank: 28, node: (
       <Suspense fallback={<BentoTileSkeleton id={`${id}-scheduled-work-tile-loading`} title={t('bento.tiles.scheduledWork', 'Scheduled work')} />}>
             <ScheduledWorkTile
               id={`${id}-scheduled-work-tile`}
               ticketId={ticketId}
               refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
-              onSchedule={props.onScheduleWork}
-              onOpenEntry={props.onOpenScheduleEntry}
+              onSchedule={screenReadOnly ? undefined : props.onScheduleWork}
+              onOpenEntry={screenReadOnly ? undefined : props.onOpenScheduleEntry}
             />
       </Suspense>
     ) } : null,
-    { key: 'documents', zone: 'start', group: 'linked', rank: 42, node: (
+    capabilities.documents ? { key: 'documents', zone: 'start', group: 'linked', rank: 42, node: (
       <DocumentsTile
         id={`${id}-documents-section`}
         ticketId={ticketId}
@@ -913,15 +940,15 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         allowBlockDocuments={!props.disableAttachmentLinking}
         onDocumentCreated={props.onDocumentCreated}
       />
-    ) },
-    !props.hideScheduling ? { key: 'appointments', zone: 'end', group: 'work', rank: 30, node: (
+    ) } : null,
+    capabilities.scheduling && capabilities.appointmentRequests && !props.hideScheduling ? { key: 'appointments', zone: 'end', group: 'work', rank: 30, node: (
           <AppointmentRequestsTile
             id={`${id}-appointment-requests-tile`}
             ticketId={ticketId}
             refreshKey={props.scheduleRefreshKey}
           />
     ) } : null,
-    { key: 'watch', zone: 'start', group: 'who', rank: 14, node: (
+    frozenFieldSet.has('watch_list') ? null : { key: 'watch', zone: 'start', group: 'who', rank: 14, node: (
       <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
@@ -937,7 +964,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
       />
     ) },
-    props.surveySummaryCard ? { key: 'feedback', zone: 'start', group: 'who', rank: 16, node: props.surveySummaryCard } : null,
+    capabilities.survey && props.surveySummaryCard ? { key: 'feedback', zone: 'start', group: 'who', rank: 16, node: props.surveySummaryCard } : null,
     { key: 'calls', zone: 'start', group: 'linked', rank: 46, node: (
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
@@ -953,15 +980,15 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       </Suspense>
     ) },
     // Flag-gated; renders nothing when credentials are off.
-    { key: 'passwords', zone: 'start', group: 'linked', rank: 48, node: <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} /> },
-    { key: 'links', zone: 'start', group: 'linked', rank: 50, node: (
+    capabilities.credentials ? { key: 'passwords', zone: 'start', group: 'linked', rank: 48, node: <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} readOnly={screenReadOnly} /> } : null,
+    capabilities.externalLinks ? { key: 'links', zone: 'start', group: 'linked', rank: 50, node: (
       <TicketExternalLinksSection
         id={`${id}-external-links-section`}
         ticketId={ticketId}
         initialLinks={props.externalLinks}
         onLinksChanged={props.onExternalLinksChanged}
       />
-    ) },
+    ) } : null,
   ] as Array<BentoBoardTile | null>).filter((tile): tile is BentoBoardTile => tile !== null);
 
   // Dialogs owned by side tiles; mounted once, outside the board, so a tier
@@ -1031,11 +1058,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           onBatchSelectChange={props.onBatchSelectChange}
           onUpdateDescription={props.onUpdateDescription}
           responseStateTrackingEnabled={props.responseStateTrackingEnabled}
-          hideSlaStatus={props.hideSlaStatus}
+          hideSlaStatus={props.hideSlaStatus || !capabilities.sla}
           workflowLocked={props.workflowLocked}
           onOpenAllFields={props.onOpenAllFields}
           tags={props.tags}
-          onTagsChange={props.onTagsChange}
+          onTagsChange={capabilities.tags ? props.onTagsChange : undefined}
           heroMeta={props.heroMeta}
           customerLabel={[props.contactInfo?.full_name, props.client?.client_name].filter(Boolean).join(' · ') || null}
           timerControl={!props.hideTimeEntry && ticketId ? (

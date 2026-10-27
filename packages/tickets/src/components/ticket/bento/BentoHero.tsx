@@ -21,7 +21,7 @@ import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { hasDescriptionContent } from './descriptionContent';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
@@ -33,8 +33,7 @@ import {
 } from '../../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
+import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
@@ -225,6 +224,9 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getTicketStatuses, getTicketCategoriesByBoard } = dataSource.options;
+  const { searchUsersForMentions } = dataSource.viewer;
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -886,7 +888,7 @@ export function BentoHero({
         <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
           <div className="min-w-0 flex-[1_1_28rem]" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
-              {isEditingTitle ? (
+              {isEditingTitle && !isFrozen('title') ? (
                 <Input
                   id={`${id}-title-input`}
                   value={titleDraft}
@@ -911,7 +913,8 @@ export function BentoHero({
                     ) : null}
                     <span>{displayedTitle}</span>
                   </span>
-                  <button
+                  {/* A frozen title (read-only screen or a field this source cannot write) offers no edit. */}
+                  {!isFrozen('title') && <button
                     id={`${id}-title-edit`}
                     type="button"
                     aria-label={t('bento.hero.editTitle', 'Edit title')}
@@ -919,7 +922,7 @@ export function BentoHero({
                     onClick={() => setIsEditingTitle(true)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  </button>}
                 </h2>
               )}
             </div>
@@ -1020,6 +1023,7 @@ export function BentoHero({
                   initialTags={tags ?? []}
                   onTagsChange={onTagsChange}
                   useInlineInput
+                  readOnly={dataSource.screen.readOnly === true}
                 />
               </div>
             ) : null}
@@ -1209,7 +1213,7 @@ export function BentoHero({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('fields.description', 'Description')}
             </span>
-            {!isEditingDescription ? (
+            {!isEditingDescription && !isFrozen('description') ? (
               <button
                 id={`${id}-description-edit`}
                 type="button"
