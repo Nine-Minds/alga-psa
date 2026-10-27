@@ -1,5 +1,5 @@
 import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
-import { getAllowedSettingsTabIds } from './settingsProductTabs';
+import { getAllowedSettingsTabIds, isSettingsRestrictedProduct } from './settingsProductTabs';
 
 export type ProductRouteBehavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 export type ProductApiBehavior = 'allowed' | 'denied';
@@ -311,7 +311,7 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
   // Settings tab routes are gated per-segment against the same allow-list SettingsTab
   // uses, so the split-out /msp/settings/<tab> routes keep the pre-split ?tab= boundary.
   const settingsSegment = mspSettingsSegment(pathname);
-  if (settingsSegment !== null && productCode !== 'psa') {
+  if (settingsSegment !== null && isSettingsRestrictedProduct(productCode)) {
     return getAllowedSettingsTabIds(productCode).has(settingsSegment) ? 'allowed' : 'not_found';
   }
 
@@ -352,7 +352,7 @@ type MenuLikeSection<T extends MenuLikeItem> = { items: T[] };
 
 function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
-  if (productCode !== 'psa' && href.startsWith('/msp/settings?tab=')) {
+  if (isSettingsRestrictedProduct(productCode) && href.startsWith('/msp/settings?tab=')) {
     const tab = new URLSearchParams(href.split('?')[1]).get('tab');
     return tab ? getAllowedSettingsTabIds(productCode).has(tab) : false;
   }
