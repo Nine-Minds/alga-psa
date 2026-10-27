@@ -67,6 +67,8 @@ vi.mock('@alga-psa/db', () => ({
     tenantJoin: (query: any) => query,
   }),
   withTransaction: async (_db: unknown, work: (trx: any) => Promise<unknown>) => work(trxStub),
+  // Events are deferred to commit in production; this stub commits immediately.
+  registerAfterCommit: (_trx: unknown, hook: () => Promise<unknown>) => { void hook(); },
 }));
 
 vi.mock('../models/projectTask', () => ({
