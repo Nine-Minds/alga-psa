@@ -28,6 +28,6 @@ Fixed-fee service entries also follow the existing scheduled billing path. Quick
 
 ## Deployment and testing
 
-The database migration for ticket fixed-fee service entries is required before using this feature; deploy the migration with the application changes.
+The database migration for ticket fixed-fee service entries is required before using this feature; deploy the migration with the application changes. Deploy the updated Temporal workflows as well so tenant deletion includes these entries.
 
 The PR will be integrated into the rolling-release branch for testing. Testing on that branch has not yet been completed.

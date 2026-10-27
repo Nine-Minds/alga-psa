@@ -284,8 +284,8 @@ const fakeTrx: any = {
 };
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({
-    table: (name: string) => new FakeBuilder(name),
+  tenantDb: (_trx: unknown, tenant: string) => ({
+    table: (name: string) => new FakeBuilder(name).where('tenant', tenant),
     tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>
       builder.addJoin({ table: joinTable, left, right }),
   }),
@@ -295,8 +295,8 @@ vi.mock('@alga-psa/db', () => ({
 // default billing profile) imports tenantDb from this subpath, not the
 // barrel above, so it needs the same fake table lookup mocked here too.
 vi.mock('@alga-psa/db/tenantDb', () => ({
-  tenantDb: () => ({
-    table: (name: string) => new FakeBuilder(name),
+  tenantDb: (_trx: unknown, tenant: string) => ({
+    table: (name: string) => new FakeBuilder(name).where('tenant', tenant),
     tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>
       builder.addJoin({ table: joinTable, left, right }),
   }),
@@ -315,7 +315,7 @@ function seed() {
   for (const name of [
     'clients', 'tenant_companies', 'client_billing_profiles', 'contacts', 'tickets', 'projects',
     'interactions', 'assets', 'client_locations', 'client_inbound_email_domains', 'client_name_aliases',
-    'usage_tracking', 'bucket_usage', 'ticket_materials', 'project_materials', 'survey_invitations',
+    'usage_tracking', 'bucket_usage', 'ticket_materials', 'ticket_fixed_fee_services', 'project_materials', 'survey_invitations',
     'survey_responses', 'invoices', 'client_billing_cycles', 'payment_methods', 'transactions',
     'credit_tracking', 'client_tax_settings', 'client_contracts', 'contracts',
     'client_portal_visibility_groups', 'billing_profile_contacts', 'client_merges', 'users',
@@ -678,6 +678,26 @@ describe('executeClientMerge', () => {
       expect(table(name).map((row) => row.client_id)).toEqual(['target']);
     }
     expect(result.counts['sales order']).toBe(1);
+  });
+
+  it('moves fixed-fee entries with their tickets without changing billing state or other tenants', async () => {
+    table('ticket_fixed_fee_services').push(
+      { tenant: TENANT, entry_id: 'fee-open', ticket_id: 'ticket-null', client_id: 'source', is_billed: false, billed_invoice_id: null },
+      { tenant: TENANT, entry_id: 'fee-billed', ticket_id: 'ticket-plant', client_id: 'source', is_billed: true, billed_invoice_id: 'inv-1' },
+      { tenant: 'other-tenant', entry_id: 'fee-other', ticket_id: 'ticket-other', client_id: 'source', is_billed: false, billed_invoice_id: null },
+    );
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('ticket_fixed_fee_services')).toEqual([
+      { tenant: TENANT, entry_id: 'fee-open', ticket_id: 'ticket-null', client_id: 'target', is_billed: false, billed_invoice_id: null },
+      { tenant: TENANT, entry_id: 'fee-billed', ticket_id: 'ticket-plant', client_id: 'target', is_billed: true, billed_invoice_id: 'inv-1' },
+      { tenant: 'other-tenant', entry_id: 'fee-other', ticket_id: 'ticket-other', client_id: 'source', is_billed: false, billed_invoice_id: null },
+    ]);
+    expect(result.counts['ticket fixed-fee service']).toBe(2);
   });
 
   it('moves a client\'s contacts together, so reports-to links and asset assignments stay within one client', async () => {

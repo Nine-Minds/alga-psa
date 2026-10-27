@@ -369,6 +369,7 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // Client-scoped checklist templates keep applying to the surviving client's tickets.
   { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_materials', label: 'ticket material' },
+  { table: 'ticket_fixed_fee_services', label: 'ticket fixed-fee service' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },
   { table: 'survey_responses', label: 'survey response' },

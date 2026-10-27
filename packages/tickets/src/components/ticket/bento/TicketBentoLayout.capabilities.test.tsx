@@ -105,6 +105,7 @@ vi.mock('../TicketStopwatchControls', () => ({
 }));
 vi.mock('../TicketTimeEntries', () => ({ __esModule: true, default: () => null }));
 vi.mock('../TicketMaterialsCard', () => ({ __esModule: true, default: () => <div data-testid="s-materials" /> }));
+vi.mock('../TicketFixedFeeServicesCard', () => ({ __esModule: true, default: () => <div data-testid="s-fixed-fees" /> }));
 vi.mock('../TicketWatchListCard', () => ({ __esModule: true, default: () => <div data-testid="s-watch-list" /> }));
 
 function baseProps(overrides: Partial<TicketBentoLayoutProps> = {}): TicketBentoLayoutProps {
