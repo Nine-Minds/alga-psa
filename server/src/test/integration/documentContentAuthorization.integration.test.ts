@@ -6,6 +6,7 @@
  * - client-portal user cannot read a document that is not client-visible (404)
  * - positive controls: the owning client and an internal technician still read it (200)
  * - a client-visible document the client created itself (no associations) stays readable
+ * - fields the kernel's decision redacts are absent from the response
  */
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -105,6 +106,7 @@ describe('document content route authorization', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     const safeDelete = async (name: string, where: Record<string, unknown>) => {
       try { await table(name).where(where).del(); } catch { /* teardown only */ }
     };
@@ -174,5 +176,41 @@ describe('document content route authorization', () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toContain(SECRET);
+  });
+
+  it("serves only what the kernel's decision leaves: redacted fields are not in the response", async () => {
+    const { clientA, clientUserA } = await twoClients();
+    const documentId = await createDocWithContent('Redacted Name Doc', true, clientA);
+    await table('documents').where({ document_id: documentId }).update({ mime_type: 'text/x-redaction-marker' });
+
+    const bundles = await import('@alga-psa/authorization/bundles/service');
+    const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+      { id: 'redact', resource: 'document', action: 'read', constraintKey: 'hide_sensitive_fields',
+        redactedFields: ['content', 'document_name', 'mime_type'] },
+    ] as any);
+
+    actAs(clientUserA);
+    const response = await callContent(documentId);
+    expect(rulesSpy).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).not.toContain(SECRET);
+    expect(text).not.toContain('Redacted Name Doc');
+    expect(text).not.toContain('text/x-redaction-marker');
+    const body = JSON.parse(text);
+    expect(body.data.document).not.toHaveProperty('document_name');
+    expect(body.data.document).not.toHaveProperty('mime_type');
+    expect(body.data.document.document_id).toBe(documentId);
+    expect(body.data.content).toMatchObject({ has_content: false, text_content: null, block_content: null, extracted_text: null });
+
+    // Control: a decision that redacts only the name still serves the content.
+    rulesSpy.mockResolvedValue([
+      { id: 'redact', resource: 'document', action: 'read', constraintKey: 'hide_sensitive_fields', redactedFields: ['document_name'] },
+    ] as any);
+    const nameOnly = await callContent(documentId);
+    expect(nameOnly.status).toBe(200);
+    const nameOnlyText = await nameOnly.text();
+    expect(nameOnlyText).toContain(SECRET);
+    expect(nameOnlyText).not.toContain('Redacted Name Doc');
   });
 });

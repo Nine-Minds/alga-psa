@@ -9,6 +9,16 @@ import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 
+const DOCUMENT_METADATA_FIELDS = [
+  'document_id',
+  'document_name',
+  'file_id',
+  'mime_type',
+  'type_id',
+  'shared_type_id',
+  'updated_at',
+] as const;
+
 type BlockContentPayload = {
   content_id: string;
   block_data: unknown;
@@ -87,32 +97,32 @@ export async function GET(
         return NextResponse.json({ error: 'Document not found' }, { status: 404 });
       }
 
-      const [documentRecord, blockContentRecord, textContentRecord] = await Promise.all([
-        db.table('documents')
-          .where({ document_id: documentId })
-          .select(
-            'document_id',
-            'document_name',
-            'file_id',
-            'mime_type',
-            'type_id',
-            'shared_type_id',
-            'updated_at',
-          )
-          .first(),
-        db.table('document_block_content')
-          .where({ document_id: documentId })
-          .select('content_id', 'block_data', 'version_id', 'created_at', 'updated_at')
-          .first<BlockContentPayload>(),
-        db.table('document_content')
-          .where({ document_id: documentId })
-          .select('id', 'content', 'created_at', 'updated_at')
-          .first<TextContentPayload>(),
-      ]);
+      // Everything below is built from the kernel's decision. Redacted fields
+      // are absent from `authorizedDocument`, so a field is served only if the
+      // kernel left it in place: document metadata is projected from the
+      // authorized record, and the document's content bodies (block and text)
+      // are governed by its `content` field.
+      const authorizedFields: Record<string, unknown> = { ...authorizedDocument };
+      const documentRecord = Object.fromEntries(
+        DOCUMENT_METADATA_FIELDS
+          .filter((field) => Object.prototype.hasOwnProperty.call(authorizedFields, field))
+          .map((field) => [field, authorizedFields[field]]),
+      );
+      const contentReadable = Object.prototype.hasOwnProperty.call(authorizedFields, 'content');
+      const fileId = typeof documentRecord.file_id === 'string' ? documentRecord.file_id : null;
 
-      if (!documentRecord) {
-        return NextResponse.json({ error: 'Document not found' }, { status: 404 });
-      }
+      const [blockContentRecord, textContentRecord] = contentReadable
+        ? await Promise.all([
+            db.table('document_block_content')
+              .where({ document_id: documentId })
+              .select('content_id', 'block_data', 'version_id', 'created_at', 'updated_at')
+              .first<BlockContentPayload>(),
+            db.table('document_content')
+              .where({ document_id: documentId })
+              .select('id', 'content', 'created_at', 'updated_at')
+              .first<TextContentPayload>(),
+          ])
+        : [undefined, undefined];
 
       let parsedBlockData: unknown = null;
       let blockDataParseError: string | null = null;
@@ -191,8 +201,8 @@ export async function GET(
             parse_warning: blockDataParseError,
           },
           guidance: {
-            file_backed_document: Boolean(documentRecord.file_id),
-            next_step_if_file_backed: documentRecord.file_id
+            file_backed_document: Boolean(fileId),
+            next_step_if_file_backed: fileId
               ? `/api/documents/${documentId}/download`
               : null,
           },
