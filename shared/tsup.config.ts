@@ -161,5 +161,9 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // @alga-psa/licensing ships TypeScript source only (no dist), so native
+    // Node cannot load it from the built runtime. The lifecycle-error contract
+    // is dependency-free and matched structurally, so an inlined copy is safe.
+    /^@alga-psa\/licensing\/lifecycle-error$/,
   ],
 });
