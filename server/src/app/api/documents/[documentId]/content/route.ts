@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 
 type BlockContentPayload = {
   content_id: string;
@@ -75,6 +77,15 @@ export async function GET(
 
       const { knex } = await createTenantKnex();
       const db = tenantDb(knex, tenantId);
+
+      // document:read is a type permission; resolve the instance through the
+      // document authorization kernel before reading any content.
+      const authorizedDocument = await withTransaction(knex, (trx: Knex.Transaction) =>
+        getAuthorizedDocumentById(trx, tenantId as string, currentUser as any, documentId),
+      );
+      if (!authorizedDocument) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      }
 
       const [documentRecord, blockContentRecord, textContentRecord] = await Promise.all([
         db.table('documents')
