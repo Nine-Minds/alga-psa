@@ -307,6 +307,35 @@ export function ruleServesHasNoFlag(source: string): string[] {
   return out;
 }
 
+/**
+ * Rule E: the gate's test-only hatches (`resetCapabilityRegistry`,
+ * `clearCapabilityCache`) are unreachable from production code. They live in
+ * `packages/core/src/capability/testing.ts`, which is not a package export and
+ * which no production file may import (by subpath or relative path).
+ */
+export function ruleE(files: SourceFile[]): string[] {
+  const out: string[] = [];
+  for (const f of files) {
+    if (f.path === 'packages/core/src/capability/testing.ts' || !f.source.includes('capability/testing')) continue;
+    const sf = parse(f);
+    const visit = (n: ts.Node) => {
+      const spec =
+        (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier && ts.isStringLiteralLike(n.moduleSpecifier)
+          ? n.moduleSpecifier.text
+          : ts.isCallExpression(n) && n.arguments[0] && ts.isStringLiteralLike(n.arguments[0]) &&
+              (n.expression.kind === ts.SyntaxKind.ImportKeyword || calleeName(n) === 'require')
+            ? (n.arguments[0] as ts.StringLiteralLike).text
+            : null;
+      if (spec && /(^|\/)capability\/testing(\.[jt]s)?$/.test(spec)) {
+        out.push(`capabilityEntryPoints: production file ${f.path}:${lineOf(sf, n)} imports the capability test hatch '${spec}'`);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return out;
+}
+
 /** Rule D: posthog-js/react and next/* unreachable from the capability graph and worker entries. */
 export function ruleD(
   workerEntries: string[],
@@ -397,6 +426,14 @@ describe('capability gate coverage (AST) — branch is green', () => {
       expect(workerEntries).toContain(e);
     }
     expect(ruleD(workerEntries)).toEqual([]);
+  });
+
+  it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
+    expect(ruleE(repoFiles)).toEqual([]);
+    const pure = readFileSync(join(REPO, 'packages/core/src/lib/capability.ts'), 'utf8');
+    expect(pure).not.toMatch(/export function (resetCapabilityRegistry|clearCapabilityCache)\b/);
+    const pkg = JSON.parse(readFileSync(join(REPO, 'packages/core/package.json'), 'utf8'));
+    expect(Object.keys(pkg.exports)).not.toContain('./capability/testing');
   });
 
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
@@ -550,6 +587,13 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
       'capabilityEntryPoints: family server-actions matches 1 production files, expected 0',
     ]);
+  });
+
+  it('Rule E fails on a production import of the test hatch, by subpath, relative path or dynamic import', () => {
+    expect(ruleE([file('server/src/lib/foo.ts', `import { resetCapabilityRegistry } from '@alga-psa/core/capability/testing';`)])).toHaveLength(1);
+    expect(ruleE([file('packages/core/src/lib/bar.ts', `export * from '../capability/testing';`)])).toHaveLength(1);
+    expect(ruleE([file('shared/x.ts', `const t = await import('@alga-psa/core/capability/testing');`)])).toHaveLength(1);
+    expect(ruleE([file('server/src/lib/ok.ts', `import { admits } from '@alga-psa/core/capability';`)])).toEqual([]);
   });
 
   it('serves-has-no-flag rule fails when serves references the flag evaluator', () => {

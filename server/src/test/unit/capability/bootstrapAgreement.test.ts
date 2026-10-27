@@ -7,13 +7,12 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(
 
 import {
   admits,
-  clearCapabilityCache,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
   resolveClientCapability,
   serves,
-  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { resolveCapabilityBootstrap } from '../../../lib/capability/bootstrap';
 
 describe('server/client agreement through the bootstrap', () => {

@@ -54,13 +54,14 @@ describe('worker boot safety', () => {
     });
     vi.doMock('../../../../../packages/core/src/lib/features', () => ({ isFeatureFlagEnabled: boom }));
     const cap = await import('../../../../../packages/core/src/lib/capability');
+    const testing = await import('../../../../../packages/core/src/capability/testing');
     cap.registerCapabilityEligibility('co-managed', async () => {
       throw new Error('db down');
     });
     cap.registerCapabilityParticipation('co-managed', async () => {
       throw new Error('db down');
     });
-    cap.clearCapabilityCache();
+    testing.clearCapabilityCache();
     await expect(cap.serves('co-managed', 't1')).resolves.toMatchObject({ served: false });
     await expect(cap.admits('co-managed', 't1')).resolves.toMatchObject({ admitted: false });
     await expect(cap.filterServed('co-managed', ['t1'])).resolves.toEqual([]);
@@ -69,7 +70,7 @@ describe('worker boot safety', () => {
       capability: 'co-managed',
     });
     // The gate registry is process-global; leave no throwing resolvers behind.
-    cap.resetCapabilityRegistry();
+    testing.resetCapabilityRegistry();
     vi.doUnmock('../../../../../packages/core/src/lib/features');
   });
 });

@@ -39,12 +39,11 @@ vi.mock('posthog-js/react', () => ({ usePostHog: () => posthogJs }));
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import {
   admits,
-  clearCapabilityCache,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
   serves,
-  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { FeatureFlagBootstrapProvider, useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
 import { clearTenantFlagPropertiesCache, featureFlags } from '../../../lib/feature-flags/featureFlags';
 import { resolveCapabilityBootstrap } from '../../../lib/capability/bootstrap';

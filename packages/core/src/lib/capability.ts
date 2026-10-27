@@ -290,19 +290,9 @@ export function invalidateCapability(capability: CapabilityKey, tenantId?: strin
   }
 }
 
-/** Tests only. */
-export function clearCapabilityCache(): void {
-  registry().cache.clear();
-}
-
-/**
- * Tests only. Drop every registered resolver and cached decision, restoring
- * the built-in gate definitions. The registry lives on `globalThis`, so in a
- * shared test process it outlives a single test file.
- */
-export function resetCapabilityRegistry(): void {
-  delete (globalThis as RegistryHost)[REGISTRY_KEY];
-}
+// Test-only hatches (clear the cache, reset the registry) live in
+// `src/capability/testing.ts`, which production code may not import (enforced
+// by the capability entry-point contract) and which is not a package export.
 
 const DEFAULT_TTL_MS = 30_000;
 const MAX_TTL_MS = 300_000;

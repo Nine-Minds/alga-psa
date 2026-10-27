@@ -22,7 +22,8 @@ vi.mock('@alga-psa/auth', () => ({ getSession }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
 
 import middleware from 'server/src/middleware';
-import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability';
+import {  } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { GET } from 'server/src/app/api/v1/capabilities/co-managed/route';
 
 const PROBE = 'http://localhost:3000/api/v1/capabilities/co-managed';

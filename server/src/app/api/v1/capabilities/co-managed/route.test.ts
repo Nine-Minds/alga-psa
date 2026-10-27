@@ -6,7 +6,8 @@ const flag = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/auth', () => ({ getSession }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
 
-import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability';
+import {  } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { GET } from './route';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'Resource not found' } };

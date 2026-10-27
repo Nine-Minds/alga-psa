@@ -9,7 +9,6 @@ import { registerFeatureFlagChecker } from './features';
 import {
   activityServesCapability,
   admits,
-  clearCapabilityCache,
   evaluateCapability,
   filterServed,
   forcedValue,
@@ -25,6 +24,7 @@ import {
   UnknownCapabilityError,
   type CapabilityKey,
 } from './capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '../capability/testing';
 
 const CAP: CapabilityKey = 'co-managed';
 const FLAG = 'release-v2-0-feature';
@@ -398,6 +398,14 @@ describe('capabilityGate', () => {
       registerCapabilityEligibility(CAP, null);
       expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'unregistered', participation: 'registered' });
     });
+  });
+
+  it('the test hatch resets the real registry (its key matches the gate module)', async () => {
+    wire({ eligible: true, participating: ['t1'] });
+    expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'registered', participation: 'registered' });
+    resetCapabilityRegistry();
+    expect(capabilityResolverStatus(CAP)).toEqual({ eligibility: 'unregistered', participation: 'unregistered' });
+    expect(capabilityFeatureFlag(CAP)).toBe(FLAG);
   });
 
   it('activityServesCapability returns the sentinel when closed and null when served', async () => {

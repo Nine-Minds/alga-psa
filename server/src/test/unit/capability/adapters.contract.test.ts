@@ -13,14 +13,13 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 import {
   activityServesCapability,
-  clearCapabilityCache,
   filterCapabilityServed,
   invalidateCapability,
   isCapabilityServed,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
-  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import {
   CapabilityUnavailableError,
   capabilityRouteGuard,

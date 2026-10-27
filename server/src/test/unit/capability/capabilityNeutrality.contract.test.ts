@@ -49,13 +49,12 @@ import {
   admits,
   capabilityAdmitBootstrapKey,
   capabilityServedBootstrapKey,
-  clearCapabilityCache,
   evaluateCapability,
   filterServed,
   resolveClientCapability,
   serves,
-  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import {
   clearTenantFlagPropertiesCache,
   featureFlags,
