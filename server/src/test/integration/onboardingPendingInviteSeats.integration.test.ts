@@ -10,7 +10,8 @@ import { getSecret } from '../../lib/utils/getSecret';
 // pending; an accepted invitee is an active user, counted once.
 
 const context = vi.hoisted(() => ({ tenant: '', db: null as any }));
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/auth')>(),
   withAuth: (fn: any) => (...args: any[]) =>
     fn({ user_id: 'admin', tenant: context.tenant, user_type: 'internal' }, { tenant: context.tenant }, ...args),
   hasPermission: vi.fn(async () => true),
