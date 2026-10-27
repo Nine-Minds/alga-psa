@@ -19,7 +19,7 @@ Ticket: alga-2026-0002848   Design: docs/plans/2026-10-26-cm-l0g-plan.md
 | `scripts/tests/n1-schema.test.mjs` | test | |
 | `scripts/ci/attribute-card.mjs` | test | maps a failing path to the owning charter |
 | `server/src/test/contract/hotPathScenario.ts` | test | 16 canonical psa-tenant steps |
-| `server/src/test/contract/hotPathQueryBudget.test.ts` | test | runner, UNSTABLE vs BUDGET EXCEEDED |
+| `server/src/test/contract/hotPathQueryBudget.db.test.ts` | test | runner, UNSTABLE vs BUDGET EXCEEDED |
 | `server/src/test/contract/hotPathQueryBudget.json` | fixture | snapshot; raising a number is a reviewed diff |
 | `.github/workflows/ci-safety-gates.yml` | test | four jobs |
 | `docs/cards/co-managed/L0g-rollout-safety-gates.md` | guide | this charter |
