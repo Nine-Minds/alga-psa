@@ -29,6 +29,8 @@ interface TagManagerProps {
     canDelete: boolean;
     canDeleteAll: boolean;
   };
+  /** Display the entity's tags with no add, remove, or edit affordance. */
+  readOnly?: boolean;
 }
 
 export const TagManager: React.FC<TagManagerProps> = ({
@@ -42,7 +44,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
   allowTextEdit = true,
   useInlineInput = false,
   size = 'md',
-  permissions: passedPermissions
+  permissions: passedPermissions,
+  readOnly = false
 }) => {
   const { t } = useTranslation('common');
   // Always call useTags to avoid conditional hooks
@@ -357,6 +360,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         <div className={`flex flex-wrap ${gapClass}`}>
           <TagList
             tags={tags}
+            readOnly={readOnly}
             onRemoveTag={handleRemoveTag}
             allowColorEdit={allowColorEdit && permissions.canEditColors}
             allowTextEdit={allowTextEdit && permissions.canEditText}
@@ -365,7 +369,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
             size={size}
           />
         </div>
-        {(permissions.canAddExisting || permissions.canCreateNew) && (
+        {!readOnly && (permissions.canAddExisting || permissions.canCreateNew) && (
           <div className="flex-shrink-0 overflow-visible">
             {useInlineInput ? (
               <TagInputInline

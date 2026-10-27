@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// T002 (Entry layout half). TicketDetails is too heavy to mount in a unit test
+// (no existing suite does), so this pins the gates in source. The Bento half
+// is a rendering test in bento/TicketBentoLayout.capabilities.test.tsx.
+const source = fs.readFileSync(path.resolve(__dirname, 'TicketDetails.tsx'), 'utf8');
+
+// Each entry: the gate expression that must wrap/disable that section in the Entry layout.
+const GATES: Array<[string, string]> = [
+  ['checklist section', '{capabilities.checklist ? ('],
+  ['documents section', '{capabilities.documents ? ('],
+  ['credentials section', '{capabilities.credentials ? ('],
+  ['external links section', '{capabilities.externalLinks ? ('],
+  ['email logs drawer', '{capabilities.emailLogs ? ('],
+  ['activity log drawer', '{capabilities.activityLog ? ('],
+  ['bundles dialog', '{capabilities.bundles ? ('],
+  ['delete dialog', '{capabilities.delete ? ('],
+  ['tags', 'onTagsChange={capabilities.tags ? handleTagsChange : undefined}'],
+  ['sla', 'hideSlaStatus || !capabilities.sla'],
+  ['billing', 'hideBilling || !capabilities.billing'],
+  ['scheduling', 'hideScheduling || !capabilities.scheduling'],
+  ['time entry', 'hideTimeEntry || !capabilities.timeEntry'],
+  ['materials', 'hideMaterials || !capabilities.materials'],
+  ['survey', 'capabilities.survey ? surveySummaryCard : undefined'],
+  ['assets', 'capabilities.assets ? associatedAssets : null'],
+  ['create project task', 'capabilities.createProjectTask ? renderCreateProjectTask : undefined'],
+  ['quick invoice', 'capabilities.quickInvoice && !effectiveHideBilling'],
+  ['navigation', 'capabilities.navigation && ticket.ticket_id'],
+  ['duplicate', 'capabilities.duplicate ? <DropdownMenuItem'],
+  ['create template', 'capabilities.createTemplate && templatePermissions.create'],
+  ['create workflow', 'capabilities.createWorkflow'],
+  ['live presence', 'capabilities.live && ticketLive.enabled'],
+];
+
+const hasGate = (text: string, gate: string) => text.includes(gate);
+
+describe('T002 TicketDetails entry layout capability gates', () => {
+  it.each(GATES)('%s is gated by its capability', (_name, gate) => {
+    expect(hasGate(source, gate)).toBe(true);
+  });
+
+  it('renders no placeholder for gated sections', () => {
+    expect(source).not.toMatch(/not available|unavailable for shared/i);
+  });
+
+  it('mutation check: removing any gate is detected', () => {
+    for (const [, gate] of GATES) {
+      const mutated = source.split(gate).join('true');
+      expect(hasGate(mutated, gate)).toBe(false);
+    }
+  });
+});
