@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { OnboardingWizard } from '@alga-psa/onboarding/components';
 import { getTenantSettings } from '@alga-psa/tenancy/actions';
-import { getOnboardingInitialData } from '@alga-psa/onboarding/actions';
+import { getOnboardingInitialData, getWorkspaceSetupAccess } from '@alga-psa/onboarding/actions';
 import type { WizardData } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
@@ -23,6 +23,12 @@ export default function OnboardingPage() {
 
   const checkOnboardingStatusAndLoadData = async () => {
     try {
+      // Workspace setup is for administrators; its actions refuse anyone else.
+      if (!(await getWorkspaceSetupAccess()).canRun) {
+        router.replace('/msp/dashboard');
+        return;
+      }
+
       // Load tenant settings
       const settings = await getTenantSettings();
 
