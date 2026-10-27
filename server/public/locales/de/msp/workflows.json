@@ -881,6 +881,7 @@
       "add": "Hinzufügen",
       "remove": "Entfernen",
       "empty": "Noch keine Zuordnungen.",
+      "nameRequired": "Geben Sie einen Namen für diese Zuordnung ein.",
       "expressionLabel": "Ausdruck"
     },
     "schemaForm": {
