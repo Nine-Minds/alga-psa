@@ -12,14 +12,39 @@ const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 24 hours
 
 let cachedSecret: string | null = null;
 
-function getCookiePortSuffix(): string | null {
-  const urlCandidates = [
-    process.env.NEXTAUTH_URL,
-    process.env.APP_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-  ].filter(Boolean) as string[];
+/**
+ * Everything the auth cookie names depend on. The runtime reads it from
+ * `process.env` (`readSessionCookieEnvironment`); anything else that has to
+ * write or read an Alga session cookie (test helpers, smoke tools) builds one
+ * of these and calls the same functions, so no consumer re-derives the name.
+ */
+export interface SessionCookieEnvironment {
+  nodeEnv?: string;
+  /** Decides `__Secure-` in production together with `nodeEnv`. */
+  nextAuthUrl?: string;
+  /** Public URLs in precedence order; the first one that parses is authoritative. */
+  publicUrls: Array<string | undefined>;
+  /** Listener port; only consulted outside production when no public URL parses. */
+  listenerPort?: string | null;
+}
 
-  for (const candidate of urlCandidates) {
+export function readSessionCookieEnvironment(): SessionCookieEnvironment {
+  return {
+    nodeEnv: process.env.NODE_ENV,
+    nextAuthUrl: process.env.NEXTAUTH_URL,
+    publicUrls: [
+      process.env.NEXTAUTH_URL,
+      process.env.APP_URL,
+      process.env.NEXT_PUBLIC_APP_URL,
+    ],
+    listenerPort:
+      process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null,
+  };
+}
+
+function cookiePortSuffixFor(env: SessionCookieEnvironment): string | null {
+  for (const candidate of env.publicUrls) {
+    if (!candidate) continue;
     try {
       // The first valid public URL is authoritative. A portless URL means
       // the browser uses the scheme's standard port, even when a reverse
@@ -32,13 +57,11 @@ function getCookiePortSuffix(): string | null {
 
   // A production listener port is an implementation detail. Only development
   // runtimes without a public URL need PORT to keep worktree cookies separate.
-  if (process.env.NODE_ENV === 'production') {
+  if (env.nodeEnv === 'production') {
     return null;
   }
 
-  const portCandidate =
-    process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
-  return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+  return env.listenerPort && env.listenerPort.length > 0 ? env.listenerPort : null;
 }
 
 /**
@@ -48,8 +71,8 @@ function getCookiePortSuffix(): string | null {
  * the port marker before the `authjs` cookie name so another runtime cannot
  * consume or clear this runtime's session cookie.
  */
-export function withDevPortSuffix(cookieName: string): string {
-  const portSuffix = getCookiePortSuffix();
+export function portScopedCookieNameFor(cookieName: string, env: SessionCookieEnvironment): string {
+  const portSuffix = cookiePortSuffixFor(env);
   if (!portSuffix) {
     return cookieName;
   }
@@ -61,6 +84,27 @@ export function withDevPortSuffix(cookieName: string): string {
   }
 
   return `${cookieName}-port-${portSuffix}`;
+}
+
+export function isSecureCookieEnvironmentFor(env: SessionCookieEnvironment): boolean {
+  return env.nodeEnv === 'production'
+    && (!env.nextAuthUrl || env.nextAuthUrl.startsWith('https://'));
+}
+
+/**
+ * The session cookie name. Auth.js also uses it as the JWT salt, so a token
+ * minted for this cookie must be encoded with exactly this string.
+ */
+export function sessionCookieNameFor(env: SessionCookieEnvironment): string {
+  const baseName = isSecureCookieEnvironmentFor(env)
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
+
+  return portScopedCookieNameFor(baseName, env);
+}
+
+export function withDevPortSuffix(cookieName: string): string {
+  return portScopedCookieNameFor(cookieName, readSessionCookieEnvironment());
 }
 
 /**
@@ -80,16 +124,11 @@ export function getSessionMaxAge(): number {
  * Get the session cookie name (environment-aware with port suffix for dev)
  */
 export function isSecureCookieEnvironment(): boolean {
-  return process.env.NODE_ENV === 'production'
-    && (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.startsWith('https://'));
+  return isSecureCookieEnvironmentFor(readSessionCookieEnvironment());
 }
 
 export function getSessionCookieName(): string {
-  const baseName = isSecureCookieEnvironment()
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-
-  return withDevPortSuffix(baseName);
+  return sessionCookieNameFor(readSessionCookieEnvironment());
 }
 
 /**
