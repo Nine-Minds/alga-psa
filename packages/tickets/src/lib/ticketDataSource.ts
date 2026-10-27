@@ -383,6 +383,7 @@ export interface TicketRecordMethods {
   updateTicketWithCache: typeof updateTicketWithCache;
   updateTicketWithCacheForCurrentUser: typeof updateTicketWithCacheForCurrentUser;
   getAdjacentTicketIds: typeof getAdjacentTicketIds;
+  /** Recurring-origin badge. Not capability gated: return null when the source has no recurring definition. */
   getRecurringSourceForTicket: typeof getRecurringSourceForTicket;
   findBoardById: typeof findBoardById;
   getScheduledHoursForTicket: typeof getScheduledHoursForTicket;
@@ -506,9 +507,12 @@ export interface TicketTagMethods {
 }
 
 /**
- * Avatar batch reads. These take an explicit tenant and no auth check, so a
- * shared implementation must never forward a foreign tenant: return no avatars
- * or tenant-safe results instead.
+ * Avatar reads, `(ids, tenant)`. Callers pass `ticket.tenant`, which for a
+ * non-native ticket may be another tenant. The native implementation
+ * (`actions/ticketAvatarActions.ts`) ignores any tenant other than the
+ * session's and returns no avatars; any other implementation must be equally
+ * tenant-safe. The ticket-id guard harness throws from this group so a
+ * non-native source has to supply its own.
  */
 export interface TicketAvatarMethods {
   getUserAvatarUrlsBatchAction: typeof getUserAvatarUrlsBatchAction;
@@ -534,7 +538,11 @@ export interface TicketViewerMethods {
 
 export interface TicketDataSource {
   readonly kind: TicketDataSourceKind;
-  /** Set by a data source bound to a single ticket; used to validate ids. */
+  /**
+   * The one ticket a bound data source serves. The screen does not read it;
+   * it documents the binding, and the implementation's own methods check
+   * incoming ids against it.
+   */
   readonly boundTicketId?: string;
   readonly capabilities: TicketCapabilities;
   readonly screen: TicketScreenBehavior;

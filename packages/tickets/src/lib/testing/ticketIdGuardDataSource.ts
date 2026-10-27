@@ -14,9 +14,10 @@ import {
  * native ticket-id action fails loudly instead of silently reading or writing
  * the wrong tenant's data.
  *
- * Only groups that are keyed by a native ticket id are replaced. Pure
- * configuration (`capabilities`, `screen`, `conversation`, `slots`, `time`)
- * and viewer/avatar/option helpers are kept from the base.
+ * Groups keyed by a native ticket id, plus `avatars` (keyed by the ticket's
+ * tenant), are replaced. Pure configuration (`capabilities`, `screen`,
+ * `conversation`, `slots`, `time`) and viewer/option helpers are kept from
+ * the base.
  */
 export const TICKET_ID_KEYED_GROUPS = [
   'ticket',
@@ -31,6 +32,9 @@ export const TICKET_ID_KEYED_GROUPS = [
   'materials',
   'tiles',
   'tags',
+  // Not ticket-id keyed, but keyed by the caller-supplied `ticket.tenant`:
+  // a non-native source must supply tenant-safe avatar reads of its own.
+  'avatars',
 ] as const;
 
 export type TicketIdKeyedGroup = (typeof TICKET_ID_KEYED_GROUPS)[number];

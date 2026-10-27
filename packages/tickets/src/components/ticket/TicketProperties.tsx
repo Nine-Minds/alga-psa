@@ -106,7 +106,7 @@ interface TicketPropertiesProps {
   onEditTimeEntry?: (entry: { entry_id: string }) => void;
   onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
   hideTimeEntry?: boolean;
-  /** Rendered in a Time card when the native time panel is hidden (for example an effort split). */
+  /** Rendered next to the time summary: inside the Time Entry card, or in its own Time card when the native time panel is hidden (for example an effort split). */
   timeSummarySlot?: React.ReactNode;
   hideMaterials?: boolean;
   onLiveDirtyFieldsChange?: (fields: string[]) => void;
@@ -603,6 +603,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             />
           )}
 
+          {/* Same placement as the Grid time tile: next to the time summary. */}
+          {timeSummarySlot}
         </div>
       </ContentCard>
       )}

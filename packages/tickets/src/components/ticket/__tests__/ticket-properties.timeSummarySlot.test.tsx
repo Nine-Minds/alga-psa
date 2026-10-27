@@ -81,7 +81,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
-  ContentCard: ({ children }: any) => <div>{children}</div>,
+  ContentCard: ({ children, id }: any) => <div id={id}>{children}</div>,
   useContentCardVariant: () => 'default',
 }));
 
@@ -344,8 +344,22 @@ describe('TicketProperties (Entry layout) with the native time panel hidden', ()
     expect(screen.queryByText('Could not load time entries')).toBeNull();
   });
 
-  it('keeps the native time panel and ignores the slot while time entry is available', () => {
-    render(<TicketProperties {...(defaultProps() as any)} timeSummarySlot={<div data-testid="effort-split" />} />);
+  it('renders the slot inside the native time panel while time entry is available (Grid parity)', () => {
+    const { container } = render(
+      <TicketProperties {...(defaultProps() as any)} timeSummarySlot={<div data-testid="effort-split" />} />,
+    );
+    expect(screen.getByText('Add Time Entry')).toBeTruthy();
+    const slot = screen.getByTestId('effort-split');
+    expect(screen.getAllByTestId('effort-split')).toHaveLength(1);
+    // Inside the existing Time Entry card, not a second Time card.
+    expect(container.querySelector('[id$="-time-summary-card"]')).toBeNull();
+    const timeEntryCard = slot.closest('[id$="-time-entry"]');
+    expect(timeEntryCard).not.toBeNull();
+    expect(timeEntryCard!.textContent).toContain('Add Time Entry');
+  });
+
+  it('adds nothing to the native time panel without a slot (native default)', () => {
+    render(<TicketProperties {...(defaultProps() as any)} />);
     expect(screen.getByText('Add Time Entry')).toBeTruthy();
     expect(screen.queryByTestId('effort-split')).toBeNull();
   });

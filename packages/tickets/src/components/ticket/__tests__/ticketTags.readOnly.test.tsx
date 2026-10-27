@@ -313,3 +313,25 @@ describe.each(layouts)('%s layout ticket tags', (_name, renderLayout) => {
     expect(controls.edit).toHaveLength(existingTags.length);
   });
 });
+
+describe('Entry layout save bar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tagActions.getAllTags.mockResolvedValue([]);
+  });
+
+  it('shows no Save or Cancel when the screen is read-only', async () => {
+    const { container } = renderEntry(workspaceDataSource(true));
+    expect(await screen.findByText('Escalated')).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(container.querySelector('#ticket-info-save-changes-btn')).toBeNull();
+    expect(container.querySelector('#ticket-info-cancel-btn')).toBeNull();
+  });
+
+  it('shows Save and Cancel on a writable screen', async () => {
+    const { container } = renderEntry(workspaceDataSource(false));
+    expect(await screen.findByText('Escalated')).toBeInTheDocument();
+    expect(container.querySelector('#ticket-info-save-changes-btn')).not.toBeNull();
+    expect(container.querySelector('#ticket-info-cancel-btn')).not.toBeNull();
+  });
+});

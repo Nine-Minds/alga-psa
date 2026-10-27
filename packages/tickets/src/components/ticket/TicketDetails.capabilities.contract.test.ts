@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// T002 (Entry layout half). TicketDetails is too heavy to mount in a unit test
-// (no existing suite does), so this pins the gates in source. The Bento half
-// is a rendering test in bento/TicketBentoLayout.capabilities.test.tsx.
+// T002 (Entry layout half), source pins. The behavioural check is the mounted
+// suite in __tests__/TicketDetails.capabilities.test.tsx, which switches each
+// capability off and asserts its section disappears. These pins cover the
+// gates that suite cannot observe with its mocks (dialogs that render only
+// when open, menu entries inside TicketInfo's injected nodes, presence). The
+// Bento half is a rendering test in bento/TicketBentoLayout.capabilities.test.tsx.
 const source = fs.readFileSync(path.resolve(__dirname, 'TicketDetails.tsx'), 'utf8');
 
 // Each entry: the gate expression that must wrap/disable that section in the Entry layout.
@@ -43,12 +46,5 @@ describe('T002 TicketDetails entry layout capability gates', () => {
 
   it('renders no placeholder for gated sections', () => {
     expect(source).not.toMatch(/not available|unavailable for shared/i);
-  });
-
-  it('mutation check: removing any gate is detected', () => {
-    for (const [, gate] of GATES) {
-      const mutated = source.split(gate).join('true');
-      expect(hasGate(mutated, gate)).toBe(false);
-    }
   });
 });

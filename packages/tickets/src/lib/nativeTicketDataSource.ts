@@ -166,9 +166,10 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
   }),
 
   avatars: Object.freeze({
-    getUserAvatarUrlsBatchAction: lazy(() => import('@alga-psa/user-composition/actions'), 'getUserAvatarUrlsBatchAction'),
-    getTeamAvatarUrlsBatchAction: lazy(() => import('@alga-psa/teams/actions'), 'getTeamAvatarUrlsBatchAction'),
-    getContactAvatarUrlAction: lazy(() => import('@alga-psa/user-composition/actions'), 'getContactAvatarUrlAction'),
+    // Session-tenant checked: a ticket from another tenant gets no avatars.
+    getUserAvatarUrlsBatchAction: lazy(() => import('../actions/ticketAvatarActions'), 'getTicketUserAvatarUrlsBatch'),
+    getTeamAvatarUrlsBatchAction: lazy(() => import('../actions/ticketAvatarActions'), 'getTicketTeamAvatarUrlsBatch'),
+    getContactAvatarUrlAction: lazy(() => import('../actions/ticketAvatarActions'), 'getTicketContactAvatarUrl'),
   }),
 
   viewer: Object.freeze({

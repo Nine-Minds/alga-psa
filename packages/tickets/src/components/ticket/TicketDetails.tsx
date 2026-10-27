@@ -781,9 +781,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         [ticket, originExternalLink?.system],
     );
     // The definition a recurring ticket came from; null (no link) when the viewer may not read definitions.
+    // Not a capability: the data source's getRecurringSourceForTicket answers null when it has none.
     const [recurringSource, setRecurringSource] = useState<RecurringTicketSource | null>(null);
     useEffect(() => {
-        if (ticketOrigin !== 'recurring' || !ticket.ticket_id || !capabilities.externalLinks) {
+        if (ticketOrigin !== 'recurring' || !ticket.ticket_id) {
             setRecurringSource(null);
             return;
         }
@@ -792,7 +793,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             .then((source) => { if (!cancelled) setRecurringSource(source ?? null); })
             .catch((error) => console.error('Failed to load the recurring ticket source:', error));
         return () => { cancelled = true; };
-    }, [ticketOrigin, ticket.ticket_id, capabilities.externalLinks]);
+    }, [ticketOrigin, ticket.ticket_id, getRecurringSourceForTicket]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),

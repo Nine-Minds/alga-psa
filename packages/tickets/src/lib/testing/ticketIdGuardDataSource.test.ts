@@ -19,6 +19,19 @@ describe('T003 ticket-id guard harness', () => {
     }
   });
 
+  it('throws from the avatar group, which is keyed by the caller-supplied ticket tenant', () => {
+    expect(TICKET_ID_KEYED_GROUPS).toContain('avatars');
+    expect(() => (guarded.avatars.getUserAvatarUrlsBatchAction as any)(['u1'], 'tenant-b')).toThrow(
+      NativeTicketIdMethodCalledError,
+    );
+    expect(() => (guarded.avatars.getTeamAvatarUrlsBatchAction as any)(['t1'], 'tenant-b')).toThrow(
+      NativeTicketIdMethodCalledError,
+    );
+    expect(() => (guarded.avatars.getContactAvatarUrlAction as any)('c1', 'tenant-b')).toThrow(
+      NativeTicketIdMethodCalledError,
+    );
+  });
+
   it('keeps configuration groups and lets overrides replace single methods', () => {
     const getTicketById = async () => ({ ticket_id: 'shared-1' }) as never;
     const ds = createTicketIdGuardDataSource({ overrides: { ticket: { getTicketById } } });
