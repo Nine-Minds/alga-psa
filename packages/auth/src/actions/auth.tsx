@@ -65,21 +65,41 @@ async function resolveTenantFromPortalDomain(portalDomain: string): Promise<stri
 }
 
 /**
+ * Oldest account first, then user_id: a total order on immutable columns, so
+ * the same duplicates always resolve to the same user.
+ */
+function compareByCreationThenId(a: IUser, b: IUser): number {
+    const aCreated = a.created_at ? new Date(a.created_at).getTime() : Number.POSITIVE_INFINITY;
+    const bCreated = b.created_at ? new Date(b.created_at).getTime() : Number.POSITIVE_INFINITY;
+    if (aCreated !== bCreated) {
+        return aCreated < bCreated ? -1 : 1;
+    }
+    return a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0;
+}
+
+type UnscopedResolution = {
+    user: IUser | undefined;
+    /** True when `user`'s password was already checked against this attempt. */
+    passwordVerified: boolean;
+};
+
+/**
  * Sign-in with no tenant in hand. A `.first()` lookup answers an arbitrary
  * tenant and can select an inactive restored account instead of the live
  * workspace. Look at every match instead, and when the credentials prove out
  * in more than one tenant, refuse instead of choosing a workspace. Only an attempt
  * that already knows the password learns that the email spans tenants.
+ * Duplicates inside one tenant resolve by `compareByCreationThenId`.
  */
 async function resolveUnscopedUser(
     normalizedEmail: string,
     password: string,
     userType: 'client' | 'internal',
-): Promise<IUser | undefined> {
+): Promise<UnscopedResolution> {
     const candidates = await User.findUsersByEmailAndType(normalizedEmail, userType);
 
     if (candidates.length <= 1) {
-        return candidates[0];
+        return { user: candidates[0], passwordVerified: false };
     }
 
     const authenticated: IUser[] = [];
@@ -103,7 +123,8 @@ async function resolveUnscopedUser(
         throw new TenantRequiredError();
     }
 
-    return authenticated[0];
+    authenticated.sort(compareByCreationThenId);
+    return { user: authenticated[0], passwordVerified: authenticated.length > 0 };
 }
 
 export async function authenticateUser(
@@ -163,10 +184,11 @@ export async function authenticateUser(
     }
 
     let user: IUser | undefined;
+    let passwordVerified = false;
     if (resolvedTenantId) {
         user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
     } else {
-        user = await resolveUnscopedUser(normalizedEmail, password, userType);
+        ({ user, passwordVerified } = await resolveUnscopedUser(normalizedEmail, password, userType));
     }
 
     if (!user || !user.user_id) {
@@ -211,7 +233,7 @@ export async function authenticateUser(
         return null;
     }
 
-    const isValid = await verifyPassword(password, user.hashed_password);
+    const isValid = passwordVerified || await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
         return null;

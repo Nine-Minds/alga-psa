@@ -137,6 +137,55 @@ describe('authenticateUser tenant scoping', () => {
     expect(user?.tenant).toBe(NINE_MINDS_TENANT);
   });
 
+  it('resolves same-tenant duplicates to the oldest account whatever order the database returns', async () => {
+    const older = { ...clientUser(NINE_MINDS_TENANT, 'u-b-older'), created_at: '2024-01-01T00:00:00Z' };
+    const newer = { ...clientUser(NINE_MINDS_TENANT, 'u-a-newer'), created_at: '2025-06-01T00:00:00Z' };
+
+    for (const rows of [[older, newer], [newer, older]]) {
+      findUsersByEmailAndTypeMock.mockResolvedValue(rows);
+      const user = await authenticateUser('tinus@example.com', 'correct-horse', 'client');
+      expect(user?.user_id).toBe('u-b-older');
+    }
+  });
+
+  it('breaks a created_at tie on user_id', async () => {
+    const createdAt = '2024-01-01T00:00:00Z';
+    const first = { ...clientUser(NINE_MINDS_TENANT, 'u-1'), created_at: createdAt };
+    const second = { ...clientUser(NINE_MINDS_TENANT, 'u-2'), created_at: createdAt };
+
+    for (const rows of [[first, second], [second, first]]) {
+      findUsersByEmailAndTypeMock.mockResolvedValue(rows);
+      const user = await authenticateUser('tinus@example.com', 'correct-horse', 'client');
+      expect(user?.user_id).toBe('u-1');
+    }
+  });
+
+  it('checks each duplicate password once and does not re-check the winner', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      clientUser(NINE_MINDS_TENANT, 'u-nine'),
+      clientUser(NINE_MINDS_TENANT, 'u-nine-dup'),
+    ]);
+
+    const user = await authenticateUser('tinus@example.com', 'correct-horse', 'client');
+
+    expect(user).not.toBeNull();
+    expect(verifyPasswordMock).toHaveBeenCalledTimes(2);
+    expect(verifyPasswordMock).toHaveBeenCalledWith('correct-horse', 'hash-u-nine');
+    expect(verifyPasswordMock).toHaveBeenCalledWith('correct-horse', 'hash-u-nine-dup');
+  });
+
+  it('only signs in the duplicate whose password matches', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      { ...clientUser(NINE_MINDS_TENANT, 'u-old'), created_at: '2024-01-01T00:00:00Z' },
+      { ...clientUser(NINE_MINDS_TENANT, 'u-new'), created_at: '2025-01-01T00:00:00Z' },
+    ]);
+    verifyPasswordMock.mockImplementation(async (_password: string, hash: string) => hash === 'hash-u-new');
+
+    const user = await authenticateUser('tinus@example.com', 'correct-horse', 'client');
+
+    expect(user?.user_id).toBe('u-new');
+  });
+
   it('resolves the tenant from an active portal domain and scopes the lookup to it', async () => {
     getPortalDomainByHostnameMock.mockResolvedValue({
       tenant: NINE_MINDS_TENANT,
