@@ -92,7 +92,7 @@ describe('transaction-owned onboarding progress persistence', () => {
   });
 
   it('passes each action transaction to the internal progress writer', async () => {
-    const user = { user_id: 'user-1' } as any;
+    const user = { user_id: 'user-1', user_type: 'internal' } as any;
     const context = { tenant: 'tenant-1' } as any;
 
     await expect(saveClientInfo(user, context, {

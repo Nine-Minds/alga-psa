@@ -14,7 +14,7 @@ import { createClientContact } from '@alga-psa/clients/actions/contact-actions/c
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { isMspPrincipalUserType, type IUserWithRoles } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
 
 export interface OnboardingActionResult {
@@ -114,11 +114,17 @@ function onboardingActionErrorMessage(error: unknown, fallback: string): string 
 
 /**
  * Workspace setup writes tenant-wide settings, users, billing and ticketing
- * defaults, so only an administrator may run it (or be sent to it). Each
+ * defaults, so only an MSP administrator may run it (or be sent to it). Each
  * action checks this itself: the wizard is not the only caller of a server action.
+ *
+ * The principal check comes first because settings:update is not MSP-only:
+ * client Admin holds it too, and hasPermission matches resource+action within
+ * the caller's own portal. Without it a client-portal admin could run every
+ * setup action, including creating internal users.
  */
 // LEVERAGE: pattern action-permission-prologue — three of the nine onboarding actions will repeat the same hasPermission prologue; a single withSetupAccess wrapper would own it
 async function canRunWorkspaceSetup(user: IUserWithRoles): Promise<boolean> {
+  if (!isMspPrincipalUserType(user.user_type)) return false;
   return hasPermission(user, 'settings', 'update');
 }
 const SETUP_DENIED = { success: false, error: 'Only an administrator can complete workspace setup.' } as const;

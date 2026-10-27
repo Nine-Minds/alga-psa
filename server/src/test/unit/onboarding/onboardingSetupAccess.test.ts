@@ -17,7 +17,7 @@ function queryFor(table: string) {
   const query: any = {
     where: () => query, whereNull: () => query, count: () => query, insert: async () => undefined,
     update: async (payload: unknown) => { if (table === 'users') mocks.userUpdates.push(payload); },
-    select: async () => [],
+    select: async () => table === 'roles' ? [{ role_id: 'role-admin', role_name: 'Admin' }] : [],
     first: async () => undefined,
   };
   return query;
@@ -44,7 +44,8 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import * as actions from '../../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions';
 
-const user = { user_id: 'technician' } as any;
+const user = { user_id: 'technician', user_type: 'internal' } as any;
+const clientAdmin = { user_id: 'client-admin', user_type: 'client', contact_id: 'contact-1' } as any;
 const context = { tenant: 'tenant-1' } as any;
 const member = { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician', password: 'NineMinds1234!' };
 
@@ -54,6 +55,18 @@ beforeEach(() => {
   mocks.userUpdates.length = 0;
 });
 
+const SETUP_ACTIONS: Array<[string, (caller: any) => Promise<unknown>]> = [
+  ['saveClientInfo', (caller: any) => actions.saveClientInfo(caller, context, { firstName: 'A', lastName: 'B', tenantName: 'T', email: 'a@example.test' } as any)],
+  ['addSingleTeamMember', (caller: any) => actions.addSingleTeamMember(caller, context, member)],
+  ['addTeamMembers', (caller: any) => actions.addTeamMembers(caller, context, [member])],
+  ['createClient', (caller: any) => actions.createClient(caller, context, { clientName: 'C' } as any)],
+  ['addClientContact', (caller: any) => actions.addClientContact(caller, context, { contactName: 'C', clientId: 'c' } as any)],
+  ['setupBilling', (caller: any) => actions.setupBilling(caller, context, { serviceName: 'S' } as any)],
+  ['configureTicketing', (caller: any) => actions.configureTicketing(caller, context, { boardName: 'B' } as any)],
+  ['saveOnboardingStepPosition', (caller: any) => actions.saveOnboardingStepPosition(caller, context, 2)],
+  ['completeOnboarding', (caller: any) => actions.completeOnboarding(caller, context)],
+];
+
 describe('workspace setup access', () => {
   it('reports setup access from the settings:update permission', async () => {
     await expect(actions.getWorkspaceSetupAccess(user, context)).resolves.toEqual({ canRun: false });
@@ -62,25 +75,36 @@ describe('workspace setup access', () => {
     await expect(actions.getWorkspaceSetupAccess(user, context)).resolves.toEqual({ canRun: true });
   });
 
-  it.each([
-    ['saveClientInfo', () => actions.saveClientInfo(user, context, { firstName: 'A', lastName: 'B', tenantName: 'T', email: 'a@example.test' } as any)],
-    ['addSingleTeamMember', () => actions.addSingleTeamMember(user, context, member)],
-    ['addTeamMembers', () => actions.addTeamMembers(user, context, [member])],
-    ['createClient', () => actions.createClient(user, context, { clientName: 'C' } as any)],
-    ['addClientContact', () => actions.addClientContact(user, context, { contactName: 'C', clientId: 'c' } as any)],
-    ['setupBilling', () => actions.setupBilling(user, context, { serviceName: 'S' } as any)],
-    ['configureTicketing', () => actions.configureTicketing(user, context, { boardName: 'B' } as any)],
-    ['saveOnboardingStepPosition', () => actions.saveOnboardingStepPosition(user, context, 2)],
-    ['completeOnboarding', () => actions.completeOnboarding(user, context)],
-  ])('%s refuses a user who cannot run workspace setup', async (_name, call) => {
-    await expect(call()).resolves.toEqual({ success: false, error: 'Only an administrator can complete workspace setup.' });
+  it.each(SETUP_ACTIONS)('%s refuses a user who cannot run workspace setup', async (_name, call) => {
+    await expect(call(user)).resolves.toEqual({ success: false, error: 'Only an administrator can complete workspace setup.' });
     expect(mocks.addUser).not.toHaveBeenCalled();
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
 });
 
+describe('workspace setup refuses client-portal principals', () => {
+  // client Admin holds settings:update and user:create in its own portal, so
+  // the permission check alone would let it through.
+  beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
+
+  it('reports no setup access for a client admin', async () => {
+    await expect(actions.getWorkspaceSetupAccess(clientAdmin, context)).resolves.toEqual({ canRun: false });
+  });
+
+  it.each(SETUP_ACTIONS)('%s refuses an authenticated client admin', async (_name, call) => {
+    await expect(call(clientAdmin)).resolves.toEqual({ success: false, error: 'Only an administrator can complete workspace setup.' });
+  });
+
+  it('never creates an internal user for a client admin', async () => {
+    mocks.addUser.mockResolvedValue({ success: true, user: { user_id: 'new' } });
+    await actions.addSingleTeamMember(clientAdmin, context, { ...member, role: 'Admin' });
+    await actions.addTeamMembers(clientAdmin, context, [{ ...member, role: 'Admin' }]);
+    expect(mocks.addUser).not.toHaveBeenCalled();
+  });
+});
+
 describe('workspace setup sign-in email', () => {
-  const admin = { user_id: 'admin', email: 'admin@example.test' } as any;
+  const admin = { user_id: 'admin', user_type: 'internal', email: 'admin@example.test' } as any;
   const info = (email: string) => ({ firstName: 'A', lastName: 'B', tenantName: 'T', email }) as any;
   beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
 

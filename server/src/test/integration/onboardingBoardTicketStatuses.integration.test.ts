@@ -218,7 +218,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await configureTicketing(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       {
         boardName: 'Support',
@@ -285,7 +285,7 @@ describe('Onboarding board-specific ticket statuses', () => {
 
     await expect(
       validateOnboardingDefaults(
-        { user_id: userId },
+        { user_id: userId, user_type: 'internal' },
         { tenant: tenantId }
       )
     ).resolves.toMatchObject({ success: true });
@@ -306,7 +306,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await configureTicketing(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       {
         boardName: 'Invalid Email Board',
@@ -391,7 +391,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await importReferenceData(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       'statuses',
       standardStatuses.map((status) => status.standard_status_id),
@@ -424,7 +424,7 @@ describe('Onboarding board-specific ticket statuses', () => {
       const { configureTicketing } = await import(
         '../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions'
       );
-      const result = await configureTicketing({ user_id: userId }, { tenant: tenantId }, {
+      const result = await configureTicketing({ user_id: userId, user_type: 'internal' }, { tenant: tenantId }, {
         boardName: 'Numbering', supportEmail: '', isDefaultBoard: true, categories: [], priorities: [],
         ticketPrefix: 'T', ticketPaddingLength: 6, ticketStartNumber: start,
         statuses: [{ name: 'Open', is_closed: false, is_default: true, order_number: 10 }],

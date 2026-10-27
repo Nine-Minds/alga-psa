@@ -43,7 +43,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 import { addSingleTeamMember, addTeamMembers, getOnboardingLicenseUsage }
   from '../../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions';
 
-const user = { user_id: 'admin' } as any;
+const user = { user_id: 'admin', user_type: 'internal' } as any;
 const context = { tenant: 'tenant-1' } as any;
 const technician = { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician', password: 'NineMinds1234!' };
 
