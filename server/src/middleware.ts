@@ -225,6 +225,11 @@ const exactApiKeySkipPaths = [
   // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
   '/api/webhooks/datto',
   '/api/webhooks/datto/',
+  // Notification live-stream token: the MSP shell and the client portal both
+  // mint a short-lived Hocuspocus token from their browser session (no
+  // x-api-key). The route re-checks the session itself, and
+  // `/api/notifications` has no other route to exempt.
+  '/api/notifications/live-token',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
