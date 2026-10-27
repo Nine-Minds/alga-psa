@@ -17,6 +17,7 @@ import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
 import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
+import { teamMemberEmailKey, uniqueTeamMemberEmails } from '../../lib/teamMemberEmails';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -356,7 +357,8 @@ type SavedTeamMember = Pick<TeamMember, 'firstName' | 'lastName' | 'email' | 'ro
  * vanished from saved progress, a resumed wizard no longer knew they existed,
  * and re-adding them hit EMAIL_ALREADY_EXISTS. The settings row is locked so
  * two saves cannot each drop the other's members. Passwords are never stored,
- * and any a legacy save left behind are dropped here.
+ * and any a legacy save left behind are dropped here. Emails are keyed by
+ * teamMemberEmailKey in both lists, the rule every reader compares with.
  */
 async function recordCreatedTeamMembers(tenant: string, createdNow: TeamMember[]): Promise<void> {
   const { knex } = await createTenantKnex();
@@ -369,13 +371,15 @@ async function recordCreatedTeamMembers(tenant: string, createdNow: TeamMember[]
       ({ firstName, lastName, email, role });
     const byEmail = new Map<string, SavedTeamMember>();
     for (const member of [...(saved.teamMembers ?? []), ...createdNow]) {
-      if (member?.email) byEmail.set(member.email.toLowerCase(), strip(member));
+      if (member?.email) byEmail.set(teamMemberEmailKey(member.email), strip(member));
     }
-    const createdEmails = new Set([...(saved.createdTeamMemberEmails ?? []), ...createdNow.map(m => m.email)]);
+    const createdEmails = uniqueTeamMemberEmails([
+      ...(saved.createdTeamMemberEmails ?? []), ...createdNow.map(m => m.email),
+    ]);
 
     await persistTenantOnboardingProgress(trx, tenant, {
       teamMembers: [...byEmail.values()],
-      createdTeamMemberEmails: [...createdEmails],
+      createdTeamMemberEmails: createdEmails,
     });
   });
 }

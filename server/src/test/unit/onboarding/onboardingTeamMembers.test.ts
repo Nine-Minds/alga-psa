@@ -164,6 +164,13 @@ describe('wizard team member creation', () => {
     expect(mocks.saved.createdTeamMemberEmails).toEqual(['tom@example.test', 'row@example.test']);
   });
 
+  it('keeps createdTeamMemberEmails to one entry per address whatever its case', async () => {
+    mocks.saved = { createdTeamMemberEmails: ['Dana@Example.test'] };
+    await addTeamMembers(user, context, [{ ...technician, email: 'dana@example.test' }, { ...technician, email: ' Eve@Example.test ' }]);
+    expect(mocks.saved.createdTeamMemberEmails).toEqual(['dana@example.test', 'eve@example.test']);
+    expect((mocks.saved.teamMembers as unknown[]).length).toBe(2);
+  });
+
   it('drops a password a legacy save left in progress', async () => {
     mocks.saved = { teamMembers: [{ ...technician, email: 'old@example.test', password: 'Legacy-Pass-1!' }] };
     await addTeamMembers(user, context, [technician]);

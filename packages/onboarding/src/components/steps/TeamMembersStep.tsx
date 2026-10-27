@@ -14,6 +14,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
 import { sendUserInvitation } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { hasTeamMemberEmail } from '../../lib/teamMemberEmails';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const { t } = useTranslation('msp/onboarding');
@@ -46,7 +47,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       !m.firstName || !m.lastName || !m.email
     );
     const isHandled = (email: string) =>
-      data.createdTeamMemberEmails?.includes(email) || data.invitedTeamMemberEmails?.includes(email);
+      hasTeamMemberEmail(data.createdTeamMemberEmails, email) || hasTeamMemberEmail(data.invitedTeamMemberEmails, email);
     const hasUnsaved = data.teamMembers.some(m =>
       m.firstName && m.lastName && m.email && !isHandled(m.email)
     );
@@ -361,8 +362,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
       {data.teamMembers.map((member, index) => {
         const inviteMode = member.inviteMode || 'email';
-        const isCreated = data.createdTeamMemberEmails?.includes(member.email);
-        const isInvited = data.invitedTeamMemberEmails?.includes(member.email);
+        const isCreated = hasTeamMemberEmail(data.createdTeamMemberEmails, member.email);
+        const isInvited = hasTeamMemberEmail(data.invitedTeamMemberEmails, member.email);
         const isAlreadyHandled = isCreated || isInvited;
         const isSaving = savingMemberIndex === index;
         const hasError = !!saveErrors[index];

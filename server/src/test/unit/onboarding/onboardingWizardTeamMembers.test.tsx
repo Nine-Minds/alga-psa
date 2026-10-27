@@ -208,4 +208,21 @@ describe('restoreTeamMemberProgress', () => {
     expect(result.createdTeamMemberEmails).toEqual(['a@x.test']);
     expect(result.tenantName).toBe('T');
   });
+  it('treats a re-typed address in another case as the member already created', async () => {
+    await clickNextOnTeamStep({
+      teamMembers: [member('dana@example.test')],
+      createdTeamMemberEmails: ['Dana@Example.test'],
+    });
+
+    await waitFor(() => expect(screen.getByText('AddClientStep')).toBeInTheDocument());
+    expect(mocks.addTeamMembers).not.toHaveBeenCalled();
+  });
+
+  it('restores saved emails that differ only in case as one created member', () => {
+    const restored = restoreTeamMemberProgress({
+      createdTeamMemberEmails: ['Dana@Example.test'],
+      teamMembers: [{ firstName: 'Dana', lastName: 'D', email: 'dana@example.test', role: 'Technician' }],
+    } as Partial<WizardData>);
+    expect(restored.createdTeamMemberEmails).toEqual(['dana@example.test']);
+  });
 });

@@ -34,6 +34,7 @@ import {
   getOnboardingWizardRequiredStepPositions,
   getOnboardingWizardStepIndexes,
 } from '../lib/onboardingWizardSteps';
+import { hasTeamMemberEmail, uniqueTeamMemberEmails } from '../lib/teamMemberEmails';
 
 interface OnboardingWizardProps {
   open?: boolean;
@@ -226,7 +227,7 @@ export function OnboardingWizard({
           // login they never chose and break their invitation.
           const existingEmails = wizardData.createdTeamMemberEmails || [];
           const invitedEmails = wizardData.invitedTeamMemberEmails || [];
-          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email) && !invitedEmails.includes(m.email));
+          const newMembers = validMembers.filter(m => !hasTeamMemberEmail(existingEmails, m.email) && !hasTeamMemberEmail(invitedEmails, m.email));
 
           // An unsent email invite has no password to create an account with.
           if (newMembers.some(m => (m.inviteMode || 'email') === 'email')) {
@@ -243,7 +244,7 @@ export function OnboardingWizard({
             // failed, so a retry after fixing the rest does not recreate them.
             const createdNow: string[] = teamResult.data?.created ?? [];
             if (createdNow.length > 0) {
-              const allCreated = [...new Set([...existingEmails, ...createdNow])];
+              const allCreated = uniqueTeamMemberEmails([...existingEmails, ...createdNow]);
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
             }
 
