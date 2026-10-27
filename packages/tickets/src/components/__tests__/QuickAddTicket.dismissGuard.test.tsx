@@ -195,6 +195,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
+  // No asset-picker seam here: these suites exercise the surfaces where the
+  // composition layer does not provide one (the dialog then shows no device field).
+  useTicketAssetPicker: () => ({}),
   useQuickAddClient: () => ({
     renderQuickAddClient: () => null,
     renderQuickAddContact: () => null,

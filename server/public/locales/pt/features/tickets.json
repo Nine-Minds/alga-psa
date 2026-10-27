@@ -941,6 +941,8 @@
     "none": "Nenhum",
     "defaultSuffix": "(Padrão)",
     "noLocationsForClient": "Nenhum local para o cliente selecionado",
+    "assetsLabel": "Ativos",
+    "assetsNeedClient": "Selecione um cliente para escolher os seus ativos",
     "unnamedLocation": "Localização sem nome",
     "boardPlaceholder": "Selecione o quadro *",
     "assignTo": "Atribuir a",

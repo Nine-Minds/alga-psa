@@ -941,6 +941,8 @@
     "none": "Geen",
     "defaultSuffix": "(Standaard)",
     "noLocationsForClient": "Geen locaties voor geselecteerde klant",
+    "assetsLabel": "Assets",
+    "assetsNeedClient": "Selecteer een klant om zijn assets te kiezen",
     "unnamedLocation": "Naamloze locatie",
     "boardPlaceholder": "Bord selecteren *",
     "assignTo": "Toewijzen aan",

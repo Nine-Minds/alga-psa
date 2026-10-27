@@ -949,6 +949,8 @@
     "none": "None",
     "defaultSuffix": "(Default)",
     "noLocationsForClient": "No locations for selected client",
+    "assetsLabel": "Assets",
+    "assetsNeedClient": "Select a client to pick its assets",
     "unnamedLocation": "Unnamed Location",
     "boardPlaceholder": "Select Board *",
     "assignTo": "Assign To",

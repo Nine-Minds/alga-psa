@@ -949,6 +949,8 @@
     "none": "⟦Ƞȯƞḗ⟧",
     "defaultSuffix": "⟦(Ḓḗƒȧŭŀŧ)⟧",
     "noLocationsForClient": "⟦Ƞȯ ŀȯƈȧŧīȯƞş ƒȯř şḗŀḗƈŧḗḓ ƈŀīḗƞŧ⟧",
+    "assetsLabel": "⟦Ȧşşḗŧş⟧",
+    "assetsNeedClient": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ƥīƈķ īŧş ȧşşḗŧş⟧",
     "unnamedLocation": "⟦Ŭƞƞȧḿḗḓ Ŀȯƈȧŧīȯƞ⟧",
     "boardPlaceholder": "⟦Şḗŀḗƈŧ Ɓȯȧřḓ *⟧",
     "assignTo": "⟦Ȧşşīɠƞ Ŧȯ⟧",

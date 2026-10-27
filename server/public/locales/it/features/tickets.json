@@ -941,6 +941,8 @@
     "none": "Nessuno",
     "defaultSuffix": "(Predefinita)",
     "noLocationsForClient": "Nessuna sede per il cliente selezionato",
+    "assetsLabel": "Asset",
+    "assetsNeedClient": "Seleziona un cliente per scegliere i suoi asset",
     "unnamedLocation": "Sede senza nome",
     "boardPlaceholder": "Seleziona bacheca *",
     "assignTo": "Assegna a",

@@ -217,6 +217,9 @@ vi.mock('@alga-psa/clients/components', () => ({
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
+  // No asset-picker seam here: these suites exercise the surfaces where the
+  // composition layer does not provide one (the dialog then shows no device field).
+  useTicketAssetPicker: () => ({}),
   useQuickAddClient: () => ({
     renderQuickAddContact: ({ isOpen, selectedClientId, onContactAdded }: any) => {
       if (!isOpen) {
@@ -952,7 +955,7 @@ describe('QuickAddTicket prefills', () => {
     ));
   });
 
-  it('T010: AlgaDesk quick-add omits asset prefill banner and asset_id submission while PSA preserves both', async () => {
+  it('T010: AlgaDesk quick-add omits asset prefill banner and asset link submission while PSA preserves both', async () => {
     const renderQuickAdd = (isAlgaDeskMode: boolean) => render(
       <QuickAddTicket
         open={true}
@@ -974,7 +977,8 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const psaFormData = addTicketMock.mock.calls[0][0] as FormData;
-    expect(psaFormData.get('asset_id')).toBe('asset-123');
+    // Linked through the device list now, so one `asset_ids` entry (alga-2026-0002785).
+    expect(psaFormData.getAll('asset_ids')).toEqual(['asset-123']);
 
     addTicketMock.mockClear();
 
@@ -993,7 +997,7 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const algadeskFormData = addTicketMock.mock.calls[0][0] as FormData;
-    expect(algadeskFormData.get('asset_id')).toBeNull();
+    expect(algadeskFormData.getAll('asset_ids')).toEqual([]);
   });
 
   it('honours a client change when the dialog opened with one prefilled', async () => {

@@ -949,6 +949,8 @@
     "none": "Inget valt",
     "defaultSuffix": "(Standard)",
     "noLocationsForClient": "Inga platser för den valda kunden",
+    "assetsLabel": "Tillgångar",
+    "assetsNeedClient": "Välj en kund för att välja dess tillgångar",
     "unnamedLocation": "Plats utan namn",
     "boardPlaceholder": "Välj tavla *",
     "assignTo": "Tilldela till",

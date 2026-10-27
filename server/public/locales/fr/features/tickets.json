@@ -941,6 +941,8 @@
     "none": "Aucun",
     "defaultSuffix": "(Défaut)",
     "noLocationsForClient": "Aucun emplacement pour le client sélectionné",
+    "assetsLabel": "Actifs",
+    "assetsNeedClient": "Sélectionnez un client pour choisir ses actifs",
     "unnamedLocation": "Emplacement sans nom",
     "boardPlaceholder": "Sélectionnez le tableau *",
     "assignTo": "Attribuer à",

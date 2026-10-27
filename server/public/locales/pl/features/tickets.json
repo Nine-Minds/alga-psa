@@ -941,6 +941,8 @@
     "none": "Brak",
     "defaultSuffix": "(domyślna)",
     "noLocationsForClient": "Brak lokalizacji dla wybranego klienta",
+    "assetsLabel": "Zasoby",
+    "assetsNeedClient": "Wybierz klienta, aby wybrać jego zasoby",
     "unnamedLocation": "Lokalizacja bez nazwy",
     "boardPlaceholder": "Wybierz tablicę *",
     "assignTo": "Przypisz do",

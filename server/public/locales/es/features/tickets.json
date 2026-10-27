@@ -941,6 +941,8 @@
     "none": "Ninguna",
     "defaultSuffix": "(Predeterminado)",
     "noLocationsForClient": "No hay ubicaciones para la empresa seleccionada",
+    "assetsLabel": "Activos",
+    "assetsNeedClient": "Seleccione un cliente para elegir sus activos",
     "unnamedLocation": "Ubicación sin nombre",
     "boardPlaceholder": "Seleccione un tablero *",
     "assignTo": "Asignar a",

@@ -941,6 +941,8 @@
     "none": "Keine",
     "defaultSuffix": "(Standard)",
     "noLocationsForClient": "Keine Standorte für den ausgewählten Kunden",
+    "assetsLabel": "Assets",
+    "assetsNeedClient": "Wählen Sie einen Kunden, um dessen Assets auszuwählen",
     "unnamedLocation": "Unbenannter Standort",
     "boardPlaceholder": "Board auswählen *",
     "assignTo": "Zuweisen an",

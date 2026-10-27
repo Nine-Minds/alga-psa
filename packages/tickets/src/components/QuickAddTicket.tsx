@@ -54,7 +54,7 @@ import { assignTeamToTicket } from '../actions/teamAssignmentActions';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useQuickAddClient } from '@alga-psa/ui/context';
+import { useQuickAddClient, useTicketAssetPicker } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
 import {
   getErrorMessage,
@@ -235,6 +235,7 @@ export function QuickAddTicket({
   const router = useRouter();
   const { data: session } = useSession();
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
+  const { renderAssetPicker } = useTicketAssetPicker();
   const { t } = useTranslation('features/tickets');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -327,6 +328,12 @@ export function QuickAddTicket({
   const lastRenderedTitleRef = useRef<string | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  // Devices the ticket is raised against. Opened from an asset, that asset is
+  // the starting selection rather than a separate read-only path; the picker
+  // belongs to the chosen client, so changing the client clears it.
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(
+    effectiveAssetId ? [effectiveAssetId] : []
+  );
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
@@ -692,6 +699,8 @@ export function QuickAddTicket({
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
+    // So do the assets: a device of the previous client must not stay picked.
+    setSelectedAssetIds([]);
     clearErrorIfSubmitted();
 
     if (newClientId !== null) {
@@ -939,6 +948,7 @@ export function QuickAddTicket({
     setLocationId(null);
     setLocations([]);
     setContacts([]);
+    setSelectedAssetIds(effectiveAssetId ? [effectiveAssetId] : []);
     // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
     setIsPrefilledClient(false);
     if (prefilledClient?.id) {
@@ -1159,8 +1169,10 @@ export function QuickAddTicket({
         }
       }
 
-      if (effectiveAssetId) {
-        formData.append('asset_id', effectiveAssetId);
+      // One entry per device. The asset the dialog was opened from is already
+      // in this list, so it is linked here and not through `asset_id`.
+      for (const pickedAssetId of selectedAssetIds) {
+        formData.append('asset_ids', pickedAssetId);
       }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
@@ -1518,7 +1530,9 @@ export function QuickAddTicket({
                 </div>
               )}
 
-              {effectiveAssetId && (
+              {/* Without the asset-picker seam (AlgaDesk, the client portal) the
+                  opened-from asset is still linked, so name it the way it always was. */}
+              {effectiveAssetId && !renderAssetPicker && (
                 <div className="mb-4 flex pb-2">
                   <Badge
                     variant="secondary"
@@ -1627,6 +1641,27 @@ export function QuickAddTicket({
                         : t('quickAdd.selectLocation', 'Select location')}
                       showPlaceholderInDropdown={false}
                     />
+                  )}
+                  {renderAssetPicker && (
+                    <div data-testid={`${id}-assets`}>
+                      {clientId
+                        ? renderAssetPicker({
+                            id: `${id}-asset-picker`,
+                            clientId,
+                            value: selectedAssetIds,
+                            onChange: (assetIds) => {
+                              setSelectedAssetIds(assetIds);
+                              clearErrorIfSubmitted();
+                            },
+                            label: t('quickAdd.assetsLabel', 'Assets'),
+                            disabled: isSubmitting,
+                          })
+                        : (
+                          <p className="text-sm text-gray-500" data-testid={`${id}-assets-disabled`}>
+                            {t('quickAdd.assetsNeedClient', 'Select a client to pick its assets')}
+                          </p>
+                        )}
+                    </div>
                   )}
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker
