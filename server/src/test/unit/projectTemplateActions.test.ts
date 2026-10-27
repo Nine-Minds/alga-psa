@@ -16,7 +16,8 @@ import type {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   withTransaction: vi.fn(),
-  registerAfterCommit: (_trx: unknown, hook: () => unknown) => { void hook(); },
+  // Wired in beforeEach to the faithful after-commit double (packages/db/test-utils).
+  registerAfterCommit: vi.fn(),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
@@ -91,7 +92,8 @@ vi.mock('@shared/services/numberingService', () => ({
   },
 }));
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { createAfterCommitDouble } from '../../../../packages/db/test-utils/afterCommitDouble';
 import { getCurrentUser } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createProject, getProjectStatuses } from '@alga-psa/projects/actions/projectActions';
@@ -122,7 +124,9 @@ describe('Project Template Actions', () => {
   beforeEach(() => {
     knexStub = createKnexStub();
     createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-123', knex: knexStub.fn });
-    withTransactionMock.mockImplementation(async (_knex: Knex, callback) => callback(knexStub.trx));
+    const afterCommit = createAfterCommitDouble(() => knexStub.trx);
+    withTransactionMock.mockImplementation(afterCommit.withTransaction as any);
+    cast(registerAfterCommit).mockImplementation(afterCommit.registerAfterCommit as any);
     getCurrentUserMock.mockResolvedValue(mockUser);
     hasPermissionMock.mockResolvedValue(true);
     getProjectStatusesMock.mockResolvedValue([
