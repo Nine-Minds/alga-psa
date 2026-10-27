@@ -710,7 +710,8 @@
         "skipItem": "Ignorar este item",
         "importNewName": "Importar com nome diferente:",
         "importWithOrder": "Importar com pedido {{order}}",
-        "importWithResolutions": "Importar com resoluções"
+        "importWithResolutions": "Importar com resoluções",
+        "removesIntro": "Excluir este quadro também remove:"
       },
       "importTable": {
         "active": "Ativo"
@@ -779,7 +780,9 @@
           "deleteFailed": "Falha ao excluir o quadro",
           "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
-          "updateDefaultFailed": "Falha ao atualizar o quadro padrão"
+          "updateDefaultFailed": "Falha ao atualizar o quadro padrão",
+          "hasEmailSenderRoute": "Não é possível excluir o quadro: ele tem uma rota de remetente de saída dedicada. Limpe primeiro o remetente de tickets no editor do quadro.",
+          "referencedByAutomations": "Não é possível excluir o quadro: automações ainda apontam para ele. Direcione-as para outro quadro ou remova-as primeiro."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Nome de exibição",
         "save": "Guardar remetente",
         "saved": "Remetente guardado"
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorias",
+        "categories_few": "categorias",
+        "categories_many": "categorias",
+        "statuses_one": "status de ticket",
+        "statuses_other": "status de ticket",
+        "statuses_few": "status de ticket",
+        "statuses_many": "status de ticket",
+        "autoCloseRules_one": "regra de fechamento automático",
+        "autoCloseRules_other": "regras de fechamento automático",
+        "autoCloseRules_few": "regras de fechamento automático",
+        "autoCloseRules_many": "regras de fechamento automático",
+        "notificationRules_one": "regra de notificação",
+        "notificationRules_other": "regras de notificação",
+        "notificationRules_few": "regras de notificação",
+        "notificationRules_many": "regras de notificação",
+        "tags_one": "etiqueta",
+        "tags_other": "etiquetas",
+        "tags_few": "etiquetas",
+        "tags_many": "etiquetas",
+        "portalVisibility_one": "atribuição de visibilidade no portal do cliente",
+        "portalVisibility_other": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_few": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_many": "atribuições de visibilidade no portal do cliente",
+        "emailSenderRoutes_one": "rota de remetente de saída",
+        "emailSenderRoutes_other": "rotas de remetente de saída",
+        "emailSenderRoutes_few": "rotas de remetente de saída",
+        "emailSenderRoutes_many": "rotas de remetente de saída",
+        "ticketTemplates_one": "modelo de ticket",
+        "ticketTemplates_other": "modelos de ticket",
+        "ticketTemplates_few": "modelos de ticket",
+        "ticketTemplates_many": "modelos de ticket",
+        "recurringTickets_one": "agenda de tickets recorrentes",
+        "recurringTickets_other": "agendas de tickets recorrentes",
+        "recurringTickets_few": "agendas de tickets recorrentes",
+        "recurringTickets_many": "agendas de tickets recorrentes",
+        "checklistRules_one": "regra de aplicação de lista de verificação",
+        "checklistRules_other": "regras de aplicação de lista de verificação",
+        "checklistRules_few": "regras de aplicação de lista de verificação",
+        "checklistRules_many": "regras de aplicação de lista de verificação"
       }
     },
     "priorities": {

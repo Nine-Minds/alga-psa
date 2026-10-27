@@ -104,6 +104,21 @@ const countCompositeTaxComponentUsage = async (
   return Number(result?.count ?? 0);
 };
 
+// email_sender_routes.board_id is only populated for route_type='board' (a
+// table CHECK enforces it), but the predicate is spelled out so the count
+// matches deleteBoard's own check exactly.
+const countBoardSenderRoutes = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'email_sender_routes')
+    .where({ route_type: 'board', board_id: options.entityId })
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -607,9 +622,22 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'board',
     supportsInactive: false,
     supportsArchive: false,
+    // deleteBoard blocks on these with its own codes before it ever reaches the
+    // lightweight path; they are mirrored here so that path reports a proper
+    // dependency instead of letting the raw FK error escape.
     dependencies: [
       { type: 'ticket', table: 'tickets', foreignKey: 'board_id', label: 'ticket' },
-      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' }
+      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' },
+      { type: 'inbound_ticket_default', table: 'inbound_ticket_defaults', foreignKey: 'board_id', label: 'inbound email default' },
+      {
+        type: 'email_sender_route',
+        table: 'email_sender_routes',
+        label: 'outbound sender route',
+        countQuery: countBoardSenderRoutes
+      },
+      { type: 'ticket_template', table: 'ticket_templates', foreignKey: 'board_id', label: 'ticket template' },
+      { type: 'recurring_ticket_definition', table: 'recurring_ticket_definitions', foreignKey: 'board_id', label: 'recurring ticket schedule' },
+      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' }
     ]
   },
   interaction_type: {

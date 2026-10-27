@@ -513,10 +513,75 @@ async function cleanupBoardStatuses(
     .where({ board_id: boardId })
     .delete();
 
+  // 2c. Remove the board's auto-close rules for the same reason: their
+  // trigger_status_id/close_to_status_id point at these statuses with no
+  // cascade. The rules only cascade from `boards`, and the board row is still
+  // here, so step 3 would hit board_auto_close_rules_trigger_status_fkey.
+  // A board-scoped delete is enough — both statuses on a rule are validated to
+  // live on that board — and ticket_auto_close_state cascades from the rule.
+  await tenantScopedTable('board_auto_close_rules')
+    .where({ board_id: boardId })
+    .delete();
+
   // 3. Delete the statuses themselves
   await tenantScopedTable('statuses')
     .where({ board_id: boardId, status_type: 'ticket' })
     .delete();
+}
+
+/**
+ * Release the board references that neither cascade from `boards` nor get
+ * cleared anywhere else, so the board row can actually be deleted.
+ *
+ * MUST be called inside the transaction that deletes the board.
+ *
+ * `force` means the user has seen and confirmed the removal counts: tag
+ * definitions are real user content, so they only go on a confirmed delete
+ * (their tag_mappings cascade). The visibility-group rows are a pure join
+ * table and always go with the board.
+ */
+async function cleanupBoardReferences(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  force: boolean
+): Promise<void> {
+  const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+    tenantDb(trx, tenant).table<Row>(table);
+
+  await tenantScopedTable('client_portal_visibility_group_boards')
+    .where({ board_id: boardId })
+    .delete();
+
+  if (force) {
+    await tenantScopedTable('tag_definitions')
+      .where({ board_id: boardId })
+      .delete();
+  }
+}
+
+// English fallbacks for the removal counts. The UI re-renders the same counts
+// through t() keys; these keep the server result readable on its own.
+const BOARD_REMOVAL_LABELS: Record<string, [singular: string, plural: string]> = {
+  categories: ['category', 'categories'],
+  statuses: ['ticket status', 'ticket statuses'],
+  auto_close_rules: ['auto-close rule', 'auto-close rules'],
+  notification_rules: ['notification rule', 'notification rules'],
+  tag_definitions: ['tag', 'tags'],
+  portal_visibility_assignments: ['client portal visibility assignment', 'client portal visibility assignments'],
+};
+
+function describeBoardRemovals(counts: Record<string, number>): string {
+  const parts = Object.entries(counts).map(([key, count]) => {
+    const [singular, plural] = BOARD_REMOVAL_LABELS[key] ?? [key, key];
+    return `${count} ${count === 1 ? singular : plural}`;
+  });
+
+  if (parts.length <= 1) {
+    return parts.join('');
+  }
+
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 /**
@@ -544,7 +609,7 @@ export const deleteBoard = withAuth(async (
   user,
   { tenant },
   boardId: string,
-  force = false,
+  force: boolean = false,
   cleanupItil = false
 ): Promise<DeleteBoardResult> => {
   if (!await hasPermission(user, 'ticket', 'delete')) {
@@ -597,6 +662,58 @@ export const deleteBoard = withAuth(async (
       };
     }
 
+    // 3b. A board-specific outbound sender route cascades from `boards`, so
+    // deleting the board would silently drop the route the client replies to.
+    // Block instead and let the admin clear the board's ticket sender first.
+    const senderRouteResult = await tenantScopedTable('email_sender_routes')
+      .where({ board_id: boardId, route_type: 'board' })
+      .count('* as count')
+      .first();
+
+    const senderRouteCount = Number(senderRouteResult?.count || 0);
+
+    if (senderRouteCount > 0) {
+      return {
+        success: false,
+        code: 'BOARD_HAS_EMAIL_SENDER_ROUTE',
+        message: 'Cannot delete board: it has a dedicated outbound email sender route. Clear the board\'s ticket sender in the board editor first.',
+        dependencies: ['email_sender_routes'],
+        counts: { email_sender_routes: senderRouteCount }
+      };
+    }
+
+    // 3c. Automations that point at the board cannot be cleaned up safely:
+    // ticket_templates/recurring_ticket_definitions have no FK at all (the rows
+    // would dangle, and a recurring definition would keep creating tickets on a
+    // board that no longer exists — its board_id is NOT NULL), and nulling a
+    // checklist apply rule's board_id silently widens it to every board. Block.
+    const [templateResult, recurringResult, checklistRuleResult] = await Promise.all([
+      tenantScopedTable('ticket_templates').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('recurring_ticket_definitions').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('checklist_template_apply_rules').where({ board_id: boardId }).count('* as count').first(),
+    ]);
+
+    const automationCounts: Record<string, number> = {};
+    const addAutomationCount = (key: string, raw: unknown) => {
+      const count = Number(raw || 0);
+      if (count > 0) {
+        automationCounts[key] = count;
+      }
+    };
+    addAutomationCount('ticket_templates', templateResult?.count);
+    addAutomationCount('recurring_ticket_definitions', recurringResult?.count);
+    addAutomationCount('checklist_template_apply_rules', checklistRuleResult?.count);
+
+    if (Object.keys(automationCounts).length > 0) {
+      return {
+        success: false,
+        code: 'BOARD_REFERENCED_BY_AUTOMATIONS',
+        message: 'Cannot delete board: automations still target it. Point them at another board (or remove them) first.',
+        dependencies: Object.keys(automationCounts),
+        counts: automationCounts
+      };
+    }
+
     // 4. Check if this is an ITIL board (categories are shared across ITIL boards)
     const isItilCategoryBoard = board.category_type === 'itil';
 
@@ -645,29 +762,60 @@ export const deleteBoard = withAuth(async (
       .first();
     const statusCount = Number(statusCountResult?.count || 0);
 
+    // 6c. Everything else the delete takes down with the board. The user has to
+    // see these before confirming — they are not recoverable, and some of them
+    // (tags, portal visibility) are content rather than board plumbing.
+    const [autoCloseRuleResult, notificationRuleResult, tagDefinitionResult, portalVisibilityResult] = await Promise.all([
+      tenantScopedTable('board_auto_close_rules').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('board_notification_rules').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('tag_definitions').where({ board_id: boardId }).count('* as count').first(),
+      tenantScopedTable('client_portal_visibility_group_boards').where({ board_id: boardId }).count('* as count').first(),
+    ]);
+
+    const cascadedCounts: Record<string, number> = {};
+    const addCascadedCount = (key: string, raw: unknown) => {
+      const count = Number(raw || 0);
+      if (count > 0) {
+        cascadedCounts[key] = count;
+      }
+    };
+    addCascadedCount('auto_close_rules', autoCloseRuleResult?.count);
+    addCascadedCount('notification_rules', notificationRuleResult?.count);
+    addCascadedCount('tag_definitions', tagDefinitionResult?.count);
+    addCascadedCount('portal_visibility_assignments', portalVisibilityResult?.count);
+
     // 7. If custom board has categories and force=false, prompt for confirmation
     // ITIL categories are shared and handled separately via ITIL cleanup
     if (!isItilCategoryBoard && allCategoryIds.length > 0 && !force) {
-      const statusInfo = statusCount > 0
-        ? ` and ${statusCount} ticket status${statusCount === 1 ? '' : 'es'}`
-        : '';
+      const counts = {
+        categories: allCategoryIds.length,
+        ...(statusCount > 0 ? { statuses: statusCount } : {}),
+        ...cascadedCounts
+      };
       return {
         success: false,
         code: 'BOARD_HAS_CATEGORIES',
-        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}${statusInfo}. Delete them too?`,
-        dependencies: ['categories', ...(statusCount > 0 ? ['statuses'] : [])],
-        counts: { categories: allCategoryIds.length, ...(statusCount > 0 ? { statuses: statusCount } : {}) }
+        message: `Board has ${describeBoardRemovals(counts)}. Delete them too?`,
+        dependencies: Object.keys(counts),
+        counts
       };
     }
 
-    // 7b. If board has statuses and user hasn't confirmed, inform them
-    if (!force && statusCount > 0 && allCategoryIds.length === 0) {
+    // 7b. If the board owns anything else that goes with it and the user hasn't
+    // confirmed, list it. Tag definitions in particular MUST be confirmed here:
+    // the lightweight path below never deletes them, so without this gate the
+    // board delete would fail on their FK.
+    if (!force && allCategoryIds.length === 0 && (statusCount > 0 || Object.keys(cascadedCounts).length > 0)) {
+      const counts = {
+        ...(statusCount > 0 ? { statuses: statusCount } : {}),
+        ...cascadedCounts
+      };
       return {
         success: false,
         code: 'BOARD_HAS_STATUSES',
-        message: `Board has ${statusCount} ticket status${statusCount === 1 ? '' : 'es'} that will also be removed.`,
-        dependencies: ['statuses'],
-        counts: { statuses: statusCount }
+        message: `Board has ${describeBoardRemovals(counts)} that will also be removed.`,
+        dependencies: Object.keys(counts),
+        counts
       };
     }
 
@@ -746,9 +894,11 @@ export const deleteBoard = withAuth(async (
     // cannot see the re-point above, so boards that needed one take the main path.
     if (!force && !isLastItilBoard && allCategoryIds.length === 0 && repointedItilCategories === 0) {
       const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
-        // Clean up board statuses (can't be deleted manually due to
-        // "at least one default status" enforcement, safe because
-        // we already confirmed zero tickets above)
+        // Release the references that have no cascade of their own, then clean
+        // up board statuses (can't be deleted manually due to "at least one
+        // default status" enforcement, safe because we already confirmed zero
+        // tickets above)
+        await cleanupBoardReferences(boardTrx, tenantId, boardId, force);
         await cleanupBoardStatuses(boardTrx, tenantId, boardId);
 
         const deletedCount = await tenantDb(boardTrx, tenantId).table('boards')
@@ -792,9 +942,10 @@ export const deleteBoard = withAuth(async (
         .delete();
     }
 
-    // 10. Clean up board statuses (can't be deleted manually due to
-    // "at least one default status" enforcement, safe because
-    // we already confirmed zero tickets above)
+    // 10. Release the references that have no cascade of their own, then clean
+    // up board statuses (can't be deleted manually due to "at least one default
+    // status" enforcement, safe because we already confirmed zero tickets above)
+    await cleanupBoardReferences(trx, tenant, boardId, force);
     await cleanupBoardStatuses(trx, tenant, boardId);
 
     // 11. Delete the board

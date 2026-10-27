@@ -710,7 +710,8 @@
         "importNewName": "Mit anderem Namen importieren:",
         "importWithResolutions": "Mit Auflösungen importieren",
         "orderConflict": "Reihenfolge {{order}} wird bereits verwendet",
-        "importWithOrder": "Mit Reihenfolge {{order}} importieren"
+        "importWithOrder": "Mit Reihenfolge {{order}} importieren",
+        "removesIntro": "Beim Löschen dieses Boards wird außerdem Folgendes entfernt:"
       },
       "importTable": {
         "active": "Aktiv"
@@ -779,7 +780,9 @@
           "deleteFailed": "Board konnte nicht gelöscht werden",
           "importFailed": "Boards konnten nicht importiert werden",
           "updateStatusFailed": "Boardstatus konnte nicht aktualisiert werden",
-          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden"
+          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden",
+          "hasEmailSenderRoute": "Board kann nicht gelöscht werden: Es hat eine eigene Route für ausgehende E-Mail-Absender. Entfernen Sie zuerst den Ticket-Absender im Board-Editor.",
+          "referencedByAutomations": "Board kann nicht gelöscht werden: Automatisierungen verweisen weiterhin darauf. Richten Sie diese zuerst auf ein anderes Board aus oder entfernen Sie sie."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Anzeigename",
         "save": "Absender speichern",
         "saved": "Absender gespeichert"
+      },
+      "deleteDependencies": {
+        "categories_one": "Kategorie",
+        "categories_other": "Kategorien",
+        "categories_few": "Kategorien",
+        "categories_many": "Kategorien",
+        "statuses_one": "Ticketstatus",
+        "statuses_other": "Ticketstatus",
+        "statuses_few": "Ticketstatus",
+        "statuses_many": "Ticketstatus",
+        "autoCloseRules_one": "automatische Abschlussregel",
+        "autoCloseRules_other": "automatische Abschlussregeln",
+        "autoCloseRules_few": "automatische Abschlussregeln",
+        "autoCloseRules_many": "automatische Abschlussregeln",
+        "notificationRules_one": "Benachrichtigungsregel",
+        "notificationRules_other": "Benachrichtigungsregeln",
+        "notificationRules_few": "Benachrichtigungsregeln",
+        "notificationRules_many": "Benachrichtigungsregeln",
+        "tags_one": "Tag",
+        "tags_other": "Tags",
+        "tags_few": "Tags",
+        "tags_many": "Tags",
+        "portalVisibility_one": "Sichtbarkeitszuweisung im Kundenportal",
+        "portalVisibility_other": "Sichtbarkeitszuweisungen im Kundenportal",
+        "portalVisibility_few": "Sichtbarkeitszuweisungen im Kundenportal",
+        "portalVisibility_many": "Sichtbarkeitszuweisungen im Kundenportal",
+        "emailSenderRoutes_one": "Route für ausgehende Absender",
+        "emailSenderRoutes_other": "Routen für ausgehende Absender",
+        "emailSenderRoutes_few": "Routen für ausgehende Absender",
+        "emailSenderRoutes_many": "Routen für ausgehende Absender",
+        "ticketTemplates_one": "Ticketvorlage",
+        "ticketTemplates_other": "Ticketvorlagen",
+        "ticketTemplates_few": "Ticketvorlagen",
+        "ticketTemplates_many": "Ticketvorlagen",
+        "recurringTickets_one": "Zeitplan für wiederkehrende Tickets",
+        "recurringTickets_other": "Zeitpläne für wiederkehrende Tickets",
+        "recurringTickets_few": "Zeitpläne für wiederkehrende Tickets",
+        "recurringTickets_many": "Zeitpläne für wiederkehrende Tickets",
+        "checklistRules_one": "Checklisten-Zuweisungsregel",
+        "checklistRules_other": "Checklisten-Zuweisungsregeln",
+        "checklistRules_few": "Checklisten-Zuweisungsregeln",
+        "checklistRules_many": "Checklisten-Zuweisungsregeln"
       }
     },
     "priorities": {

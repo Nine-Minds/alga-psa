@@ -710,7 +710,8 @@
         "skipItem": "Skip this item",
         "importNewName": "Import with different name:",
         "importWithOrder": "Import with order {{order}}",
-        "importWithResolutions": "Import with Resolutions"
+        "importWithResolutions": "Import with Resolutions",
+        "removesIntro": "Deleting this board will also remove:"
       },
       "importTable": {
         "active": "Active"
@@ -779,7 +780,9 @@
           "deleteFailed": "Failed to delete board",
           "importFailed": "Failed to import boards",
           "updateStatusFailed": "Failed to update board status",
-          "updateDefaultFailed": "Failed to update default board"
+          "updateDefaultFailed": "Failed to update default board",
+          "hasEmailSenderRoute": "Cannot delete board: it has a dedicated outbound email sender route. Clear the board's ticket sender in the board editor first.",
+          "referencedByAutomations": "Cannot delete board: automations still target it. Point them at another board (or remove them) first."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "useDefault": "Use ticket default",
         "duplicateRoute": "That sender route already exists.",
         "saveFailed": "Could not save sender routing. Please try again."
+      },
+      "deleteDependencies": {
+        "categories_one": "category",
+        "categories_other": "categories",
+        "categories_few": "categories",
+        "categories_many": "categories",
+        "statuses_one": "ticket status",
+        "statuses_other": "ticket statuses",
+        "statuses_few": "ticket statuses",
+        "statuses_many": "ticket statuses",
+        "autoCloseRules_one": "auto-close rule",
+        "autoCloseRules_other": "auto-close rules",
+        "autoCloseRules_few": "auto-close rules",
+        "autoCloseRules_many": "auto-close rules",
+        "notificationRules_one": "notification rule",
+        "notificationRules_other": "notification rules",
+        "notificationRules_few": "notification rules",
+        "notificationRules_many": "notification rules",
+        "tags_one": "tag",
+        "tags_other": "tags",
+        "tags_few": "tags",
+        "tags_many": "tags",
+        "portalVisibility_one": "client portal visibility assignment",
+        "portalVisibility_other": "client portal visibility assignments",
+        "portalVisibility_few": "client portal visibility assignments",
+        "portalVisibility_many": "client portal visibility assignments",
+        "emailSenderRoutes_one": "outbound sender route",
+        "emailSenderRoutes_other": "outbound sender routes",
+        "emailSenderRoutes_few": "outbound sender routes",
+        "emailSenderRoutes_many": "outbound sender routes",
+        "ticketTemplates_one": "ticket template",
+        "ticketTemplates_other": "ticket templates",
+        "ticketTemplates_few": "ticket templates",
+        "ticketTemplates_many": "ticket templates",
+        "recurringTickets_one": "recurring ticket schedule",
+        "recurringTickets_other": "recurring ticket schedules",
+        "recurringTickets_few": "recurring ticket schedules",
+        "recurringTickets_many": "recurring ticket schedules",
+        "checklistRules_one": "checklist apply rule",
+        "checklistRules_other": "checklist apply rules",
+        "checklistRules_few": "checklist apply rules",
+        "checklistRules_many": "checklist apply rules"
       }
     },
     "priorities": {

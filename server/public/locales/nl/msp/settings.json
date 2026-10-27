@@ -710,7 +710,8 @@
         "importNewName": "Importeren met een andere naam:",
         "importWithResolutions": "Importeren met oplossingen",
         "orderConflict": "Volgorde {{order}} is al in gebruik",
-        "importWithOrder": "Importeren met volgorde {{order}}"
+        "importWithOrder": "Importeren met volgorde {{order}}",
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
         "active": "Actief"
@@ -779,7 +780,9 @@
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
-          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
+          "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog automatiseringen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
         "saved": "Afzender opgeslagen"
+      },
+      "deleteDependencies": {
+        "categories_one": "categorie",
+        "categories_other": "categorieën",
+        "categories_few": "categorieën",
+        "categories_many": "categorieën",
+        "statuses_one": "ticketstatus",
+        "statuses_other": "ticketstatussen",
+        "statuses_few": "ticketstatussen",
+        "statuses_many": "ticketstatussen",
+        "autoCloseRules_one": "automatisch-sluitenregel",
+        "autoCloseRules_other": "automatisch-sluitenregels",
+        "autoCloseRules_few": "automatisch-sluitenregels",
+        "autoCloseRules_many": "automatisch-sluitenregels",
+        "notificationRules_one": "meldingsregel",
+        "notificationRules_other": "meldingsregels",
+        "notificationRules_few": "meldingsregels",
+        "notificationRules_many": "meldingsregels",
+        "tags_one": "label",
+        "tags_other": "labels",
+        "tags_few": "labels",
+        "tags_many": "labels",
+        "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
+        "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_many": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "emailSenderRoutes_one": "uitgaande afzenderroute",
+        "emailSenderRoutes_other": "uitgaande afzenderroutes",
+        "emailSenderRoutes_few": "uitgaande afzenderroutes",
+        "emailSenderRoutes_many": "uitgaande afzenderroutes",
+        "ticketTemplates_one": "ticketsjabloon",
+        "ticketTemplates_other": "ticketsjablonen",
+        "ticketTemplates_few": "ticketsjablonen",
+        "ticketTemplates_many": "ticketsjablonen",
+        "recurringTickets_one": "planning voor terugkerende tickets",
+        "recurringTickets_other": "planningen voor terugkerende tickets",
+        "recurringTickets_few": "planningen voor terugkerende tickets",
+        "recurringTickets_many": "planningen voor terugkerende tickets",
+        "checklistRules_one": "controlelijstregel",
+        "checklistRules_other": "controlelijstregels",
+        "checklistRules_few": "controlelijstregels",
+        "checklistRules_many": "controlelijstregels"
       }
     },
     "priorities": {

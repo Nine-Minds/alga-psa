@@ -710,7 +710,8 @@
         "importNewName": "Importuj z inną nazwą:",
         "importWithResolutions": "Importuj z rozwiązaniami",
         "orderConflict": "Kolejność {{order}} jest już zajęta",
-        "importWithOrder": "Importuj z kolejnością {{order}}"
+        "importWithOrder": "Importuj z kolejnością {{order}}",
+        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
       },
       "importTable": {
         "active": "Aktywna"
@@ -779,7 +780,9 @@
           "deleteFailed": "Nie udało się usunąć tablicy",
           "importFailed": "Nie udało się zaimportować tablic",
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
-          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy",
+          "hasEmailSenderRoute": "Nie można usunąć tablicy: ma własną trasę nadawcy wiadomości wychodzących. Najpierw usuń nadawcę zgłoszeń w edytorze tablicy.",
+          "referencedByAutomations": "Nie można usunąć tablicy: nadal wskazują na nią automatyzacje. Najpierw przekieruj je na inną tablicę lub usuń."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Nazwa wyświetlana",
         "save": "Zapisz nadawcę",
         "saved": "Zapisano nadawcę"
+      },
+      "deleteDependencies": {
+        "categories_one": "kategoria",
+        "categories_other": "kategorii",
+        "categories_few": "kategorie",
+        "categories_many": "kategorii",
+        "statuses_one": "status zgłoszenia",
+        "statuses_other": "statusów zgłoszeń",
+        "statuses_few": "statusy zgłoszeń",
+        "statuses_many": "statusów zgłoszeń",
+        "autoCloseRules_one": "reguła automatycznego zamknięcia",
+        "autoCloseRules_other": "reguł automatycznego zamknięcia",
+        "autoCloseRules_few": "reguły automatycznego zamknięcia",
+        "autoCloseRules_many": "reguł automatycznego zamknięcia",
+        "notificationRules_one": "reguła powiadomień",
+        "notificationRules_other": "reguł powiadomień",
+        "notificationRules_few": "reguły powiadomień",
+        "notificationRules_many": "reguł powiadomień",
+        "tags_one": "tag",
+        "tags_other": "tagów",
+        "tags_few": "tagi",
+        "tags_many": "tagów",
+        "portalVisibility_one": "przypisanie widoczności w portalu klienta",
+        "portalVisibility_other": "przypisań widoczności w portalu klienta",
+        "portalVisibility_few": "przypisania widoczności w portalu klienta",
+        "portalVisibility_many": "przypisań widoczności w portalu klienta",
+        "emailSenderRoutes_one": "trasa nadawcy wychodzącego",
+        "emailSenderRoutes_other": "tras nadawcy wychodzącego",
+        "emailSenderRoutes_few": "trasy nadawcy wychodzącego",
+        "emailSenderRoutes_many": "tras nadawcy wychodzącego",
+        "ticketTemplates_one": "szablon zgłoszenia",
+        "ticketTemplates_other": "szablonów zgłoszeń",
+        "ticketTemplates_few": "szablony zgłoszeń",
+        "ticketTemplates_many": "szablonów zgłoszeń",
+        "recurringTickets_one": "harmonogram cyklicznych zgłoszeń",
+        "recurringTickets_other": "harmonogramów cyklicznych zgłoszeń",
+        "recurringTickets_few": "harmonogramy cyklicznych zgłoszeń",
+        "recurringTickets_many": "harmonogramów cyklicznych zgłoszeń",
+        "checklistRules_one": "reguła stosowania listy kontrolnej",
+        "checklistRules_other": "reguł stosowania listy kontrolnej",
+        "checklistRules_few": "reguły stosowania listy kontrolnej",
+        "checklistRules_many": "reguł stosowania listy kontrolnej"
       }
     },
     "priorities": {

@@ -710,7 +710,8 @@
         "skipItem": "Hoppa över denna post",
         "importNewName": "Importera med ett annat namn:",
         "importWithOrder": "Importera med ordning {{order}}",
-        "importWithResolutions": "Importera med lösta konflikter"
+        "importWithResolutions": "Importera med lösta konflikter",
+        "removesIntro": "Om du raderar den här tavlan tas även följande bort:"
       },
       "importTable": {
         "active": "Aktiv"
@@ -779,7 +780,9 @@
           "deleteFailed": "Det gick inte att radera tavlan",
           "importFailed": "Det gick inte att importera tavlor",
           "updateStatusFailed": "Det gick inte att uppdatera tavlans status",
-          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan"
+          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan",
+          "hasEmailSenderRoute": "Det går inte att radera tavlan: den har en egen routning för utgående avsändare. Ta först bort ärendeavsändaren i tavelredigeraren.",
+          "referencedByAutomations": "Det går inte att radera tavlan: automatiseringar pekar fortfarande på den. Rikta om dem till en annan tavla eller ta bort dem först."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "useDefault": "Använd standard för ärenden",
         "duplicateRoute": "Den avsändarroutningen finns redan.",
         "saveFailed": "Det gick inte att spara avsändarroutningen. Försök igen."
+      },
+      "deleteDependencies": {
+        "categories_one": "kategori",
+        "categories_other": "kategorier",
+        "categories_few": "kategorier",
+        "categories_many": "kategorier",
+        "statuses_one": "ärendestatus",
+        "statuses_other": "ärendestatusar",
+        "statuses_few": "ärendestatusar",
+        "statuses_many": "ärendestatusar",
+        "autoCloseRules_one": "regel för automatisk stängning",
+        "autoCloseRules_other": "regler för automatisk stängning",
+        "autoCloseRules_few": "regler för automatisk stängning",
+        "autoCloseRules_many": "regler för automatisk stängning",
+        "notificationRules_one": "aviseringsregel",
+        "notificationRules_other": "aviseringsregler",
+        "notificationRules_few": "aviseringsregler",
+        "notificationRules_many": "aviseringsregler",
+        "tags_one": "tagg",
+        "tags_other": "taggar",
+        "tags_few": "taggar",
+        "tags_many": "taggar",
+        "portalVisibility_one": "synlighetstilldelning i kundportalen",
+        "portalVisibility_other": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_few": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_many": "synlighetstilldelningar i kundportalen",
+        "emailSenderRoutes_one": "utgående avsändarroutning",
+        "emailSenderRoutes_other": "utgående avsändarroutningar",
+        "emailSenderRoutes_few": "utgående avsändarroutningar",
+        "emailSenderRoutes_many": "utgående avsändarroutningar",
+        "ticketTemplates_one": "ärendemall",
+        "ticketTemplates_other": "ärendemallar",
+        "ticketTemplates_few": "ärendemallar",
+        "ticketTemplates_many": "ärendemallar",
+        "recurringTickets_one": "schema för återkommande ärenden",
+        "recurringTickets_other": "scheman för återkommande ärenden",
+        "recurringTickets_few": "scheman för återkommande ärenden",
+        "recurringTickets_many": "scheman för återkommande ärenden",
+        "checklistRules_one": "regel för checklistetilldelning",
+        "checklistRules_other": "regler för checklistetilldelning",
+        "checklistRules_few": "regler för checklistetilldelning",
+        "checklistRules_many": "regler för checklistetilldelning"
       }
     },
     "priorities": {
