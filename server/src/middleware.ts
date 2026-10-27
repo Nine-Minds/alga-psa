@@ -163,6 +163,9 @@ const apiKeySkipPaths = [
   '/api/mcp',
   // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
   '/api/v1/mcp/',
+  // Capability probes (e.g. /api/v1/capabilities/co-managed) are session-authenticated
+  // in-route; the tenant always comes from the session, never from the request.
+  '/api/v1/capabilities/',
   // Workflow definition/run APIs are session-authenticated for MSP workflow UI tooling.
   '/api/workflow-definitions',
   '/api/workflow-definitions/',
