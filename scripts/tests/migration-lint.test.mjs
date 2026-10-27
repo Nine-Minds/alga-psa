@@ -240,3 +240,102 @@ test('CLI: exit codes against a temp git repo (0 clean, 1 violation, 2 cannot de
   assert.match(lint().stdout, /R6 timestamp 20230101000000 is not later/);
   fs.rmSync(repo, { recursive: true, force: true });
 });
+
+// PR mode must scan modified and renamed migrations, not only added ones.
+function prRepo() {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'mlint-amr-'));
+  const git = (...args) => spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+  git('init', '-q', '-b', 'main');
+  git('config', 'user.email', 't@example.com');
+  git('config', 'user.name', 't');
+  fs.mkdirSync(path.join(repo, 'server/migrations'), { recursive: true });
+  const write = (name, body) => fs.writeFileSync(path.join(repo, 'server/migrations', name), body);
+  write('20240101000000_widgets.cjs', "exports.up = async (knex) => {\n  await knex.raw('CREATE TABLE IF NOT EXISTS widgets (id int, note text)');\n};\n");
+  write('20240115000000_touch.cjs', "exports.up = async (knex) => {\n  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS a int');\n};\n");
+  git('add', '.');
+  git('commit', '-q', '-m', 'base');
+  git('switch', '-q', '-c', 'pr');
+  const commit = (msg) => { git('add', '-A'); git('commit', '-q', '-m', msg); };
+  const lint = () => spawnSync('node', [CLI, '--repo', repo, '--base', 'main'], { encoding: 'utf8' });
+  return { repo, git, write, commit, lint, cleanup: () => fs.rmSync(repo, { recursive: true, force: true }) };
+}
+
+const TOUCH = '20240115000000_touch.cjs';
+const ADD_A = "  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS a int');\n";
+const DROP_NOTE = "  await knex.raw('ALTER TABLE widgets DROP COLUMN note');\n";
+
+test('CLI PR mode: an edit that adds DROP COLUMN to a base migration fails R3 and is reported as modified', () => {
+  const r = prRepo();
+  r.write(TOUCH, `exports.up = async (knex) => {\n${ADD_A}${DROP_NOTE}};\n`);
+  r.commit('edit');
+  const out = r.lint();
+  assert.equal(out.status, 1, out.stdout);
+  assert.match(out.stdout, /20240115000000_touch\.cjs: modified/);
+  assert.match(out.stdout, /20240115000000_touch\.cjs:3: R3 /);
+  assert.match(out.stdout, /1 file\(s\) scanned/);
+  r.cleanup();
+});
+
+test('CLI PR mode: a clean edit of a base migration passes (no false R6, own CREATE TABLE is not "existing")', () => {
+  const r = prRepo();
+  // Editing the creating migration: its own CREATE TABLE followed by an index must not count as an existing table.
+  r.write('20240101000000_widgets.cjs', "// harmless comment\nexports.up = async (knex) => {\n  await knex.raw('CREATE TABLE IF NOT EXISTS widgets (id int, note text)');\n  await knex.raw('CREATE INDEX IF NOT EXISTS widgets_id_idx ON widgets (id)');\n};\n");
+  r.write(TOUCH, `// harmless comment\nexports.up = async (knex) => {\n${ADD_A}  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS extra text');\n};\n`);
+  r.commit('clean edit');
+  const out = r.lint();
+  assert.equal(out.status, 0, out.stdout);
+  assert.match(out.stdout, /2 file\(s\) scanned/);
+  assert.match(out.stdout, /: modified/);
+  r.cleanup();
+});
+
+test('CLI PR mode: a renamed migration is scanned under its new name; a timestamp-keeping rename is exempt from R6-vs-base', () => {
+  const r = prRepo();
+  r.git('mv', `server/migrations/${TOUCH}`, 'server/migrations/20240115000000_touch_renamed.cjs');
+  r.write('20240115000000_touch_renamed.cjs', `exports.up = async (knex) => {\n${ADD_A}${DROP_NOTE}};\n`);
+  r.commit('rename');
+  const out = r.lint();
+  assert.equal(out.status, 1, out.stdout);
+  assert.match(out.stdout, /20240115000000_touch_renamed\.cjs: renamed from server\/migrations\/20240115000000_touch\.cjs/);
+  assert.match(out.stdout, /20240115000000_touch_renamed\.cjs:3: R3 /);
+  assert.doesNotMatch(out.stdout, /R6 /);
+  r.cleanup();
+});
+
+test('CLI PR mode: a rename that changes the timestamp is a new migration and gets the full R6 check', () => {
+  const r = prRepo();
+  r.git('mv', `server/migrations/${TOUCH}`, 'server/migrations/20230101000000_touch.cjs');
+  r.commit('rename with older timestamp');
+  const out = r.lint();
+  assert.equal(out.status, 1, out.stdout);
+  assert.match(out.stdout, /20230101000000_touch\.cjs:1: R6 timestamp 20230101000000 is not later/);
+  r.cleanup();
+});
+
+test('CLI PR mode: an added file still goes through the unchanged path (no status line)', () => {
+  const r = prRepo();
+  r.write('20240201000000_bad.cjs', `exports.up = async (knex) => {\n${DROP_NOTE}};\n`);
+  r.commit('add');
+  const out = r.lint();
+  assert.equal(out.status, 1);
+  assert.match(out.stdout, /20240201000000_bad\.cjs:2: R3 /);
+  assert.doesNotMatch(out.stdout, /: (modified|renamed)/);
+  r.cleanup();
+});
+
+test('CLI PR mode: touching a file whose duplicate timestamp already exists on base is not a new R6; a new duplicate still is', () => {
+  const r = prRepo();
+  r.write('20240115000000_twin.cjs', 'exports.up = async () => {};\n');
+  r.git('add', '-A'); r.git('commit', '-q', '-m', 'twin on main');
+  r.git('switch', '-q', 'main'); r.git('merge', '-q', '--ff-only', 'pr'); r.git('switch', '-q', 'pr');
+  fs.appendFileSync(path.join(r.repo, 'server/migrations/20240115000000_twin.cjs'), '// comment\n');
+  fs.appendFileSync(path.join(r.repo, `server/migrations/${TOUCH}`), '// comment\n');
+  r.commit('touch both');
+  assert.equal(r.lint().status, 0, 'inherited duplicate is not introduced by this change');
+  r.write('20240115000000_third.cjs', 'exports.up = async () => {};\n');
+  r.commit('new duplicate');
+  const out = r.lint();
+  assert.equal(out.status, 1);
+  assert.match(out.stdout, /R6 duplicate timestamp 20240115000000/);
+  r.cleanup();
+});

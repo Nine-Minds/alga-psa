@@ -768,6 +768,12 @@ const isSystemTable = (t) => /^(pg_|information_schema|knex_migrations)/.test(t)
  * files: [{ name, source }]
  * ctx:   { isExistingTable(table, ts), isExistingFunction(name, ts),
  *          baseMaxTimestamp?: string }   (rule 6 is skipped without it)
+ *
+ * A file may carry `ctx` (its own table/function view, e.g. as-of its own
+ * timestamp for a modified migration) and `skipBaseMax` (exempt from the
+ * "not later than base" half of rule 6; the duplicate check still applies,
+ * except between two files that both carry `onBase`: a duplicate inherited
+ * from base is not introduced by this change).
  */
 export function lintMigrationSet(files, ctx) {
   const analyses = files.map((f) => ({ ...f, a: analyzeMigration(f.source, f.name), ts: timestampOf(f.name), annotations: parseAnnotations(f.source) }));
@@ -788,7 +794,7 @@ export function lintMigrationSet(files, ctx) {
       undecided.push({ file: f.name, line: 1, rule: 'PARSE', message: `cannot parse: ${f.a.parseError}` });
       continue;
     }
-    const existing = (t) => !!t && !isSystemTable(t) && ctx.isExistingTable(t, f.ts);
+    const existing = (t) => !!t && !isSystemTable(t) && (f.ctx ?? ctx).isExistingTable(t, f.ts);
     const events = f.a.events;
     const guardedBefore = (kind, ev) => ev.doGuarded || f.a.guards.some((g) => g.kind === kind && g.top === ev.topId && g.seq < ev.seq);
     const createdEarlier = (ev) => events.some((e) => e.type === 'create-table' && e.table === ev.table && e.seq < ev.seq && (e.ifNotExists || guardedBefore('table', e)));
@@ -798,9 +804,11 @@ export function lintMigrationSet(files, ctx) {
       const at = { line: 1, anchorLine: 1 };
       if (!f.ts) add(6, at, 'filename has no numeric timestamp prefix');
       else {
-        if (f.ts <= ctx.baseMaxTimestamp.padEnd(14, '0')) add(6, at, `timestamp ${f.ts} is not later than the newest on base (${ctx.baseMaxTimestamp})`);
-        if (seenTs.has(f.ts) && seenTs.get(f.ts) !== f.name) add(6, at, `duplicate timestamp ${f.ts} (also ${seenTs.get(f.ts)})`);
-        seenTs.set(f.ts, f.name);
+        if (!f.skipBaseMax && f.ts <= ctx.baseMaxTimestamp.padEnd(14, '0')) add(6, at, `timestamp ${f.ts} is not later than the newest on base (${ctx.baseMaxTimestamp})`);
+        const other = seenTs.get(f.ts);
+        // A collision between two files that were both already on base is inherited, not introduced by this change.
+        if (other && other.name !== f.name && !(f.onBase && other.onBase)) add(6, at, `duplicate timestamp ${f.ts} (also ${other.name})`);
+        seenTs.set(f.ts, f);
       }
     }
 
@@ -873,7 +881,7 @@ export function lintMigrationSet(files, ctx) {
           if (existing(ev.table)) add(4, ev, `CREATE TRIGGER ${ev.name} on existing table "${ev.table}" (Citus skips triggers; keep the invariant in app code)`);
           break;
         case 'create-function':
-          if (ev.orReplace && ctx.isExistingFunction(ev.name, f.ts)) add(4, ev, `CREATE OR REPLACE FUNCTION ${ev.name} replaces a function main already defines`);
+          if (ev.orReplace && (f.ctx ?? ctx).isExistingFunction(ev.name, f.ts)) add(4, ev, `CREATE OR REPLACE FUNCTION ${ev.name} replaces a function main already defines`);
           break;
 
         case 'create-table':

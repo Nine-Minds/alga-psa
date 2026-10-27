@@ -104,6 +104,7 @@ export function run(argv) {
   let files;
   let ctx;
   let mode;
+  const touched = [];
 
   if (opts.last) {
     // Audit mode: newest N migrations in the working tree, judged against the
@@ -125,10 +126,31 @@ export function run(argv) {
     ctx = contextFromFacts(facts, { baseMaxTimestamp: facts.maxTimestamp });
     if (opts.files) files = expandFiles(opts.files);
     else {
-      const added = git(['diff', '--name-status', '--diff-filter=A', `${opts.base}...HEAD`, '--', ...MIGRATION_DIRS])
-        .split('\n').filter(Boolean).map((l) => l.split('\t')[1])
-        .filter((f) => MIGRATION_FILE.test(path.basename(f)) && MIGRATION_DIRS.includes(path.dirname(f)));
-      files = added.map((f) => ({ name: f, source: fs.readFileSync(path.join(repoRoot(), f), 'utf8') }));
+      // Added (A), modified (M) and renamed (R) migrations. Lines are `A\tpath`,
+      // `M\tpath` or `R<score>\told\tnew`; the new path is what gets linted.
+      const changes = git(['diff', '--name-status', '--diff-filter=AMR', `${opts.base}...HEAD`, '--', ...MIGRATION_DIRS])
+        .split('\n').filter(Boolean).map((l) => {
+          const [st, a, b] = l.split('\t');
+          return st.startsWith('R') ? { status: 'R', from: a, name: b } : { status: st, from: null, name: a };
+        })
+        .filter((c) => MIGRATION_FILE.test(path.basename(c.name)) && MIGRATION_DIRS.includes(path.dirname(c.name)));
+      // Modified / timestamp-keeping renamed files are judged as of their own
+      // timestamp (same view as the main audit); added files and renames that
+      // change the timestamp (new migration names to knex) use the current view.
+      const asOfCtx = contextFromFacts(facts, { asOf: true });
+      let newCtx = ctx;
+      const movedOut = changes.filter((c) => c.status === 'R' && timestampOf(c.from) !== timestampOf(c.name)).map((c) => c.from);
+      if (movedOut.length) {
+        const rest = deriveSchemaFacts(baseFiles.filter((f) => !movedOut.includes(f.name)));
+        newCtx = contextFromFacts(rest, { baseMaxTimestamp: facts.maxTimestamp });
+      }
+      files = changes.map((c) => {
+        const file = { name: c.name, source: fs.readFileSync(path.join(repoRoot(), c.name), 'utf8') };
+        if (c.status === 'A') return file;
+        touched.push({ file: c.name, status: c.status === 'R' ? 'renamed' : 'modified', renamedFrom: c.from });
+        if (c.status === 'M' || timestampOf(c.from) === timestampOf(c.name)) return { ...file, ctx: asOfCtx, skipBaseMax: true, onBase: c.status === 'M' };
+        return movedOut.length ? { ...file, ctx: newCtx } : file;
+      });
     }
     mode = `change set vs ${opts.base}`;
   }
@@ -137,7 +159,7 @@ export function run(argv) {
   let exit = 0;
   if (result.violations.length) exit = 1;
   else if (result.undecided.length) exit = 2;
-  return { exit, report: { mode, opts, ...result } };
+  return { exit, report: { mode, opts, ...result, ...(touched.length ? { touched } : {}) } };
 }
 
 function print(report, json) {
@@ -150,6 +172,7 @@ function print(report, json) {
     return;
   }
   console.log(`migration-lint: ${report.mode}`);
+  for (const t of report.touched ?? []) console.log(`${t.file}: ${t.status}${t.renamedFrom ? ` from ${t.renamedFrom}` : ''}`);
   for (const v of report.violations) console.log(formatViolation(v));
   for (const v of report.undecided) console.log(`${v.file}:${v.line}: ${v.rule === 'PARSE' ? 'PARSE' : 'R*-UNRESOLVED'} ${v.message} (lint could not decide)`);
   for (const a of report.allowed) console.log(`${a.file}:${a.line}: R${a.rule} ALLOWED by line ${a.annotationLine} - ${a.reason}`);
