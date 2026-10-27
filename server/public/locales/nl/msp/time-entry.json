@@ -132,12 +132,14 @@
       "billable": "Factureerbaar",
       "notes": "Opmerkingen",
       "deleteTimeEntry": "Tijdsinvoer verwijderen",
-      "unsavedChanges": "Niet-opgeslagen wijzigingen"
+      "unsavedChanges": "Niet-opgeslagen wijzigingen",
+      "contractLine": "Contractregel"
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",
       "selectDate": "Datum selecteren",
-      "addNotes": "Voeg notities toe"
+      "addNotes": "Voeg notities toe",
+      "selectContractLine": "Selecteer een contractregel"
     },
     "validation": {
       "startBeforeEnd": "De starttijd moet eerder zijn dan de eindtijd",
@@ -155,6 +157,9 @@
       "task": "Standaard van taak",
       "phase": "Standaard van fase",
       "project": "Standaard van project"
+    },
+    "options": {
+      "resolveContractLineLater": "Geen regel - later oplossen"
     }
   },
   "workItemPicker": {
@@ -401,7 +406,7 @@
     "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "Systeembeheerd standaardcontract",
-    "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie"
+    "multipleEligible": "Meerdere contractregels komen in aanmerking voor deze datum. Selecteer een contractregel om de toewijzing op te slaan."
   },
   "billableLegend": {
     "title": "Factureerbare legende",

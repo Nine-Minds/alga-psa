@@ -6,12 +6,19 @@ import type { PageState, UIComponent } from './types';
 const btn = (id: string, parentId?: string, extra: Partial<UIComponent> = {}) =>
   ({ id, type: 'button', label: id, parentId, ...extra }) as UIComponent;
 
+const countNodes = (components: UIComponent[]): number =>
+  components.reduce((total, comp) => total + 1 + countNodes(comp.children ?? []), 0);
+
 function make() {
+  // Tallied at publish time: a rebuild mutates the component objects it emits,
+  // so a tree counted after a later flush no longer reflects what this one did.
+  let publishedNodes = 0;
   const publish = vi.fn((s: PageState) => {
+    publishedNodes += countNodes(s.components);
     (window as any).__UI_STATE__ = s;
   });
   const reg = createUIStateRegistry({ onPublish: publish });
-  return { reg, publish };
+  return { reg, publish, publishedNodes: () => publishedNodes };
 }
 
 /** Register n components: 1 root parent per 100 children-ish mix, time register+flush. */
@@ -72,22 +79,33 @@ describe('uiStateRegistry', () => {
     expect(unregMs).toBeLessThan(100);
   });
 
-  it('scales roughly linearly (1k / 2k / 5k)', () => {
-    const results: Record<number, { reg: number; unreg: number }> = {};
-    // warm up the JIT so the 1k sample isn't artificially slow
-    { const { reg } = make(); registerMix(reg, 2000); unregisterAll(reg, 2000); }
+  // The rebuild walks the whole dictionary, so rebuilding once per mutation
+  // instead of once per flush makes a batch of n mutations cost O(n^2) -- the
+  // regression the coalescing in markDirty exists to prevent. A wall-clock
+  // ratio of the 1k and 5k batches could not separate that from noise: correct
+  // code spends single-digit milliseconds at these sizes, so one GC pause
+  // inside the 5k sample crossed the 10x bound on a loaded CI runner
+  // (11.7 vs a 1ms floor). Count the rebuild's work instead, the way #3588 did
+  // for the kb-import split test: every node a rebuild emits is a node it
+  // walked, so the published total is the work and it is exactly linear in the
+  // batch size while the mutations coalesce. The absolute budgets stay on the
+  // 5000-component case above.
+  it('scales linearly: one rebuild per flush, not one per mutation', () => {
+    const emitted: Record<number, { reg: number; unreg: number }> = {};
     for (const n of [1000, 2000, 5000]) {
-      const { reg } = make();
-      const r = registerMix(reg, n);
-      const u = unregisterAll(reg, n);
-      results[n] = { reg: r, unreg: u };
+      const { reg, publishedNodes } = make();
+      registerMix(reg, n);
+      const afterRegister = publishedNodes();
+      unregisterAll(reg, n);
+      emitted[n] = { reg: afterRegister, unreg: publishedNodes() - afterRegister };
     }
-    // eslint-disable-next-line no-console
-    console.info('registry bench (ms)', JSON.stringify(results));
-    // Perfectly linear = 5x; quadratic = 25x. Allow generous noise margin.
-    const floor = (x: number) => Math.max(x, 1);
-    expect(results[5000].reg / floor(results[1000].reg)).toBeLessThan(10);
-    expect(results[5000].unreg / floor(results[1000].unreg)).toBeLessThan(10);
+    // Register batch: one rebuild emitting each component once. Unregister
+    // batch: one rebuild of an empty tree. Publishing per mutation would emit
+    // ~n^2/2 nodes for the register batch alone.
+    for (const n of [1000, 2000, 5000]) {
+      expect(emitted[n]).toEqual({ reg: n, unreg: 0 });
+    }
+    expect(emitted[5000].reg / emitted[1000].reg).toBe(5);
   });
 
   it('coalesces many mutations in one tick into a single publish (microtask)', async () => {

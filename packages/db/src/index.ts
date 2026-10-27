@@ -37,6 +37,8 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 export { auditLog } from './lib/auditLog';
 export { writeAccountingAudit } from './lib/accountingAudit';
 export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
+export { writeInvoiceAudit, listInvoiceAuditHistory, INVOICE_AUDIT_OPERATIONS } from './lib/invoiceAudit';
+export type { InvoiceAuditOperation, InvoiceAuditParams, InvoiceAuditState, InvoiceHistoryEntry } from './lib/invoiceAudit';
 export * from './lib/workDate';
 
 // Shared invoice external-sync row lock (billing adapters + integrations
@@ -100,6 +102,31 @@ export async function withKnexTransaction<T>(
 }
 
 /**
+ * Describe an error for logging without ever throwing.
+ *
+ * `error.stack` is a lazy getter: V8 formats the trace on first access (and
+ * under vite-node a source-mapping `prepareStackTrace` runs then, consuming
+ * stack), so the read can itself raise (e.g. `RangeError: Maximum call stack
+ * size exceeded`). Inside a catch block that second error would replace the
+ * original failure the caller must see. Any failure to read falls back to
+ * `String(error)`; a hostile `toString` degrades to a fixed placeholder.
+ */
+function describeError(error: unknown): { error: string; stack: string | undefined } {
+  try {
+    return {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+  } catch {
+    try {
+      return { error: String(error), stack: undefined };
+    } catch {
+      return { error: '<unprintable error>', stack: undefined };
+    }
+  }
+}
+
+/**
  * Execute a function within an admin database transaction
  */
 export async function withAdminTransaction<T>(
@@ -133,10 +160,9 @@ export async function withAdminTransaction<T>(
     const result = await runOwnedTransaction(adminDb, callback);
     return result;
   } catch (error) {
-    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    // Reporting must never replace the error it reports: describing the error
+    // is guarded, the rethrow is not.
+    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, describeError(error));
     throw error;
   }
 }

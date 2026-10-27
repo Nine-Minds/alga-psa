@@ -8,9 +8,20 @@ import {
   APPLY_RULE_CATEGORY_INVALID,
   APPLY_RULE_SUBCATEGORY_INVALID,
   APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY,
+  TEMPLATE_CLIENT_INVALID,
   checklistActionErrorFrom,
   type ChecklistActionError,
 } from './checklistActionErrors';
+import {
+  TEMPLATE_RULES_TARGET_OTHER_CLIENTS,
+  ruleClientIdsForTemplate,
+  validateRuleKeywords,
+  validateRuleOrigins,
+} from './applyRuleMatcherValidation';
+import type {
+  ChecklistKeywordMode,
+  ChecklistKeywordTarget,
+} from '@alga-psa/shared/lib/ticketChecklists';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply matcher
@@ -33,6 +44,9 @@ export interface IChecklistTemplate {
   name: string;
   description: string | null;
   is_active: boolean;
+  /** null = available to every client */
+  client_id: string | null;
+  client_name: string | null;
   items?: IChecklistTemplateItem[];
 }
 
@@ -43,6 +57,14 @@ export interface IChecklistTemplateApplyRule {
   category_id: string | null;
   subcategory_id: string | null;
   priority_id: string | null;
+  client_ids: string[] | null;
+  ticket_origins: string[] | null;
+  /** Ticket must come from a service request (implied when a definition is named). */
+  from_service_request: boolean;
+  service_request_definition_id: string | null;
+  keywords: string[] | null;
+  keyword_mode: ChecklistKeywordMode;
+  keyword_target: ChecklistKeywordTarget;
   is_enabled: boolean;
 }
 
@@ -50,6 +72,8 @@ export interface ChecklistTemplateInput {
   name: string;
   description?: string | null;
   is_active?: boolean;
+  /** Optional client scope; null/undefined on create = tenant-wide. */
+  client_id?: string | null;
 }
 
 export interface ChecklistTemplateItemInput {
@@ -63,7 +87,39 @@ export interface ChecklistTemplateApplyRuleInput {
   category_id?: string | null;
   subcategory_id?: string | null;
   priority_id?: string | null;
+  client_ids?: string[] | null;
+  ticket_origins?: string[] | null;
+  from_service_request?: boolean;
+  service_request_definition_id?: string | null;
+  keywords?: string[] | null;
+  keyword_mode?: ChecklistKeywordMode;
+  keyword_target?: ChecklistKeywordTarget;
   is_enabled?: boolean;
+}
+
+/**
+ * Columns written for a rule's matchers. Normalises + validates the new
+ * matcher fields; naming a definition implies "from service request".
+ */
+function applyRuleMatcherColumns(input: ChecklistTemplateApplyRuleInput, templateClientId: string | null) {
+  const keywordMode = input.keyword_mode ?? 'any';
+  const keywordTarget = input.keyword_target ?? 'title_and_description';
+  // Out-of-range mode/target values are rejected by the table's CHECK constraints (23514).
+  const definitionId = input.service_request_definition_id || null;
+  return {
+    board_id: input.board_id || null,
+    category_id: input.category_id || null,
+    subcategory_id: input.subcategory_id || null,
+    priority_id: input.priority_id || null,
+    client_ids: ruleClientIdsForTemplate(templateClientId, input.client_ids),
+    ticket_origins: validateRuleOrigins(input.ticket_origins),
+    from_service_request: Boolean(input.from_service_request) || definitionId !== null,
+    service_request_definition_id: definitionId,
+    keywords: validateRuleKeywords(input.keywords),
+    keyword_mode: keywordMode,
+    keyword_target: keywordTarget,
+    is_enabled: input.is_enabled ?? true,
+  };
 }
 
 async function requireSettingsPermission(user: Parameters<Parameters<typeof withAuth>[0]>[0]) {
@@ -78,6 +134,15 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+async function assertClientBelongsToTenant(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<void> {
+  const client = await tenantScopedTable(conn, 'clients', tenant).where({ client_id: clientId }).first('client_id');
+  if (!client) throw new Error(TEMPLATE_CLIENT_INVALID);
 }
 
 /**
@@ -118,14 +183,71 @@ async function assertApplyRuleScopeIsConsistent(
   }
 }
 
+/**
+ * Giving a template an owner: its rules' client matchers must fit inside that owner (see
+ * ruleClientIdsForTemplate). Rules naming only the owner are reset to "any client"; a rule naming
+ * any other client blocks the change rather than being silently narrowed.
+ */
+async function narrowRuleClientsToOwner(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  ownerClientId: string
+): Promise<void> {
+  const rules = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+    .where({ template_id: templateId })
+    .whereNotNull('client_ids')
+    .select('apply_rule_id', 'client_ids') as Array<{ apply_rule_id: string; client_ids: string[] | null }>;
+  for (const rule of rules) {
+    try {
+      ruleClientIdsForTemplate(ownerClientId, rule.client_ids);
+    } catch {
+      throw new Error(TEMPLATE_RULES_TARGET_OTHER_CLIENTS);
+    }
+  }
+  if (rules.length) {
+    await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+      .whereIn('apply_rule_id', rules.map((rule) => rule.apply_rule_id))
+      .update({ client_ids: null, updated_at: trx.fn.now() });
+  }
+}
+
+export interface GetChecklistTemplatesOptions {
+  includeInactive?: boolean;
+  /**
+   * Ticket-aware mode for the "apply checklist" picker: only templates with no client or the
+   * ticket's client are returned. Omit for the (unfiltered) settings list.
+   */
+  forTicketId?: string;
+  /** Settings list filter: only templates scoped to this client. */
+  clientId?: string;
+}
+
 export const getChecklistTemplates = withAuth(
-  async (_user, { tenant }, opts?: { includeInactive?: boolean }): Promise<IChecklistTemplate[]> => {
+  async (_user, { tenant }, opts?: GetChecklistTemplatesOptions): Promise<IChecklistTemplate[]> => {
     const { knex: db } = await createTenantKnex();
+
+    let ticketClientId: string | null | undefined;
+    if (opts?.forTicketId) {
+      const ticket = await tenantScopedTable(db, 'tickets', tenant)
+        .where({ ticket_id: opts.forTicketId })
+        .first('client_id');
+      if (!ticket) throw new Error('Ticket not found');
+      ticketClientId = ticket.client_id;
+    }
+
     const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
       .modify((qb) => {
         if (!opts?.includeInactive) qb.where('is_active', true);
+        if (opts?.forTicketId) {
+          qb.where((scope) => {
+            scope.whereNull('client_id');
+            if (ticketClientId) scope.orWhere('client_id', ticketClientId);
+          });
+        }
+        if (opts?.clientId) qb.where('client_id', opts.clientId);
       })
-      .orderBy('name', 'asc') as IChecklistTemplate[];
+      .orderBy('name', 'asc') as Array<IChecklistTemplate>;
 
     if (!templates.length) return [];
 
@@ -133,11 +255,19 @@ export const getChecklistTemplates = withAuth(
       .whereIn('template_id', templates.map((t: { template_id: string }) => t.template_id))
       .orderBy('order_number', 'asc') as IChecklistTemplateItem[];
 
+    const clientIds = Array.from(new Set(templates.map((t) => t.client_id).filter((id): id is string => Boolean(id))));
+    const clientRows: { client_id: string; client_name: string }[] = clientIds.length
+      ? await tenantScopedTable(db, 'clients', tenant).whereIn('client_id', clientIds).select('client_id', 'client_name')
+      : [];
+    const clientNames = new Map(clientRows.map((c) => [c.client_id, c.client_name]));
+
     return templates.map((t) => ({
       template_id: t.template_id,
       name: t.name,
       description: t.description,
       is_active: t.is_active,
+      client_id: t.client_id ?? null,
+      client_name: t.client_id ? clientNames.get(t.client_id) ?? null : null,
       items: items.filter((i) => i.template_id === t.template_id),
     }));
   }
@@ -150,12 +280,14 @@ export const createChecklistTemplate = withAuth(
       if (!input.name?.trim()) throw new Error('Template name is required');
 
       const { knex: db } = await createTenantKnex();
+      if (input.client_id) await assertClientBelongsToTenant(db, tenant, input.client_id);
       const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
         .insert({
           tenant,
           name: input.name.trim(),
           description: input.description ?? null,
           is_active: input.is_active ?? true,
+          client_id: input.client_id || null,
         })
         .returning('*');
       return row;
@@ -182,13 +314,78 @@ export const updateChecklistTemplate = withAuth(
       }
       if (input.description !== undefined) updates.description = input.description;
       if (input.is_active !== undefined) updates.is_active = input.is_active;
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        if (input.client_id !== undefined) {
+          if (input.client_id) {
+            await assertClientBelongsToTenant(trx, tenant, input.client_id);
+            await narrowRuleClientsToOwner(trx, tenant, templateId, input.client_id);
+          }
+          updates.client_id = input.client_id || null;
+        }
 
-      const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
-        .where({ template_id: templateId })
-        .update(updates)
-        .returning('*');
-      if (!row) throw new Error('Checklist template not found');
-      return row;
+        const [row] = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .update(updates)
+          .returning('*');
+        if (!row) throw new Error('Checklist template not found');
+        return row;
+      });
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
+  }
+);
+
+/**
+ * "Duplicate to client": copies a template and its items into a new template scoped to one
+ * client, leaving a "copied from" note in the description. A plain copy: no inheritance and no
+ * per-client item overrides, so later edits to the source do not propagate.
+ */
+export const duplicateChecklistTemplateToClient = withAuth(
+  async (user, { tenant }, templateId: string, clientId: string): Promise<IChecklistTemplate | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const source = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .first();
+        if (!source) throw new Error('Checklist template not found');
+        if (!clientId) throw new Error(TEMPLATE_CLIENT_INVALID);
+        await assertClientBelongsToTenant(trx, tenant, clientId);
+
+        const note = `Copied from "${source.name}"`;
+        const [created] = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .insert({
+            tenant,
+            name: source.name,
+            description: source.description ? `${note}\n\n${source.description}` : note,
+            is_active: source.is_active,
+            client_id: clientId,
+          })
+          .returning('*');
+
+        const items = await tenantScopedTable(trx, 'checklist_template_items', tenant)
+          .where({ template_id: templateId })
+          .orderBy('order_number', 'asc') as IChecklistTemplateItem[];
+        if (items.length) {
+          await tenantScopedTable(trx, 'checklist_template_items', tenant).insert(
+            items.map((item) => ({
+              tenant,
+              template_id: created.template_id,
+              item_name: item.item_name,
+              description: item.description,
+              is_required: item.is_required,
+              order_number: item.order_number,
+            }))
+          );
+        }
+        return created;
+      });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);
       if (expected) {
@@ -355,6 +552,13 @@ export const getChecklistTemplateApplyRules = withAuth(
         'category_id',
         'subcategory_id',
         'priority_id',
+        'client_ids',
+        'ticket_origins',
+        'from_service_request',
+        'service_request_definition_id',
+        'keywords',
+        'keyword_mode',
+        'keyword_target',
         'is_enabled'
       );
   }
@@ -377,11 +581,7 @@ export const createChecklistTemplateApplyRule = withAuth(
           .insert({
             tenant,
             template_id: templateId,
-            board_id: input.board_id || null,
-            category_id: input.category_id || null,
-            subcategory_id: input.subcategory_id || null,
-            priority_id: input.priority_id || null,
-            is_enabled: input.is_enabled ?? true,
+            ...applyRuleMatcherColumns(input, template.client_id ?? null),
           })
           .returning('*');
         return row;
@@ -402,20 +602,25 @@ export const updateChecklistTemplateApplyRule = withAuth(
       await requireSettingsPermission(user);
 
       const { knex: db } = await createTenantKnex();
-      await assertApplyRuleScopeIsConsistent(db, tenant, input);
-      const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
-        .where({ apply_rule_id: applyRuleId })
-        .update({
-          board_id: input.board_id || null,
-          category_id: input.category_id || null,
-          subcategory_id: input.subcategory_id || null,
-          priority_id: input.priority_id || null,
-          is_enabled: input.is_enabled ?? true,
-          updated_at: db.fn.now(),
-        })
-        .returning('*');
-      if (!row) throw new Error('Apply rule not found');
-      return row;
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const existing = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+          .where({ apply_rule_id: applyRuleId })
+          .first('template_id');
+        if (!existing) throw new Error('Apply rule not found');
+        const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: existing.template_id })
+          .first('client_id');
+        await assertApplyRuleScopeIsConsistent(trx, tenant, input);
+        const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+          .where({ apply_rule_id: applyRuleId })
+          .update({
+            ...applyRuleMatcherColumns(input, template?.client_id ?? null),
+            updated_at: trx.fn.now(),
+          })
+          .returning('*');
+        if (!row) throw new Error('Apply rule not found');
+        return row;
+      });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);
       if (expected) {
@@ -440,6 +645,47 @@ export const deleteChecklistTemplateApplyRule = withAuth(
       if (expected) {
         return expected;
       }
+      throw error;
+    }
+  }
+);
+
+export interface ChecklistRuleServiceRequestDefinitionOption {
+  definition_id: string;
+  name: string;
+}
+
+/** Service request definitions a rule can be narrowed to (tenant-scoped, not archived). */
+export const getChecklistRuleServiceRequestDefinitions = withAuth(
+  async (user, { tenant }): Promise<ChecklistRuleServiceRequestDefinitionOption[] | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      return await tenantScopedTable(db, 'service_request_definitions', tenant)
+        .whereNot({ lifecycle_state: 'archived' })
+        .orderBy('name', 'asc')
+        .select('definition_id', 'name');
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
+  }
+);
+
+/** Display names for the clients a rule lists (tenant-scoped lookup by id). */
+export const getChecklistRuleClientNames = withAuth(
+  async (user, { tenant }, clientIds: string[]): Promise<Array<{ client_id: string; client_name: string }> | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      if (!clientIds?.length) return [];
+      const { knex: db } = await createTenantKnex();
+      return await tenantScopedTable(db, 'clients', tenant)
+        .whereIn('client_id', clientIds)
+        .select('client_id', 'client_name');
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) return expected;
       throw error;
     }
   }

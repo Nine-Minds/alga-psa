@@ -1,50 +1,103 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTileData } from '@alga-psa/ui/components/bento';
 import { Search } from 'lucide-react';
-import type { Asset } from '@alga-psa/types';
+import type {
+  Asset,
+  AssetSoftwareDisplayItem,
+  AssetSoftwareListResponse,
+  ColumnDefinition,
+  SoftwareCategory,
+} from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getAssetSoftware } from '../../actions/softwareActions';
 
 interface SoftwareInventoryTabProps {
   asset: Asset;
 }
 
+export const SOFTWARE_TAB_PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+const ALL_CATEGORIES = 'All';
+
+type Row = AssetSoftwareDisplayItem & { id: string };
+
+/**
+ * Software installed on one asset, read from the normalized asset_software
+ * table — the same source as the client-level Software view, so a drill from
+ * there (?software=<title>) lands on the rows it listed, whichever RMM wrote them.
+ */
 export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
-  const [search, setSearch] = useState('');
-  const unknownValue = t('softwareInventoryTab.values.unknown', { defaultValue: 'Unknown' });
-  
-  // Fallback to getting software from asset extension data
-  // In a real implementation, this would query the normalized asset_software table
-  const softwareList = React.useMemo(() => {
-    const rawList = asset.workstation?.installed_software || asset.server?.installed_software || [];
-    
-    // Ensure rawList is an array
-    if (!Array.isArray(rawList)) {
-      return [];
-    }
-    
-    // NinjaOne typically returns array of objects with name, version, installDate, etc.
-    // or just strings depending on mapping. Assuming objects based on plan.
-    return rawList
-      .map((item: any, index) => ({
-        id: index,
-        name: item?.name || item?.softwareName || item?.displayName || item?.productName || unknownValue,
-        version: item?.version || item?.displayVersion || unknownValue,
-        publisher: item?.publisher || item?.vendor || unknownValue,
-        installDate: item?.installDate || item?.installedOn || null,
-      }))
-      .filter(item => item.name && item.name !== unknownValue);
-  }, [asset, unknownValue]);
+  const searchParams = useSearchParams();
+  const [searchInput, setSearchInput] = useState(() => searchParams?.get('software') ?? '');
+  const [search, setSearch] = useState(() => (searchParams?.get('software') ?? '').trim());
+  const [category, setCategory] = useState<string>(ALL_CATEGORIES);
+  const [page, setPage] = useState(1);
 
-  const filteredSoftware = softwareList.filter(sw => {
-    const searchLower = search.toLowerCase();
-    const nameLower = (sw.name || '').toLowerCase();
-    const publisherLower = (sw.publisher || '').toLowerCase();
-    return nameLower.includes(searchLower) || publisherLower.includes(searchLower);
-  });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const { data, error, loading } = useTileData<AssetSoftwareListResponse>(
+    () => getAssetSoftware({
+      asset_id: asset.asset_id,
+      search: search || undefined,
+      category: category === ALL_CATEGORIES ? undefined : (category as SoftwareCategory),
+      page,
+      limit: SOFTWARE_TAB_PAGE_SIZE,
+    }),
+    [asset.asset_id, search, category, page],
+    () => t('softwareInventoryTab.loadError', { defaultValue: 'Could not load software inventory.' }),
+  );
+
+  const unknownValue = t('softwareInventoryTab.values.unknown', { defaultValue: 'Unknown' });
+  const rows = useMemo<Row[]>(
+    () => (data?.software ?? []).map((item) => ({ ...item, id: item.software_id })),
+    [data],
+  );
+  const columns = useMemo<ColumnDefinition<Row>[]>(() => [
+    {
+      title: t('softwareInventoryTab.table.name', { defaultValue: 'Name' }),
+      dataIndex: 'name',
+      sortable: false,
+      render: (value: string) => <span className="font-medium text-gray-900">{value}</span>,
+    },
+    {
+      title: t('softwareInventoryTab.table.version', { defaultValue: 'Version' }),
+      dataIndex: 'version',
+      sortable: false,
+      render: (value: string | null) => <span className="text-gray-500">{value || unknownValue}</span>,
+    },
+    {
+      title: t('softwareInventoryTab.table.publisher', { defaultValue: 'Publisher' }),
+      dataIndex: 'publisher',
+      sortable: false,
+      render: (value: string | null) => <span className="text-gray-500">{value || unknownValue}</span>,
+    },
+    {
+      title: t('softwareInventoryTab.table.installDate', { defaultValue: 'Install Date' }),
+      dataIndex: 'install_date',
+      sortable: false,
+      render: (value: string | null) => (
+        <span className="text-gray-500">{value ? new Date(value).toLocaleDateString() : '-'}</span>
+      ),
+    },
+  ], [t, unknownValue]);
+
+  const total = data?.total ?? 0;
+  const filtered = Boolean(search) || category !== ALL_CATEGORIES;
+  const showEmpty = !loading && !error && data !== null && total === 0;
 
   return (
     <Card>
@@ -54,72 +107,64 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
       <CardContent>
         <div className="flex items-center gap-4 mb-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input 
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Input
+              id="asset-software-search"
               placeholder={t('softwareInventoryTab.searchPlaceholder', {
                 defaultValue: 'Search software...'
               })}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              aria-label={t('softwareInventoryTab.searchPlaceholder', { defaultValue: 'Search software...' })}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-9"
             />
           </div>
-          <CustomSelect 
+          <CustomSelect
+            id="asset-software-category"
             placeholder={t('softwareInventoryTab.category.placeholder', {
               defaultValue: 'Category'
             })}
             options={[
-              { value: 'All', label: t('softwareInventoryTab.category.options.all', { defaultValue: 'All' }) },
+              { value: ALL_CATEGORIES, label: t('softwareInventoryTab.category.options.all', { defaultValue: 'All' }) },
               { value: 'Browser', label: t('softwareInventoryTab.category.options.browser', { defaultValue: 'Browser' }) },
               { value: 'Security', label: t('softwareInventoryTab.category.options.security', { defaultValue: 'Security' }) },
               { value: 'Productivity', label: t('softwareInventoryTab.category.options.productivity', { defaultValue: 'Productivity' }) },
               { value: 'Development', label: t('softwareInventoryTab.category.options.development', { defaultValue: 'Development' }) }
             ]}
-            value="All"
-            onValueChange={() => {}}
+            value={category}
+            onValueChange={(value) => { setCategory(value); setPage(1); }}
             className="w-48"
           />
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('softwareInventoryTab.table.name', { defaultValue: 'Name' })}</TableHead>
-                <TableHead>{t('softwareInventoryTab.table.version', { defaultValue: 'Version' })}</TableHead>
-                <TableHead>{t('softwareInventoryTab.table.publisher', { defaultValue: 'Publisher' })}</TableHead>
-                <TableHead>{t('softwareInventoryTab.table.installDate', { defaultValue: 'Install Date' })}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSoftware.length > 0 ? (
-                filteredSoftware.map((sw) => (
-                  <TableRow key={sw.id}>
-                    <TableCell className="font-medium text-gray-900">{sw.name}</TableCell>
-                    <TableCell className="text-gray-500">{sw.version}</TableCell>
-                    <TableCell className="text-gray-500">{sw.publisher}</TableCell>
-                    <TableCell className="text-gray-500">
-                      {sw.installDate ? new Date(sw.installDate).toLocaleDateString() : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                    {t('softwareInventoryTab.empty', {
-                      defaultValue: 'No software found matching your search.'
-                    })}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        
+        {error && (
+          <p id="asset-software-error" className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
+
+        {showEmpty ? (
+          <div id="asset-software-empty" className="h-24 flex items-center justify-center text-center text-gray-400">
+            {filtered
+              ? t('softwareInventoryTab.empty', { defaultValue: 'No software found matching your search.' })
+              : t('softwareInventoryTab.noInventory', { defaultValue: 'No software inventory has been collected for this device yet.' })}
+          </div>
+        ) : !error && (
+          <DataTable
+            id="asset-software-table"
+            data={rows}
+            columns={columns}
+            pagination
+            persistPageSize={false}
+            pageSize={SOFTWARE_TAB_PAGE_SIZE}
+            currentPage={page}
+            onPageChange={setPage}
+            totalItems={total}
+          />
+        )}
+
         <div className="mt-4 text-xs text-gray-400 text-right">
           {t('softwareInventoryTab.totalItems', {
             defaultValue: 'Total Items: {{count}}',
-            count: filteredSoftware.length
+            count: total
           })}
         </div>
       </CardContent>

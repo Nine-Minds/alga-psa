@@ -3,7 +3,11 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import {
   buildClientCreatedPayload,
 } from '@alga-psa/workflow-streams';
@@ -128,7 +132,7 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
 });
 
 export const createOrFindIntegrationContactByEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: {
     email: string;
@@ -179,6 +183,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       role: input.title,
       is_inactive: false,
     }, tenant, trx);
+    queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
     const client = await tenantDb(trx, tenant).table('clients')
       .select('client_name')
@@ -208,32 +213,13 @@ export const createIntegrationClient = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    const clientData: Record<string, unknown> = { ...client };
-
-    if ((clientData.properties as Record<string, unknown> | undefined)?.website && !clientData.url) {
-      clientData.url = (clientData.properties as Record<string, string>).website;
-    }
-
-    if (clientData.url && (!(clientData.properties as Record<string, unknown> | undefined)?.website)) {
-      clientData.properties = {
-        ...((clientData.properties as Record<string, unknown> | undefined) || {}),
-        website: clientData.url,
-      };
-    }
-
-    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await tenantDb(trx, tenant).table<IClient>('clients')
-        .insert({
-          ...clientData,
-          tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .returning('*');
-
-      await createDefaultTaxSettings(trx, tenant, created.client_id);
-      return created;
-    });
+    // The shared creation seam owns the website/url sync and every default a
+    // client needs — default billing profile, default contract, tax settings
+    // and the tenant's currency. This path previously created clients with
+    // none of them, which prod migration 20261023002700 had to repair.
+    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      createClientWithDefaults(trx, tenant, client as CreateClientWithDefaultsData)
+    );
 
     if (!createdClient) {
       return {

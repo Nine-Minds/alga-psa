@@ -192,7 +192,17 @@
         "managed": "Hanterad via RMM",
         "unmanaged": "Inte hanterad"
       },
-      "allGroups": "Alla grupper"
+      "allGroups": "Alla grupper",
+      "ownership": {
+        "any": "Valfri ägare",
+        "client": "Kundägd",
+        "msp": "MSP-ägd"
+      },
+      "custody": {
+        "any": "Valfritt förvar",
+        "inCustody": "I MSP:ns förvar",
+        "notInCustody": "Inte i MSP:ns förvar"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -246,7 +256,9 @@
         "setLocation": "Ange plats",
         "setStatus": "Ange status",
         "assignContact": "Tilldela till kontakt",
-        "addToGroup": "Lägg till i grupp"
+        "addToGroup": "Lägg till i grupp",
+        "printLabels": "Skriv ut etiketter",
+        "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -446,7 +458,9 @@
       "rebootDevice": "Starta om enhet",
       "rebooting": "Startar om…",
       "editAsset": "Redigera tillgång",
-      "deleteAsset": "Radera tillgång"
+      "deleteAsset": "Radera tillgång",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "printPage": "Skriv ut sida"
     },
     "values": {
       "unknownClient": "Okänd kund"
@@ -664,7 +678,8 @@
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
       "orderNumber": "Ordernr.",
-      "billingProfile": "Faktureringsprofil"
+      "billingProfile": "Faktureringsprofil",
+      "ownership": "Ägarskap"
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -718,6 +733,10 @@
     },
     "help": {
       "assignedTo": "I kundportalen ser personer med begränsad synlighet den här enheten bara om den är tilldelad dem eller någon som rapporterar till dem."
+    },
+    "ownership": {
+      "client": "Kundägd",
+      "msp": "MSP-ägd"
     }
   },
   "assetFormClient": {
@@ -831,7 +850,8 @@
       "save": "Spara",
       "label": "Knapptext",
       "template": "URL-mall",
-      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "ninjaExample": "Exempel på NinjaOne-enhetsinstrumentpanel: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Byt ut värden mot din NinjaOne-region: app, eu, ca, oc eller us2 .ninjarmm.com.",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
       "errors": {
         "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
         "save": "Det gick inte att spara länken för fjärråtkomst.",
@@ -932,7 +952,8 @@
     "assetStatuses": {
       "active": "Aktiv",
       "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
+      "maintenance": "Underhåll",
+      "held_by_msp": "Hålls av MSP"
     },
     "assetTypes": {
       "workstation": "Arbetsstation",
@@ -1040,7 +1061,8 @@
       "manufacturer": "Tillverkare",
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
-      "orderNumber": "Ordernr."
+      "orderNumber": "Ordernr.",
+      "ownership": "Ägarskap"
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -1482,6 +1504,8 @@
       "installDate": "Installationsdatum"
     },
     "empty": "Ingen programvara matchar din sökning.",
+    "noInventory": "Ingen programvaruinventering har samlats in för den här enheten ännu.",
+    "loadError": "Det gick inte att läsa in programvaruinventeringen.",
     "totalItems": "Totalt antal poster: {{count}}",
     "values": {
       "unknown": "Okänd"
@@ -1627,6 +1651,30 @@
       "rmm_linked": "RMM kopplad",
       "hardware_upgrade": "Maskinvara uppgraderad",
       "warranty_updated": "Garanti uppdaterad"
+    },
+    "custody": {
+      "unknownPlace": "en okänd plats",
+      "ticket": "Ärende {{ticket}}",
+      "receivedBack": "Mottagen tillbaka på {{place}}",
+      "received": "Mottagen i förvar på {{place}}",
+      "moved": "Flyttad från {{from}} till {{to}}",
+      "movedTo": "Flyttad till {{to}}",
+      "handedOff": "Överlämnad från {{from}} till {{to}}",
+      "handedOffTo": "Överlämnad till {{to}}",
+      "aColleague": "en kollega",
+      "shipped": "Skickad till {{counterparty}}",
+      "shippedVendor": "Skickad till leverantör",
+      "returnedTo": "Återlämnad till kund ({{counterparty}})",
+      "returned": "Återlämnad till kund",
+      "updated": "Förvarsuppgifter uppdaterade",
+      "fields": {
+        "purpose": "syfte",
+        "next_action_party": "nästa åtgärd",
+        "next_action_note": "anteckning om nästa åtgärd",
+        "follow_up_on": "uppföljningsdatum",
+        "condition_note": "skick",
+        "accessories": "tillbehör"
+      }
     }
   },
   "assetSignals": {
@@ -1765,6 +1813,7 @@
     "in_stock": "I lager",
     "maintenance": "Under underhåll",
     "inactive": "Inaktiv",
+    "held_by_msp": "Hålls av MSP",
     "retired": "Utfasad"
   },
   "assetStatusKinds": {
@@ -1856,6 +1905,180 @@
     "errors": {
       "createFailed": "Kunde inte skapa gruppen.",
       "addFailed": "Kunde inte lägga till de valda tillgångarna."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparation",
+      "warranty_evaluation": "Garantibedömning",
+      "loaner_prep": "Förberedelse av lånemaskin",
+      "staging": "Driftförberedelse"
+    },
+    "party": {
+      "msp": "Vi (MSP)",
+      "client": "Kund",
+      "vendor": "Leverantör"
+    },
+    "fields": {
+      "location": "Plats",
+      "keepLocation": "Behåll nuvarande plats",
+      "selectLocation": "Välj en plats",
+      "bin": "Back eller hylla",
+      "binPlaceholder": "t.ex. Hylla B3",
+      "purpose": "Syfte",
+      "nextActionParty": "Nästa åtgärd ligger hos",
+      "followUpOn": "Uppföljning den",
+      "followUpPlaceholder": "Välj ett datum",
+      "nextActionNote": "Anteckning om nästa åtgärd",
+      "internalNote": "Intern. Skrivs aldrig ut på en etikett och visas aldrig för kunden.",
+      "conditionNote": "Skick",
+      "conditionPlaceholder": "Repor, saknade skruvar, skador vid ankomst",
+      "accessories": "Mottagna tillbehör",
+      "accessoryPlaceholder": "t.ex. Nätadapter",
+      "accessoryQuantity": "Antal",
+      "removeAccessory": "Ta bort tillbehör",
+      "addAccessory": "Lägg till tillbehör",
+      "note": "Anteckning (valfritt)"
+    },
+    "errors": {
+      "generic": "Något gick fel."
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "saving": "Sparar...",
+      "move": "Flytta",
+      "handOff": "Lämna över",
+      "ship": "Skicka till leverantör",
+      "receiveBack": "Ta emot",
+      "returnToClient": "Återlämna till kund",
+      "edit": "Redigera uppgifter",
+      "receiveIntoCustody": "Ta emot i förvar"
+    },
+    "move": {
+      "title": "Flytta utrustning",
+      "submit": "Flytta",
+      "toLocation": "Flytta till"
+    },
+    "handOff": {
+      "title": "Lämna över till en kollega",
+      "submit": "Lämna över",
+      "newHolder": "Ny innehavare",
+      "selectHolder": "Välj en person"
+    },
+    "ship": {
+      "title": "Skicka till leverantör",
+      "description": "Artikeln lämnar kontoret. Den förblir i förvar och visas som hos leverantören.",
+      "submit": "Skicka",
+      "counterparty": "Leverantör eller transportör",
+      "counterpartyPlaceholder": "t.ex. Dells RMA-depå"
+    },
+    "receiveBack": {
+      "title": "Ta emot från leverantör",
+      "submit": "Ta emot",
+      "holder": "Innehavare (du som standard)",
+      "me": "Jag"
+    },
+    "return": {
+      "title": "Återlämna till kund",
+      "description": "Detta avslutar förvarsperioden. Artikeln listas inte längre som i förvar.",
+      "submit": "Återlämna till kund",
+      "collectedBy": "Hämtad av (valfritt)"
+    },
+    "edit": {
+      "title": "Redigera förvarsuppgifter",
+      "submit": "Spara"
+    },
+    "open": {
+      "title": "Ta emot i förvar",
+      "description": "Registrera att MSP:n nu innehar den här utrustningen. Detta skapar inget lagersaldo och påverkar inte faktureringen.",
+      "submit": "Ta emot",
+      "holder": "Innehavare (du som standard)"
+    },
+    "card": {
+      "withVendor": "Hos leverantör",
+      "title": "Förvar",
+      "location": "Plats",
+      "holder": "Innehavare",
+      "purpose": "Syfte",
+      "nextAction": "Nästa åtgärd",
+      "followUp": "Uppföljning",
+      "overdue": "försenad",
+      "daysHeld": "Dagar i förvar",
+      "ticket": "Ärende",
+      "openTicket": "Öppna ärende",
+      "condition": "Skick",
+      "accessories": "Tillbehör",
+      "notInCustody": "Är för närvarande inte i MSP:ns förvar.",
+      "hideHistory": "Dölj förvarshistorik",
+      "showHistoryWithPast": "Förvarshistorik ({{count}} tidigare perioder)",
+      "showHistory": "Förvarshistorik",
+      "noEvents": "Inga förvarshändelser har registrerats."
+    },
+    "state": {
+      "with_vendor": "Hos leverantör",
+      "in_office": "På kontoret"
+    },
+    "badge": {
+      "withVendor": "Hos leverantör",
+      "inOfficeAt": "På kontoret - {{location}}",
+      "inOffice": "På kontoret"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Tillgång",
+        "client": "Kund",
+        "location": "Plats",
+        "holder": "Innehavare",
+        "purpose": "Syfte",
+        "nextAction": "Nästa åtgärd",
+        "followUp": "Uppföljning",
+        "daysHeld": "Dagar i förvar",
+        "ticket": "Ärende",
+        "actions": "Åtgärder"
+      },
+      "openMenu": "Öppna meny",
+      "tabs": {
+        "all_open": "Alla öppna",
+        "in_office": "På kontoret",
+        "waiting_on_vendor": "Väntar på leverantör",
+        "waiting_on_client": "Väntar på kund",
+        "overdue": "Försenade"
+      },
+      "title": "Utrustning i förvar",
+      "filters": {
+        "client": "Kund",
+        "allLocations": "Alla platser",
+        "holder": "Innehavare",
+        "allPurposes": "Alla syften",
+        "mine": "Mina"
+      },
+      "empty": "Ingen utrustning är i förvar i den här vyn."
+    },
+    "receiveEquipment": {
+      "button": "Ta emot utrustning",
+      "title": "Ta emot utrustning",
+      "description": "Registrera kundutrustning som lämnats in för det här ärendet. Detta skapar inget lagersaldo och påverkar inte fakturering eller tid.",
+      "submit": "Ta emot",
+      "modeExisting": "Befintlig tillgång",
+      "modeNew": "Ny artikel",
+      "search": "Sök kundens tillgångar",
+      "asset": "Tillgång",
+      "assetPlaceholder": "Välj en tillgång",
+      "fields": {
+        "name": "Namn",
+        "type": "Typ",
+        "manufacturer": "Tillverkare",
+        "model": "Modell",
+        "serial": "Serienummer",
+        "assetTag": "Tillgångsetikett (valfritt)"
+      },
+      "photos": "Foton (valfritt)",
+      "photosHint": "Foton bifogas det här ärendet och visas inte för kunden.",
+      "doneTitle": "Utrustning mottagen",
+      "doneBody": "{{name}} ({{tag}}) är nu i MSP:ns förvar.",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "openAsset": "Öppna tillgång",
+      "close": "Stäng"
     }
   }
 }

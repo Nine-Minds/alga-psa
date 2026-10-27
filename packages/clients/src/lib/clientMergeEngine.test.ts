@@ -291,6 +291,17 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The shared client-creation seam (used when the merge re-provisions a
+// default billing profile) imports tenantDb from this subpath, not the
+// barrel above, so it needs the same fake table lookup mocked here too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: () => ({
+    table: (name: string) => new FakeBuilder(name),
+    tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>
+      builder.addJoin({ table: joinTable, left, right }),
+  }),
+}));
+
 import { ClientMergeBlockedError, executeClientMerge } from './clientMergeEngine';
 
 const TENANT = 'tenant-1';

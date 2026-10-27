@@ -35,9 +35,9 @@ describe('buildAssetStatusOptions', () => {
     expect(options[1].label).toBe('In repair');
   });
 
-  it('falls back to the five builtins while the registry is loading', () => {
+  it('falls back to the six builtins while the registry is loading', () => {
     expect(buildAssetStatusOptions(null, t).map((option) => option.value))
-      .toEqual(['active', 'in_stock', 'maintenance', 'inactive', 'retired']);
+      .toEqual(['active', 'in_stock', 'maintenance', 'held_by_msp', 'inactive', 'retired']);
   });
 
   it('keeps an archived status the asset already carries selectable', () => {

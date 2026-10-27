@@ -47,7 +47,23 @@ import {
 } from '@alga-psa/ui/components/PrintOptionsDialog';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import {
+  LIST_FILTER_DENSITY_PRESETS,
+  ListCard,
+  ListFilterChips,
+  ListFilterPanel,
+  ListFilterRow,
+  ListPageHeading,
+  ListToolbarEnd,
+  ListToolbarFiltersToggle,
+  ListToolbarResetButton,
+  ListToolbarRow,
+  ListToolbarSearchInput,
+  ListToolbarSurface,
+  useDebouncedValue,
+} from '@alga-psa/ui/components/ListToolbar';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
+import { LabelPrintDialog } from '@alga-psa/ui/components';
 import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -197,20 +213,10 @@ interface TicketingDashboardProps {
   /** Controlled column widths for the ticket table (named views capture and apply them). */
   columnSizing?: Record<string, number>;
   onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
+  /** App-owned slot rendered between the board tabs and the list. */
+  listCallout?: React.ReactNode;
 }
 
-const useDebounce = <T,>(value: T, delay: number): T => {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
-};
 
 const EMPTY_STRING_ARRAY: string[] = [];
 // Density lives in the view-settings layer now (board -> tenant -> default), so
@@ -227,38 +233,26 @@ const normalizeTicketListDensityLevel = (value: number): number => {
 // Indexed by zoom/10; `[&>td_*]:!text-[Xpx]` forces descendant elements to follow the row font-size.
 // `tagSize` scales tag padding/gap/icons (font already tracks the row override); sm for the compact
 // half, md for the spacious half — md matches the look tags have at the spacious end today.
-// `filterControlClass` scales the filter controls' height + font via a cascade on the filter rows.
 // These MUST be literal strings so Tailwind's scanner generates the arbitrary utilities — do not
-// build them via interpolation. Applied to Row 1 directly and to a `display:contents` wrapper around
-// Row 2's filter controls so the Bundled toggle / density control stay untouched.
-// 5 bands change every ~2 zoom steps; spacious anchors at ~38px/14px (today's size).
-const FILTER_CONTROL_SHARED =
-  '[&_button]:!min-h-0 [&_button]:!py-0 [&_button]:!items-center';
-const FILTER_CONTROL_30_12 = `[&_button]:!h-[30px] [&_input]:!h-[30px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_32_12 = `[&_button]:!h-[32px] [&_input]:!h-[32px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_34_13 = `[&_button]:!h-[34px] [&_input]:!h-[34px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_36_13 = `[&_button]:!h-[36px] [&_input]:!h-[36px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_38_14 = `[&_button]:!h-[38px] [&_input]:!h-[38px] [&_button]:!text-[14px] [&_input]:!text-[14px] ${FILTER_CONTROL_SHARED}`;
-
+// build them via interpolation.
+// The filter band's padding, gap and control size per density step live with the shared list toolbar
+// (LIST_FILTER_DENSITY_PRESETS); this table keeps the ticket-specific body and row sizing, same index.
 const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
-  filterPadding: string;
-  filterGap: string;
   bodyPadding: string;
   tableRowDensity: string;
   tagSize: TagSize;
-  filterControlClass: string;
 }> = [
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3', tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3', tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm' },
+  { bodyPadding: 'p-4', tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm' },
+  { bodyPadding: 'p-5', tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md' },
+  { bodyPadding: 'p-5', tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md' },
+  { bodyPadding: 'p-6', tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]', tagSize: 'md' },
+  { bodyPadding: 'p-7', tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]', tagSize: 'md' },
+  { bodyPadding: 'p-7', tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]', tagSize: 'md' },
+  { bodyPadding: 'p-8', tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]', tagSize: 'md' },
 ];
 
 // Module scope has no hook to read the app locale from, so the printing helpers
@@ -352,6 +346,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   listViewPicker,
   columnSizing,
   onColumnSizingChange,
+  listCallout,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -362,6 +357,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const {
     selectedTicketIds,
     setSelectedTicketIds,
@@ -620,7 +616,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // No longer need client-side tag fetching since we get all tags from server
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
 
   // Emit debounced search query changes to the container
   const isFirstSearchEmit = useRef(true);
@@ -660,7 +656,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       TICKET_LIST_DENSITY_PRESETS.length - 1,
       Math.max(0, Math.round(ticketListDensityLevel / TICKET_LIST_DENSITY_STEP))
     );
-    return TICKET_LIST_DENSITY_PRESETS[index];
+    return { ...LIST_FILTER_DENSITY_PRESETS[index], ...TICKET_LIST_DENSITY_PRESETS[index] };
   }, [ticketListDensityLevel]);
 
 
@@ -1537,6 +1533,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
+      tagsReadOnly: !canUpdateTickets,
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
@@ -1664,6 +1661,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     viewPresentation,
     handleTicketClick,
     handleTagsChange,
+    canUpdateTickets,
     ticketTagsRef,
     onQuickViewClient,
     onQuickViewContact,
@@ -2241,17 +2239,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    return chips;
+    return chips.map((chip) => ({
+      ...chip,
+      removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
+    }));
   }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t('dashboard.title', 'Ticketing Dashboard')}
-        </h1>
-        <div className="flex items-center gap-3">
+      <ListPageHeading
+        title={t('dashboard.title', 'Ticketing Dashboard')}
+        actions={<>
           <ShareActionsMenu
             id={`${id}-share-actions`}
             disabled={isLoadingMore && !hasSelection}
@@ -2299,15 +2298,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Button id="add-ticket-button" onClick={openQuickAddTicket}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
-        </div>
-      </div>
+        </>}
+      />
       <BoardTabStrip
         id={`${id}-board-tabs`}
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
       />
-      <div className="bg-[rgb(var(--color-card))] shadow rounded-lg">
+      {listCallout}
+      <ListCard>
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by
@@ -2321,12 +2321,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             t={t as (key: string, fallback: string) => string}
           />
         )}
-        <div className={`sticky top-0 z-40 bg-[rgb(var(--color-card))] rounded-t-lg border-b border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
+        <ListToolbarSurface density={densityClasses}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Candidate #1: always-visible search + Filters toggle + density */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Input
+              <ListToolbarRow>
+                <ListToolbarSearchInput
                   id={`${id}-search-tickets-input`}
                   placeholder={smartSearchAvailable
                     ? t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')
@@ -2342,8 +2342,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       setSearchQuery('');
                     }
                   }}
-                  className="h-[38px] w-full text-sm"
-                  containerClassName="flex-1 min-w-[260px] max-w-[460px]"
                 />
                 {smartSearchAvailable && (
                   <Button
@@ -2358,32 +2356,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     {t('smartSearch.run', 'Smart search')}
                   </Button>
                 )}
-                <Button
+                <ListToolbarFiltersToggle
                   id={`${id}-toggle-filters`}
-                  variant={showFilters ? 'soft' : 'outline'}
-                  onClick={() => setShowFilters((v) => !v)}
-                  className="shrink-0 flex items-center gap-1.5 h-[38px]"
-                >
-                  <Filter className="h-4 w-4" />
-                  {t('filters.button', 'Filters')}
-                  {activeFilterCount > 0 && (
-                    <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  open={showFilters}
+                  activeCount={activeFilterCount}
+                  label={t('filters.button', 'Filters')}
+                  onToggle={() => setShowFilters((v) => !v)}
+                />
+                <ListToolbarResetButton
                   id='reset-filters'
-                  disabled={!isFiltered}
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('resetFilters', 'Reset')}
-                </Button>
-                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  active={isFiltered}
+                  label={t('resetFilters', 'Reset')}
+                  onClick={handleResetFilters}
+                />
+                <ListToolbarEnd>
                   <div className="flex items-center gap-2 shrink-0">
                     <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
                       {t('dashboard.bundledToggle', 'Bundled')}
@@ -2412,34 +2398,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       t={t as (key: string, fallback: string) => string}
                     />
                   )}
-                </div>
-              </div>
+                </ListToolbarEnd>
+              </ListToolbarRow>
 
-              {activeFilterChips.length > 0 && (
-                <div className="flex items-center flex-wrap gap-2">
-                  {activeFilterChips.map((chip) => (
-                    <span
-                      key={chip.key}
-                      className="chip-primary inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] py-1 pl-2.5 pr-1.5 text-xs font-medium"
-                    >
-                      <span className="max-w-[220px] truncate">{chip.label}</span>
-                      <button
-                        type="button"
-                        onClick={chip.onRemove}
-                        aria-label={`Remove ${chip.label}`}
-                        className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <ListFilterChips chips={activeFilterChips} />
 
               {showFilters && (
-              <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
+              <ListFilterPanel>
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center flex-wrap ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+              <ListFilterRow density={densityClasses}>
                 <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -2572,7 +2539,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
                   />
                 )}
-              </div>
+              </ListFilterRow>
 
               {/* Row 2: Category, tags */}
               <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
@@ -2628,11 +2595,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 />
                 </div>
               </div>
-              </div>
+              </ListFilterPanel>
               )}
             </div>
           </ReflectionContainer>
-        </div>
+        </ListToolbarSurface>
 
         <div className={densityClasses.bodyPadding}>
         {/* The smart search panel owns its run: an ordinary-list refresh (a chip
@@ -2755,7 +2722,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </>
         )}
         </div>
-      </div>
+      </ListCard>
 
       <div className="app-print-root app-print-only">
         <PrintableTable
@@ -3077,8 +3044,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setBulkDeleteErrors([]);
           setIsBulkDeleteDialogOpen(true);
         }}
+        onPrintLabels={() => setIsPrintLabelsOpen(true)}
         onClear={clearSelection}
       />
+      {isPrintLabelsOpen && (
+        <LabelPrintDialog
+          isOpen={isPrintLabelsOpen}
+          onClose={() => setIsPrintLabelsOpen(false)}
+          labelClass="ticket-work-tag"
+          ids={selectedTicketIdsArray}
+          idPrefix={`${id}-print-labels`}
+        />
+      )}
     </ReflectionContainer>
     </>
   );

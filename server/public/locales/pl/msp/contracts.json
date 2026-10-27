@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Aktywny",
+    "scheduled": "Zaplanowana",
+    "startsOn": "Rozpoczyna się {{date}}",
     "draft": "Projekt",
     "expired": "Wygasły",
     "terminated": "Zakończony"
@@ -94,7 +96,7 @@
     },
     "timing": {
       "advance": "Z góry",
-      "arrears": "Zalegający"
+      "arrears": "Z dołu"
     }
   },
   "po": {
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Aktualny status klienta jest kontrolowany przez cykl życia przypisania poniżej.",
+      "scheduledExplanation": "Ta umowa jest aktywna i rozpocznie rozliczanie {{date}}.",
       "assignmentStatus": "Status przypisania",
       "billingFrequencyLabel": "Częstotliwość rozliczeń *",
       "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Aktywny",
+      "scheduled": "Zaplanowana",
       "draft": "Wersja robocza",
       "expired": "Wygasła",
       "terminated": "Zakończona"
@@ -612,6 +616,7 @@
       "quantityShort": "Ilość: {{quantity}}",
       "quantityTaxAllocation": "Ilość (do alokacji podatków)",
       "rateTaxAllocation": "Stawka (do alokacji podatków)",
+      "shareOfLineFee": "Udział w opłacie pozycji",
       "title": "Usługi ({{count}})",
       "typeLabel": "Usługa {{type}}",
       "unitOfMeasure": "Jednostka miary",
@@ -767,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Domyślna stawka bazowa:",
-      "defaultRatePlaceholder": "Domyślnie: ${{rate}}",
+      "defaultRatePlaceholder": "Domyślnie: {{rate}}",
       "enterBaseRate": "Wprowadź stawkę bazową",
       "leaveBlankDefault": "Pozostaw puste, aby użyć stawki domyślnej",
       "notSet": "Nie ustawiono",
@@ -775,7 +780,7 @@
       "title": "Konfiguracja stałej stawki"
     },
     "hourlyConfig": {
-      "defaultRate": "Domyślnie: ${{rate}}",
+      "defaultRate": "Domyślnie: {{rate}}",
       "hourlyRate": "Stawka godzinowa",
       "minimumBillableMinutes": "Minimalne minuty podlegające rozliczeniu",
       "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
@@ -801,7 +806,7 @@
     },
     "title": "Dodaj linie kontraktowe z presetów",
     "usageConfig": {
-      "defaultRate": "Domyślnie: ${{rate}}",
+      "defaultRate": "Domyślnie: {{rate}}",
       "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "ratePerUnit": "Stawka (za jednostkę)",
       "unitHint": "np. GB, wywołanie API, użytkownik",
@@ -1286,9 +1291,7 @@
     },
     "loadingTemplate": "Ładowanie szablonu...",
     "servicesLabel": "Usługi",
-    "summary": {
-      "clientCurrency": "Waluta klienta"
-    },
+    "summary": {},
     "templateBadge": "Szablon",
     "templateNotFound": "Nie znaleziono szablonu umowy",
     "templateSnapshotTitle": "Migawka szablonu",
@@ -1333,6 +1336,16 @@
       "hypothetical": "Hipotetyczny profil klienta",
       "open": "Symuluj",
       "title": "Symulacja szablonu"
+    },
+    "pricing": {
+      "title": "Ceny według waluty",
+      "addCurrency": "Dodaj walutę",
+      "removeCurrency": "Usuń",
+      "missing": "Brakujące kwoty: {{count}}",
+      "baseCurrency": "(bazowa)",
+      "changeBaseCurrency": "Zmień walutę bazową",
+      "changeBaseConfirm": "Zmienić walutę bazową na {{currency}}? Istniejące kwoty NIE są przeliczane: zachowują wartość liczbową i są odczytywane jako {{currency}}.",
+      "noSlots": "Ten szablon nie ma jeszcze kwot do wycenienia."
     },
     "discounts": {
       "title": "Domyślne rabaty umowy",
@@ -1540,6 +1553,9 @@
       "confirm": "Potwierdź i kontynuuj",
       "cancel": "Wstecz"
     },
+    "templatePicker": {
+      "needsRates": "Wymaga stawek w {{currency}}"
+    },
     "discounts": {
       "help": "Rabaty dla całej umowy obejmują każdą kwalifikującą się opłatę rozliczaną przez tę umowę. Powstają razem z umową po zakończeniu konfiguracji, a symulacja poniżej je wycenia.",
       "draftDialog": {
@@ -1673,7 +1689,8 @@
       "preview": {
         "billingCadenceLabel": "Rytm rozliczeń:",
         "notSpecified": "Nie określono",
-        "templateLabel": "Szablon:"
+        "templateLabel": "Szablon:",
+        "currencyLabel": "Waluta bazowa:"
       },
       "selectTemplateOptional": "Wybierz szablon (opcjonalnie)",
       "startFromTemplate": "Rozpocznij z szablonu"
@@ -1731,10 +1748,6 @@
       "recurringQuantityLabel": "Ilość cykliczna",
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
-    },
-    "advanceSuggestion": {
-      "message": "Przy rozliczaniu z dołu tę pozycję można zafakturować dopiero po zakończeniu pierwszego okresu usługi. Przy rozliczaniu z góry według cyklu umowy zostanie zafakturowana w dniu rozpoczęcia.",
-      "action": "Rozliczaj z góry według cyklu umowy"
     }
   },
   "wizardProducts": {
@@ -1985,7 +1998,7 @@
     },
     "total": {
       "title": "Szacowana suma miesięczna",
-      "description": "Tylko opłaty stałe. Usługi godzinowe i rozliczane według zużycia są rozliczane osobno na podstawie rzeczywistego użycia.",
+      "description": "Produkty i opłaty stałe są wliczone w tę sumę. Usługi godzinowe i rozliczane według zużycia są rozliczane według rzeczywistych wartości.",
       "perMonth": "miesięcznie",
       "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
     },
@@ -2031,8 +2044,15 @@
     "unitRate": "Stawka jednostkowa",
     "serviceRate": "Stawka usługi",
     "noCurrencyPrice": "Brak ceny w {{currency}} dla tej usługi. Wprowadź stawkę, w przeciwnym razie nie można utworzyć umowy.",
-    "templateRateNote": "Z szablonu (kwota nie ma przypisanej waluty).",
-    "reviewTitle": "Pozycje utworzone na podstawie szablonu"
+    "reviewTitle": "Pozycje utworzone na podstawie szablonu",
+    "fallbackAlert": "Ten szablon nie ma stawek w {{currency}}. Jego struktura jest kopiowana; wprowadź poniżej kwoty w {{currency}}. Kwoty z szablonu są pokazane tylko jako odniesienie i nie są przeliczane.",
+    "templateReference": "Szablon: {{amount}} {{currency}}",
+    "catalogPrice": "Cena z katalogu",
+    "fromTemplateCurrency": "Z szablonu ({{currency}})",
+    "fromTemplatePriceSet": "Ze stawek szablonu w {{currency}}",
+    "noCurrencyAmount": "Brak kwoty w {{currency}}. Wprowadź ją, w przeciwnym razie umowa nie może zostać utworzona.",
+    "overtimeRate": "Stawka za nadgodziny",
+    "bucketOverageRate": "Stawka za przekroczenie"
   },
   "templateWizard": {
     "title": {
@@ -2076,8 +2096,10 @@
           "usage": "Zużycie"
         }
       },
-      "recurringQuantityInvalid": "Ilość cykliczna dla „{{serviceName}}” musi być liczbą całkowitą równą zero lub większą, a każda stawka jednostkowa musi być prawidłową kwotą."
-    }
+      "recurringQuantityInvalid": "Ilość cykliczna dla „{{serviceName}}” musi być liczbą całkowitą równą zero lub większą, a każda stawka jednostkowa musi być prawidłową kwotą.",
+      "currencyRequired": "Waluta bazowa jest wymagana"
+    },
+    "currency": "Waluta bazowa *"
   },
   "templateBasics": {
     "heading": "Podstawy szablonu",
@@ -2095,7 +2117,8 @@
     "help": {
       "templateName": "Użyj opisowej nazwy, aby zespoły mogły szybko zidentyfikować właściwy szablon.",
       "internalNotes": "Te notatki pozostają z szablonem, aby zapewnić kontekst, gdy członkowie zespołu z niego korzystają.",
-      "billingFrequency": "Ustawia domyślny rytm po zastosowaniu szablonu. Można go nadal dostosować dla każdego klienta."
+      "billingFrequency": "Ustawia domyślny rytm po zastosowaniu szablonu. Można go nadal dostosować dla każdego klienta.",
+      "currency": "Stawki wprowadzone w tym kreatorze są w tej walucie. Ceny w innych walutach można później dodać do szablonu. Kwoty nigdy nie są przeliczane."
     }
   },
   "templateFixed": {
@@ -2230,7 +2253,7 @@
   },
   "templateReview": {
     "heading": "Przejrzyj szablon",
-    "description": "Potwierdź zawartość szablonu. Stawki są ustalane na podstawie cennika każdej usługi w walucie klienta w momencie tworzenia umowy z tego szablonu.",
+    "description": "Potwierdź zawartość szablonu. Stawki są zapisywane w walucie bazowej szablonu. Inne waluty korzystają z zestawów cen szablonu albo kwoty wpisuje się podczas tworzenia umowy.",
     "sections": {
       "basics": "Podstawy szablonu",
       "fixedFeeServices": "Usługi z opłatą stałą",
@@ -2242,7 +2265,8 @@
     "fields": {
       "templateName": "Nazwa szablonu",
       "billingFrequency": "Częstotliwość rozliczeń",
-      "internalNotes": "Notatki wewnętrzne"
+      "internalNotes": "Notatki wewnętrzne",
+      "baseCurrency": "Waluta bazowa"
     },
     "fallback": {
       "none": "—",
@@ -2278,8 +2302,7 @@
       "serviceLabel": "Usługa:",
       "invoiceWindowLabel": "Okno fakturowania:",
       "unitRateLabel": "Stawka jednostkowa:",
-      "unitRateFromCatalog": "Cena katalogowa w walucie klienta",
-      "unitRateNeutral": "{{rate}} w walucie klienta"
+      "unitRateFromCatalog": "Cena katalogowa w walucie klienta"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimalny czas podlegający rozliczeniu:",
@@ -2293,7 +2316,7 @@
       "hoursIncluded": "Wliczone {{value}} godz.",
       "unitsIncluded": "Wliczone {{value}} {{unit}}",
       "unitsFallback": "jednostki",
-      "overage": "Nadwyżka ${{amount}}/{{unit}}",
+      "overage": "Przekroczenie {{amount}}/{{unit}}",
       "hourSingular": "godzina",
       "unitSingular": "jednostka",
       "rolloverEnabled": "Przenoszenie włączone",
@@ -2410,6 +2433,22 @@
       "description": "Ta umowa nie ma pozycji umowy. Najpierw dodaj pozycje umowy, a następnie wróć, aby przeprowadzić symulację.",
       "title": "Na razie nie ma czego symulować"
     },
+    "errors": {
+      "title": "Nie można uruchomić symulacji",
+      "baselineTitle": "Obecnej umowy nie można zasymulować, więc nie ma z czym porównywać",
+      "unsupportedLineType": "Pozycja umowy „{{lineName}}\" ma typ pozycji „{{lineType}}\", którego symulator nie potrafi wycenić. Zmień pozycję na Ryczałt, Godzinową lub Zużycie i zasymuluj ponownie.",
+      "unsupportedServiceConfiguration": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" ma typ konfiguracji „{{configurationType}}\", którego symulator nie potrafi wycenić. Ustaw usługę jako Ryczałt, Godzinową, Zużycie lub Pakiet i zasymuluj ponownie.",
+      "serviceNotInCatalog": "Pozycja umowy „{{lineName}}\" używa usługi, której nie ma już w katalogu usług ({{serviceId}}). Usuń ją z pozycji lub przywróć usługę i zasymuluj ponownie.",
+      "poolMissing": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" jest skonfigurowana jako pakiet, ale nie ma puli godzin w cenie. Dodaj godziny w cenie puli w pozycji umowy i zasymuluj ponownie.",
+      "contractNotFound": "Ta umowa jest niedostępna. Mogła zostać usunięta; odśwież stronę.",
+      "clientNotAvailable": "Klient tej symulacji jest niedostępny. Mógł zostać usunięty; wybierz innego klienta.",
+      "clientRequired": "Przed symulacją wybierz klienta.",
+      "historyRequiresClient": "Założenia historyczne wymagają scenariusza powiązanego z prawdziwym klientem. Wybierz klienta dla tej symulacji i spróbuj ponownie.",
+      "invalidReplayRange": "Zakres odtwarzania jest nieprawidłowy. Wybierz zakres, który kończy się po swoim początku i obejmuje nie więcej niż 120 okresów rozliczeniowych.",
+      "scenarioInvalid": "Tego scenariusza nie można zasymulować, ponieważ jego konfiguracja jest niekompletna. Odśwież stronę i spróbuj ponownie.",
+      "scenarioReferenceInvalid": "Ten scenariusz odwołuje się do czegoś, co jest już niedostępne, na przykład pozycji umowy, usługi, stawki podatku lub lokalizacji klienta. Odśwież stronę, aby zacząć od bieżącej umowy.",
+      "unexpected": "Symulator nie mógł się uruchomić z powodu nieoczekiwanego błędu. Spróbuj ponownie; jeśli problem się powtarza, skontaktuj się z pomocą techniczną."
+    },
     "explanation": {
       "amount": "Kwota",
       "close": "Zamknij",
@@ -2456,6 +2495,7 @@
       "simulatedDelta": "symulowana różnica"
     },
     "runBar": {
+      "blocked": "Symulacja niemożliwa",
       "compareToggle": "Pokaż zmiany względem bieżącego kontraktu",
       "horizonOption": "{{count}} okresów rozliczeniowych klienta",
       "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych klienta",
@@ -2464,6 +2504,7 @@
       "simulating": "Symulowanie…",
       "stale": "Zmiany nie zostały zasymulowane",
       "staleBanner": "Te kwoty pochodzą z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
+      "staleBlockedBanner": "Ten komunikat pochodzi z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
       "updateSimulation": "Zaktualizuj symulację"
     },
     "scenario": {
@@ -2498,7 +2539,7 @@
       "editDetails": "Edytuj reguły",
       "editDetailsFor": "Edytuj szczegóły dla {{line}}",
       "fields": {
-        "adjustmentAmount": "Kwota korekty w dolarach",
+        "adjustmentAmount": "Kwota korekty",
         "adjustmentDescription": "Opis korekty",
         "adjustmentPeriod": "Okres korekty",
         "billingFrequency": "Częstotliwość rozliczeń",
@@ -2516,16 +2557,16 @@
         "lineType": "Typ linii",
         "minimumBillableMinutes": "Minimalne rozliczane minuty",
         "minimumUsage": "Minimalne zużycie",
-        "overtimeRate": "Stawka za nadgodziny ($/godz.)",
+        "overtimeRate": "Godzinowa stawka za nadgodziny",
         "overtimeThreshold": "Próg nadgodzin (godziny)",
         "roundUpMinutes": "Zaokrąglaj do minut",
         "scheduleEffectiveDate": "Data wejścia w życie harmonogramu",
         "scheduleEndDate": "Data zakończenia harmonogramu",
-        "scheduleRate": "Stawka harmonogramu w dolarach",
+        "scheduleRate": "Stawka harmonogramu",
         "serviceQuantity": "Liczba licencji lub produktów",
         "tierMaximum": "Maksimum progu",
         "tierMinimum": "Minimum progu",
-        "tierRate": "Stawka progu w dolarach",
+        "tierRate": "Stawka progu",
         "usageUnit": "Jednostka zużycia"
       },
       "frequencies": {
@@ -2550,7 +2591,7 @@
       "placeholders": {
         "minimum": "wartość minimalna",
         "minimumMinutes": "minimalne minuty",
-        "overtimeRate": "nadgodziny $/godz.",
+        "overtimeRate": "godzinowa stawka za nadgodziny",
         "roundMinutes": "zaokrąglenie w minutach",
         "thresholdHours": "godziny progu"
       },
@@ -2583,7 +2624,8 @@
         "value": "Wartość",
         "appliesTo": "Dotyczy",
         "description": "Opis",
-        "amount": "Kwota ($)",
+        "amount": "Kwota",
+        "rate": "Stawka",
         "billingPeriod": "Okres rozliczeniowy",
         "timing": "Moment rozliczenia"
       },
@@ -2690,6 +2732,10 @@
       "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
       "resumeUnsupportedShape": "Tej wersji roboczej nie można wznowić w kreatorze bez zmiany jej cen: {{lines}}",
       "fixedLineNoService": "Linia stała „{{lineName}}\" ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem.",
+      "templateAmountsMissing": "Nie można utworzyć umowy w {{currency}}. Następujące kwoty nie mają wartości w {{currency}}: {{amounts}}. Wprowadź kwotę dla każdej z nich lub dodaj stawki w {{currency}} do szablonu.",
+      "currencyPricingMissing": "Nie można utworzyć umowy w {{currency}}. Brak ceny w {{currency}} dla: {{services}}.",
+      "invalidTemplateCurrency": "„{{currency}}” nie jest prawidłowym kodem waluty ISO 4217",
+      "templateCurrencyHasPriceSet": "Ten szablon ma już cennik w {{currency}}. Usuń go, zanim ustawisz {{currency}} jako walutę bazową.",
       "standingTerms": "Ten szkic zawiera stałe warunki rabatowe. Edytuj karty Pozycje i Rabaty, aby je zachować."
     },
     "pricingSchedule": {
@@ -2730,7 +2776,8 @@
       "advance": "Rozliczana z góry według cyklu umowy: pierwsza faktura jest dostępna od {{date}}, czyli daty rozpoczęcia umowy."
     },
     "client": {
-      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się bieżący okres rozliczeniowy klienta.",
+      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia.",
+      "arrearsPartial": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia. Ponieważ data rozpoczęcia przypada w trakcie tego okresu, obejmuje ona {{periodStart}} – {{periodEnd}}.",
       "advance": "Rozliczana z góry według harmonogramu rozliczeń klienta: pierwsza faktura jest dostępna od {{date}}, czyli początku okresu rozliczeniowego klienta, w którym przypada data rozpoczęcia umowy."
     }
   },
@@ -2742,6 +2789,11 @@
   },
   "sellHourBlockNote": {
     "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, dodaj do tej umowy linię Przedpłacony pakiet."
+  },
+  "review": {
+    "saveTemplateRates": "Zapisz te stawki w {{currency}} w szablonie",
+    "saveMissingTemplateRates": "Dodaj do szablonu brakujące stawki w {{currency}}",
+    "updateTemplateRates": "Zaktualizuj stawki szablonu w {{currency}} tymi kwotami"
   },
   "billingTimingField": {
     "arrears": "Z dołu",
@@ -2943,5 +2995,9 @@
       "invalidBlock": "Uzupełnij rozmiar, cenę i wyzwalacze każdej pozycji bloku przedpłaconego przed zakończeniem.",
       "rateRequired": "Usługa bloku przedpłaconego \"{{serviceName}}\" wymaga stawki godzinowej powyżej zera (godziny ponad blok są fakturowane według tej stawki)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Pierwsza faktura: faktura z dnia {{invoiceDate}} obejmuje {{periodStart}} – {{periodEnd}} (rozliczane z dołu). Wybierz „Z góry”, aby rozliczyć to na fakturze za okres rozpoczynający się {{advanceInvoiceDate}}.",
+    "billInAdvance": "Rozlicz z góry"
   }
 }

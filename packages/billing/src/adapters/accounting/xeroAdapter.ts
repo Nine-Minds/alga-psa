@@ -689,6 +689,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         externalInvoiceId: existingMapping?.externalInvoiceId ?? null,
         contactId: clientMapping.external_entity_id,
         currency: invoice.currency_code ?? exportLines[0]?.currency_code ?? null,
+        invoiceNumber: invoice.invoice_number ?? null,
         reference,
         invoiceDate: formatDate(invoice.invoice_date),
         dueDate: formatDate(invoice.due_date),
@@ -828,6 +829,9 @@ export class XeroAdapter implements AccountingExportAdapter {
         const metadata = {
           last_exported_at: new Date().toISOString(),
           invoiceNumber: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          // Plain Alga number; invoiceNumber/doc_number hold what Xero actually stores
+          // (legacy exports keep their PO-suffixed number, auto-numbered ones keep AUTO-xxxx).
+          algaInvoiceNumber: payload.invoice.invoiceNumber ?? null,
           doc_number: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
           sync_token: rawInvoice?.UpdatedDateUTC != null ? String(rawInvoice.UpdatedDateUTC) : null,
           exported_total: exportedTotal,

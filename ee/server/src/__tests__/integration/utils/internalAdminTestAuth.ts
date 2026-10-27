@@ -2,6 +2,7 @@ import { encode } from '@auth/core/jwt';
 import type { Page } from '@playwright/test';
 import { knex as createKnex, type Knex } from 'knex';
 import { PLAYWRIGHT_DB_CONFIG } from './playwrightDatabaseConfig';
+import { playwrightSessionCookieName } from './playwrightSessionCookie';
 
 export function adminDb(): Knex {
   return createKnex({
@@ -38,21 +39,7 @@ export async function setInternalSessionCookie(
     throw new Error('NEXTAUTH_SECRET must be defined to mint session cookie.');
   }
 
-  const portSuffix = (() => {
-    if (process.env.NODE_ENV === 'production') return null;
-    try {
-      const parsed = new URL(baseUrl);
-      return parsed.port || null;
-    } catch {
-      return process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
-    }
-  })();
-
-  const cookieBaseName = process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-
-  const cookieName = portSuffix ? `${cookieBaseName}.${portSuffix}` : cookieBaseName;
+  const cookieName = playwrightSessionCookieName(baseUrl);
 
   const token = await encode({
     token: {

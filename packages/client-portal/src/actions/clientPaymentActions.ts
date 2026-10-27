@@ -23,6 +23,7 @@ import {
   expireInvoicePaymentLinksForTerminalStatus,
 } from '@alga-psa/billing/actions/paymentActions';
 import { PaymentLinkError } from '@alga-psa/billing/actions/paymentLinkError';
+import { computeBalanceDue } from '@alga-psa/billing/lib/balanceDue';
 import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -91,7 +92,7 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get the user's client_id from their contact and verify invoice access
-    const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const { contact, invoice, totalPaid } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenantId);
 
       const contactResult = await scopedDb.table('contacts')
@@ -107,7 +108,19 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
         })
         .first();
 
-      return { contact: contactResult, invoice: invoiceResult };
+      // Net recorded payments (reversals are stored as negative rows), the
+      // same definition as recordExternalPayment's sumPayments. Tenant-scoped
+      // by tenantDb so it stays on the invoice's shard.
+      const paymentsResult = await scopedDb.table('invoice_payments')
+        .where({ invoice_id: invoiceId })
+        .sum('amount as total')
+        .first();
+
+      return {
+        contact: contactResult,
+        invoice: invoiceResult,
+        totalPaid: parseInt(String(paymentsResult?.total ?? '0'), 10) || 0,
+      };
     });
 
     if (!contact?.client_id) {
@@ -146,7 +159,13 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
     }
 
     // Credit notes and fully-covered invoices carry no payable amount.
-    const amountDue = Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0);
+    // Amount due nets recorded payments as well as credit, so a fully paid
+    // invoice whose status has not flipped yet still reports no amount due.
+    const amountDue = computeBalanceDue({
+      totalAmount: Number(invoice.total_amount ?? 0),
+      creditApplied: Number(invoice.credit_applied ?? 0),
+      totalPaid,
+    });
     if (invoice.invoice_type === 'credit_note' || amountDue <= 0) {
       return actionError('no_amount_due', 'Invoice has no amount due');
     }

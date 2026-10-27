@@ -6,6 +6,7 @@ import type {
   EntraSyncScheduleSettings,
 } from '@alga-psa/integrations/actions';
 import { entraClientHealth } from './entraClientHealth';
+import { displayCippApiUrl } from '../cippConnectModel';
 
 /**
  * What the console decides without the DOM: which tab a URL means, and what
@@ -445,3 +446,42 @@ export function buildEntraRunHistoryCsv(
 
   return lines.join('\n');
 }
+
+/**
+ * CIPP connection identity as the UI may show it. Built from the status
+ * payload's non-secret fields only; there is no secret in `EntraStatusResponse`
+ * to leak, and this keeps it that way by naming exactly what is read.
+ */
+export interface EntraCippConnectionView {
+  authType: 'api_client' | 'legacy_api_token' | null;
+  isLegacy: boolean;
+  apiUrl: string | null;
+  clientId: string | null;
+  tenantId: string | null;
+}
+
+export const buildCippConnectionView = (
+  connectionType: string | null | undefined,
+  details:
+    | {
+        cippBaseUrl?: string | null;
+        cippAuthType?: 'api_client' | 'legacy_api_token' | null;
+        cippClientId?: string | null;
+        cippDirectoryId?: string | null;
+      }
+    | null
+    | undefined
+): EntraCippConnectionView | null => {
+  if (connectionType !== 'cipp') return null;
+  const authType = details?.cippAuthType ?? null;
+  return {
+    authType,
+    isLegacy: authType === 'legacy_api_token',
+    // One form everywhere: the URL as CIPP shows it (ending /api), the same
+    // value the connect dialog displays. Storage keeps the host form that
+    // request paths append /api to.
+    apiUrl: details?.cippBaseUrl ? displayCippApiUrl(details.cippBaseUrl) : null,
+    clientId: details?.cippClientId || null,
+    tenantId: details?.cippDirectoryId || null,
+  };
+};

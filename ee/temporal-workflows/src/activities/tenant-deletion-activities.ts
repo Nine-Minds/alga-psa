@@ -58,6 +58,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // also reference email providers. Delete the route rows first, then senders,
   // before any of those parent tables.
   'email_sender_routes', 'email_sender_addresses',
+  // Equipment custody: events FK to custody; custody FKs to assets, tickets,
+  // users and stock_locations (all deleted below), so both go first.
+  'asset_custody_events', 'asset_custody',
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -66,11 +69,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // top-level parent: 20261009120000 added assets.vendor_id -> vendors
   // (NO ACTION), and assets sits far below in the Asset details block, so
   // vendors has to move down with it (see the comment near the assets entry). ===
+  'staging_container_members', 'staging_containers',
   'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
   'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
   'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
   'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
-  'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
+  // project_staging_lines before stock_units: lines.unit_id -> stock_units is NO ACTION; the
+  // opposite stock_units.allocated_staging_line_id FK is NULL'd in breakCircularDependencies.
+  'project_staging_lines', 'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
   'stock_transfers', 'purchase_orders', 'document_templates',
   'stock_locations',
 
@@ -139,7 +145,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
-  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
+  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'payment_confirmation_emails', 'invoice_template_assignments',
 
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
@@ -285,6 +291,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
 
+  // Canned ticket responses. Favorites FK to responses (ON DELETE CASCADE), so favorites go first.
+  'canned_response_favorites', 'canned_responses',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',
@@ -393,6 +402,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
+  // Price sets/prices reference template lines, buckets and templates (children first)
+  'contract_template_prices', 'contract_template_price_sets',
   'contract_template_line_defaults',
   'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
@@ -521,7 +532,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // BEFORE those (tickets at LEVEL 5 below, boards at LEVEL 7, statuses at LEVEL 8).
   // Internal order follows the FKs among them: ticket_auto_close_state →
   // board_auto_close_rules, and checklist_template_items / _apply_rules →
-  // checklist_templates. ticket_checklist_items.template_id is a soft ref (no FK),
+  // checklist_templates. checklist_templates.client_id FKs to clients (2026-10-18), which is already
+  // satisfied because this group is deleted before clients. ticket_checklist_items.template_id is a soft ref (no FK),
   // and board_close_rules only FKs to boards.
   'ticket_auto_close_state', 'board_auto_close_rules',
   'ticket_checklist_items',
@@ -1738,6 +1750,26 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas or CE without inventory)
     log.debug('Could not clear stock_unit_id in assets (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 6b: NULL out stock_units.allocated_staging_line_id so project_staging_lines
+  // can be deleted. project_staging_lines.unit_id -> stock_units (project_staging_lines_unit_fk)
+  // and stock_units.allocated_staging_line_id -> project_staging_lines
+  // (fk_stock_units_allocated_staging_line) are both NO ACTION and form a restrictive
+  // cycle; the inventory block deletes project_staging_lines before stock_units, which is
+  // only legal once units no longer point at lines (exempted in validate-tenant-management).
+  try {
+    const result6b = await tenantScopedDb.table('stock_units')
+      .whereNotNull('allocated_staging_line_id')
+      .update({ allocated_staging_line_id: null });
+    if (result6b > 0) {
+      log.info('Cleared allocated_staging_line_id references in stock_units', { count: result6b });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas or CE without project staging)
+    log.debug('Could not clear allocated_staging_line_id in stock_units (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

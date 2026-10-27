@@ -21,6 +21,7 @@ export default defineConfig({
 
       'src/__tests__/worker-queue-ownership.test.ts',
       'src/__tests__/worker-health.test.ts',
+      'src/__tests__/worker.capabilityBoot.test.ts',
       'src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts',
       'src/config/__tests__/**/*.test.ts',
       'src/workflows/__tests__/generic-job-workflow.temporal.test.ts',
@@ -38,6 +39,7 @@ export default defineConfig({
       'src/activities/__tests__/tenant-email-ingestion-activities.test.ts',
       'src/db/__tests__/tenant-operations.email-settings.test.ts',
       'src/activities/__tests__/product-upgrade-activities.test.ts',
+      'src/activities/__tests__/appliance-console-stripe-seat-change.test.ts',
       'src/activities/__tests__/trial-payment-reminder-activities.test.ts',
       'src/activities/__tests__/trial-payment-reminder-email.test.ts',
       'src/activities/__tests__/comment-recovery-forwarding.test.ts',
@@ -54,6 +56,7 @@ export default defineConfig({
       'src/activities/__tests__/portal-domain-reconcile.integration.test.ts',
       'src/activities/__tests__/portal-domain-activities.git.test.ts',
       'src/activities/__tests__/portal-domain-nextauth-url.test.ts',
+      'src/activities/__tests__/portal-domain-redirect-uri-gate.test.ts',
       'src/activities/__tests__/threecx-call-control-events.test.ts',
       'src/activities/__tests__/threecx-call-control-host.test.ts',
       'src/activities/__tests__/threecx-call-control-session.test.ts',

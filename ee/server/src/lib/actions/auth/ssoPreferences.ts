@@ -156,7 +156,11 @@ export async function getLinkedSsoAccountsAction(): Promise<GetLinkedSsoAccounts
     }
 
     const email = session.user.email;
-    const userRecord = await User.findUserByEmail(email.toLowerCase());
+    // SSO linking is an MSP-side feature: resolve the typed internal user in the session's tenant.
+    const sessionTenant = (session.user as { tenant?: string }).tenant;
+    const userRecord = sessionTenant
+      ? await User.findUserByEmailTenantAndType(email.toLowerCase(), sessionTenant, 'internal')
+      : await User.findUserByEmailAndType(email.toLowerCase(), 'internal');
     if (!userRecord || !userRecord.user_id) {
       return { success: false, error: "User not found" };
     }

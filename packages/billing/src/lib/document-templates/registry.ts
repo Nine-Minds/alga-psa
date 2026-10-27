@@ -1,5 +1,7 @@
 import type { TemplateAst } from '@alga-psa/types';
 
+import type { TemplatePrintGeometry } from '../invoice-template-ast/printSettings';
+
 import { buildSalesOrderTemplateBindings } from '../sales-order-template-ast/bindings';
 import { buildSampleSalesOrderViewModel } from '../sales-order-template-ast/sampleData';
 import {
@@ -15,6 +17,20 @@ import {
   getStandardPackingSlipTemplateAstByCode,
   getStandardPickListTemplateAstByCode,
 } from '../sales-order-template-ast/otherDocuments';
+import { buildStagingManifestTemplateBindings } from '../staging-manifest-template-ast/bindings';
+import { buildSampleStagingManifestViewModel } from '../staging-manifest-template-ast/sampleData';
+import {
+  STANDARD_STAGING_MANIFEST_CODE,
+  STANDARD_STAGING_MANIFEST_TEMPLATE_ASTS,
+  getStandardStagingManifestTemplateAstByCode,
+} from '../staging-manifest-template-ast/standardTemplates';
+import { buildLabelTemplateBindings } from '../label-template-ast/bindings';
+import { buildSampleLabelViewModel } from '../label-template-ast/sampleData';
+import {
+  STANDARD_LABEL_TEMPLATE_ASTS,
+  STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+  getStandardLabelTemplateAstByCode,
+} from '../label-template-ast/standardTemplates';
 
 /**
  * The generic document-template registry (Approach C). Each registered document type contributes
@@ -25,7 +41,7 @@ import {
  * Sales Order is the first registered type. Invoice and quote keep their existing dedicated stacks
  * for now; the registry is shaped so they could migrate onto it later.
  */
-export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list';
+export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list' | 'work-tag' | 'staging-manifest';
 
 export interface DocumentTypeRegistryEntry {
   /** Human label for menus / the management route. */
@@ -40,6 +56,8 @@ export interface DocumentTypeRegistryEntry {
   buildBindings: () => NonNullable<TemplateAst['bindings']>;
   /** A representative render model for designer preview (rendered against the template). */
   buildSampleViewModel: () => Record<string, unknown>;
+  /** The print path this type reaches paper through; the designer preview frames content to match it. */
+  printGeometry: TemplatePrintGeometry;
 }
 
 export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEntry> = {
@@ -50,6 +68,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardSalesOrderTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
   // Packing slip + pick list render from the SAME Sales Order data, so they reuse the SO bindings +
   // sample; only their standard templates differ. Adding a document type is "register an entry".
@@ -60,6 +79,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardPackingSlipTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
   'pick-list': {
     label: 'Pick List',
@@ -68,6 +88,30 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardPickListTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
+  },
+  // ONE generic label type (decision for alga-2026-0002683 PLAN.md question 3): every label class
+  // (ticket work tag, asset label, stock-unit label) renders from the uniform LabelViewModel, with
+  // one standard template per class. Tenants manage one template list, not one per entity.
+  'work-tag': {
+    label: 'Work Tag / Label',
+    defaultStandardCode: STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+    standardCodes: Object.keys(STANDARD_LABEL_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardLabelTemplateAstByCode,
+    buildBindings: buildLabelTemplateBindings,
+    buildSampleViewModel: () => buildSampleLabelViewModel() as unknown as Record<string, unknown>,
+    // Printed by the label batch path: one clipped cell per label, never the single-document PDF path.
+    printGeometry: 'label-cell',
+  },
+  // What is in one project staging box (alga-2026-0002683 C6). Rendered on demand and never filed.
+  'staging-manifest': {
+    label: 'Packing Manifest',
+    defaultStandardCode: STANDARD_STAGING_MANIFEST_CODE,
+    standardCodes: Object.keys(STANDARD_STAGING_MANIFEST_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardStagingManifestTemplateAstByCode,
+    buildBindings: buildStagingManifestTemplateBindings,
+    buildSampleViewModel: () => buildSampleStagingManifestViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
 };
 

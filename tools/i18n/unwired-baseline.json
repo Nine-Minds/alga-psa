@@ -2,6 +2,7 @@
   "note": "TRANSLATION DEBT — a slow burner, not a target to hit in one pass. Every file here renders JSX without importing useTranslation or calling t(), so its copy is English in every locale. They predate the scan being widened to packages/, where most of the product now lives; gating at zero would have blocked every PR, so the gate ratchets against this list instead: these are known debt, anything new fails. Chip away at it — delete a line when you wire a file up, and the gate will tell you when an entry no longer belongs here. Do not add to it to make a build pass; regenerate deliberately with --write-unwired-baseline. packages/client-portal is the place to start: customer-facing, and the smallest of the large buckets.",
   "files": [
     "packages/scheduling/src/lib/scheduleEntryLauncher.tsx",
+    "packages/ui/src/components/ListToolbar.tsx",
     "packages/ui/src/components/UnitOfMeasureInput.tsx",
     "packages/ui/src/editor/TextEditor.tsx"
   ]

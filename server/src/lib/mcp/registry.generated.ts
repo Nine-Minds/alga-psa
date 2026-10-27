@@ -5109,10 +5109,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
-        "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total.",
+        "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter.",
         "schema": {
           "type": "string",
-          "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total."
+          "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter."
         }
       },
       {
@@ -6317,6 +6317,16 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
+        },
+        "extension_data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/AssetExtensionData"
+            },
+            {
+              "description": "Provided keys are written to the extension row; omitted keys remain."
+            }
+          ]
         }
       }
     },
@@ -6591,6 +6601,322 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_custody",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Get asset custody",
+    "summary": "Get asset custody",
+    "description": "Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Receive an asset into custody",
+    "summary": "Receive an asset into custody",
+    "description": "Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Ticket the equipment was received for; its client must match the asset."
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Active stock location the item is shelved at."
+        },
+        "bin": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Free-text bin or shelf label."
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        },
+        "next_action_party": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        },
+        "next_action_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "follow_up_on": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Date only, YYYY-MM-DD."
+        },
+        "condition_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "location_id",
+        "bin",
+        "purpose"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody_events",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody/events",
+    "displayName": "Record a custody step",
+    "summary": "Record a custody step",
+    "description": "Appends a moved, handed_off, shipped, received or returned step to the asset’s open episode. Invalid transitions answer 409.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "moved",
+            "handed_off",
+            "shipped",
+            "received",
+            "returned"
+          ]
+        }
+      },
+      "required": [
+        "event_type"
+      ],
+      "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "get-_api_v1_assetcustody",
+    "method": "get",
+    "path": "/api/v1/asset-custody",
+    "displayName": "List equipment in custody",
+    "summary": "List equipment in custody",
+    "description": "The custody queue. Rows and tab counts exclude assets the caller cannot read.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tab",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "holder_user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "purpose",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        }
+      },
+      {
+        "name": "next_action_party",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        }
+      },
+      {
+        "name": "mine",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
     }
   },
   {
@@ -8339,1689 +8665,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_assetaudits",
-    "method": "get",
-    "path": "/api/v1/asset-audits",
-    "displayName": "List site audits",
-    "summary": "List site audits",
-    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "description": "Page number. Defaults to 1.",
-        "schema": {
-          "type": "string",
-          "description": "Page number. Defaults to 1."
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Page size, 1 through 100. Defaults to 25.",
-        "schema": {
-          "type": "string",
-          "description": "Page size, 1 through 100. Defaults to 25."
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "description": "Only audits of this client.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Only audits of this client."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "audit_id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "tenant": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "client_id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "location_id": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "uuid"
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "in_progress",
-                  "completed",
-                  "cancelled"
-                ]
-              },
-              "started_by": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "started_at": {
-                "type": "string"
-              },
-              "completed_at": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "expected_count": {
-                "type": "integer"
-              },
-              "present_count": {
-                "type": "integer"
-              },
-              "missing_count": {
-                "type": "integer"
-              },
-              "unexpected_count": {
-                "type": "integer"
-              },
-              "statuses": {
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "string"
-                }
-              },
-              "notes": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "client_name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "location_name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "items": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "asset_id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "result": {
-                      "type": "string",
-                      "enum": [
-                        "expected",
-                        "present",
-                        "missing",
-                        "unexpected"
-                      ]
-                    },
-                    "method": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "enum": [
-                        "scan",
-                        "manual",
-                        "register"
-                      ]
-                    },
-                    "marked_at": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "marked_by": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "format": "uuid"
-                    },
-                    "asset_name": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "asset_tag": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "serial_number": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "client_id": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "format": "uuid"
-                    },
-                    "location_id": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "format": "uuid"
-                    },
-                    "location": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "asset_id",
-                    "result",
-                    "method",
-                    "marked_at",
-                    "marked_by"
-                  ]
-                }
-              }
-            },
-            "required": [
-              "audit_id",
-              "tenant",
-              "client_id",
-              "location_id",
-              "status",
-              "started_by",
-              "started_at",
-              "completed_at",
-              "expected_count",
-              "present_count",
-              "missing_count",
-              "unexpected_count"
-            ]
-          }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data",
-        "pagination"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_assetaudits",
-    "method": "post",
-    "path": "/api/v1/asset-audits",
-    "displayName": "Start a site audit",
-    "summary": "Start a site audit",
-    "description": "Snapshots the assets expected for the client, location and status slugs in scope as expected items and opens the audit. Needs asset:update because completing the audit writes asset history.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "client_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Client whose assets are audited."
-        },
-        "location_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Client location in scope. null or omitted audits the client assets that have no location."
-        },
-        "statuses": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Asset status slugs in scope. Omitted means every status."
-        },
-        "notes": {
-          "type": "string",
-          "maxLength": 2000
-        }
-      },
-      "required": [
-        "client_id"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_assetaudits_id",
-    "method": "get",
-    "path": "/api/v1/asset-audits/{id}",
-    "displayName": "Get a site audit",
-    "summary": "Get a site audit",
-    "description": "Returns the audit with its items joined to each asset name, tag, serial and location.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Audit UUID from asset_audits.audit_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Audit UUID from asset_audits.audit_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_assetaudits_id_items",
-    "method": "post",
-    "path": "/api/v1/asset-audits/{id}/items",
-    "displayName": "Mark an asset in a site audit",
-    "summary": "Mark an asset in a site audit",
-    "description": "Marks the asset present, or unexpected when it is not in the audit snapshot. Idempotent per asset: a second mark keeps the first marked_at.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Audit UUID from asset_audits.audit_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Audit UUID from asset_audits.audit_id."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "asset_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Asset being marked."
-        },
-        "result": {
-          "type": "string",
-          "enum": [
-            "present",
-            "unexpected"
-          ],
-          "description": "Caller intent; an asset outside the snapshot is stored as unexpected regardless. Defaults to present."
-        },
-        "method": {
-          "type": "string",
-          "enum": [
-            "scan",
-            "manual",
-            "register"
-          ],
-          "description": "How the asset was marked. Defaults to manual."
-        }
-      },
-      "required": [
-        "asset_id"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "delete-_api_v1_assetaudits_id_items_assetid",
-    "method": "delete",
-    "path": "/api/v1/asset-audits/{id}/items/{assetId}",
-    "displayName": "Undo a site audit mark",
-    "summary": "Undo a site audit mark",
-    "description": "Returns an expected asset to the remaining list; an unexpected asset was never in scope, so its item is removed.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Audit UUID from asset_audits.audit_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Audit UUID from asset_audits.audit_id."
-        }
-      },
-      {
-        "name": "assetId",
-        "in": "path",
-        "required": true,
-        "description": "Asset UUID from assets.asset_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Asset UUID from assets.asset_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_assetaudits_id_complete",
-    "method": "post",
-    "path": "/api/v1/asset-audits/{id}/complete",
-    "displayName": "Complete a site audit",
-    "summary": "Complete a site audit",
-    "description": "Turns every still-expected item into missing, writes the counts, and records one asset_history row (change_type audit) plus assets.last_audited_at and last_audit_result for each present and missing asset, in one transaction.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Audit UUID from asset_audits.audit_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Audit UUID from asset_audits.audit_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_assetaudits_id_cancel",
-    "method": "post",
-    "path": "/api/v1/asset-audits/{id}/cancel",
-    "displayName": "Cancel a site audit",
-    "summary": "Cancel a site audit",
-    "description": "Abandons an open audit; it writes no asset history.",
-    "tags": [
-      "Asset audits"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Audit UUID from asset_audits.audit_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Audit UUID from asset_audits.audit_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        },
-        "data": {
-          "type": "object",
-          "properties": {
-            "audit_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "tenant": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "client_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "location_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "in_progress",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "started_by": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "started_at": {
-              "type": "string"
-            },
-            "completed_at": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_count": {
-              "type": "integer"
-            },
-            "present_count": {
-              "type": "integer"
-            },
-            "missing_count": {
-              "type": "integer"
-            },
-            "unexpected_count": {
-              "type": "integer"
-            },
-            "statuses": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "notes": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "client_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "location_name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "asset_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "result": {
-                    "type": "string",
-                    "enum": [
-                      "expected",
-                      "present",
-                      "missing",
-                      "unexpected"
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "scan",
-                      "manual",
-                      "register"
-                    ]
-                  },
-                  "marked_at": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "marked_by": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "asset_name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "asset_tag": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "serial_number": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "client_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "location": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "asset_id",
-                  "result",
-                  "method",
-                  "marked_at",
-                  "marked_by"
-                ]
-              }
-            }
-          },
-          "required": [
-            "audit_id",
-            "tenant",
-            "client_id",
-            "location_id",
-            "status",
-            "started_by",
-            "started_at",
-            "completed_at",
-            "expected_count",
-            "present_count",
-            "missing_count",
-            "unexpected_count"
-          ]
-        }
-      },
-      "required": [
-        "success",
-        "data"
-      ]
-    }
-  },
-  {
     "id": "get-_api_v1_integrations_rmm",
     "method": "get",
     "path": "/api/v1/integrations/rmm",
@@ -10056,10 +8699,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -10159,10 +8802,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -10280,10 +8923,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -10331,1982 +8974,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "devicesProcessed",
         "startedAt",
         "finishedAt"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_executions",
-    "method": "get",
-    "path": "/api/v1/automation/executions",
-    "displayName": "List automation executions",
-    "summary": "List automation executions",
-    "description": "Returns a paginated list of automation executions for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; the controller validates the API key, resolves the user and tenant, runs under tenant context, and requires automation:read permission. The service forces tenant into the execution query conditions. Current service code appears to wrap the execution array in another array before createPaginatedResponse, which may produce nested data in practice.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "description": "Page number as a query string. Defaults to 1.",
-        "schema": {
-          "type": "string",
-          "description": "Page number as a query string. Defaults to 1."
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
-        "schema": {
-          "type": "string",
-          "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation; the service currently orders executions by started_at desc.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared list query validation; the service currently orders executions by started_at desc."
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ],
-          "description": "Accepted by shared list query validation."
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "is_active",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation and transformed to boolean.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by shared filter validation and transformed to boolean."
-        }
-      },
-      {
-        "name": "automation_rule_id",
-        "in": "query",
-        "required": false,
-        "description": "Filter executions by parent automation rule UUID.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Filter executions by parent automation rule UUID."
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "description": "Filter by execution status.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "running",
-            "completed",
-            "failed",
-            "cancelled",
-            "timeout",
-            "skipped"
-          ],
-          "description": "Filter by execution status."
-        }
-      },
-      {
-        "name": "started_from",
-        "in": "query",
-        "required": false,
-        "description": "Filter executions started at or after this timestamp.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Filter executions started at or after this timestamp."
-        }
-      },
-      {
-        "name": "started_to",
-        "in": "query",
-        "required": false,
-        "description": "Filter executions started at or before this timestamp.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Filter executions started at or before this timestamp."
-        }
-      },
-      {
-        "name": "duration_min_ms",
-        "in": "query",
-        "required": false,
-        "description": "Minimum execution duration in milliseconds.",
-        "schema": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Minimum execution duration in milliseconds."
-        }
-      },
-      {
-        "name": "duration_max_ms",
-        "in": "query",
-        "required": false,
-        "description": "Maximum execution duration in milliseconds.",
-        "schema": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Maximum execution duration in milliseconds."
-        }
-      },
-      {
-        "name": "has_errors",
-        "in": "query",
-        "required": false,
-        "description": "Filter by whether the execution has errors; transformed to boolean by validation.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Filter by whether the execution has errors; transformed to boolean by validation."
-        }
-      },
-      {
-        "name": "trigger_type",
-        "in": "query",
-        "required": false,
-        "description": "Filter by automation trigger type.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "time_based",
-            "event_based",
-            "condition_based",
-            "manual",
-            "recurring",
-            "webhook"
-          ],
-          "description": "Filter by automation trigger type."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationExecution"
-          },
-          "description": "Automation execution rows. Current service code wraps the DB result array in another array; this schema documents the intended flat shape returned by createPaginatedResponse."
-        },
-        "pagination": {
-          "$ref": "#/components/schemas/AutomationPagination"
-        },
-        "meta": {
-          "type": "object",
-          "properties": {
-            "filters": {
-              "type": "object",
-              "additionalProperties": {},
-              "description": "Validated filters echoed by the controller."
-            },
-            "resource": {
-              "type": "string",
-              "enum": [
-                "automation_execution"
-              ],
-              "description": "Resource name supplied by the controller."
-            }
-          }
-        }
-      },
-      "required": [
-        "data",
-        "pagination"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_executions_id",
-    "method": "get",
-    "path": "/api/v1/automation/executions/{id}",
-    "displayName": "Get automation execution",
-    "summary": "Get automation execution",
-    "description": "Returns one automation execution by execution_id for the authenticated tenant, with HATEOAS links to the parent rule and retry endpoint when the status is failed. Authentication uses x-api-key with optional x-tenant-id; the controller validates the API key, resolves tenant context, validates the UUID path parameter, and requires automation:read permission. The service scopes lookup by execution_id and tenant. Missing executions currently throw a generic Error and may surface as 500 rather than 404.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation execution UUID from automation_executions.execution_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation execution UUID from automation_executions.execution_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationExecution"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_executions_id_retry",
-    "method": "post",
-    "path": "/api/v1/automation/executions/{id}/retry",
-    "displayName": "Retry automation execution",
-    "summary": "Retry automation execution",
-    "description": "Retries a failed automation execution. The controller authenticates with x-api-key, requires automation:execute permission, validates the execution UUID, resets a failed execution to pending, clears completion/error counters, queues the execution, publishes automation.execution.retried, and returns the updated execution with links. The service only allows status=failed; missing executions and non-failed executions currently throw generic Errors and may surface as 500 rather than 404 or 400. The queueExecution helper is currently a stub.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation execution UUID from automation_executions.execution_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation execution UUID from automation_executions.execution_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationExecution"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_rules",
-    "method": "get",
-    "path": "/api/v1/automation/rules",
-    "displayName": "List automation rules",
-    "summary": "List automation rules",
-    "description": "Returns a paginated list of automation rules scoped to the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id, then RBAC requires automation:read. The controller validates query params with automationRulesListSchema, parses page/limit from the URL, and the service enforces tenant filtering on automation_rules.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "description": "Page number as a query string. Defaults to 1.",
-        "schema": {
-          "type": "string",
-          "description": "Page number as a query string. Defaults to 1."
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
-        "schema": {
-          "type": "string",
-          "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation; service currently orders rules by created_at desc.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared list query validation; service currently orders rules by created_at desc."
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ],
-          "description": "Accepted by shared list query validation."
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "is_active",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation and transformed to boolean.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by shared filter validation and transformed to boolean."
-        }
-      },
-      {
-        "name": "name",
-        "in": "query",
-        "required": false,
-        "description": "Optional rule name filter.",
-        "schema": {
-          "type": "string",
-          "description": "Optional rule name filter."
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "description": "Filter by automation rule status.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "active",
-            "inactive",
-            "draft",
-            "error"
-          ],
-          "description": "Filter by automation rule status."
-        }
-      },
-      {
-        "name": "trigger_type",
-        "in": "query",
-        "required": false,
-        "description": "Filter by trigger type.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "time_based",
-            "event_based",
-            "condition_based",
-            "manual",
-            "recurring",
-            "webhook"
-          ],
-          "description": "Filter by trigger type."
-        }
-      },
-      {
-        "name": "priority",
-        "in": "query",
-        "required": false,
-        "description": "Filter by priority level.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "low",
-            "normal",
-            "high",
-            "critical"
-          ],
-          "description": "Filter by priority level."
-        }
-      },
-      {
-        "name": "template_category",
-        "in": "query",
-        "required": false,
-        "description": "Filter template category.",
-        "schema": {
-          "type": "string",
-          "description": "Filter template category."
-        }
-      },
-      {
-        "name": "created_by",
-        "in": "query",
-        "required": false,
-        "description": "Filter by creator user UUID from automation_rules.created_by.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Filter by creator user UUID from automation_rules.created_by."
-        }
-      },
-      {
-        "name": "last_executed_from",
-        "in": "query",
-        "required": false,
-        "description": "Filter for rules last executed at or after timestamp.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Filter for rules last executed at or after timestamp."
-        }
-      },
-      {
-        "name": "last_executed_to",
-        "in": "query",
-        "required": false,
-        "description": "Filter for rules last executed at or before timestamp.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Filter for rules last executed at or before timestamp."
-        }
-      },
-      {
-        "name": "execution_count_min",
-        "in": "query",
-        "required": false,
-        "description": "Minimum execution count filter.",
-        "schema": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Minimum execution count filter."
-        }
-      },
-      {
-        "name": "execution_count_max",
-        "in": "query",
-        "required": false,
-        "description": "Maximum execution count filter.",
-        "schema": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Maximum execution count filter."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationRule"
-          }
-        },
-        "pagination": {
-          "$ref": "#/components/schemas/AutomationPagination"
-        },
-        "meta": {
-          "type": "object",
-          "properties": {
-            "filters": {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            "resource": {
-              "type": "string",
-              "enum": [
-                "automation_rule"
-              ]
-            }
-          }
-        }
-      },
-      "required": [
-        "data",
-        "pagination"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_rules",
-    "method": "post",
-    "path": "/api/v1/automation/rules",
-    "displayName": "Create automation rule",
-    "summary": "Create automation rule",
-    "description": "Creates a tenant-scoped automation rule in automation_rules. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates request body via createAutomationRuleSchema, and the service validates trigger/action config, inserts the rule with crypto.randomUUID generated rule_id, and emits automation.rule.created + audit log events.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
-        },
-        "description": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "active",
-            "inactive",
-            "draft",
-            "error"
-          ],
-          "description": "Defaults to draft when omitted."
-        },
-        "priority": {
-          "type": "string",
-          "enum": [
-            "low",
-            "normal",
-            "high",
-            "critical"
-          ],
-          "description": "Defaults to normal when omitted."
-        },
-        "trigger_type": {
-          "type": "string",
-          "enum": [
-            "time_based",
-            "event_based",
-            "condition_based",
-            "manual",
-            "recurring",
-            "webhook"
-          ]
-        },
-        "trigger_config": {
-          "type": "object",
-          "additionalProperties": {},
-          "description": "Trigger-type-specific configuration object."
-        },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationRuleCondition"
-          }
-        },
-        "condition_logic": {
-          "type": "string",
-          "enum": [
-            "and",
-            "or"
-          ]
-        },
-        "actions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationRuleAction"
-          },
-          "minItems": 1
-        },
-        "max_concurrent_executions": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "execution_timeout_minutes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "retry_failed_executions": {
-          "type": "boolean"
-        },
-        "is_template": {
-          "type": "boolean"
-        },
-        "template_category": {
-          "type": "string"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "notification_settings": {
-          "$ref": "#/components/schemas/AutomationNotificationSettings"
-        }
-      },
-      "required": [
-        "name",
-        "trigger_type",
-        "trigger_config",
-        "actions"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationRule"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_rules_id",
-    "method": "get",
-    "path": "/api/v1/automation/rules/{id}",
-    "displayName": "Get automation rule",
-    "summary": "Get automation rule",
-    "description": "Returns one automation rule by rule_id for the authenticated tenant with generated links and execution statistics. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The service scopes by {rule_id, tenant}. Missing rules currently throw generic Error and surface as 500 rather than 404.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation rule UUID from automation_rules.rule_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation rule UUID from automation_rules.rule_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationRule"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "put-_api_v1_automation_rules_id",
-    "method": "put",
-    "path": "/api/v1/automation/rules/{id}",
-    "displayName": "Update automation rule",
-    "summary": "Update automation rule",
-    "description": "Updates an automation rule by rule_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:update. The controller validates partial updates with updateAutomationRuleSchema and the service revalidates trigger/action config when changed, updates automation_rules, and emits automation.rule.updated + audit log events. Missing rules currently surface as 500.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation rule UUID from automation_rules.rule_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation rule UUID from automation_rules.rule_id."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
-        },
-        "description": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "active",
-            "inactive",
-            "draft",
-            "error"
-          ],
-          "description": "Defaults to draft when omitted."
-        },
-        "priority": {
-          "type": "string",
-          "enum": [
-            "low",
-            "normal",
-            "high",
-            "critical"
-          ],
-          "description": "Defaults to normal when omitted."
-        },
-        "trigger_type": {
-          "type": "string",
-          "enum": [
-            "time_based",
-            "event_based",
-            "condition_based",
-            "manual",
-            "recurring",
-            "webhook"
-          ]
-        },
-        "trigger_config": {
-          "type": "object",
-          "additionalProperties": {},
-          "description": "Trigger-type-specific configuration object."
-        },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationRuleCondition"
-          }
-        },
-        "condition_logic": {
-          "type": "string",
-          "enum": [
-            "and",
-            "or"
-          ]
-        },
-        "actions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationRuleAction"
-          },
-          "minItems": 1
-        },
-        "max_concurrent_executions": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "execution_timeout_minutes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "retry_failed_executions": {
-          "type": "boolean"
-        },
-        "is_template": {
-          "type": "boolean"
-        },
-        "template_category": {
-          "type": "string"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "notification_settings": {
-          "$ref": "#/components/schemas/AutomationNotificationSettings"
-        }
-      }
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationRule"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "delete-_api_v1_automation_rules_id",
-    "method": "delete",
-    "path": "/api/v1/automation/rules/{id}",
-    "displayName": "Delete automation rule",
-    "summary": "Delete automation rule",
-    "description": "Deletes one automation rule by rule_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:delete. The service blocks deletion when pending/running executions exist, unschedules active rules, deletes automation_rules row, and emits automation.rule.deleted + audit log events. Missing rules and delete constraints currently bubble as 500 errors.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation rule UUID from automation_rules.rule_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation rule UUID from automation_rules.rule_id."
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_automation_rules_id_execute",
-    "method": "post",
-    "path": "/api/v1/automation/rules/{id}/execute",
-    "displayName": "Execute automation rule manually",
-    "summary": "Execute automation rule manually",
-    "description": "Starts a manual execution for one automation rule identified by path rule_id. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:execute. The current request schema requires automation_rule_id in the body, but controller/service execute the path rule ID and do not cross-check the body ID. For dry_run=false the service creates automation_executions row and queues execution via a currently stubbed queue helper.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation rule UUID from automation_rules.rule_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation rule UUID from automation_rules.rule_id."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "automation_rule_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Required by current validation schema but ignored by controller/service, which execute the path rule ID."
-        },
-        "execution_data": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "override_conditions": {
-          "type": "boolean",
-          "description": "Set true to allow execution of inactive rules."
-        },
-        "dry_run": {
-          "type": "boolean",
-          "description": "When true, returns a completed execution without queueing actions."
-        }
-      },
-      "required": [
-        "automation_rule_id"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationExecution"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_rules_bulkstatus",
-    "method": "post",
-    "path": "/api/v1/automation/rules/bulk-status",
-    "displayName": "Bulk update automation rule status",
-    "summary": "Bulk update automation rule status",
-    "description": "Updates status for up to 100 automation rules under the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:update. The controller validates ids/status with bulkStatusUpdateSchema and calls updateAutomationRule per id. Failures are collected into an errors array and still return HTTP 200 with partial-success details.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "minItems": 1,
-          "maxItems": 100,
-          "description": "Rule UUIDs from automation_rules.rule_id."
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "active",
-            "inactive",
-            "draft",
-            "error"
-          ],
-          "description": "Status to apply to each provided rule id."
-        }
-      },
-      "required": [
-        "ids",
-        "status"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "action": {
-              "type": "string",
-              "enum": [
-                "bulk_status_update"
-              ]
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "active",
-                "inactive",
-                "draft",
-                "error"
-              ]
-            },
-            "rule_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              }
-            },
-            "updated": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "errors": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Per-rule failures emitted as `<ruleId>: <error message>` entries."
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "status",
-            "rule_ids",
-            "updated",
-            "errors",
-            "message"
-          ]
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_rules_bulkexecute",
-    "method": "post",
-    "path": "/api/v1/automation/rules/bulk-execute",
-    "displayName": "Bulk execute automation rules",
-    "summary": "Bulk execute automation rules",
-    "description": "Starts execution attempts for up to 20 automation rules for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:execute. The controller validates bulkExecutionSchema and calls executeAutomationRule per id. sequential_execution=true runs serially; otherwise Promise.all is used. Per-rule errors are returned in a 200 response.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "automation_rule_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "minItems": 1,
-          "maxItems": 20,
-          "description": "Rule UUIDs to execute."
-        },
-        "execution_data": {
-          "type": "object",
-          "additionalProperties": {},
-          "description": "Optional shared execution payload for each run."
-        },
-        "override_conditions": {
-          "type": "boolean",
-          "description": "Allow execution of inactive rules when true."
-        },
-        "sequential_execution": {
-          "type": "boolean",
-          "description": "When true, executes rules sequentially; otherwise Promise.all is used."
-        }
-      },
-      "required": [
-        "automation_rule_ids"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "action": {
-              "type": "string",
-              "enum": [
-                "bulk_execute"
-              ]
-            },
-            "rule_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              }
-            },
-            "started": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "errors": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Per-rule failures emitted as `<ruleId>: <error message>` entries."
-            },
-            "sequential": {
-              "type": "boolean"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "rule_ids",
-            "started",
-            "errors",
-            "message"
-          ]
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_templates",
-    "method": "get",
-    "path": "/api/v1/automation/templates",
-    "displayName": "List automation templates",
-    "summary": "List automation templates",
-    "description": "Returns a paginated list of automation templates for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The controller validates query params with templatesListSchema and the service filters automation_templates by tenant. Current service code wraps template array before createPaginatedResponse, which can produce nested data in practice.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "description": "Page number as a query string. Defaults to 1.",
-        "schema": {
-          "type": "string",
-          "description": "Page number as a query string. Defaults to 1."
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
-        "schema": {
-          "type": "string",
-          "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation; service currently orders templates by created_at desc.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared list query validation; service currently orders templates by created_at desc."
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared list query validation.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ],
-          "description": "Accepted by shared list query validation."
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Accepted by shared filter validation."
-        }
-      },
-      {
-        "name": "is_active",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by shared filter validation and transformed to boolean.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by shared filter validation and transformed to boolean."
-        }
-      },
-      {
-        "name": "category",
-        "in": "query",
-        "required": false,
-        "description": "Filter templates by category.",
-        "schema": {
-          "type": "string",
-          "description": "Filter templates by category."
-        }
-      },
-      {
-        "name": "compatible_version",
-        "in": "query",
-        "required": false,
-        "description": "Filter templates by compatibility version tag.",
-        "schema": {
-          "type": "string",
-          "description": "Filter templates by compatibility version tag."
-        }
-      },
-      {
-        "name": "author",
-        "in": "query",
-        "required": false,
-        "description": "Filter templates by author/user id value saved on the template.",
-        "schema": {
-          "type": "string",
-          "description": "Filter templates by author/user id value saved on the template."
-        }
-      },
-      {
-        "name": "usage_count_min",
-        "in": "query",
-        "required": false,
-        "description": "Minimum usage_count filter.",
-        "schema": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Minimum usage_count filter."
-        }
-      },
-      {
-        "name": "usage_count_max",
-        "in": "query",
-        "required": false,
-        "description": "Maximum usage_count filter.",
-        "schema": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Maximum usage_count filter."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AutomationTemplate"
-          },
-          "description": "Template rows. Current service code wraps the DB result array in another array before createPaginatedResponse, which can produce nested data in practice."
-        },
-        "pagination": {
-          "$ref": "#/components/schemas/AutomationPagination"
-        },
-        "meta": {
-          "type": "object",
-          "properties": {
-            "filters": {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            "resource": {
-              "type": "string",
-              "enum": [
-                "automation_template"
-              ]
-            }
-          }
-        }
-      },
-      "required": [
-        "data",
-        "pagination"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_templates",
-    "method": "post",
-    "path": "/api/v1/automation/templates",
-    "displayName": "Create automation template from rule",
-    "summary": "Create automation template from rule",
-    "description": "Creates a template row by copying one source automation rule into automation_templates.template_config. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates createTemplateFromRuleSchema and service emits automation.template.created + audit log events. Missing source rules currently throw generic Error and surface as 500.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "automation_rule_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Source automation_rules.rule_id copied into template_config."
-        },
-        "template_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
-        },
-        "template_description": {
-          "type": "string"
-        },
-        "category": {
-          "type": "string",
-          "minLength": 1
-        },
-        "template_variables": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "rule_field_path": {
-                "type": "string",
-                "minLength": 1
-              },
-              "variable_name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "display_name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "string",
-                  "number",
-                  "boolean",
-                  "date",
-                  "select",
-                  "multiselect"
-                ]
-              },
-              "required": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "rule_field_path",
-              "variable_name",
-              "display_name",
-              "type"
-            ]
-          }
-        }
-      },
-      "required": [
-        "automation_rule_id",
-        "template_name",
-        "category"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationTemplate"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_templates_id",
-    "method": "get",
-    "path": "/api/v1/automation/templates/{id}",
-    "displayName": "Get automation template",
-    "summary": "Get automation template",
-    "description": "Returns one automation template by template_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. Service lookup is scoped by {template_id, tenant}. Missing templates currently throw generic Error and surface as 500 rather than 404.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation template UUID from automation_templates.template_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation template UUID from automation_templates.template_id."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationTemplate"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_automation_templates_id_use",
-    "method": "post",
-    "path": "/api/v1/automation/templates/{id}/use",
-    "displayName": "Create automation rule from template",
-    "summary": "Create automation rule from template",
-    "description": "Uses one template_id to create a new automation rule under the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates `{ variables }`, then service loads template, applies substitutions into template_config, creates rule via createAutomationRule, and increments automation_templates.usage_count/last_used. Missing templates surface as 500.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Automation template UUID from automation_templates.template_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Automation template UUID from automation_templates.template_id."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "variables": {
-          "type": "object",
-          "additionalProperties": {},
-          "description": "Optional variable substitutions applied to template_config before creating a new automation rule."
-        }
-      }
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/AutomationRule"
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_statistics",
-    "method": "get",
-    "path": "/api/v1/automation/statistics",
-    "displayName": "Get automation statistics",
-    "summary": "Get automation statistics",
-    "description": "Returns tenant-scoped automation aggregate counts (rules and executions) plus HATEOAS links. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The service computes counts from automation_rules and automation_executions plus period-based execution totals and success rate.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "total_rules": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "active_rules": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "inactive_rules": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "draft_rules": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "error_rules": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "total_executions": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "successful_executions": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "failed_executions": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "executions_today": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "executions_this_week": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "executions_this_month": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "avg_execution_time_ms": {
-              "type": "number",
-              "minimum": 0
-            },
-            "success_rate_percent": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "_links": {
-              "type": "object",
-              "properties": {
-                "self": {
-                  "type": "string",
-                  "enum": [
-                    "/api/v1/automation/statistics"
-                  ]
-                },
-                "rules": {
-                  "type": "string",
-                  "enum": [
-                    "/api/v1/automation/rules"
-                  ]
-                },
-                "executions": {
-                  "type": "string",
-                  "enum": [
-                    "/api/v1/automation/executions"
-                  ]
-                },
-                "templates": {
-                  "type": "string",
-                  "enum": [
-                    "/api/v1/automation/templates"
-                  ]
-                },
-                "performance": {
-                  "type": "string",
-                  "enum": [
-                    "/api/v1/automation/performance"
-                  ]
-                }
-              },
-              "required": [
-                "self",
-                "rules",
-                "executions",
-                "templates",
-                "performance"
-              ]
-            }
-          },
-          "required": [
-            "total_rules",
-            "active_rules",
-            "inactive_rules",
-            "draft_rules",
-            "error_rules",
-            "total_executions",
-            "successful_executions",
-            "failed_executions",
-            "executions_today",
-            "executions_this_week",
-            "executions_this_month"
-          ]
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_performance",
-    "method": "get",
-    "path": "/api/v1/automation/performance",
-    "displayName": "Get automation performance metrics",
-    "summary": "Get automation performance metrics",
-    "description": "Returns performance metrics calculated by AutomationService.calculatePerformanceMetrics for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. Query is validated with performanceMetricsRequestSchema; because validateQueryParams maps URL values to strings, array filters (rule_ids, metrics) currently have parsing limitations and may fail validation unless encoded specially.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "description": "Optional lower bound for performance window.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional lower bound for performance window."
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "description": "Optional upper bound for performance window.",
-        "schema": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional upper bound for performance window."
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "description": "Aggregation bucket size; defaults to day.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "hour",
-            "day",
-            "week",
-            "month"
-          ],
-          "description": "Aggregation bucket size; defaults to day."
-        }
-      },
-      {
-        "name": "rule_ids",
-        "in": "query",
-        "required": false,
-        "description": "Raw query value copied from URL. The controller expects an array UUID schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation.",
-        "schema": {
-          "type": "string",
-          "description": "Raw query value copied from URL. The controller expects an array UUID schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
-        }
-      },
-      {
-        "name": "metrics",
-        "in": "query",
-        "required": false,
-        "description": "Raw query value copied from URL. The controller expects an array enum schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation.",
-        "schema": {
-          "type": "string",
-          "description": "Raw query value copied from URL. The controller expects an array enum schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "allOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "object",
-              "properties": {
-                "_links": {
-                  "type": "object",
-                  "properties": {
-                    "self": {
-                      "type": "string",
-                      "enum": [
-                        "/api/v1/automation/performance"
-                      ]
-                    },
-                    "statistics": {
-                      "type": "string",
-                      "enum": [
-                        "/api/v1/automation/statistics"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "self",
-                    "statistics"
-                  ]
-                }
-              }
-            }
-          ],
-          "description": "Performance payload from AutomationService.calculatePerformanceMetrics plus links."
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_automation_meta",
-    "method": "get",
-    "path": "/api/v1/automation/meta",
-    "displayName": "Get automation metadata",
-    "summary": "Get automation metadata",
-    "description": "Returns a static reference catalog of automation enum values: trigger types, action types, rule statuses, execution statuses, priority levels, and condition operators. Authentication uses x-api-key with optional x-tenant-id; the controller validates the API key, resolves tenant context, and requires automation:read permission. The response is hardcoded and performs no service or database lookup beyond authentication/RBAC.",
-    "tags": [
-      "Automation"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "trigger_types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "time_based",
-                  "event_based",
-                  "condition_based",
-                  "manual",
-                  "recurring",
-                  "webhook"
-                ]
-              },
-              "description": "Valid automation trigger types."
-            },
-            "action_types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "email_notification",
-                  "sms_notification",
-                  "webhook_call",
-                  "database_update",
-                  "ticket_creation",
-                  "ticket_update",
-                  "project_update",
-                  "time_entry_creation",
-                  "invoice_generation",
-                  "custom_script",
-                  "workflow_execution",
-                  "system_command"
-                ]
-              },
-              "description": "Valid automation action types."
-            },
-            "rule_statuses": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "active",
-                  "inactive",
-                  "draft",
-                  "error"
-                ]
-              },
-              "description": "Valid automation rule statuses."
-            },
-            "execution_statuses": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "pending",
-                  "running",
-                  "completed",
-                  "failed",
-                  "cancelled",
-                  "timeout",
-                  "skipped"
-                ]
-              },
-              "description": "Valid automation execution statuses."
-            },
-            "priority_levels": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "low",
-                  "normal",
-                  "high",
-                  "critical"
-                ]
-              },
-              "description": "Valid automation priority levels."
-            },
-            "condition_operators": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "equals",
-                  "not_equals",
-                  "greater_than",
-                  "less_than",
-                  "greater_than_or_equal",
-                  "less_than_or_equal",
-                  "contains",
-                  "not_contains",
-                  "starts_with",
-                  "ends_with",
-                  "in",
-                  "not_in",
-                  "exists",
-                  "not_exists",
-                  "regex_match"
-                ]
-              },
-              "description": "Valid condition operators."
-            }
-          },
-          "required": [
-            "trigger_types",
-            "action_types",
-            "rule_statuses",
-            "execution_statuses",
-            "priority_levels",
-            "condition_operators"
-          ]
-        }
-      },
-      "required": [
-        "data"
       ]
     }
   },
@@ -12686,7 +9353,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "enum": [
                   "company",
-                  "individual"
+                  "individual",
+                  null
                 ]
               },
               "tax_id_number": {
@@ -13098,7 +9766,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prospect",
             "active",
             "former"
-          ]
+          ],
+          "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
         },
         "tags": {
           "type": "array",
@@ -13170,7 +9839,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -13485,7 +10155,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -13852,7 +10523,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prospect",
             "active",
             "former"
-          ]
+          ],
+          "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
         },
         "tags": {
           "type": "array",
@@ -13924,7 +10596,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -15732,7 +12405,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "mobile",
                   "home",
                   "fax",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -15810,7 +12484,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "work",
             "personal",
             "billing",
-            "other"
+            "other",
+            null
           ]
         },
         "primary_email_custom_type": {
@@ -15850,7 +12525,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "work",
                   "personal",
                   "billing",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -16057,7 +12733,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "mobile",
                   "home",
                   "fax",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -16135,7 +12812,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "work",
             "personal",
             "billing",
-            "other"
+            "other",
+            null
           ]
         },
         "primary_email_custom_type": {
@@ -16175,7 +12853,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "work",
                   "personal",
                   "billing",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -26590,6 +23269,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "List invoice transactions",
     "summary": "List invoice transactions",
     "description": "Returns transactions array for one invoice id.",
+    "tags": [
+      "Invoices"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_invoices_id_history",
+    "method": "get",
+    "path": "/api/v1/invoices/{id}/history",
+    "displayName": "Get invoice lifecycle history",
+    "summary": "Get invoice lifecycle history",
+    "description": "Returns the audit trail (invoice_finalized, invoice_unfinalized, invoice_deleted) for one invoice id, oldest first. Each entry has the acting user, timestamp and before/after status and finalized_at.",
     "tags": [
       "Invoices"
     ],
@@ -41080,9 +37811,47 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "tags"
                 ]
               }
+            },
+            "client": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "changed_fields"
+                ]
+              }
+            },
+            "contact": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
+            },
+            "client_location": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
         },
         "payload_transformation": {
           "type": "object",
@@ -41203,7 +37972,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/events",
     "displayName": "List available webhook events",
     "summary": "List available webhook events",
-    "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).",
+    "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*).",
     "tags": [
       "Webhooks"
     ],
@@ -41535,9 +38304,47 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "tags"
                 ]
               }
+            },
+            "client": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "changed_fields"
+                ]
+              }
+            },
+            "contact": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
+            },
+            "client_location": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
         },
         "payload_transformation": {
           "type": "object",
@@ -42015,9 +38822,47 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "tags"
                 ]
               }
+            },
+            "client": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "changed_fields"
+                ]
+              }
+            },
+            "contact": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
+            },
+            "client_location": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "changed_fields"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
         },
         "payload_transformation": {
           "type": "object",
@@ -44660,10 +41505,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "assigned_to": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": "string",
           "format": "uuid"
         },
         "estimated_hours": {
@@ -44675,17 +41517,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time"
         },
         "due_date": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": "string",
           "format": "date-time"
         },
         "priority_id": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": "string",
           "format": "uuid"
         },
         "task_type_key": {
@@ -47052,8 +43888,67 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheduled_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduled_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "meeting",
+            "break",
+            "other"
+          ]
+        },
+        "assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "calendar_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_private": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_all_day": {
+          "type": "boolean"
+        },
+        "recurrence_pattern": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "scheduled_start",
+        "scheduled_end"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -47266,7 +44161,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "Update schedule entry",
     "summary": "Update schedule entry",
-    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().",
+    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).",
     "tags": [
       "Work Management v1"
     ],
@@ -47286,8 +44181,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheduled_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduled_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "meeting",
+            "break",
+            "other"
+          ]
+        },
+        "assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "calendar_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_private": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_all_day": {
+          "type": "boolean"
+        },
+        "recurrence_pattern": {
+          "type": "string"
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -50820,7 +47769,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle/settings",
     "displayName": "Update ticket bundle settings",
     "summary": "Update ticket bundle settings",
-    "description": "Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.",
+    "description": "Updates the bundle mode and/or reopen-on-child-reply policy for master {id}. Children lock status, assignee and priority only in sync_updates mode; link_only children manage their own. Switching to link_only never changes children. Switching to sync_updates while the master is open changes no children. Switching to sync_updates while the master is closed requires on_closed_master (keep_closed, apply_resolution to the still-open children, or reopen_master); omitting it returns 409 naming the allowed choices. Supplying it when switching to sync_updates on an open master returns 400; it is ignored for any other change.",
     "tags": [
       "Work Management v1"
     ],
@@ -51002,7 +47951,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries",
     "displayName": "Create time entry",
     "summary": "Create time entry",
-    "description": "Creates time entry.",
+    "description": "Creates a time entry. Billable entries are linked to a contract line (optional `contract_line_id`; auto-resolved when exactly one line is eligible) and draw bucket/hour-block usage. Returns 400 ValidationError (VALIDATION_ERROR) with details.reason `contract_line_ambiguous` or `contract_line_not_eligible` and details.eligible_contract_lines[] (contract_line_id, contract_line_name, contract_line_type, contract_id, contract_name, has_bucket) when the line cannot be resolved.",
     "tags": [
       "Work Management v1"
     ],
@@ -51046,6 +47995,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "tax_region": {
           "type": "string"
+        },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
           "type": "boolean",
@@ -51289,6 +48251,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tax_region": {
                 "type": "string"
               },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+              },
               "is_billable": {
                 "type": "boolean",
                 "default": true
@@ -51400,6 +48375,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "tax_region": {
                     "type": "string"
                   },
+                  "tax_rate_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                  },
+                  "contract_line_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+                  },
                   "is_billable": {
                     "type": "boolean",
                     "default": true
@@ -51454,7 +48442,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/bulk",
     "displayName": "Bulk delete time entries",
     "summary": "Bulk delete time entries",
-    "description": "Bulk delete time entry operation.",
+    "description": "Bulk delete time entry operation. Each deletion reverses the entry's bucket usage and hour-block burn.",
     "tags": [
       "Work Management v1"
     ],
@@ -52209,7 +49197,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "Update time entry",
     "summary": "Update time entry",
-    "description": "Updates time entry UUID.",
+    "description": "Updates time entry UUID. Re-resolves the contract line and adjusts bucket usage by the change; returns the same 400 contract_line_ambiguous / contract_line_not_eligible ValidationError as create.",
     "tags": [
       "Work Management v1"
     ],
@@ -52266,6 +49254,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "tax_region": {
           "type": "string"
         },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+        },
         "is_billable": {
           "type": "boolean",
           "default": true
@@ -52306,7 +49307,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "Delete time entry",
     "summary": "Delete time entry",
-    "description": "Deletes time entry UUID.",
+    "description": "Deletes time entry UUID and reverses the bucket usage draw and hour-block burn the entry made.",
     "tags": [
       "Work Management v1"
     ],
@@ -53416,171 +50417,105 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/search",
     "displayName": "Search time sheets",
     "summary": "Search time sheets",
-    "description": "Current route delegates to ApiTimeSheetController.list() rather than search().",
+    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
     "tags": [
       "Work Management v1"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "page",
+        "name": "query",
+        "in": "query",
+        "required": true,
+        "description": "Search text (required). Case-insensitive substring match.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Search text (required). Case-insensitive substring match."
+        }
+      },
+      {
+        "name": "fields",
         "in": "query",
         "required": false,
+        "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default."
+        }
+      },
+      {
+        "name": "approval_statuses",
+        "in": "query",
+        "required": false,
+        "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate.",
+        "schema": {
+          "type": "string",
+          "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate."
+        }
+      },
+      {
+        "name": "user_ids",
+        "in": "query",
+        "required": false,
+        "description": "User UUIDs to keep. Repeat or comma-separate.",
+        "schema": {
+          "type": "string",
+          "description": "User UUIDs to keep. Repeat or comma-separate."
+        }
+      },
+      {
+        "name": "period_ids",
+        "in": "query",
+        "required": false,
+        "description": "Time period UUIDs to keep. Repeat or comma-separate.",
+        "schema": {
+          "type": "string",
+          "description": "Time period UUIDs to keep. Repeat or comma-separate."
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date.",
+        "schema": {
+          "type": "string",
+          "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date."
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date.",
+        "schema": {
+          "type": "string",
+          "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date."
+        }
+      },
+      {
+        "name": "include_entries",
+        "in": "query",
+        "required": false,
+        "description": "Include time_entries on each sheet. Default false.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Include time_entries on each sheet. Default false."
         }
       },
       {
         "name": "limit",
         "in": "query",
         "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
+        "description": "Max results, 1-100. Default 25.",
         "schema": {
           "type": "string",
-          "enum": [
-            "approval_status",
-            "approved_at",
-            "created_at",
-            "period_end",
-            "period_start",
-            "submitted_at"
-          ],
-          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "user_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "period_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "approval_status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "approved_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "submitted_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "submitted_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "has_entries",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "period_start_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_start_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
+          "description": "Max results, 1-100. Default 25."
         }
       }
     ],
@@ -53591,48 +50526,295 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "period_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "approval_status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "APPROVED",
+                  "CHANGES_REQUESTED"
+                ]
+              },
+              "submitted_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "approved_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "approved_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": "string"
+              },
+              "time_entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tenant": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "entry_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "start_time": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "end_time": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "work_item_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "billable_duration": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "work_item_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ticket",
+                        "project_task",
+                        "non_billable_category",
+                        "ad_hoc",
+                        "interaction",
+                        null
+                      ]
+                    },
+                    "approval_status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "DRAFT",
+                        "SUBMITTED",
+                        "APPROVED",
+                        "REJECTED",
+                        "CHANGES_REQUESTED",
+                        null
+                      ]
+                    },
+                    "time_sheet_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "created_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "service_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "tax_region": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "invoiced": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "tax_rate_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "contract_line_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "work_date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "work_timezone": {
+                      "type": "string"
+                    },
+                    "created_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "updated_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "contract_line_source": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "explicit",
+                        "auto_unique_service",
+                        "auto_bucket_overlay",
+                        "unresolved",
+                        "reconciled_at_generation",
+                        "auto_billing_profile",
+                        null
+                      ]
+                    },
+                    "contract_line_unresolved_reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ambiguous",
+                        "no_match",
+                        "error",
+                        null
+                      ]
+                    },
+                    "catalog_pricing_acknowledged_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "catalog_pricing_acknowledged_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "entry_id",
+                    "user_id",
+                    "start_time",
+                    "end_time",
+                    "notes",
+                    "work_item_id",
+                    "billable_duration",
+                    "work_item_type",
+                    "approval_status",
+                    "time_sheet_id",
+                    "created_at",
+                    "updated_at",
+                    "service_id",
+                    "tax_region",
+                    "invoiced",
+                    "tax_rate_id",
+                    "contract_line_id",
+                    "work_date",
+                    "work_timezone",
+                    "created_by",
+                    "updated_by",
+                    "contract_line_source",
+                    "contract_line_unresolved_reason",
+                    "catalog_pricing_acknowledged_at",
+                    "catalog_pricing_acknowledged_by"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "tenant",
+              "id",
+              "user_id",
+              "period_id",
+              "approval_status",
+              "submitted_at",
+              "approved_at",
+              "approved_by",
+              "user_name"
+            ]
           }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },
@@ -53922,7 +51104,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/entries",
     "displayName": "List time sheet entries",
     "summary": "List time sheet entries",
-    "description": "Current route delegates to ApiTimeSheetController.list() rather than a per-sheet entries reader.",
+    "description": "Returns the time_entries of the time sheet in the path (ordered by start_time) via ApiTimeSheetController.getEntries(). 404 when the sheet does not exist in the caller's tenant.",
     "tags": [
       "Work Management v1"
     ],
@@ -53938,66 +51120,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
         }
-      },
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "fields",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
       }
     ],
     "responseBodySchema": {
@@ -54007,48 +51129,227 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "entry_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "start_time": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "end_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "work_item_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "billable_duration": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "work_item_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "ticket",
+                  "project_task",
+                  "non_billable_category",
+                  "ad_hoc",
+                  "interaction",
+                  null
+                ]
+              },
+              "approval_status": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "APPROVED",
+                  "REJECTED",
+                  "CHANGES_REQUESTED",
+                  null
+                ]
+              },
+              "time_sheet_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "created_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "service_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "tax_region": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "invoiced": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "contract_line_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "work_date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "work_timezone": {
+                "type": "string"
+              },
+              "created_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "updated_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "contract_line_source": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "explicit",
+                  "auto_unique_service",
+                  "auto_bucket_overlay",
+                  "unresolved",
+                  "reconciled_at_generation",
+                  "auto_billing_profile",
+                  null
+                ]
+              },
+              "contract_line_unresolved_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "ambiguous",
+                  "no_match",
+                  "error",
+                  null
+                ]
+              },
+              "catalog_pricing_acknowledged_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "catalog_pricing_acknowledged_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "tenant",
+              "entry_id",
+              "user_id",
+              "start_time",
+              "end_time",
+              "notes",
+              "work_item_id",
+              "billable_duration",
+              "work_item_type",
+              "approval_status",
+              "time_sheet_id",
+              "created_at",
+              "updated_at",
+              "service_id",
+              "tax_region",
+              "invoiced",
+              "tax_rate_id",
+              "contract_line_id",
+              "work_date",
+              "work_timezone",
+              "created_by",
+              "updated_by",
+              "contract_line_source",
+              "contract_line_unresolved_reason",
+              "catalog_pricing_acknowledged_at",
+              "catalog_pricing_acknowledged_by"
+            ]
           }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },
@@ -54343,7 +51644,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/summary",
     "displayName": "Get time sheet summary",
     "summary": "Get time sheet summary",
-    "description": "Current route delegates to ApiTimeSheetController.list() instead of summary-specific computation.",
+    "description": "Returns the summary (hours totals, billable split, approval_ready) of the time sheet in the path via ApiTimeSheetController.getSummary(). 404 when the sheet does not exist in the caller's tenant.",
     "tags": [
       "Work Management v1"
     ],
@@ -54359,65 +51660,92 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
         }
-      },
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total_hours": {
+              "type": "number"
+            },
+            "billable_hours": {
+              "type": "number"
+            },
+            "non_billable_hours": {
+              "type": "number"
+            },
+            "entries_by_type": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "entries_by_day": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "approval_ready": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "total_hours",
+            "billable_hours",
+            "non_billable_hours",
+            "entries_by_type",
+            "entries_by_day",
+            "approval_ready"
           ]
         }
       },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_calendars",
+    "method": "get",
+    "path": "/api/v1/calendars",
+    "displayName": "List calendars",
+    "summary": "List calendars",
+    "description": "Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: the caller's own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see (every group calendar for user_schedule:update holders). HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send `calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
       {
-        "name": "fields",
+        "name": "type",
         "in": "query",
         "required": false,
+        "description": "Only return calendars of this type.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "personal",
+            "group"
+          ],
+          "description": "Only return calendars of this type."
         }
       },
       {
-        "name": "search",
+        "name": "include_archived",
         "in": "query",
         "required": false,
+        "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers.",
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers."
         }
       }
     ],
@@ -54427,40 +51755,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": {}
+            "$ref": "#/components/schemas/WorkV1Calendar"
           }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
-          ]
         },
         "meta": {
           "type": "object",
@@ -54468,8 +51764,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },
@@ -54858,58 +52153,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Filter statuses to this board."
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_categories",
-    "method": "get",
-    "path": "/api/v1/tickets/categories",
-    "displayName": "List ticket categories",
-    "summary": "List ticket categories",
-    "description": "Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.",
-    "tags": [
-      "Work Management v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "board_id",
-        "in": "query",
-        "required": false,
-        "description": "Filter categories to this board.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Filter categories to this board."
         }
       }
     ],
@@ -55854,6 +53097,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "External link UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_projectlinks",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/project-links",
+    "displayName": "List the project tasks a ticket is linked to",
+    "summary": "List the project tasks a ticket is linked to",
+    "description": "Returns each project task the ticket is linked to, with its project, phase and current status (custom status name, then project status, then standard), is_closed, and when the task last changed. Requires read on the ticket and on project; links to projects the caller cannot read are omitted.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
         }
       }
     ],
@@ -58111,8 +55406,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": {}
+            "$ref": "#/components/schemas/ContractListItemV1"
           }
         },
         "pagination": {
@@ -58712,7 +56006,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -58924,7 +56219,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -59096,7 +56392,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -59372,7 +56669,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "assessment",
             "proposed",
             "verbal",
-            "won"
+            "won",
+            null
           ]
         }
       }
@@ -64390,14 +61688,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "boolean",
                   "description": "Project tasks on mobile (project:read; PSA product only)."
                 },
-                "assets": {
-                  "type": "boolean",
-                  "description": "Asset browsing on mobile (asset:read; PSA product only)."
-                },
-                "assetAudit": {
-                  "type": "boolean",
-                  "description": "Site audits on mobile (asset:read AND asset:update; PSA product only)."
-                },
                 "clientsCreate": {
                   "type": "boolean"
                 },
@@ -64416,8 +61706,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "opportunities",
                 "opportunitiesCreate",
                 "projects",
-                "assets",
-                "assetAudit",
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",

@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import type { LinkingOptions } from "@react-navigation/native";
 import type { RootStackParamList } from "./types";
 import { logger } from "../logging/logger";
+import { matchRecordPath } from "../urls/recordLinks";
 
 const EXPO_PREFIX = Linking.createURL("/");
 const ALLOWED_PREFIXES = [EXPO_PREFIX, "alga://"] as const;
@@ -9,33 +10,34 @@ const ALLOWED_PREFIXES = [EXPO_PREFIX, "alga://"] as const;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Hosted web ticket URLs reach the app through iOS Universal Links / Android
+// Hosted web record URLs reach the app through iOS Universal Links / Android
 // App Links (declared in app.json). They are folded into the alga:// shape so
-// the rest of the config has a single ticket route.
-const HOSTED_TICKET_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/tickets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
+// the rest of the config has a single route per record. The path grammar is
+// the shared resolver's (matchRecordPath); only the trusted hosted origin and
+// the UUID shape are checked here.
+const HOSTED_ORIGIN_RE = /^https:\/\/algapsa\.com(?=[/?#]|$)/i;
 
-// Web task links point at the project page with the task in the query string.
-const HOSTED_PROJECT_TASK_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/projects\/[0-9a-f-]{36}\?(?:.*&)?taskId=([0-9a-f-]{36})(?:[&#].*)?$/i;
-
-// The same project page without a taskId opens the project itself.
-const HOSTED_PROJECT_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/projects\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
-
-const HOSTED_ASSET_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/assets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
-
-export function normalizeHostedTicketUrl(rawUrl: string): string {
-  const match = HOSTED_TICKET_URL_RE.exec(rawUrl);
-  if (match) return `alga://ticket/${match[1].toLowerCase()}`;
-  // taskId first: a project URL carrying one means the task, not the project.
-  const taskMatch = HOSTED_PROJECT_TASK_URL_RE.exec(rawUrl);
-  if (taskMatch) return `alga://project-task/${taskMatch[1].toLowerCase()}`;
-  const projectMatch = HOSTED_PROJECT_URL_RE.exec(rawUrl);
-  if (projectMatch) return `alga://project/${projectMatch[1].toLowerCase()}`;
-  const assetMatch = HOSTED_ASSET_URL_RE.exec(rawUrl);
-  return assetMatch ? `alga://asset/${assetMatch[1].toLowerCase()}` : rawUrl;
+export function normalizeHostedRecordUrl(rawUrl: string): string {
+  const origin = HOSTED_ORIGIN_RE.exec(rawUrl);
+  if (!origin) return rawUrl;
+  const match = matchRecordPath(rawUrl.slice(origin[0].length));
+  if (!match || !UUID_RE.test(match.id)) return rawUrl;
+  const id = match.id.toLowerCase();
+  switch (match.entityType) {
+    case "ticket":
+      return `alga://ticket/${id}`;
+    case "asset":
+      return `alga://asset/${id}`;
+    case "project":
+      return `alga://project/${id}`;
+    case "stock_unit":
+      return `alga://stock-unit/${id}`;
+    case "project_task":
+      // A project URL carrying a taskId means the task, not the project.
+      return match.projectId && UUID_RE.test(match.projectId) ? `alga://project-task/${id}` : rawUrl;
+    default:
+      return rawUrl;
+  }
 }
 
 function isAllowedPath(path: string): boolean {
@@ -56,11 +58,13 @@ function isAllowedPath(path: string): boolean {
   if (projectMatch) return UUID_RE.test(projectMatch[1] ?? "");
   const assetMatch = /^asset\/(.+)$/.exec(path);
   if (assetMatch) return UUID_RE.test(assetMatch[1] ?? "");
+  const unitMatch = /^stock-unit\/(.+)$/.exec(path);
+  if (unitMatch) return UUID_RE.test(unitMatch[1] ?? "");
   return false;
 }
 
 function safeDeepLinkUrl(url: string): string | null {
-  const rawUrl = normalizeHostedTicketUrl(url);
+  const rawUrl = normalizeHostedRecordUrl(url);
   if (!ALLOWED_PREFIXES.some((prefix) => rawUrl.startsWith(prefix))) return null;
 
   try {
@@ -104,7 +108,8 @@ function requiresSession(url: string): boolean {
     url.startsWith("alga://ticket/") ||
     url.startsWith("alga://project-task/") ||
     url.startsWith("alga://project/") ||
-    url.startsWith("alga://asset/")
+    url.startsWith("alga://asset/") ||
+    url.startsWith("alga://stock-unit/")
   );
 }
 
@@ -122,7 +127,7 @@ function rejectUrl(url: string, message: string): void {
 }
 
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [EXPO_PREFIX, "alga://", "https://algapsa.com"],
+  prefixes: [EXPO_PREFIX, "alga://"],
   getInitialURL: async () => {
     if (pendingUrl && signedIn) {
       const url = pendingUrl;
@@ -169,6 +174,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ProjectTaskDetail: "project-task/:taskId",
       ProjectDetail: "project/:projectId",
       AssetDetail: "asset/:assetId",
+      StockUnitDetail: "stock-unit/:unitId",
       Tabs: {
         screens: {
           TicketsTab: {

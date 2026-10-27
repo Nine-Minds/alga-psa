@@ -26,7 +26,7 @@ export type ResolvedWorkflowUser = {
   user_id: string;
   email: string | null;
   display_name: string;
-  user_type: 'internal' | 'client';
+  user_type: 'internal' | 'client' | 'service';
   is_inactive: boolean;
   sources: ResolvedWorkflowUserSource[];
 };
@@ -146,7 +146,8 @@ export async function resolveWorkflowUserRecipients(
       user_id: userId,
       email: typeof row.email === 'string' ? row.email : null,
       display_name: fullName || String(row.username ?? ''),
-      user_type: row.user_type === 'client' ? 'client' : 'internal',
+      // 'service' is explicit; only a missing/legacy type falls back to internal.
+      user_type: row.user_type === 'client' ? 'client' : row.user_type === 'service' ? 'service' : 'internal',
       is_inactive: Boolean(row.is_inactive),
       sources: Array.from(sources),
     });

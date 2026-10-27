@@ -212,6 +212,9 @@ export default defineConfig({
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/capability$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/capability.ts') },
+      { find: /^@alga-psa\/core\/capability\/server$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/server.ts') },
+      { find: /^@alga-psa\/core\/capability\/testing$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/testing.ts') },
       { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
@@ -232,6 +235,13 @@ export default defineConfig({
       // db's ./workDate export maps to src/lib/workDate (names don't mirror the
       // src layout), so a prefix alias can't reach it — alias it explicitly.
       { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+      // Same as workDate: ./tenantDb maps to src/lib, not a mirror path. The
+      // client-creation seam (shared/models/clientCreation.ts) imports this
+      // subpath directly to dodge the barrel's turbopack shim; without this
+      // alias Vite falls through to the real package "exports" map, which
+      // only resolves once packages/db has a built dist — not guaranteed in
+      // every CI lane (e.g. workspace-unit never builds it).
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
       // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 
@@ -371,6 +381,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
       { find: /^@alga-psa\/emulator-threecx$/, replacement: path.resolve(__dirname, '../packages/emulators/threecx/src/index.ts') },
       { find: /^@alga-psa\/emulator-levelio$/, replacement: path.resolve(__dirname, '../packages/emulators/levelio/src/index.ts') },
+      { find: /^@alga-psa\/emulator-huntress$/, replacement: path.resolve(__dirname, '../packages/emulators/huntress/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },

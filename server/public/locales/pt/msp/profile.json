@@ -460,6 +460,8 @@
         "customHeadersPlaceholder": "Autorização: Portador abc123\nFonte X: alga-psa",
         "ticketFilter": "Filtro de tickets",
         "ticketFilterPlaceholder": "Um UUID de ticket por linha. Deixe em branco para receber todos os eventos de tickets correspondentes.",
+        "legacyEventsHelp": "Estes tipos de evento já não são suportados. Permanecem neste webhook, mas nunca são entregues. Desmarque um tipo para o remover.",
+        "legacyEventLabel": "não suportado",
         "retryConfig": "Tentar novamente configurar JSON",
         "verifySsl": "Verifique os certificados SSL",
         "webhookActive": "O webhook está ativo",
@@ -800,6 +802,7 @@
       "signingSecretMissing": "O segredo de assinatura do webhook está ausente. Faça a rotação do segredo de assinatura e tente novamente.",
       "deliveryNotFound": "Entrega não encontrada.",
       "testNotRetryable": "Entregas de teste não podem ser repetidas.",
+      "unsupportedEventType": "Tipo de evento não suportado: {{eventTypes}}",
       "payloadInvalid": "Esta entrega não pode ser repetida porque o payload armazenado é inválido.",
       "validation": { "unknownEntity": "Entidade de webhook desconhecida \"{{entity}}\".", "unknownField": "Campo desconhecido \"{{field}}\" para a entidade de webhook \"{{entity}}\"." }
     },
