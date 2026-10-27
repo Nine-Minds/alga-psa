@@ -65,6 +65,7 @@ jobs:
 
   artifact-drift:
     name: artifact-drift
+    needs: migration-lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -102,7 +103,7 @@ jobs:
 
   upgrade-order:
     name: upgrade-order
-    needs: images
+    needs: [images, artifact-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     services:
@@ -156,7 +157,7 @@ jobs:
 
   hot-path-budget:
     name: hot-path-budget
-    needs: images
+    needs: [images, upgrade-order]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
