@@ -6,7 +6,7 @@ const flag = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/auth', () => ({ getSession }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
 
-import { clearCapabilityCache } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability';
 import { GET } from './route';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'Resource not found' } };
@@ -14,6 +14,7 @@ const msp = { user: { user_type: 'internal', tenant: 'tenant-1', id: 'u1' } };
 
 describe('GET /api/v1/capabilities/co-managed', () => {
   beforeEach(() => {
+    resetCapabilityRegistry();
     clearCapabilityCache();
     getSession.mockResolvedValue(msp);
     flag.mockImplementation(async () => true);

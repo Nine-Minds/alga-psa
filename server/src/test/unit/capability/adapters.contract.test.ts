@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const nf = vi.hoisted(() => vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }));
 vi.mock('next/navigation', () => ({ notFound: nf }));
@@ -19,6 +19,7 @@ import {
   isCapabilityServed,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
+  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
 import {
   CapabilityUnavailableError,
@@ -36,6 +37,11 @@ function open(on: boolean) {
 }
 
 describe('capability adapters', () => {
+  afterEach(() => {
+    // The gate registry is process-global; leave no resolvers for the next file.
+    resetCapabilityRegistry();
+  });
+
   beforeEach(() => {
     delete process.env.FORCE_CAPABILITIES;
     vi.clearAllMocks();

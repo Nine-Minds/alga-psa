@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const flag = vi.hoisted(() => vi.fn());
 vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <T,>(fn: T) => fn }));
@@ -12,10 +12,16 @@ import {
   registerCapabilityParticipation,
   resolveClientCapability,
   serves,
+  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
 import { resolveCapabilityBootstrap } from '../../../lib/capability/bootstrap';
 
 describe('server/client agreement through the bootstrap', () => {
+  afterEach(() => {
+    delete process.env.FORCE_CAPABILITIES;
+    resetCapabilityRegistry();
+  });
+
   beforeEach(() => {
     delete process.env.FORCE_CAPABILITIES;
     flag.mockReset();

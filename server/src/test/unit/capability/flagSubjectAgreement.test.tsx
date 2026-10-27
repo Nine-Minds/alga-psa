@@ -2,7 +2,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Server and client agree on `release-v2-0-feature` and on the capability,
@@ -43,6 +43,7 @@ import {
   registerCapabilityEligibility,
   registerCapabilityParticipation,
   serves,
+  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
 import { FeatureFlagBootstrapProvider, useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
 import { clearTenantFlagPropertiesCache, featureFlags } from '../../../lib/feature-flags/featureFlags';
@@ -61,6 +62,11 @@ function renderClient(bootstrap: Record<string, boolean>) {
 }
 
 describe('server/client agreement through the real evaluator', () => {
+  afterEach(() => {
+    resetCapabilityRegistry();
+    (globalThis as any)[Symbol.for('alga.core.featureFlagChecker')] = undefined;
+  });
+
   beforeEach(() => {
     delete process.env.FORCE_CAPABILITIES;
     delete process.env.DISABLE_FEATURE_FLAGS;

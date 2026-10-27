@@ -54,6 +54,7 @@ import {
   filterServed,
   resolveClientCapability,
   serves,
+  resetCapabilityRegistry,
 } from '@alga-psa/core/capability';
 import {
   clearTenantFlagPropertiesCache,
@@ -88,11 +89,12 @@ describe('capability neutrality on the real evaluator path', () => {
     featureFlags.clearCache();
     clearTenantFlagPropertiesCache();
     // Fresh gate registry: no eligibility or participation resolver registered.
-    delete (globalThis as any)[Symbol.for('alga.core.capabilityRegistry')];
+    resetCapabilityRegistry();
     clearCapabilityCache();
   });
   afterEach(() => {
     vi.useRealTimers();
+    (globalThis as any)[Symbol.for('alga.core.featureFlagChecker')] = undefined;
   });
 
   it('evaluateCapability: closed, zero SQL, zero PostHog calls', async () => {

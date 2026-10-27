@@ -295,6 +295,15 @@ export function clearCapabilityCache(): void {
   registry().cache.clear();
 }
 
+/**
+ * Tests only. Drop every registered resolver and cached decision, restoring
+ * the built-in gate definitions. The registry lives on `globalThis`, so in a
+ * shared test process it outlives a single test file.
+ */
+export function resetCapabilityRegistry(): void {
+  delete (globalThis as RegistryHost)[REGISTRY_KEY];
+}
+
 const DEFAULT_TTL_MS = 30_000;
 const MAX_TTL_MS = 300_000;
 

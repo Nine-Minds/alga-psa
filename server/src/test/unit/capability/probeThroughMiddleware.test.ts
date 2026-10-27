@@ -22,7 +22,7 @@ vi.mock('@alga-psa/auth', () => ({ getSession }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag }));
 
 import middleware from 'server/src/middleware';
-import { clearCapabilityCache } from '@alga-psa/core/capability';
+import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability';
 import { GET } from 'server/src/app/api/v1/capabilities/co-managed/route';
 
 const PROBE = 'http://localhost:3000/api/v1/capabilities/co-managed';
@@ -43,6 +43,7 @@ describe('capability probe behind the real middleware', () => {
   beforeEach(() => {
     vi.stubEnv('NEXTAUTH_URL', 'http://localhost:3000');
     vi.stubEnv('E2E_AUTH_BYPASS', 'false');
+    resetCapabilityRegistry();
     clearCapabilityCache();
     flag.mockResolvedValue(true);
     getSession.mockResolvedValue({ user: mspUser });

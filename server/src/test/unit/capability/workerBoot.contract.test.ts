@@ -68,6 +68,8 @@ describe('worker boot safety', () => {
       skipped: true,
       capability: 'co-managed',
     });
+    // The gate registry is process-global; leave no throwing resolvers behind.
+    cap.resetCapabilityRegistry();
     vi.doUnmock('../../../../../packages/core/src/lib/features');
   });
 });
