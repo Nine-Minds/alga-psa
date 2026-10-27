@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isAdditionalWorkspaceTest, isNodeToolingTest, isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
+import { serverUnitSelection } from '../run-server-unit-shard.mjs';
 
 function inspect(overrides = {}) {
   return reconcileDiscovery({
@@ -194,6 +196,31 @@ test('the env-gated tenant deletion query budget is collected only by its manual
   const runner = runners.find(entry => entry.filters?.some(filter => `${entry.cwd}/${filter}` === file));
   assert.equal(runner?.mandatory, false);
   // vitest list omits skipped cases; collection must see the gated case.
+  assert.equal(runner.env?.HOTPATH_DB, '1');
+});
+
+// The server unit shards run without a database (SKIP_DB_TESTS=1) and require
+// executed assertions in every collected file, so a suite gated as a whole
+// skips and fails the shard. Per-case gates still leave assertions executing.
+test('no DB-less server unit candidate gates its whole suite on the environment', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const roots = serverUnitSelection.map(selection => path.posix.normalize(`server/${selection}/`));
+  const candidates = repositoryTestFiles(root)
+    .filter(file => roots.some(prefix => file.startsWith(prefix)) && !/\.db\.test\.[cm]?[jt]sx?$/.test(file));
+  assert.ok(candidates.length > 0);
+  for (const file of candidates) {
+    assert.doesNotMatch(readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8'), /\bdescribe\.(skipIf|runIf)\(/, file);
+  }
+});
+
+test('the env-gated server hot-path capture is collected only by its manual review runner', () => {
+  const file = 'server/src/test/contract/hotPathQueryBudget.local.test.ts';
+  assert.ok(!serverUnitSelection.some(selection => file.startsWith(path.posix.normalize(`server/${selection}/`))));
+  assert.equal(isWorkspaceDbTest(file), false);
+  const runners = JSON.parse(readFileSync(new URL('../manual-vitest-runners.json', import.meta.url), 'utf8'));
+  const runner = runners.find(entry => entry.filters?.some(filter => `${entry.cwd}/${filter}` === file));
+  assert.equal(runner?.mandatory, false);
+  // vitest list omits skipped cases; collection must see the gated cases.
   assert.equal(runner.env?.HOTPATH_DB, '1');
 });
 
