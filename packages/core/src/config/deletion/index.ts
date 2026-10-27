@@ -660,7 +660,10 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         label: 'recurring ticket schedule',
         countQuery: countActiveBoardRecurringDefinitions
       },
-      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' }
+      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' },
+      // board_id is only ever set when scope='board' (canned_responses_scope_target_check),
+      // so a plain board_id count already means "board-scoped response".
+      { type: 'canned_response', table: 'canned_responses', foreignKey: 'board_id', label: 'board canned response' }
     ]
   },
   interaction_type: {

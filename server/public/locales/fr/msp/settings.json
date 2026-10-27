@@ -782,7 +782,7 @@
           "updateStatusFailed": "Échec de la mise à jour du statut du tableau",
           "updateDefaultFailed": "Échec de la mise à jour du tableau par défaut",
           "hasEmailSenderRoute": "Impossible de supprimer le tableau : il possède une route d’expéditeur sortant dédiée. Supprimez d’abord l’expéditeur de tickets dans l’éditeur de tableau.",
-          "referencedByAutomations": "Impossible de supprimer le tableau : des automatisations le ciblent encore. Redirigez-les vers un autre tableau ou supprimez-les d’abord."
+          "referencedByAutomations": "Impossible de supprimer le tableau : d’autres paramètres le ciblent encore. Redirigez-les vers un autre tableau ou supprimez-les d’abord."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "règles de notification",
         "notificationRules_few": "règles de notification",
         "notificationRules_many": "règles de notification",
-        "tags_one": "étiquette",
-        "tags_other": "étiquettes",
-        "tags_few": "étiquettes",
-        "tags_many": "étiquettes",
         "portalVisibility_one": "affectation de visibilité du portail client",
         "portalVisibility_other": "affectations de visibilité du portail client",
         "portalVisibility_few": "affectations de visibilité du portail client",
@@ -937,7 +933,11 @@
         "checklistRules_one": "règle d’application de liste de contrôle",
         "checklistRules_other": "règles d’application de liste de contrôle",
         "checklistRules_few": "règles d’application de liste de contrôle",
-        "checklistRules_many": "règles d’application de liste de contrôle"
+        "checklistRules_many": "règles d’application de liste de contrôle",
+        "cannedResponses_one": "réponse prédéfinie du tableau",
+        "cannedResponses_other": "réponses prédéfinies du tableau",
+        "cannedResponses_few": "réponses prédéfinies du tableau",
+        "cannedResponses_many": "réponses prédéfinies du tableau"
       }
     },
     "priorities": {

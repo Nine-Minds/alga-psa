@@ -782,7 +782,7 @@
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
           "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita",
           "hasEmailSenderRoute": "Impossibile eliminare la bacheca: ha una regola mittente in uscita dedicata. Rimuovi prima il mittente dei ticket nell’editor della bacheca.",
-          "referencedByAutomations": "Impossibile eliminare la bacheca: alcune automazioni la utilizzano ancora. Spostale su un’altra bacheca o rimuovile prima."
+          "referencedByAutomations": "Impossibile eliminare la bacheca: altre impostazioni la utilizzano ancora. Spostale su un’altra bacheca o rimuovile prima."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "regole di notifica",
         "notificationRules_few": "regole di notifica",
         "notificationRules_many": "regole di notifica",
-        "tags_one": "tag",
-        "tags_other": "tag",
-        "tags_few": "tag",
-        "tags_many": "tag",
         "portalVisibility_one": "assegnazione di visibilità del portale clienti",
         "portalVisibility_other": "assegnazioni di visibilità del portale clienti",
         "portalVisibility_few": "assegnazioni di visibilità del portale clienti",
@@ -937,7 +933,11 @@
         "checklistRules_one": "regola di applicazione della lista di controllo",
         "checklistRules_other": "regole di applicazione della lista di controllo",
         "checklistRules_few": "regole di applicazione della lista di controllo",
-        "checklistRules_many": "regole di applicazione della lista di controllo"
+        "checklistRules_many": "regole di applicazione della lista di controllo",
+        "cannedResponses_one": "risposta predefinita della bacheca",
+        "cannedResponses_other": "risposte predefinite della bacheca",
+        "cannedResponses_few": "risposte predefinite della bacheca",
+        "cannedResponses_many": "risposte predefinite della bacheca"
       }
     },
     "priorities": {

@@ -782,7 +782,7 @@
           "updateStatusFailed": "Det gick inte att uppdatera tavlans status",
           "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan",
           "hasEmailSenderRoute": "Det går inte att radera tavlan: den har en egen routning för utgående avsändare. Ta först bort ärendeavsändaren i tavelredigeraren.",
-          "referencedByAutomations": "Det går inte att radera tavlan: automatiseringar pekar fortfarande på den. Rikta om dem till en annan tavla eller ta bort dem först."
+          "referencedByAutomations": "Det går inte att radera tavlan: andra inställningar pekar fortfarande på den. Rikta om dem till en annan tavla eller ta bort dem först."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "aviseringsregler",
         "notificationRules_few": "aviseringsregler",
         "notificationRules_many": "aviseringsregler",
-        "tags_one": "tagg",
-        "tags_other": "taggar",
-        "tags_few": "taggar",
-        "tags_many": "taggar",
         "portalVisibility_one": "synlighetstilldelning i kundportalen",
         "portalVisibility_other": "synlighetstilldelningar i kundportalen",
         "portalVisibility_few": "synlighetstilldelningar i kundportalen",
@@ -937,7 +933,11 @@
         "checklistRules_one": "regel för checklistetilldelning",
         "checklistRules_other": "regler för checklistetilldelning",
         "checklistRules_few": "regler för checklistetilldelning",
-        "checklistRules_many": "regler för checklistetilldelning"
+        "checklistRules_many": "regler för checklistetilldelning",
+        "cannedResponses_one": "färdigt svar för tavlan",
+        "cannedResponses_other": "färdiga svar för tavlan",
+        "cannedResponses_few": "färdiga svar för tavlan",
+        "cannedResponses_many": "färdiga svar för tavlan"
       }
     },
     "priorities": {

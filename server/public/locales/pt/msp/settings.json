@@ -782,7 +782,7 @@
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
           "updateDefaultFailed": "Falha ao atualizar o quadro padrão",
           "hasEmailSenderRoute": "Não é possível excluir o quadro: ele tem uma rota de remetente de saída dedicada. Limpe primeiro o remetente de tickets no editor do quadro.",
-          "referencedByAutomations": "Não é possível excluir o quadro: automações ainda apontam para ele. Direcione-as para outro quadro ou remova-as primeiro."
+          "referencedByAutomations": "Não é possível excluir o quadro: outras configurações ainda apontam para ele. Direcione-as para outro quadro ou remova-as primeiro."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "regras de notificação",
         "notificationRules_few": "regras de notificação",
         "notificationRules_many": "regras de notificação",
-        "tags_one": "etiqueta",
-        "tags_other": "etiquetas",
-        "tags_few": "etiquetas",
-        "tags_many": "etiquetas",
         "portalVisibility_one": "atribuição de visibilidade no portal do cliente",
         "portalVisibility_other": "atribuições de visibilidade no portal do cliente",
         "portalVisibility_few": "atribuições de visibilidade no portal do cliente",
@@ -937,7 +933,11 @@
         "checklistRules_one": "regra de aplicação de lista de verificação",
         "checklistRules_other": "regras de aplicação de lista de verificação",
         "checklistRules_few": "regras de aplicação de lista de verificação",
-        "checklistRules_many": "regras de aplicação de lista de verificação"
+        "checklistRules_many": "regras de aplicação de lista de verificação",
+        "cannedResponses_one": "resposta pronta do quadro",
+        "cannedResponses_other": "respostas prontas do quadro",
+        "cannedResponses_few": "respostas prontas do quadro",
+        "cannedResponses_many": "respostas prontas do quadro"
       }
     },
     "priorities": {

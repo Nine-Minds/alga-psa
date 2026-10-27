@@ -782,7 +782,7 @@
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
           "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
           "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
-          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog automatiseringen naar. Richt deze eerst op een ander bord of verwijder ze."
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog andere instellingen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "meldingsregels",
         "notificationRules_few": "meldingsregels",
         "notificationRules_many": "meldingsregels",
-        "tags_one": "label",
-        "tags_other": "labels",
-        "tags_few": "labels",
-        "tags_many": "labels",
         "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
         "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
         "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
@@ -937,7 +933,11 @@
         "checklistRules_one": "controlelijstregel",
         "checklistRules_other": "controlelijstregels",
         "checklistRules_few": "controlelijstregels",
-        "checklistRules_many": "controlelijstregels"
+        "checklistRules_many": "controlelijstregels",
+        "cannedResponses_one": "standaardantwoord van het bord",
+        "cannedResponses_other": "standaardantwoorden van het bord",
+        "cannedResponses_few": "standaardantwoorden van het bord",
+        "cannedResponses_many": "standaardantwoorden van het bord"
       }
     },
     "priorities": {

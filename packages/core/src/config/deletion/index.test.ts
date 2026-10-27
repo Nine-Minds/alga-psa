@@ -153,6 +153,13 @@ describe('deletion configs', () => {
       foreignKey: 'board_id',
       label: 'checklist apply rule'
     });
+    // A board-scoped canned response cannot give up its board_id (the
+    // scope_target_check requires it), so it has to block too.
+    expect(deps.canned_response).toMatchObject({
+      table: 'canned_responses',
+      foreignKey: 'board_id',
+      label: 'board canned response'
+    });
     // None of them opt out of blocking.
     for (const dep of DELETION_CONFIGS.board.dependencies) {
       expect(dep.blocking).not.toBe(false);

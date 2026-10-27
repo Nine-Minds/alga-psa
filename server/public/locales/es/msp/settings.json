@@ -782,7 +782,7 @@
           "updateStatusFailed": "No se pudo actualizar el estado del tablero",
           "updateDefaultFailed": "No se pudo actualizar el tablero predeterminado",
           "hasEmailSenderRoute": "No se puede eliminar el tablero: tiene una ruta propia de remitente de correo saliente. Borre primero el remitente de tickets en el editor del tablero.",
-          "referencedByAutomations": "No se puede eliminar el tablero: todavía hay automatizaciones que apuntan a él. Diríjalas primero a otro tablero o elimínelas."
+          "referencedByAutomations": "No se puede eliminar el tablero: todavía hay otras configuraciones que apuntan a él. Diríjalas primero a otro tablero o elimínelas."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "reglas de notificación",
         "notificationRules_few": "reglas de notificación",
         "notificationRules_many": "reglas de notificación",
-        "tags_one": "etiqueta",
-        "tags_other": "etiquetas",
-        "tags_few": "etiquetas",
-        "tags_many": "etiquetas",
         "portalVisibility_one": "asignación de visibilidad del portal del cliente",
         "portalVisibility_other": "asignaciones de visibilidad del portal del cliente",
         "portalVisibility_few": "asignaciones de visibilidad del portal del cliente",
@@ -937,7 +933,11 @@
         "checklistRules_one": "regla de aplicación de lista de verificación",
         "checklistRules_other": "reglas de aplicación de lista de verificación",
         "checklistRules_few": "reglas de aplicación de lista de verificación",
-        "checklistRules_many": "reglas de aplicación de lista de verificación"
+        "checklistRules_many": "reglas de aplicación de lista de verificación",
+        "cannedResponses_one": "respuesta predefinida del tablero",
+        "cannedResponses_other": "respuestas predefinidas del tablero",
+        "cannedResponses_few": "respuestas predefinidas del tablero",
+        "cannedResponses_many": "respuestas predefinidas del tablero"
       }
     },
     "priorities": {

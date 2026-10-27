@@ -476,12 +476,12 @@ const BOARD_DELETE_COUNT_LABEL_KEYS: Record<string, string> = {
   statuses: 'ticketing.boards.deleteDependencies.statuses',
   auto_close_rules: 'ticketing.boards.deleteDependencies.autoCloseRules',
   notification_rules: 'ticketing.boards.deleteDependencies.notificationRules',
-  tag_definitions: 'ticketing.boards.deleteDependencies.tags',
   portal_visibility_assignments: 'ticketing.boards.deleteDependencies.portalVisibility',
   email_sender_routes: 'ticketing.boards.deleteDependencies.emailSenderRoutes',
   ticket_templates: 'ticketing.boards.deleteDependencies.ticketTemplates',
   recurring_ticket_definitions: 'ticketing.boards.deleteDependencies.recurringTickets',
   checklist_template_apply_rules: 'ticketing.boards.deleteDependencies.checklistRules',
+  canned_responses: 'ticketing.boards.deleteDependencies.cannedResponses',
 };
 
 // Blocking codes whose server message has a translated counterpart.

@@ -782,7 +782,7 @@
           "updateStatusFailed": "Failed to update board status",
           "updateDefaultFailed": "Failed to update default board",
           "hasEmailSenderRoute": "Cannot delete board: it has a dedicated outbound email sender route. Clear the board's ticket sender in the board editor first.",
-          "referencedByAutomations": "Cannot delete board: automations still target it. Point them at another board (or remove them) first."
+          "referencedByAutomations": "Cannot delete board: other settings still target it. Point them at another board (or remove them) first."
         }
       },
       "closeRules": {
@@ -914,10 +914,6 @@
         "notificationRules_other": "notification rules",
         "notificationRules_few": "notification rules",
         "notificationRules_many": "notification rules",
-        "tags_one": "tag",
-        "tags_other": "tags",
-        "tags_few": "tags",
-        "tags_many": "tags",
         "portalVisibility_one": "client portal visibility assignment",
         "portalVisibility_other": "client portal visibility assignments",
         "portalVisibility_few": "client portal visibility assignments",
@@ -937,7 +933,11 @@
         "checklistRules_one": "checklist apply rule",
         "checklistRules_other": "checklist apply rules",
         "checklistRules_few": "checklist apply rules",
-        "checklistRules_many": "checklist apply rules"
+        "checklistRules_many": "checklist apply rules",
+        "cannedResponses_one": "board canned response",
+        "cannedResponses_other": "board canned responses",
+        "cannedResponses_few": "board canned responses",
+        "cannedResponses_many": "board canned responses"
       }
     },
     "priorities": {

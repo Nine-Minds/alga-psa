@@ -52,6 +52,7 @@ function tenantRows() {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
+  await tenantTable(tenantId, 'canned_responses').del();
   await tenantTable(tenantId, 'checklist_template_apply_rules').del();
   await tenantTable(tenantId, 'checklist_templates').del();
   await tenantTable(tenantId, 'recurring_ticket_definitions').del();
@@ -159,7 +160,7 @@ describe('board deletion dependency cleanup', () => {
     expect(remainingBoards).toEqual([defaultBoardId]);
   }, HOOK_TIMEOUT);
 
-  it('lists and removes tag definitions and portal visibility assignments', async () => {
+  it('keeps tenant-wide tags and removes portal visibility assignments', async () => {
     const defaultBoardId = uuidv4();
     const doomedBoardId = uuidv4();
     const { tenantId, userId } = await createTenantFixture([
@@ -169,6 +170,10 @@ describe('board deletion dependency cleanup', () => {
 
     await addTicketStatus(tenantId, userId, doomedBoardId);
 
+    // A tag definition is unique per (tenant, tag_text, tagged_type) and shared
+    // tenant-wide; board_id is only provenance from the channels era. The
+    // mapping below stands in for the ones that live on OTHER boards: deleting
+    // the definition would cascade them all away.
     const tagId = uuidv4();
     await tenantTable(tenantId, 'tag_definitions').insert({
       tenant: tenantId,
@@ -177,9 +182,10 @@ describe('board deletion dependency cleanup', () => {
       tagged_type: 'ticket',
       board_id: doomedBoardId,
     });
+    const tagMappingId = uuidv4();
     await tenantTable(tenantId, 'tag_mappings').insert({
       tenant: tenantId,
-      mapping_id: uuidv4(),
+      mapping_id: tagMappingId,
       tag_id: tagId,
       tagged_id: uuidv4(),
       tagged_type: 'ticket',
@@ -204,14 +210,14 @@ describe('board deletion dependency cleanup', () => {
       board_id: doomedBoardId,
     });
 
-    // The user must see the tags and portal assignments before they go: the
-    // confirmation enumerates them and only the confirmed delete removes them.
+    // The user must see the portal assignments before they go: the confirmation
+    // enumerates them and only the confirmed delete removes them. Tags are NOT
+    // listed — nothing is removed, so there is nothing to consent to.
     const confirmation = await deleteBoard(doomedBoardId);
     expect(confirmation.success).toBe(false);
     expect(confirmation.code).toBe('BOARD_HAS_STATUSES');
     expect(confirmation.counts).toEqual({
       statuses: 1,
-      tag_definitions: 1,
       portal_visibility_assignments: 1,
     });
 
@@ -221,12 +227,14 @@ describe('board deletion dependency cleanup', () => {
     const remainingBoards = await tenantTable(tenantId, 'boards').pluck('board_id');
     expect(remainingBoards).toEqual([defaultBoardId]);
 
-    const remainingTagDefs = await tenantTable(tenantId, 'tag_definitions').select('*');
-    expect(remainingTagDefs).toHaveLength(0);
+    // The tag survives with its provenance cleared: deleting it would strip the
+    // tag off every entity in the tenant through the tag_mappings cascade.
+    const tagDef = await tenantTable(tenantId, 'tag_definitions').where({ tag_id: tagId }).first();
+    expect(tagDef).toBeTruthy();
+    expect(tagDef.board_id).toBeNull();
 
-    // tag_mappings cascade from the definitions.
-    const remainingTagMappings = await tenantTable(tenantId, 'tag_mappings').select('*');
-    expect(remainingTagMappings).toHaveLength(0);
+    const remainingTagMappings = await tenantTable(tenantId, 'tag_mappings').pluck('mapping_id');
+    expect(remainingTagMappings).toEqual([tagMappingId]);
 
     const remainingGroupBoards = await tenantTable(tenantId, 'client_portal_visibility_group_boards').select('*');
     expect(remainingGroupBoards).toHaveLength(0);
@@ -236,7 +244,7 @@ describe('board deletion dependency cleanup', () => {
     expect(remainingGroups).toEqual([groupId]);
   }, HOOK_TIMEOUT);
 
-  it('blocks deletion while automations still target the board', async () => {
+  it('blocks deletion while other settings still target the board', async () => {
     const defaultBoardId = uuidv4();
     const doomedBoardId = uuidv4();
     const { tenantId, userId } = await createTenantFixture([
@@ -278,6 +286,21 @@ describe('board deletion dependency cleanup', () => {
       board_id: doomedBoardId,
     });
 
+    // A board-scoped canned response cannot drop its board_id (the
+    // scope_target_check requires one), so it would survive as a library entry
+    // that silently never matches a ticket again. Inactive ones count too: they
+    // can be switched back on.
+    await tenantTable(tenantId, 'canned_responses').insert({
+      tenant: tenantId,
+      canned_response_id: uuidv4(),
+      name: 'Dispatch confirmation',
+      body: '<p>On our way.</p>',
+      body_markdown: 'On our way.',
+      scope: 'board',
+      board_id: doomedBoardId,
+      is_active: false,
+    });
+
     for (const force of [false, true]) {
       const result = await deleteBoard(doomedBoardId, force);
       expect(result.success).toBe(false);
@@ -286,6 +309,7 @@ describe('board deletion dependency cleanup', () => {
         ticket_templates: 1,
         recurring_ticket_definitions: 1,
         checklist_template_apply_rules: 1,
+        canned_responses: 1,
       });
     }
 
