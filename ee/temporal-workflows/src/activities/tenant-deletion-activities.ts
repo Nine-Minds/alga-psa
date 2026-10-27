@@ -315,7 +315,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // asset_groups itself has restrictive FKs to clients and client_locations
   // (both far below, LEVEL 6+), so it must be deleted well before this point.
   'asset_group_members', 'asset_group_contacts', 'asset_groups',
-  // Site audits (migration 20261016120000). Both have a RESTRICT FK to tenants
+  // Site audits (migration 20261027120000). Both have a RESTRICT FK to tenants
   // and none to assets/users, so they must be deleted explicitly before tenants;
   // items go before their audit to match the parent/child reading order.
   'asset_audit_items', 'asset_audits',

@@ -26,7 +26,7 @@ function parseDeletionOrder(source: string): string[] {
   return [...withoutComments.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 }
 
-const MIGRATION = 'server/migrations/20261016120000_create_asset_audits.cjs';
+const MIGRATION = 'server/migrations/20261027120000_create_asset_audits.cjs';
 
 describe('asset audit tenant deletion ordering (T138)', () => {
   const order = parseDeletionOrder(
