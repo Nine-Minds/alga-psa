@@ -24,6 +24,7 @@ function queryFor(table: string) {
   const query = {
     where: vi.fn(() => query),
     whereNull: vi.fn(() => query),
+    forUpdate: vi.fn(() => query),
     count: vi.fn(() => query),
     first: vi.fn(async () => table === 'service_types' ? { id: 'service-type-1' } : table === 'user_invitations' ? { count: '0' } : undefined),
     insert: vi.fn(async () => undefined),

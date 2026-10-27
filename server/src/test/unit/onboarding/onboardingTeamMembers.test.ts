@@ -8,16 +8,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 const mocks = vi.hoisted(() => ({
   addUser: vi.fn(),
-  persist: vi.fn(async () => undefined),
+  // Saved onboarding_data, shallow-merged like persistTenantOnboardingProgress does.
+  saved: {} as Record<string, unknown>,
+  persist: vi.fn(async (_trx: unknown, _tenant: string, patch: Record<string, unknown>) => {
+    mocks.saved = { ...mocks.saved, ...JSON.parse(JSON.stringify(patch)) };
+  }),
   pendingInvitations: 0,
 }));
 
 function queryFor(table: string) {
   const query: any = {
-    where: () => query, whereNull: () => query, count: () => query,
+    where: () => query, whereNull: () => query, count: () => query, forUpdate: () => query,
     select: async () => table === 'roles'
       ? [{ role_id: 'role-admin', role_name: 'Admin' }, { role_id: 'role-tech', role_name: 'Technician' }] : [],
-    first: async () => table === 'user_invitations' ? { count: String(mocks.pendingInvitations) } : undefined,
+    first: async () => table === 'user_invitations' ? { count: String(mocks.pendingInvitations) }
+      : table === 'tenant_settings' ? { onboarding_data: mocks.saved } : undefined,
   };
   return query;
 }
@@ -42,6 +47,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { addSingleTeamMember, addTeamMembers, getOnboardingLicenseUsage }
   from '../../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions';
+import { restoreTeamMemberProgress } from '../../../../../packages/onboarding/src/lib/restoreTeamMemberProgress';
 
 const user = { user_id: 'admin', user_type: 'internal' } as any;
 const context = { tenant: 'tenant-1' } as any;
@@ -50,6 +56,7 @@ const technician = { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.tes
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.pendingInvitations = 0;
+  mocks.saved = {};
   mocks.addUser.mockResolvedValue({ success: true, user: { user_id: 'new' } });
 });
 
@@ -122,8 +129,45 @@ describe('wizard team member creation', () => {
   it('never stores temporary passwords in the onboarding progress', async () => {
     await addTeamMembers(user, context, [technician]);
     expect(JSON.stringify(mocks.persist.mock.calls)).not.toContain('NineMinds1234!');
-    expect(mocks.persist).toHaveBeenCalledWith({}, 'tenant-1', { teamMembers: [
-      { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician' }] });
+    expect(mocks.persist).toHaveBeenCalledWith({}, 'tenant-1', {
+      teamMembers: [{ firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician' }],
+      createdTeamMemberEmails: ['tom@example.test'],
+    });
+  });
+
+  it('keeps members created in an earlier save round when a retry creates the rest', async () => {
+    const two = { ...technician, firstName: 'Tia', email: 'two@example.test' };
+    // Round 1: Tom is created, Tia is refused.
+    mocks.addUser
+      .mockResolvedValueOnce({ success: true, user: { user_id: 'one' } })
+      .mockResolvedValueOnce({ success: false, code: 'USER_CREATE_FAILED', error: 'Could not create user.' });
+    await addTeamMembers(user, context, [technician, two]);
+    // Round 2: the wizard resends only Tia, who is now created.
+    mocks.addUser.mockResolvedValueOnce({ success: true, user: { user_id: 'two' } });
+    await addTeamMembers(user, context, [two]);
+
+    expect(mocks.saved).toEqual({
+      teamMembers: [
+        { firstName: 'Tom', lastName: 'Tech', email: 'tom@example.test', role: 'Technician' },
+        { firstName: 'Tia', lastName: 'Tech', email: 'two@example.test', role: 'Technician' },
+      ],
+      createdTeamMemberEmails: ['tom@example.test', 'two@example.test'],
+    });
+    // A resumed wizard therefore marks both created and resends neither.
+    expect(restoreTeamMemberProgress(mocks.saved as any).createdTeamMemberEmails)
+      .toEqual(['tom@example.test', 'two@example.test']);
+  });
+
+  it('records a member saved on its own row alongside batch-created ones', async () => {
+    await addTeamMembers(user, context, [technician]);
+    await addSingleTeamMember(user, context, { ...technician, email: 'row@example.test' });
+    expect(mocks.saved.createdTeamMemberEmails).toEqual(['tom@example.test', 'row@example.test']);
+  });
+
+  it('drops a password a legacy save left in progress', async () => {
+    mocks.saved = { teamMembers: [{ ...technician, email: 'old@example.test', password: 'Legacy-Pass-1!' }] };
+    await addTeamMembers(user, context, [technician]);
+    expect(JSON.stringify(mocks.saved)).not.toContain('Legacy-Pass-1!');
   });
 });
 

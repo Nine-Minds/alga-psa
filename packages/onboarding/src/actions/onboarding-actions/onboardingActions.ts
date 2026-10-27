@@ -14,7 +14,7 @@ import { createClientContact } from '@alga-psa/clients/actions/contact-actions/c
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
 import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
 
@@ -346,6 +346,40 @@ async function onboardingSeatUsage(tenant: string): Promise<{ limit: number | nu
   return { limit: usage.limit, used: usage.used + await countPendingInvitationSeats(knex, tenant) };
 }
 
+type SavedTeamMember = Pick<TeamMember, 'firstName' | 'lastName' | 'email' | 'role'>;
+
+/**
+ * Records members the wizard just created in the saved onboarding progress,
+ * on top of those recorded by earlier saves. persistTenantOnboardingProgress
+ * merges top-level keys only, so writing this call's members alone replaced
+ * teamMembers: after a partial batch was fixed and retried, round one's members
+ * vanished from saved progress, a resumed wizard no longer knew they existed,
+ * and re-adding them hit EMAIL_ALREADY_EXISTS. The settings row is locked so
+ * two saves cannot each drop the other's members. Passwords are never stored,
+ * and any a legacy save left behind are dropped here.
+ */
+async function recordCreatedTeamMembers(tenant: string, createdNow: TeamMember[]): Promise<void> {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const row = await tenantDb(trx, tenant).table('tenant_settings').forUpdate().first('onboarding_data');
+    const raw = row?.onboarding_data;
+    const saved: Partial<WizardData> = (typeof raw === 'string' ? JSON.parse(raw) : raw) ?? {};
+
+    const strip = ({ firstName, lastName, email, role }: SavedTeamMember): SavedTeamMember =>
+      ({ firstName, lastName, email, role });
+    const byEmail = new Map<string, SavedTeamMember>();
+    for (const member of [...(saved.teamMembers ?? []), ...createdNow]) {
+      if (member?.email) byEmail.set(member.email.toLowerCase(), strip(member));
+    }
+    const createdEmails = new Set([...(saved.createdTeamMemberEmails ?? []), ...createdNow.map(m => m.email)]);
+
+    await persistTenantOnboardingProgress(trx, tenant, {
+      teamMembers: [...byEmail.values()],
+      createdTeamMemberEmails: [...createdEmails],
+    });
+  });
+}
+
 export const addSingleTeamMember = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -356,6 +390,7 @@ export const addSingleTeamMember = withAuth(async (
     const outcome = await createTeamMember(member, await mspRoleIds(tenant));
     revalidatePath('/msp/onboarding');
     if (outcome.status === 'created') {
+      await recordCreatedTeamMembers(tenant, [member]);
       const usage = await onboardingSeatUsage(tenant);
       return { success: true, data: { created: member.email, licenseStatus: { current: usage.used, limit: usage.limit } } };
     }
@@ -401,12 +436,7 @@ export const addTeamMembers = withAuth(async (
 
     // A batch where nothing was created leaves the stored progress alone.
     if (created.length || !notCreated.length) {
-      // Progress is stored as tenant data: never keep the temporary passwords.
-      const { knex } = await createTenantKnex();
-      await withTransaction(knex, (trx: Knex.Transaction) => persistTenantOnboardingProgress(trx, tenant, {
-        teamMembers: members.filter(m => created.includes(m.email))
-          .map(({ firstName, lastName, email, role }) => ({ firstName, lastName, email, role })),
-      }));
+      await recordCreatedTeamMembers(tenant, members.filter(m => created.includes(m.email)));
     }
 
     revalidatePath('/msp/onboarding');

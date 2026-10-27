@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 function queryFor(table: string) {
   const query: any = {
-    where: () => query, whereNull: () => query, count: () => query, insert: async () => undefined,
+    where: () => query, whereNull: () => query, forUpdate: () => query, count: () => query, insert: async () => undefined,
     update: async (payload: unknown) => { if (table === 'users') mocks.userUpdates.push(payload); },
     select: async () => table === 'roles' ? [{ role_id: 'role-admin', role_name: 'Admin' }] : [],
     first: async () => undefined,
