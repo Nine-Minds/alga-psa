@@ -69,8 +69,20 @@ describe('GET /api/v1/capabilities/co-managed', () => {
     expect(typeof body.evaluatedAt).toBe('string');
   });
 
-  it('ignores a ?tenant= parameter (accepts no input)', () => {
-    expect(GET.length).toBe(0);
+  it('ignores a ?tenant= parameter: the body always carries the session tenant', async () => {
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    const request = new Request('http://localhost/api/v1/capabilities/co-managed?tenant=other-tenant');
+    const res = await (GET as unknown as (r: Request) => Promise<Response>)(request);
+    expect(res.status).toBe(200);
+    expect((await res.json()).tenantId).toBe('tenant-1');
+    expect(GET.length).toBe(0); // the handler cannot read the request at all
+  });
+
+  it('forced off cannot be a 200: it closes the gate, so the probe answers the 404', async () => {
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    const res = await GET();
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual(NOT_FOUND);
   });
 
   it('co-managed:off closes co-managed; the Timeline flag is untouched', async () => {

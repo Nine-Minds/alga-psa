@@ -1,86 +1,73 @@
 import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import ts from 'typescript';
+import { join } from 'node:path';
+import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 
 /**
- * Worker boot safety (plan 2.6): jobs, Temporal worker and subscribers import
- * only the pure entry `@alga-psa/core/capability`. The import graph reachable
- * from it and from the jobs adapter must be Next-free, and the pure entry must
- * keep loading and fail closed when resolution is forced to fail.
+ * Worker boot safety (plan 2.6, acceptance A6).
+ *
+ * Real boot harnesses (each mocks @alga-psa/core/capability so admits / serves /
+ * filterServed throw, and proves the entry completes):
+ *   services/workflow-worker/src/index.startup.test.ts      (startServices)
+ *   services/email-service/src/index.capabilityBoot.test.ts (module start)
+ *   ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts (module load)
+ * This file guards that those harnesses keep existing and keep throwing, checks
+ * the worker-reachable capability graph is Next-free, and proves the pure entry
+ * itself fails closed rather than throwing when resolution is forced to fail.
  */
-const REPO = resolve(__dirname, '../../../../..');
-const ENTRIES = [
-  'packages/core/src/lib/capability.ts',
-  'packages/jobs/src/lib/jobs/capabilityJob.ts',
+const HARNESSES = [
+  'services/workflow-worker/src/index.startup.test.ts',
+  'services/email-service/src/index.capabilityBoot.test.ts',
+  'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts',
 ];
 
-function importsOf(file: string): string[] {
-  const sf = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
-  const out: string[] = [];
-  const visit = (n: ts.Node) => {
-    if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier && ts.isStringLiteral(n.moduleSpecifier)) {
-      if (!(ts.isImportDeclaration(n) && n.importClause?.isTypeOnly)) out.push(n.moduleSpecifier.text);
-    }
-    if (ts.isCallExpression(n) && n.expression.kind === ts.SyntaxKind.ImportKeyword && ts.isStringLiteral(n.arguments[0])) {
-      out.push(n.arguments[0].text);
-    }
-    ts.forEachChild(n, visit);
-  };
-  visit(sf);
-  return out;
-}
-
-function resolveRel(from: string, spec: string): string | null {
-  const base = resolve(dirname(from), spec);
-  for (const c of [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts')]) {
-    if (existsSync(c) && /\.[tj]sx?$/.test(c)) return c;
-  }
-  return null;
-}
-
-function closure(entry: string): { files: Set<string>; bare: Set<string> } {
-  const files = new Set<string>();
-  const bare = new Set<string>();
-  const stack = [join(REPO, entry)];
-  while (stack.length) {
-    const f = stack.pop()!;
-    if (files.has(f)) continue;
-    files.add(f);
-    for (const spec of importsOf(f)) {
-      if (spec.startsWith('.')) {
-        const r = resolveRel(f, spec);
-        if (r) stack.push(r);
-      } else bare.add(spec);
-    }
-  }
-  return { files, bare };
-}
-
 describe('worker boot safety', () => {
-  it.each(ENTRIES)('%s reaches no Next module and never the Next-bound subpath', (entry) => {
-    const { bare } = closure(entry);
-    const bad = [...bare].filter((s) => s === 'next' || s.startsWith('next/') || s.includes('capability/server') || s.startsWith('react') || s === 'posthog-js');
-    expect(bad).toEqual([]);
+  it.each(HARNESSES)('%s exists and forces the gate to throw', (h) => {
+    expect(existsSync(join(REPO, h))).toBe(true);
+    const src = readFileSync(join(REPO, h), 'utf8');
+    expect(src).toContain("vi.mock('@alga-psa/core/capability'");
+    for (const fn of ['admits', 'serves', 'filterServed']) expect(src).toMatch(new RegExp(`${fn}:`));
+    expect(src).toContain('forced to fail');
+  });
+
+  it.each([
+    'packages/core/src/lib/capability.ts',
+    'packages/jobs/src/lib/jobs/capabilityJob.ts',
+    'services/workflow-worker/src/index.ts',
+    'services/email-service/src/index.ts',
+  ])('%s reaches no Next/posthog module and never the Next-bound subpath', (entry) => {
+    const c = closure(entry);
+    expect([...c.bare].filter(isForbiddenForWorkers)).toEqual([]);
+    expect([...c.files].filter((f) => /capability\/server\.ts$/.test(f))).toEqual([]);
   });
 
   it('the jobs adapter imports only the pure capability entry', () => {
-    const specs = importsOf(join(REPO, ENTRIES[1]));
-    expect(specs.filter((s) => s.includes('capability'))).toEqual(['@alga-psa/core/capability']);
+    const src = readFileSync(join(REPO, 'packages/jobs/src/lib/jobs/capabilityJob.ts'), 'utf8');
+    const specs = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]).filter((s) => s.includes('capability'));
+    expect(specs).toEqual(['@alga-psa/core/capability']);
   });
 
-  it('loads and fails closed when flag evaluation and resolvers are forced to fail', async () => {
+  it('the pure entry loads and fails closed when flag evaluation and resolvers are forced to fail', async () => {
     vi.resetModules();
-    vi.doMock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: vi.fn(async () => { throw new Error('boom'); }) }));
-    vi.doMock('../../../../../packages/core/src/lib/features', () => ({ isFeatureFlagEnabled: vi.fn(async () => { throw new Error('boom'); }) }));
+    const boom = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    vi.doMock('../../../../../packages/core/src/lib/features', () => ({ isFeatureFlagEnabled: boom }));
     const cap = await import('../../../../../packages/core/src/lib/capability');
-    cap.registerCapabilityEligibility('co-managed', async () => { throw new Error('db down'); });
-    cap.registerCapabilityParticipation('co-managed', async () => { throw new Error('db down'); });
+    cap.registerCapabilityEligibility('co-managed', async () => {
+      throw new Error('db down');
+    });
+    cap.registerCapabilityParticipation('co-managed', async () => {
+      throw new Error('db down');
+    });
     cap.clearCapabilityCache();
     await expect(cap.serves('co-managed', 't1')).resolves.toMatchObject({ served: false });
     await expect(cap.admits('co-managed', 't1')).resolves.toMatchObject({ admitted: false });
-    await expect(cap.activityServesCapability('co-managed', 't1')).resolves.toEqual({ skipped: true, capability: 'co-managed' });
-    vi.doUnmock('@alga-psa/core/features');
+    await expect(cap.filterServed('co-managed', ['t1'])).resolves.toEqual([]);
+    await expect(cap.activityServesCapability('co-managed', 't1')).resolves.toEqual({
+      skipped: true,
+      capability: 'co-managed',
+    });
     vi.doUnmock('../../../../../packages/core/src/lib/features');
   });
 });

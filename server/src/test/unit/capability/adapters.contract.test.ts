@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const nf = vi.hoisted(() => vi.fn(() => { throw new Error('NEXT_NOT_FOUND'); }));
 vi.mock('next/navigation', () => ({ notFound: nf }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: vi.fn(async () => true) }));
+const sql = vi.hoisted(() => ({ createTenantKnex: vi.fn(), getAdminConnection: vi.fn(), tenantDb: vi.fn() }));
+vi.mock('@alga-psa/db', () => sql);
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: sql.getAdminConnection }));
 const logInfo = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -67,6 +70,9 @@ describe('capability adapters', () => {
     const handler = vi.fn();
     await withCapabilityJob('co-managed', handler)('job-1', { tenantId: 't1' } as any);
     expect(handler).not.toHaveBeenCalled();
+    expect(sql.createTenantKnex).not.toHaveBeenCalled();
+    expect(sql.getAdminConnection).not.toHaveBeenCalled();
+    expect(sql.tenantDb).not.toHaveBeenCalled();
     expect(logInfo).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ event: 'job_skipped_capability_closed', tenantId: 't1', jobId: 'job-1' }),
@@ -91,6 +97,8 @@ describe('capability adapters', () => {
 
   it('temporal: closed returns the CapabilitySkip sentinel, open returns null', async () => {
     expect(await activityServesCapability('co-managed', 't1')).toEqual({ skipped: true, capability: 'co-managed' });
+    expect(sql.createTenantKnex).not.toHaveBeenCalled();
+    expect(sql.getAdminConnection).not.toHaveBeenCalled();
     open(true);
     invalidateCapability('co-managed');
     expect(await activityServesCapability('co-managed', 't1')).toBeNull();

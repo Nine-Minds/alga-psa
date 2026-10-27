@@ -1,66 +1,244 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import ts from 'typescript';
+import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 
 /**
- * AST gate-coverage contract (plan 2.7).
+ * AST gate-coverage contract (plan 2.7, acceptance A7).
  *
- * Rules, applied to entry-point globs (never to a hand-maintained file list):
- *  A. No entry point may read `release-v2-0-feature` directly (the only
- *     sanctioned consumers are the allowlist below). Co-managed code must go
- *     through the capability gate / useCapability.
- *  B. `release-v1-6-feature` must not be referenced anywhere in source.
- *  C. `serves`, `servesBatch`, `filterServed` never reference the flag evaluator.
+ * Every co-managed entry point must pass through one of the six capability
+ * adapters, before it touches the database. Later cards extend
+ * ENTRY_POINT_GLOBS; they never delete from it (registry sanity below).
  */
 
-const REPO = resolve(__dirname, '../../../../..');
-const V2 = 'release-v2-0-feature';
-const V1_6 = 'release-v1-6-feature';
+// ---------------------------------------------------------------------------
+// Registry
+// ---------------------------------------------------------------------------
 
-// Sanctioned references to the v2 flag key, each with the reason it is allowed.
-const ALLOW_V2: Record<string, string> = {
-  'packages/projects/src/components/ProjectDetail.tsx': 'Timeline view consumer (feature-flags.md section 14)',
-  'packages/core/src/lib/capability.ts': 'co-managed gate definition',
+export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows'] as const;
+
+export const ENTRY_POINT_GLOBS = [
+  'server/src/app/msp/co-manag*/**',
+  'server/src/app/api/**/co-management/**',
+  'server/src/lib/actions/coManaged*',
+  'packages/co-managed/src/**/actions*',
+  'packages/jobs/**/coManaged*',
+  'server/src/lib/eventBus/subscribers/coManaged*',
+  'ee/temporal-workflows/src/activities/coManaged*',
+  'ee/temporal-workflows/src/workflows/coManaged*',
+  'shared/services/**/coManaged*',
+] as const;
+
+/** Every family 2.7 requires; registry sanity asserts each is still present. */
+export const REQUIRED_GLOB_FAMILIES = [...ENTRY_POINT_GLOBS];
+
+/** The six adapters (plus the three Next-free guard names they export). */
+export const ADAPTER_EXPORTS = new Set([
+  'requireCapabilityForAction', // 1 server action
+  'capabilityRouteGuard', //       2 REST
+  'requireCapabilityForPage', //   3 RSC
+  'withCapabilityJob', //          4 job
+  'isCapabilityServed', //         5 subscriber
+  'filterCapabilityServed', //     5 subscriber (batch)
+  'activityServesCapability', //   6 Temporal
+]);
+
+const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
+
+/** file -> reason; reviewed in the diff. Applies to Rules B and C. Intentionally empty. */
+export const ALLOWLIST: Record<string, string> = {};
+
+/** Worker entries for Rule D. */
+export const WORKER_ENTRY_GLOBS = ['services/*/src/index.ts', 'ee/temporal-workflows/src/worker.ts'] as const;
+export const CAPABILITY_PURE_ENTRIES = [
+  'packages/core/src/lib/capability.ts',
+  'packages/jobs/src/lib/jobs/capabilityJob.ts',
+] as const;
+
+/**
+ * Next/posthog specifiers that the Temporal worker's (much larger) build graph
+ * already reached before this card, via packages the worker bundles. Rule D
+ * pins the set: a NEW forbidden specifier, or the capability graph gaining
+ * one, fails; a stale entry fails too.
+ */
+export const TEMPORAL_PREEXISTING_FORBIDDEN: Record<string, string> = {
+  'next/headers.js': 'ui/lib/i18n/serverOnly',
+  'next/headers': 'auth/getSession',
+  'next/navigation': 'ui/context/UnsavedChangesContext',
+  'posthog-js/react': 'ui/hooks/useFeatureFlag (not capability-related)',
+  'next/link': 'ui/components/extensions/DynamicNavigationSlot',
+  'next/image': 'auth/components/MspSignIn',
+  'next/server': 'auth/lib/apiAuth',
 };
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', '.git', 'coverage', 'out']);
-const isTest = (p: string) => /\.(test|spec)\.[tj]sx?$|\/__tests__\/|\/test\//.test(p);
+// ---------------------------------------------------------------------------
+// Glob + file model
+// ---------------------------------------------------------------------------
 
-function walk(dir: string, acc: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    if (SKIP_DIRS.has(name)) continue;
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, acc);
-    else if (/\.(ts|tsx|mjs|cjs|js)$/.test(name) && !name.endsWith('.d.ts')) acc.push(full);
-  }
-  return acc;
+export interface SourceFile {
+  path: string; // repo-relative, posix
+  source: string;
 }
 
-const ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/server/src', 'ee/temporal-workflows/src'];
+export function globToRegExp(glob: string): RegExp {
+  let re = '';
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === '*') {
+      if (glob[i + 1] === '*') {
+        i++;
+        if (glob[i + 1] === '/') {
+          i++;
+          re += '(?:.*/)?'; // `**/` = zero or more directories
+        } else re += '.*';
+      } else re += '[^/]*';
+    } else if ('\\^$+?.()|{}[]'.includes(c)) re += `\\${c}`;
+    else re += c;
+  }
+  return new RegExp(`^${re}$`);
+}
 
-function stringLiterals(source: string, file = 'x.tsx'): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+const GLOB_RES = ENTRY_POINT_GLOBS.map((g) => [g, globToRegExp(g)] as const);
+
+export const matchesEntryPointGlob = (path: string): string | null =>
+  GLOB_RES.find(([, re]) => re.test(path))?.[0] ?? null;
+
+const isTestPath = (p: string) => /\.(test|spec)\.[tj]sx?$|(^|\/)__tests__\/|(^|\/)test\//.test(p) || p.startsWith('docs/');
+const isSourcePath = (p: string) => /\.(ts|tsx|mjs|cjs|js)$/.test(p) && !p.endsWith('.d.ts');
+
+/**
+ * Under `app/` only the route modules are entry points (helpers beside a page
+ * are not); everywhere else every glob match is one.
+ */
+export function isEntryPoint(path: string): boolean {
+  if (!isSourcePath(path) || isTestPath(path)) return false;
+  if (!matchesEntryPointGlob(path)) return false;
+  if (path.startsWith('server/src/app/')) return /(^|\/)(page\.tsx?|route\.ts|layout\.tsx?)$/.test(path);
+  return true;
+}
+
+const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', '.git', 'coverage', 'out', 'build']);
+
+function walk(dir: string, acc: string[]): void {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (SKIP_DIRS.has(name)) continue;
+    const full = join(dir, name);
+    let st;
+    try {
+      st = statSync(full);
+    } catch {
+      continue; // broken symlink
+    }
+    if (st.isDirectory()) walk(full, acc);
+    else acc.push(full);
+  }
+}
+
+export function scanRepo(): SourceFile[] {
+  const abs: string[] = [];
+  for (const r of SCAN_ROOTS) walk(join(REPO, r), abs);
+  return abs
+    .map((f) => relative(REPO, f).split('\\').join('/'))
+    .filter((p) => isSourcePath(p) && !isTestPath(p))
+    .map((p) => ({ path: p, source: readFileSync(join(REPO, p), 'utf8') }));
+}
+
+// ---------------------------------------------------------------------------
+// Rules
+// ---------------------------------------------------------------------------
+
+const parse = (f: SourceFile) =>
+  ts.createSourceFile(f.path, f.source, ts.ScriptTarget.Latest, true, f.path.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+const lineOf = (sf: ts.SourceFile, n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
+const calleeName = (c: ts.CallExpression): string | null =>
+  ts.isIdentifier(c.expression) ? c.expression.text : ts.isPropertyAccessExpression(c.expression) ? c.expression.name.text : null;
+
+/** Rule A: adapter call present, and for action/page/route files before the first DB-touching await. */
+export function ruleA(files: SourceFile[]): string[] {
   const out: string[] = [];
-  const visit = (n: ts.Node) => {
-    if (ts.isStringLiteralLike(n)) out.push(n.text);
-    ts.forEachChild(n, visit);
-  };
-  visit(sf);
+  for (const f of files.filter((x) => isEntryPoint(x.path))) {
+    const sf = parse(f);
+    let adapterPos = Infinity;
+    let dbAwaitPos = Infinity;
+    const visit = (n: ts.Node) => {
+      if (ts.isCallExpression(n)) {
+        const name = calleeName(n);
+        if (name && ADAPTER_EXPORTS.has(name)) adapterPos = Math.min(adapterPos, n.getStart(sf));
+      }
+      if (ts.isAwaitExpression(n)) {
+        let touches = false;
+        const inner = (c: ts.Node) => {
+          if (ts.isIdentifier(c) && DB_TOUCHING.has(c.text)) touches = true;
+          ts.forEachChild(c, inner);
+        };
+        inner(n.expression);
+        if (touches) dbAwaitPos = Math.min(dbAwaitPos, n.getStart(sf));
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+    const where = matchesEntryPointGlob(f.path);
+    if (adapterPos === Infinity) {
+      out.push(`capabilityEntryPoints: ${f.path} (glob ${where}) never calls a capability adapter`);
+      continue;
+    }
+    const orderSensitive = /(^|\/)(page\.tsx?|route\.ts)$|\/actions?[^/]*\.tsx?$|\/lib\/actions\//.test(f.path);
+    if (orderSensitive && dbAwaitPos < adapterPos) {
+      out.push(`capabilityEntryPoints: ${f.path} awaits database work before calling its capability adapter`);
+    }
+  }
   return out;
 }
 
-/** Rule A: direct v2 flag key literals in non-allowlisted production source. */
-export function ruleAViolations(source: string): string[] {
-  return stringLiterals(source).filter((s) => s === V2);
-}
-/** Rule B: any v1.6 flag reference. */
-export function ruleBViolations(source: string): string[] {
-  return stringLiterals(source).filter((s) => s === V1_6);
+/** Rule B: the retired flag key, anywhere in scanned source. */
+export function ruleB(files: SourceFile[]): string[] {
+  const out: string[] = [];
+  for (const f of files) {
+    if (f.path in ALLOWLIST || !f.source.includes('release-v1-6-feature')) continue;
+    const sf = parse(f);
+    const visit = (n: ts.Node) => {
+      if (ts.isStringLiteralLike(n) && n.text === 'release-v1-6-feature') {
+        out.push(
+          `capabilityEntryPoints: 'release-v1-6-feature' is retired for co-managed gating — use useCapability('co-managed') or the server adapter (${f.path}:${lineOf(sf, n)})`,
+        );
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return out;
 }
 
-/** Rule C: identifiers referenced inside the named function bodies. */
+/** Rule C: raw flag reads inside co-managed entry points. */
+export function ruleC(files: SourceFile[]): string[] {
+  const out: string[] = [];
+  for (const f of files) {
+    if (f.path in ALLOWLIST || !matchesEntryPointGlob(f.path) || !isSourcePath(f.path) || isTestPath(f.path)) continue;
+    const sf = parse(f);
+    const visit = (n: ts.Node) => {
+      if (ts.isCallExpression(n) && calleeName(n) === 'useFeatureFlag') {
+        const a = n.arguments[0];
+        if (a && ts.isStringLiteralLike(a) && (a.text === 'release-v2-0-feature' || a.text.startsWith('capability:'))) {
+          out.push(
+            `capabilityEntryPoints: raw useFeatureFlag('${a.text}') at ${f.path}:${lineOf(sf, n)} — co-managed UI must read useCapability('co-managed'); the release flag alone never changes co-managed behaviour`,
+          );
+        }
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return out;
+}
+
+/** Additional rule: serves / servesBatch / filterServed never reference the flag evaluator. */
 export function identifiersInFunctions(source: string, names: string[]): Record<string, string[]> {
   const sf = ts.createSourceFile('x.ts', source, ts.ScriptTarget.Latest, true);
   const found: Record<string, string[]> = {};
@@ -79,75 +257,233 @@ export function identifiersInFunctions(source: string, names: string[]): Record<
   visit(sf);
   return found;
 }
-
-describe('capability gate coverage (AST)', () => {
-  const files = ROOTS.flatMap((r) => {
-    try {
-      return walk(join(REPO, r));
-    } catch {
-      return [];
+export function ruleServesHasNoFlag(source: string): string[] {
+  const ids = identifiersInFunctions(source, ['serves', 'servesBatch', 'filterServed']);
+  const out = Object.keys(ids).length === 3 ? [] : ['serves/servesBatch/filterServed not all found'];
+  for (const [fn, names] of Object.entries(ids)) {
+    for (const bad of ['isFeatureFlagEnabled', 'computeAdmits', 'admits']) {
+      if (names.includes(bad)) out.push(`capabilityEntryPoints: ${fn} references ${bad}; serves must never evaluate the release flag`);
     }
-  })
-    .map((f) => relative(REPO, f))
-    .filter((f) => !isTest(`/${f}`));
+  }
+  return out;
+}
 
-  it('scans a plausible number of production entry points', () => {
-    expect(files.length).toBeGreaterThan(500);
+/** Rule D: posthog-js/react and next/* unreachable from the capability graph and worker entries. */
+export function ruleD(
+  workerEntries: string[],
+  readSource?: (file: string) => string | undefined,
+  pureEntries: readonly string[] = CAPABILITY_PURE_ENTRIES,
+): string[] {
+  const out: string[] = [];
+  for (const e of pureEntries) {
+    const c = closure(e, readSource);
+    for (const s of c.bare) if (isForbiddenForWorkers(s)) out.push(`capabilityEntryPoints: ${s} reachable from ${e}`);
+    for (const f of c.files) if (/capability\/server\.ts$/.test(f) || /useCapability|bootstrapContext/.test(f)) out.push(`capabilityEntryPoints: ${e} reaches Next/React-bound ${relative(REPO, f)}`);
+  }
+  for (const e of workerEntries) {
+    const c = closure(e, readSource);
+    const isTemporal = e.startsWith('ee/temporal-workflows/');
+    for (const s of c.bare) {
+      if (!isForbiddenForWorkers(s)) continue;
+      if (isTemporal && s in TEMPORAL_PREEXISTING_FORBIDDEN) continue;
+      out.push(`capabilityEntryPoints: ${s} reachable from worker entry ${e}`);
+    }
+    for (const f of c.files) {
+      if (/capability\/server\.ts$/.test(f)) out.push(`capabilityEntryPoints: worker entry ${e} reaches @alga-psa/core/capability/server`);
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+const repoFiles = scanRepo();
+const workerEntries = repoFiles
+  .map((f) => f.path)
+  .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
+
+describe('capability gate coverage (AST) — branch is green', () => {
+  it('scans a plausible number of production files', () => {
+    expect(repoFiles.length).toBeGreaterThan(500);
   });
 
-  it('Rule A: only allowlisted files reference release-v2-0-feature', () => {
-    const offenders = files.filter(
-      (f) => !(f in ALLOW_V2) && ruleAViolations(readFileSync(join(REPO, f), 'utf8')).length > 0,
-    );
-    expect(offenders).toEqual([]);
-  });
-
-  it('Rule A allowlist has no stale entries', () => {
-    for (const f of Object.keys(ALLOW_V2)) {
-      expect(ruleAViolations(readFileSync(join(REPO, f), 'utf8')).length, f).toBeGreaterThan(0);
-    }
+  it('Rule A: every co-managed entry point calls an adapter before DB work', () => {
+    expect(ruleA(repoFiles)).toEqual([]);
   });
 
   it('Rule B: release-v1-6-feature is referenced nowhere', () => {
-    const offenders = files.filter((f) => ruleBViolations(readFileSync(join(REPO, f), 'utf8')).length > 0);
-    expect(offenders).toEqual([]);
+    expect(ruleB(repoFiles)).toEqual([]);
   });
 
-  it('Rule C: serves / servesBatch / filterServed never reference the flag evaluator', () => {
+  it('Rule C: no raw release flag reads inside co-managed entry points', () => {
+    expect(ruleC(repoFiles)).toEqual([]);
+  });
+
+  it('serves / servesBatch / filterServed never reference the flag evaluator', () => {
     const src = readFileSync(join(REPO, 'packages/core/src/lib/capability.ts'), 'utf8');
-    const ids = identifiersInFunctions(src, ['serves', 'servesBatch', 'filterServed']);
-    expect(Object.keys(ids).sort()).toEqual(['filterServed', 'serves', 'servesBatch']);
-    for (const [fn, names] of Object.entries(ids)) {
-      expect(names, fn).not.toContain('isFeatureFlagEnabled');
-      expect(names, fn).not.toContain('computeAdmits');
-      expect(names, fn).not.toContain('admits');
+    expect(ruleServesHasNoFlag(src)).toEqual([]);
+  });
+
+  it('Rule D: next/* and posthog-js/react are unreachable from the capability graph and worker entries', () => {
+    for (const e of ['ee/temporal-workflows/src/worker.ts', 'services/email-service/src/index.ts', 'services/workflow-worker/src/index.ts']) {
+      expect(workerEntries).toContain(e);
+    }
+    expect(ruleD(workerEntries)).toEqual([]);
+  });
+
+  it('Rule D baseline for the Temporal worker has no stale entries', () => {
+    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
+    for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
+  });
+
+  it('registry sanity: every required family is present, and globs are well-formed', () => {
+    for (const fam of REQUIRED_GLOB_FAMILIES) expect(ENTRY_POINT_GLOBS).toContain(fam);
+    expect(ENTRY_POINT_GLOBS.length).toBeGreaterThanOrEqual(9);
+    for (const g of ENTRY_POINT_GLOBS) expect(() => globToRegExp(g)).not.toThrow();
+  });
+
+  it('allowlist has no stale entries', () => {
+    const paths = new Set(repoFiles.map((f) => f.path));
+    for (const f of Object.keys(ALLOWLIST)) {
+      expect(paths.has(f), `${f} no longer exists`).toBe(true);
+      const src = repoFiles.find((x) => x.path === f)!.source;
+      expect(src.includes('release-v1-6-feature') || matchesEntryPointGlob(f) !== null, `${f} no longer needs its allowlist entry`).toBe(true);
     }
   });
 
-  describe('negative fixtures (the rules actually bite)', () => {
-    it('Rule A fails on a raw useFeatureFlag(release-v2-0-feature) in an entry point', () => {
-      const fixture = `
-        'use client';
-        import { useFeatureFlag } from '@alga-psa/ui/hooks';
-        export default function CoManagedPage() {
-          const { enabled } = useFeatureFlag('release-v2-0-feature');
-          return enabled ? null : null;
-        }`;
-      expect(ruleAViolations(fixture)).toHaveLength(1);
-      expect(ruleAViolations(`export const x = 'something-else';`)).toHaveLength(0);
-    });
+  it('ProjectDetail Timeline keeps its own flag read and is not an entry point', () => {
+    const f = repoFiles.find((x) => x.path === 'packages/projects/src/components/ProjectDetail.tsx')!;
+    expect(f.source).toContain("useFeatureFlag('release-v2-0-feature'");
+    expect(matchesEntryPointGlob(f.path)).toBeNull();
+    expect(ruleC([f])).toEqual([]);
+  });
+});
 
-    it('Rule B fails on any release-v1-6-feature reference', () => {
-      const fixture = `const on = await isFeatureFlagEnabled("release-v1-6-feature", { tenantId });`;
-      expect(ruleBViolations(fixture)).toHaveLength(1);
-    });
+describe('glob matching', () => {
+  it.each([
+    ['server/src/app/msp/co-management/providers/page.tsx', true],
+    ['server/src/app/msp/co-managed/page.tsx', true],
+    ['server/src/app/msp/tickets/page.tsx', false],
+    ['server/src/app/api/v1/co-management/providers/route.ts', true],
+    ['server/src/app/api/co-management/route.ts', true],
+    ['server/src/lib/actions/coManagedActions.ts', true],
+    ['server/src/lib/actions/ticketActions.ts', false],
+    ['packages/co-managed/src/lib/actions.ts', true],
+    ['packages/co-managed/src/a/b/actionsFoo.ts', true],
+    ['packages/jobs/src/lib/jobs/handlers/coManagedSync.ts', true],
+    ['server/src/lib/eventBus/subscribers/coManagedSubscriber.ts', true],
+    ['ee/temporal-workflows/src/activities/coManagedActivities.ts', true],
+    ['ee/temporal-workflows/src/workflows/coManagedWorkflow.ts', true],
+    ['shared/services/x/y/coManagedService.ts', true],
+  ])('%s -> %s', (path, expected) => {
+    expect(matchesEntryPointGlob(path) !== null).toBe(expected);
+  });
+});
 
-    it('Rule C fails when serves references the flag evaluator', () => {
-      const fixture = `
-        export async function serves(c, t) { return isFeatureFlagEnabled('x', { tenantId: t }); }
-        async function servesBatch() {}
-        export async function filterServed() {}`;
-      expect(identifiersInFunctions(fixture, ['serves']).serves).toContain('isFeatureFlagEnabled');
-    });
+describe('negative fixtures: each rule bites, through the real glob and rule functions', () => {
+  const ACTION = 'server/src/lib/actions/coManagedFixtureActions.ts';
+  const file = (path: string, source: string): SourceFile => ({ path, source });
+
+  it('Rule A fails on a stub co-managed action that does DB work with no adapter', () => {
+    const f = file(
+      ACTION,
+      `export async function listProviders() {
+         const { knex } = await createTenantKnex();
+         return knex('co_management_providers').select('*');
+       }`,
+    );
+    const v = ruleA([f]);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toContain('never calls a capability adapter');
+  });
+
+  it('Rule A fails when the adapter is called AFTER the DB await', () => {
+    const f = file(
+      ACTION,
+      `export async function listProviders(tenant: string) {
+         const { knex } = await createTenantKnex();
+         await requireCapabilityForAction('co-managed', tenant);
+         return knex('co_management_providers').select('*');
+       }`,
+    );
+    const v = ruleA([f]);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toContain('before calling its capability adapter');
+  });
+
+  it('Rule A passes when the adapter comes first', () => {
+    const f = file(
+      ACTION,
+      `export async function listProviders(tenant: string) {
+         await requireCapabilityForAction('co-managed', tenant);
+         const { knex } = await createTenantKnex();
+         return knex('co_management_providers').select('*');
+       }`,
+    );
+    expect(ruleA([f])).toEqual([]);
+  });
+
+  it('Rule A covers pages, routes, jobs and activities (adapter forms and non-entry helpers)', () => {
+    expect(ruleA([file('server/src/app/msp/co-management/page.tsx', `export default async function P(){ return null; }`)])).toHaveLength(1);
+    expect(ruleA([file('server/src/app/msp/co-management/helper.ts', `export const x = 1;`)])).toEqual([]);
+    expect(ruleA([file('server/src/app/api/v1/co-management/x/route.ts', `export async function GET(){ const g = await capabilityRouteGuard('co-managed','t'); return g; }`)])).toEqual([]);
+    expect(ruleA([file('packages/jobs/src/lib/jobs/handlers/coManagedSync.ts', `export const h = withCapabilityJob('co-managed', async () => { await knex('x'); });`)])).toEqual([]);
+    expect(ruleA([file('ee/temporal-workflows/src/activities/coManagedA.ts', `export async function a(){ return knex('x'); }`)])).toHaveLength(1);
+  });
+
+  it('Rule B fails on any release-v1-6-feature reference, with the plan message', () => {
+    const v = ruleB([file('packages/anything/src/Foo.tsx', `const x = useFeatureFlag('release-v1-6-feature');`)]);
+    expect(v).toEqual([
+      "capabilityEntryPoints: 'release-v1-6-feature' is retired for co-managed gating — use useCapability('co-managed') or the server adapter (packages/anything/src/Foo.tsx:1)",
+    ]);
+  });
+
+  it("Rule C fails on a raw useFeatureFlag('release-v2-0-feature') in a co-managed entry point", () => {
+    const f = file(
+      'server/src/app/msp/co-management/page.tsx',
+      `export default function P() {\n  const { enabled } = useFeatureFlag('release-v2-0-feature');\n  return null;\n}`,
+    );
+    const v = ruleC([f]);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toBe(
+      "capabilityEntryPoints: raw useFeatureFlag('release-v2-0-feature') at server/src/app/msp/co-management/page.tsx:2 — co-managed UI must read useCapability('co-managed'); the release flag alone never changes co-managed behaviour",
+    );
+  });
+
+  it("Rule C fails on useFeatureFlag('capability:*') and ignores the same call outside entry points", () => {
+    expect(ruleC([file(ACTION, `useFeatureFlag('capability:co-managed');`)])).toHaveLength(1);
+    expect(ruleC([file('packages/projects/src/components/ProjectDetail.tsx', `useFeatureFlag('release-v2-0-feature');`)])).toEqual([]);
+  });
+
+  it('serves-has-no-flag rule fails when serves references the flag evaluator', () => {
+    const bad = `export async function serves(c, t) { return isFeatureFlagEnabled('x', { tenantId: t }); }
+                 async function servesBatch() {}
+                 export async function filterServed() {}`;
+    expect(ruleServesHasNoFlag(bad)).toHaveLength(1);
+  });
+
+  it('Rule D fails when the pure capability entry gains a next/* import', () => {
+    const real = readFileSync(join(REPO, 'packages/core/src/lib/capability.ts'), 'utf8');
+    const target = join(REPO, 'packages/core/src/lib/capability.ts');
+    const v = ruleD([], (f) => (f === target ? `import { notFound } from 'next/navigation';\n${real}` : undefined));
+    expect(v.some((m) => m.includes('next/navigation reachable from packages/core/src/lib/capability.ts'))).toBe(true);
+  });
+
+  it('Rule D fails when a pure entry reaches posthog-js/react or capability/server', () => {
+    const target = join(REPO, 'packages/jobs/src/lib/jobs/capabilityJob.ts');
+    const real = readFileSync(target, 'utf8');
+    const v = ruleD([], (f) => (f === target ? `import 'posthog-js/react';\nimport '@alga-psa/core/capability/server';\n${real}` : undefined));
+    expect(v.some((m) => m.includes('posthog-js/react'))).toBe(true);
+    expect(v.some((m) => m.includes('capability/server'))).toBe(true);
+  });
+
+  it('Rule D fails when a services entry imports a Next module', () => {
+    const entry = 'services/email-service/src/index.ts';
+    const target = join(REPO, entry);
+    const real = readFileSync(target, 'utf8');
+    const v = ruleD([entry], (f) => (f === target ? `import 'next/headers';\n${real}` : undefined), []);
+    expect(v).toContain(`capabilityEntryPoints: next/headers reachable from worker entry ${entry}`);
   });
 });
