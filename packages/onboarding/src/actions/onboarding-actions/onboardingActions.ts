@@ -14,8 +14,9 @@ import { createClientContact } from '@alga-psa/clients/actions/contact-actions/c
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { isMspPrincipalUserType, type IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
+import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -114,17 +115,20 @@ function onboardingActionErrorMessage(error: unknown, fallback: string): string 
 
 /**
  * Workspace setup writes tenant-wide settings, users, billing and ticketing
- * defaults, so only an MSP administrator may run it (or be sent to it). Each
- * action checks this itself: the wizard is not the only caller of a server action.
+ * defaults, so only an internal (MSP staff) administrator may run it (or be
+ * sent to it). Each action checks this itself: the wizard is not the only
+ * caller of a server action.
  *
- * The principal check comes first because settings:update is not MSP-only:
+ * The user-type check comes first because settings:update is not MSP-only:
  * client Admin holds it too, and hasPermission matches resource+action within
  * the caller's own portal. Without it a client-portal admin could run every
- * setup action, including creating internal users.
+ * setup action, including creating internal users. It is isLicensedUserType
+ * ('internal'), the same test msp/layout.tsx applies to a session: a 'service'
+ * principal never holds a UI session and setup is a human, seat-creating flow.
  */
 // LEVERAGE: pattern action-permission-prologue — three of the nine onboarding actions will repeat the same hasPermission prologue; a single withSetupAccess wrapper would own it
 async function canRunWorkspaceSetup(user: IUserWithRoles): Promise<boolean> {
-  if (!isMspPrincipalUserType(user.user_type)) return false;
+  if (!isLicensedUserType(user.user_type)) return false;
   return hasPermission(user, 'settings', 'update');
 }
 const SETUP_DENIED = { success: false, error: 'Only an administrator can complete workspace setup.' } as const;
@@ -322,6 +326,18 @@ async function mspRoleIds(tenant: string): Promise<Map<string, string>> {
   return new Map(roles.map((role: { role_id: string; role_name: string }) => [role.role_name, role.role_id]));
 }
 
+/**
+ * Seats as the wizard reports them: active internal users plus pending
+ * invitations (plan §6.2) — the same reservation sendUserInvitation applies.
+ * An invitee who accepts leaves "pending" (used_at) as they become an active
+ * user, so no one is counted twice.
+ */
+async function onboardingSeatUsage(tenant: string): Promise<{ limit: number | null; used: number }> {
+  const usage = await getLicenseUsage(tenant);
+  const { knex } = await createTenantKnex();
+  return { limit: usage.limit, used: usage.used + await countPendingInvitationSeats(knex, tenant) };
+}
+
 export const addSingleTeamMember = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -332,7 +348,7 @@ export const addSingleTeamMember = withAuth(async (
     const outcome = await createTeamMember(member, await mspRoleIds(tenant));
     revalidatePath('/msp/onboarding');
     if (outcome.status === 'created') {
-      const usage = await getLicenseUsage(tenant);
+      const usage = await onboardingSeatUsage(tenant);
       return { success: true, data: { created: member.email, licenseStatus: { current: usage.used, limit: usage.limit } } };
     }
     return { success: false, error: outcome.error };
@@ -387,7 +403,7 @@ export const addTeamMembers = withAuth(async (
 
     revalidatePath('/msp/onboarding');
 
-    const usage = await getLicenseUsage(tenant);
+    const usage = await onboardingSeatUsage(tenant);
     const data = { created, notCreated, licenseStatus: { current: usage.used, limit: usage.limit } };
     if (!notCreated.length) return { success: true, data };
     return {
@@ -1161,18 +1177,20 @@ export const getAvailableRoles = withAuth(async (
  * -context lookup, which is unreliable this early in onboarding and left the
  * step's "Users: N" counter stuck at 0.
  *
- * A seat here is what addUser admits against: an active internal user. The
- * counter, the save, and the licenseStatus returned after a save all read the
- * same number, so the step never blocks a save addUser would accept and the
- * count does not drop after one. Pending email invitations are held to the
- * limit by sendUserInvitation itself, which reports its refusal on the row.
+ * A seat here is an active internal user plus a pending invitation
+ * (`used_at IS NULL AND expires_at > now()`, tenant-scoped) — plan §6.2 and
+ * exactly what sendUserInvitation reserves. The counter and the licenseStatus
+ * returned after a save read the same number. Consequence, by design: with
+ * seats left only because of pending invitations the step reports the limit
+ * reached and blocks a direct-create save that addUser (which counts active
+ * users only) would admit — those seats are reserved for the invitees.
  */
 export const getOnboardingLicenseUsage = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<OnboardingActionResult> => {
   try {
-    const usage = await getLicenseUsage(tenant);
+    const usage = await onboardingSeatUsage(tenant);
     return { success: true, data: { limit: usage.limit, used: usage.used } };
   } catch (error) {
     console.error('Error fetching onboarding license usage:', error);

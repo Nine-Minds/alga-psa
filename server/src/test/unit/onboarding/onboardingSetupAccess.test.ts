@@ -87,6 +87,10 @@ describe('workspace setup refuses client-portal principals', () => {
   // the permission check alone would let it through.
   beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
 
+  it('reports no setup access for a service principal', async () => {
+    await expect(actions.getWorkspaceSetupAccess({ user_id: 'svc', user_type: 'service' } as any, context)).resolves.toEqual({ canRun: false });
+  });
+
   it('reports no setup access for a client admin', async () => {
     await expect(actions.getWorkspaceSetupAccess(clientAdmin, context)).resolves.toEqual({ canRun: false });
   });

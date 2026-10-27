@@ -128,8 +128,22 @@ describe('wizard team member creation', () => {
 });
 
 describe('wizard seat usage', () => {
-  it('counts seats as addUser admits them, so the counter and the save agree', async () => {
+  it('counts pending invitations as reserved seats on top of active users', async () => {
     mocks.pendingInvitations = 1;
+    await expect(getOnboardingLicenseUsage(user, context)).resolves.toEqual({ success: true, data: { limit: 3, used: 2 } });
+  });
+
+  it('counts only active users when nothing is pending', async () => {
+    mocks.pendingInvitations = 0;
     await expect(getOnboardingLicenseUsage(user, context)).resolves.toEqual({ success: true, data: { limit: 3, used: 1 } });
+  });
+
+  it('reports the same count in the licenseStatus returned after a save', async () => {
+    mocks.pendingInvitations = 1;
+    mocks.addUser.mockResolvedValue({ success: true, user: { user_id: 'one' } });
+    await expect(addSingleTeamMember(user, context, technician)).resolves.toMatchObject({
+      success: true, data: { licenseStatus: { current: 2, limit: 3 } } });
+    await expect(addTeamMembers(user, context, [technician])).resolves.toMatchObject({
+      success: true, data: { licenseStatus: { current: 2, limit: 3 } } });
   });
 });

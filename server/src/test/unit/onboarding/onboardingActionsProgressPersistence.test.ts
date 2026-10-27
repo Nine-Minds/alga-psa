@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => {
   };
 
   return {
-    knex: {},
+    knex: { fn: { now: () => 'now' } },
     trx,
     persistTenantOnboardingProgress: vi.fn(async () => undefined),
     saveTenantOnboardingProgress: vi.fn(async () => {
@@ -24,7 +24,8 @@ function queryFor(table: string) {
   const query = {
     where: vi.fn(() => query),
     whereNull: vi.fn(() => query),
-    first: vi.fn(async () => table === 'service_types' ? { id: 'service-type-1' } : undefined),
+    count: vi.fn(() => query),
+    first: vi.fn(async () => table === 'service_types' ? { id: 'service-type-1' } : table === 'user_invitations' ? { count: '0' } : undefined),
     insert: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
     select: vi.fn(async () => []),
