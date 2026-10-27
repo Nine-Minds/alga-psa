@@ -271,6 +271,15 @@ const COLUMN_METHODS = new Set([
 ]);
 const DML_METHODS = { insert: 'INSERT', update: 'UPDATE', del: 'DELETE', delete: 'DELETE', increment: 'UPDATE', decrement: 'UPDATE' };
 
+const UNK = Symbol('unknown-value');
+const FN_VALUE = Symbol('function-value'); // an expanded helper parameter bound to a function argument
+// Chained query-builder modifiers that leave the SQL argument of `.raw(sql)` untouched.
+const EXEC_MODIFIERS = new Set(['connection', 'transacting', 'timeout', 'debug', 'queryContext', 'options', 'on']);
+const stripExpr = (n) => {
+  while (ts.isParenthesizedExpression(n) || ts.isAsExpression(n) || ts.isNonNullExpression(n)) n = n.expression;
+  return n;
+};
+
 const isFn = (n) => ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n);
 const isLoop = (n) => ts.isForStatement(n) || ts.isForInStatement(n) || ts.isForOfStatement(n) || ts.isWhileStatement(n) || ts.isDoStatement(n);
 
@@ -619,7 +628,9 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
       const str = resolvePieces(a, ctx.env);
       if (str) { env.set(param.name.text, str.map((x) => x.text).join('')); return; }
       const arr = resolveStringArray(a, ctx.env);
-      if (arr) env.set(param.name.text, arr);
+      if (arr) { env.set(param.name.text, arr); return; }
+      const fv = evalVal(a);
+      if (fv.size && ![...fv].includes(UNK)) env.set(param.name.text, FN_VALUE);
     });
     expanded.add(fn);
     const inner = { ...ctx, env, stack: [...stack, fn], builder: undefined };
@@ -632,6 +643,16 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
       if (skip.has(node) || helperNodes.has(node)) return;
       visitFn(node, ctx);
       return;
+    }
+    if (ts.isConditionalExpression(node) || ts.isIfStatement(node)) {
+      const taken = typeofGuard(ts.isIfStatement(node) ? node.expression : node.condition, ctx.env);
+      if (taken !== null) {
+        const branch = ts.isIfStatement(node)
+          ? (taken ? node.thenStatement : node.elseStatement)
+          : (taken ? node.whenTrue : node.whenFalse);
+        if (branch) visit(branch, ctx);
+        return;
+      }
     }
     if (ts.isForOfStatement(node)) {
       const decl = node.initializer;
@@ -668,7 +689,8 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
           return;
         }
       }
-      if (isMember && e.name.text === 'raw') handleRaw(node, ctx);
+      if (isMember && e.name.text === 'raw' && !executorSinks.has(node)) handleRaw(node, ctx);
+      else if (!isMember) handleExecutorCall(node, ctx);
       expandHelper(node, ctx);
       const outermost = !(ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node);
       if (outermost) handleChain(node, ctx);
@@ -697,7 +719,203 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
     }
   }
 
+  // -------------------------------------------------------------------------
+  // In-file executor wrappers.
+  //
+  // An executor is a closure that forwards its first parameter as the SQL of a
+  // raw sink: `(sql, b) => knex.raw(sql, b ?? []).connection(c)`. A call to it
+  // is a raw-SQL call whose SQL is argument 0. Because migrations hand the
+  // closure to callbacks and helpers (`work(run)`), a small whole-file value
+  // flow binds each function-valued parameter to the set of functions that can
+  // reach it from the call sites in this file. The result is trusted only when
+  // that set is complete: any call site that passes something else (or nothing,
+  // or a spread), any call through a callee that is not statically known, and
+  // any function that leaves the file's call graph (exported, stored, returned,
+  // given to a foreign function) contributes UNK and makes the binding
+  // undecided.
+  // LEVERAGE: friction lint-resolver-binding - the AST walk resolves values through a per-expansion env and lookupConst; this whole-file call-site binding is a second, separate resolution path that only the executor check consults. A single scope-aware value resolver should replace both.
+  // -------------------------------------------------------------------------
+  const executorSinks = new Set(); // raw() calls that are the body of an executor closure
+  const paramVals = new Map(); // ParameterDeclaration -> Set<fn node | UNK>
+  const escaped = new Map(); // fn node -> node where it left the modelled call graph
+  const getParam = (p) => {
+    if (!paramVals.has(p)) paramVals.set(p, new Set());
+    return paramVals.get(p);
+  };
+
+  const patternBinds = (name, name0) => {
+    if (ts.isIdentifier(name)) return name.text === name0;
+    return name.elements.some((el) => !ts.isOmittedExpression(el) && patternBinds(el.name, name0));
+  };
+  const UNMODELLED = Symbol('unmodelled-binding');
+  function declOf(id) {
+    const name = id.text;
+    for (let p = id.parent; p; p = p.parent) {
+      if (isFn(p)) {
+        for (const prm of p.parameters) {
+          if (ts.isIdentifier(prm.name) && prm.name.text === name) return prm;
+          if (!ts.isIdentifier(prm.name) && patternBinds(prm.name, name)) return UNMODELLED;
+        }
+        if (!ts.isArrowFunction(p) && !ts.isMethodDeclaration(p) && p.name?.text === name && ts.isFunctionExpression(p)) return UNMODELLED;
+      }
+      if (ts.isCatchClause(p) && p.variableDeclaration && patternBinds(p.variableDeclaration.name, name)) return UNMODELLED;
+      if ((ts.isForStatement(p) || ts.isForInStatement(p) || ts.isForOfStatement(p)) && p.initializer && ts.isVariableDeclarationList(p.initializer)
+        && p.initializer.declarations.some((d) => patternBinds(d.name, name))) return UNMODELLED;
+      if (ts.isBlock(p) || ts.isSourceFile(p) || ts.isModuleBlock(p) || ts.isCaseClause(p) || ts.isDefaultClause(p)) {
+        for (const st of p.statements) {
+          if (ts.isFunctionDeclaration(st) && st.name?.text === name) return st;
+          if (ts.isClassDeclaration(st) && st.name?.text === name) return UNMODELLED;
+          if (ts.isVariableStatement(st)) {
+            for (const d of st.declarationList.declarations) {
+              if (ts.isIdentifier(d.name) && d.name.text === name) return d;
+              if (!ts.isIdentifier(d.name) && patternBinds(d.name, name)) return UNMODELLED;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function evalVal(expr, depth = 0) {
+    const e = stripExpr(expr);
+    if (depth > 10) return new Set([UNK]);
+    if (isFn(e) && !ts.isMethodDeclaration(e)) return new Set([e]);
+    if (ts.isIdentifier(e)) {
+      const d = declOf(e);
+      if (d && d !== UNMODELLED) {
+        if (ts.isFunctionDeclaration(d)) return new Set([d]);
+        if (ts.isParameter(d)) return new Set(getParam(d));
+        if (ts.isVariableDeclaration(d) && ts.isIdentifier(d.name) && d.initializer && (d.parent.flags & ts.NodeFlags.Const)) return evalVal(d.initializer, depth + 1);
+      }
+    }
+    return new Set([UNK]);
+  }
+
+  const execMemo = new Map();
+  function executorSink(fn) {
+    if (fn === UNK) return null;
+    if (execMemo.has(fn)) return execMemo.get(fn);
+    let found = null;
+    const p0 = fn.parameters?.[0];
+    if (p0 && ts.isIdentifier(p0.name) && !p0.dotDotDotToken && fn.body) {
+      let expr = null;
+      if (ts.isBlock(fn.body)) {
+        const only = fn.body.statements.length === 1 ? fn.body.statements[0] : null;
+        if (only && ts.isReturnStatement(only) && only.expression) expr = only.expression;
+      } else expr = fn.body;
+      while (expr) {
+        expr = stripExpr(expr);
+        if (ts.isAwaitExpression(expr)) { expr = expr.expression; continue; }
+        if (!ts.isCallExpression(expr) || !ts.isPropertyAccessExpression(expr.expression)) break;
+        const name = expr.expression.name.text;
+        if (name === 'raw') {
+          const a = expr.arguments[0];
+          if (a && ts.isIdentifier(a) && a.text === p0.name.text && declOf(a) === p0) found = expr;
+          break;
+        }
+        if (!EXEC_MODIFIERS.has(name)) break;
+        expr = expr.expression.expression;
+      }
+    }
+    execMemo.set(fn, found);
+    return found;
+  }
+
+  const allCalls = [];
+  const occurrences = []; // identifiers / inline functions that may carry a function value
+  (function collect(n) {
+    if (ts.isCallExpression(n)) allCalls.push(n);
+    if (isFn(n) && !ts.isMethodDeclaration(n)) occurrences.push(n);
+    else if (ts.isIdentifier(n)) {
+      const p = n.parent;
+      const isName = (ts.isPropertyAccessExpression(p) && p.name === n)
+        || ((ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isFunctionDeclaration(p) || ts.isFunctionExpression(p) || ts.isPropertyAssignment(p) || ts.isBindingElement(p) || ts.isMethodDeclaration(p)) && p.name === n);
+      if (!isName) occurrences.push(n);
+    }
+    ts.forEachChild(n, collect);
+  })(sf);
+
+  const grow = (set, items) => {
+    let changed = false;
+    for (const x of items) if (!set.has(x)) { set.add(x); changed = true; }
+    return changed;
+  };
+  let flowOk = true;
+  for (let iter = 0, changed = true; changed; iter++) {
+    if (iter > 50) { flowOk = false; break; }
+    changed = false;
+    for (const call of allCalls) {
+      const callees = evalVal(call.expression);
+      if (callees.has(UNK)) continue; // arguments are treated as escaping below
+      for (const g of callees) {
+        g.parameters.forEach((prm, i) => {
+          const set = getParam(prm);
+          if (!ts.isIdentifier(prm.name) || prm.dotDotDotToken) { changed = grow(set, [UNK]) || changed; return; }
+          const arg = call.arguments[i];
+          if (!arg || call.arguments.slice(0, i + 1).some((a) => ts.isSpreadElement(a))) { changed = grow(set, [UNK]) || changed; return; }
+          changed = grow(set, evalVal(arg)) || changed;
+        });
+      }
+    }
+    for (const occ of occurrences) {
+      const vals = [...evalVal(occ)].filter((x) => x !== UNK);
+      if (!vals.length) continue;
+      let site = occ;
+      while (ts.isParenthesizedExpression(site.parent) || ts.isAsExpression(site.parent) || ts.isNonNullExpression(site.parent)) site = site.parent;
+      const par = site.parent;
+      let ok = false;
+      if (ts.isCallExpression(par)) {
+        if (par.expression === site) ok = true;
+        else if (par.arguments.includes(site)) ok = !evalVal(par.expression).has(UNK);
+      } else if (ts.isFunctionDeclaration(par) || ts.isFunctionExpression(par)) ok = true;
+      else if (ts.isVariableDeclaration(par) && par.initializer === site && ts.isIdentifier(par.name) && (par.parent.flags & ts.NodeFlags.Const)) ok = true;
+      if (!ok) for (const f of vals) if (!escaped.has(f)) { escaped.set(f, site); changed = true; }
+    }
+  }
+  if (!flowOk) for (const f of occurrences) escaped.set(f, f); // could not settle: nothing is trusted
+
+  /** true = `typeof id === 'function'` holds, false = fails, null = not decidable here. */
+  function typeofGuard(cond, env) {
+    const c = stripExpr(cond);
+    if (!ts.isBinaryExpression(c)) return null;
+    const op = c.operatorToken.kind;
+    const eq = op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken;
+    const ne = op === ts.SyntaxKind.ExclamationEqualsEqualsToken || op === ts.SyntaxKind.ExclamationEqualsToken;
+    if (!eq && !ne) return null;
+    const [t, lit] = ts.isTypeOfExpression(stripExpr(c.left)) ? [stripExpr(c.left), c.right] : [stripExpr(c.right), c.left];
+    if (!ts.isTypeOfExpression(t) || !ts.isStringLiteral(lit) || lit.text !== 'function' || !ts.isIdentifier(stripExpr(t.expression))) return null;
+    const id = stripExpr(t.expression).text;
+    if (!env.has(id)) return null;
+    const isFnVal = env.get(id) === FN_VALUE;
+    return eq ? isFnVal : !isFnVal;
+  }
+
+  for (const call of allCalls) {
+    if (!ts.isPropertyAccessExpression(call.expression)) continue;
+    const sinkOwner = [...evalAllExecutors()].find((f) => executorSink(f) === call);
+    if (sinkOwner) executorSinks.add(call);
+  }
+  function evalAllExecutors() {
+    return occurrences.filter((o) => isFn(o) && executorSink(o));
+  }
+
+  function handleExecutorCall(call, ctx) {
+    const vals = evalVal(call.expression);
+    const execs = [...vals].filter((f) => f !== UNK && executorSink(f));
+    if (!execs.length) return;
+    if (execs.length === vals.size) handleRaw(call, ctx);
+    else {
+      push({ type: 'unresolved', what: 'a SQL-executor closure parameter is not bound to the executor at every call site (or its binding is unknown)' }, call, ctx);
+    }
+  }
+
+
   visit(sf, { env: new Map(), loops: 0 });
+  // An executor handed to code the lint cannot follow runs SQL nobody sees.
+  for (const [f, site] of escaped) {
+    if (executorSink(f)) push({ type: 'unresolved', what: 'a SQL-executor closure is passed to code the lint cannot follow' }, site, { env: new Map(), loops: 0 });
+  }
   // Helpers that were never called with resolvable shape are still analysed (arguments unbound).
   for (const fn of helperNodes) {
     if (!expanded.has(fn) && fnName(fn) !== 'down') ts.forEachChild(fn, (c) => visit(c, { env: new Map(), loops: 0, root: fn }));

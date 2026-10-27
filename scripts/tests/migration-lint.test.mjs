@@ -111,6 +111,43 @@ test('unresolved: dynamic table is an undecided finding, literal-only code resol
   assert.deepEqual(found(lintDir('unresolved/pass')), []);
 });
 
+test('wrapper: VALIDATE sent through an onOneConnection-style run callback satisfies rule 2', () => {
+  assert.deepEqual(found(lintDir('rule-2/wrapper/pass')), []);
+  assert.equal(loadDir('rule-2/wrapper/pass').length, 2);
+});
+
+test('wrapper: with no VALIDATE anywhere rule 2 still fires', () => {
+  const r = lintDir('rule-2/wrapper/fail');
+  assert.deepEqual(found(r), expectations(loadDir('rule-2/wrapper/fail')));
+  assert.equal(r.undecided.length, 0);
+});
+
+test('wrapper: unsafe statements through run(...) are not a blind spot (named callback, helper, nesting)', () => {
+  const r = lintDir('rule-3/wrapper/fail');
+  assert.deepEqual(found(r), expectations(loadDir('rule-3/wrapper/fail')));
+  assert.equal(r.violations.length, 2);
+  assert.equal(r.undecided.length, 0);
+});
+
+test('wrapper: a parameter bound to the executor at one call site and to an unknown at another is undecided', () => {
+  const r = lintDir('unresolved/wrapper/mixed');
+  // the helper is expanded once per call site, so the same line can be reported twice
+  assert.deepEqual([...new Set(found(r))], expectations(loadDir('unresolved/wrapper/mixed')));
+  assert.equal(r.violations.length, 0);
+});
+
+test('wrapper: an executor passed to code the lint cannot follow is undecided', () => {
+  const r = lintDir('unresolved/wrapper/escape');
+  assert.deepEqual(found(r), expectations(loadDir('unresolved/wrapper/escape')));
+  assert.equal(r.undecided.length, 1);
+});
+
+test('wrapper: fully bound executors and typeof-narrowed helpers resolve cleanly', () => {
+  const r = lintDir('unresolved/wrapper/pass');
+  assert.deepEqual(found(r), []);
+  assert.deepEqual(r.stale, []);
+});
+
 test('annotations: allowed / missing reason / wrong rule', () => {
   const allowed = lintDir('annotation/allowed');
   assert.deepEqual(found(allowed), []);
