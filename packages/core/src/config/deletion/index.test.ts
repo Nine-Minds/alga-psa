@@ -130,6 +130,52 @@ describe('deletion configs', () => {
     expect(categoryDep?.foreignKey).toBe('board_id');
   });
 
+  it('board config blocks on every reference deleteBoard refuses to cascade', () => {
+    const deps = Object.fromEntries(DELETION_CONFIGS.board.dependencies.map((dep) => [dep.type, dep]));
+
+    expect(deps.inbound_ticket_default).toMatchObject({
+      table: 'inbound_ticket_defaults',
+      foreignKey: 'board_id',
+      label: 'inbound email default'
+    });
+    expect(deps.ticket_template).toMatchObject({
+      table: 'ticket_templates',
+      foreignKey: 'board_id',
+      label: 'ticket template'
+    });
+    expect(deps.recurring_ticket_definition).toMatchObject({
+      table: 'recurring_ticket_definitions',
+      foreignKey: 'board_id',
+      label: 'recurring ticket schedule'
+    });
+    expect(deps.checklist_apply_rule).toMatchObject({
+      table: 'checklist_template_apply_rules',
+      foreignKey: 'board_id',
+      label: 'checklist apply rule'
+    });
+    // None of them opt out of blocking.
+    for (const dep of DELETION_CONFIGS.board.dependencies) {
+      expect(dep.blocking).not.toBe(false);
+    }
+  });
+
+  it('board email_sender_route dependency counts only the board route type', async () => {
+    const routeDep = DELETION_CONFIGS.board.dependencies.find((dep) => dep.type === 'email_sender_route');
+    expect(routeDep?.table).toBe('email_sender_routes');
+    expect(routeDep?.label).toBe('outbound sender route');
+    expect(routeDep?.countQuery).toBeDefined();
+
+    const { trx, builder } = makeTrx();
+    await routeDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-1' });
+
+    expect(trx).toHaveBeenCalledWith('email_sender_routes');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'email_sender_routes.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
+      route_type: 'board',
+      board_id: 'board-1'
+    });
+  });
+
   it('ticket config includes schedule_entry dependency with polymorphic countQuery', async () => {
     const scheduleDep = DELETION_CONFIGS.ticket.dependencies.find((dep) => dep.type === 'schedule_entry');
     expect(scheduleDep).toBeDefined();
