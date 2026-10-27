@@ -124,6 +124,14 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
   {
+    // Authenticated app-internal endpoint that mints the short-lived realtime
+    // notification-signals token. Not part of the public v1 metadata surface.
+    group: 'api_notification_stream',
+    staticPrefixes: ['/api/notifications'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     group: 'api_ticket_psa_only_subroutes',
     staticPrefixes: [
       '/api/v1/tickets/from-asset',
