@@ -168,3 +168,12 @@ export async function withAdminTransaction<T>(
 export type { Knex as KnexInstance } from 'knex';
 
 export { ensureMiscellaneousService } from './lib/ensureMiscellaneousService';
+
+export {
+  registerCommentEventContributor,
+  publishCommentEvent,
+  resetCommentEventContributors,
+  type CommentEvent,
+  type CommentEventContributor,
+  type CommentEventSource,
+} from './lib/commentEventRegistry';

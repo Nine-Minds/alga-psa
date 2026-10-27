@@ -1,6 +1,6 @@
 import { registerAfterCommit } from '@alga-psa/db';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
-import { publishCommentEvent } from '../commentEventRegistry';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 
 /**
  * The shared publisher with comment publication routed through the comment-event

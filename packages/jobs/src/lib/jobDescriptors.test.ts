@@ -17,6 +17,36 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: vi.fn(async () => ({})) }));
 vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization', () => ({ replenishContractCadenceServicePeriodsSweep: vi.fn() }));
 
+// The native handler modules pull in other workspace packages whose exports maps
+// point at unbuilt dist output; this suite only exercises the fan-out dispatcher.
+// Constants (…_JOB…) stay strings, everything else becomes a stub function.
+vi.mock('./handlers/expiredCreditsHandler', () => ({ expiredCreditsHandler: vi.fn() }));
+vi.mock('./handlers/expiringCreditsNotificationHandler', () => ({ expiringCreditsNotificationHandler: vi.fn() }));
+vi.mock('./handlers/prepaidBalanceAlertScanHandler', () => ({ PREPAID_BALANCE_ALERT_SCAN_JOB: 'stub:PREPAID_BALANCE_ALERT_SCAN_JOB', prepaidBalanceAlertScanHandler: vi.fn() }));
+vi.mock('./handlers/expiredHourBlocksHandler', () => ({ expiredHourBlocksHandler: vi.fn() }));
+vi.mock('./handlers/expiringHourBlocksNotificationHandler', () => ({ expiringHourBlocksNotificationHandler: vi.fn() }));
+vi.mock('./handlers/reconcileBucketUsageHandler', () => ({ handleReconcileBucketUsage: vi.fn() }));
+vi.mock('./handlers/reconcileHourBlockAllocationsHandler', () => ({ handleReconcileHourBlockAllocations: vi.fn() }));
+vi.mock('./handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHandler: vi.fn() }));
+vi.mock('./handlers/dateTriggerScanHandler', () => ({ createDateTriggerScanHandler: vi.fn() }));
+vi.mock('./handlers/autoCloseTicketsHandler', () => ({ autoCloseTicketsHandler: vi.fn() }));
+vi.mock('./handlers/searchReconcileHandler', () => ({ SEARCH_RECONCILE_JOB_NAME: 'stub:SEARCH_RECONCILE_JOB_NAME', searchReconcileHandler: vi.fn() }));
+vi.mock('./handlers/calendarWebhookMaintenanceHandler', () => ({ verifyGoogleCalendarProvisioning: vi.fn() }));
+vi.mock('./handlers/googleGmailWatchRenewalHandler', () => ({ renewGoogleGmailWatchSubscriptions: vi.fn() }));
+vi.mock('./handlers/teamsMeetingArtifactWebhookHandler', () => ({ renewTeamsMeetingArtifactSubscriptions: vi.fn() }));
+vi.mock('./handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: vi.fn() }));
+vi.mock('./handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'stub:TELEPHONY_CALL_ARTIFACT_SWEEP_JOB', telephonyCallArtifactSweepHandler: vi.fn() }));
+vi.mock('./handlers/teamsMeetingSweepHandler', () => ({ teamsMeetingSweepHandler: vi.fn(), TEAMS_MEETING_SWEEP_JOB: 'stub:TEAMS_MEETING_SWEEP_JOB' }));
+vi.mock('./handlers/threecxCallControlReconcileHandler', () => ({ reconcileThreecxCallControlHandler: vi.fn(), THREECX_CALL_CONTROL_RECONCILE_JOB: 'stub:THREECX_CALL_CONTROL_RECONCILE_JOB' }));
+vi.mock('./handlers/threecxCdrBackfillHandler', () => ({ backfillThreecxCdrHandler: vi.fn(), THREECX_CDR_BACKFILL_JOB: 'stub:THREECX_CDR_BACKFILL_JOB' }));
+vi.mock('./handlers/threecxPhonebookHandlers', () => ({ reconcileThreecxPhonebookHandler: vi.fn(), THREECX_PHONEBOOK_RECONCILE_JOB: 'stub:THREECX_PHONEBOOK_RECONCILE_JOB' }));
+vi.mock('./handlers/workflowQuotaResumeScanHandler', () => ({ workflowQuotaResumeScanHandler: vi.fn() }));
+vi.mock('./handlers/cleanupAiSessionKeysHandler', () => ({ cleanupAiSessionKeysHandler: vi.fn() }));
+vi.mock('./handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemporaryFormsJob: vi.fn() }));
+vi.mock('./handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: vi.fn() }));
+vi.mock('./handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: vi.fn() }));
+vi.mock('./handlers/providerDisconnectRetryHandler', () => ({ providerDisconnectRetryHandler: vi.fn() }));
+
 import { defineJob, resetJobDescriptors } from './jobDescriptors';
 import { isKnownMaintenanceJob, listMaintenanceJobNames, runMaintenanceJob } from './maintenanceJobFanout';
 

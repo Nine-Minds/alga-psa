@@ -6,6 +6,10 @@
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
+    "./commentEventRegistry": {
+      "import": "./dist/lib/commentEventRegistry.js",
+      "types": "./src/lib/commentEventRegistry.ts"
+    },
     "./tenantTableManifest": {
       "import": "./dist/lib/tenantTableManifest.js",
       "types": "./src/lib/tenantTableManifest.ts"
