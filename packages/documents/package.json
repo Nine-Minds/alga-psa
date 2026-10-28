@@ -77,6 +77,10 @@
     "./models/*": {
       "import": "./src/models/*.ts",
       "types": "./src/models/*.ts"
+    },
+    "./lib/withPrivateDocumentUploads": {
+      "import": "./src/lib/withPrivateDocumentUploads.ts",
+      "types": "./src/lib/withPrivateDocumentUploads.ts"
     }
   },
   "scripts": {

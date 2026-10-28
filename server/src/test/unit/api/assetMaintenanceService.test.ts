@@ -125,6 +125,25 @@ describe('AssetService maintenance writes', () => {
     expect(h.state[occurrences]).toHaveLength(0);
   });
 
+  it('rejects a custom frequency without a recurrence rule, before and after merging with the stored row', async () => {
+    const service = new AssetService();
+    await expect(service.createMaintenanceSchedule('asset-one', { ...data, frequency: 'custom' }, context))
+      .rejects.toThrow('requires schedule_config.recurrence');
+    expect(h.state[schedules]).toHaveLength(0);
+
+    const recurrence = { unit: 'months', days_of_month: [1, 15] };
+    const row = await service.createMaintenanceSchedule(
+      'asset-one', { ...data, frequency: 'custom', schedule_config: { recurrence } }, context);
+    expect(row.schedule_config).toEqual({ recurrence });
+
+    await expect(service.updateMaintenanceSchedule(row.schedule_id, { schedule_config: { checklist: [] } }, context))
+      .rejects.toThrow('requires schedule_config.recurrence');
+    expect(h.state[schedules][0].schedule_config).toEqual({ recurrence });
+    await service.updateMaintenanceSchedule(row.schedule_id, { frequency: 'monthly', schedule_config: {} }, context);
+    await expect(service.updateMaintenanceSchedule(row.schedule_id, { frequency: 'custom' }, context))
+      .rejects.toThrow('requires schedule_config.recurrence');
+  });
+
   it('rejects assets from another tenant before writing', async () => {
     h.state.assets[0].tenant = 'tenant-two';
     await expect(new AssetService().createMaintenanceSchedule('asset-one', data, context)).rejects.toThrow('Asset not found');

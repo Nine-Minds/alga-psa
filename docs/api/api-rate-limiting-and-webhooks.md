@@ -608,6 +608,7 @@ Twelve events cover the lifecycle of clients, contacts, and client locations. Th
 | Client | `client.created`, `client.updated`, `client.deactivated`, `client.deleted` |
 | Contact | `contact.created`, `contact.updated`, `contact.deactivated`, `contact.deleted` |
 | Client location | `client_location.created`, `client_location.updated`, `client_location.deactivated`, `client_location.deleted` |
+| Quote | `quote.sent`, `quote.viewed`, `quote.approved`, `quote.accepted`, `quote.rejected`, `quote.expired`, `quote.converted`, `quote.conversion_reverted`, `quote.superseded`, `quote.cancelled` |
 
 ### What Triggers Each Event
 
@@ -700,6 +701,48 @@ For contact and client location events, an `entity_ids` filter matches either th
 - **Deleted.** The record is gone. Deleting a client does **not** send `contact.deleted` or `client_location.deleted` for its children. Treat a `client.deleted` as covering everything under that client.
 - **Merge.** Merging client A into client B sends one `client.deleted` with A's id. B receives no event. Each contact and location that moved from A to B sends its own `contact.updated` or `client_location.updated` with the new `client_id` (B) and `changed_fields` of `["client_id"]`, published after the merge commits. A location that stops being the default in the process also sends `client_location.updated` with `is_default` in `changed_fields`.
 - **Follow-up fetches.** If you fetch a record after a `*.deleted` event, a `404` is the expected answer. Treat it as success.
+
+## Quote Lifecycle Webhooks
+
+Quote events publish after the transaction commits. Ordinary edits and repeated writes of the same status do not emit lifecycle events. Linking an existing quote to an opportunity does not emit them either.
+
+| Event | Fires when | Sources |
+| --- | --- | --- |
+| `quote.sent` | A quote becomes sent. Resending or sending a reminder does not fire it again. | MSP actions, REST, workflow actions |
+| `quote.viewed` | The first client-portal view sets `viewed_at`. Later views do not fire it. | Client portal |
+| `quote.approved` | Internal approval changes pending approval to approved. | MSP actions, REST, workflow updates |
+| `quote.accepted` | A sent quote is accepted. | Client portal, MSP on behalf of the client, REST, workflow updates |
+| `quote.rejected` | A quote becomes rejected. | Client portal, REST, workflow updates |
+| `quote.expired` | A sent quote expires. Competing expiry paths produce one transition. | Scheduled expiry job, expiry on access in the application or workflow worker |
+| `quote.converted` | Conversion creates draft destination records and changes the quote to converted. Combined conversion emits one event with both targets. | MSP actions, REST, workflow actions |
+| `quote.conversion_reverted` | Deleting the only converted draft invoice returns the quote to accepted. A quote also linked to a contract keeps its status. | Invoice deletion |
+| `quote.superseded` | A revision replaces an existing quote version. | MSP actions, REST |
+| `quote.cancelled` | A quote becomes cancelled. | MSP actions, REST, workflow updates |
+
+Use `event_filter.entity_ids` to match either the quote ID or its client ID. Use `payload_fields.quote` to select fields; `quote_id` is always included. The default payload carries quote number and version, client/contact/opportunity references, previous and new status, currency, total amount in minor units, actor type/ID, and the event timestamp. Legacy quotes may have a null quote number or client reference.
+
+Acceptance includes `accepted_by_name`, `accepted_on_behalf`, and `selected_optional_item_ids`. Optional selections contain IDs only. Rejection includes `rejection_reason`. Conversion includes `conversion_targets` and destination IDs; a converted contract may still be a draft. Fetch `GET /api/v1/quotes/{id}` for line items, prices, and terms.
+
+Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval or requesting approval changes emits no event in this version.
+
+```json
+{
+  "event_id": "43146901-a180-5d98-896c-3c8c550179ae",
+  "event_type": "quote.accepted",
+  "occurred_at": "2026-10-28T12:00:00.000Z",
+  "tenant_id": "96228f61-4ec1-4ec4-84dc-91ed82977765",
+  "data": {
+    "quote_id": "b1ff62e5-f93c-4b5f-a04d-2bf9f740dcba",
+    "quote_number": "Q-0042",
+    "previous_status": "sent",
+    "new_status": "accepted",
+    "accepted_on_behalf": false,
+    "selected_optional_item_ids": []
+  }
+}
+```
+
+Event IDs are stable for the tenant and recorded transition. Successful outbound deliveries retain a database receipt, so replay after Redis cache expiry does not create another successful delivery. Network failures still require idempotent consumers: a receiver can process a request before its response is lost.
 
 ## Shared Webhook Mechanics
 

@@ -156,7 +156,12 @@
     "allResponseStatuses": "Todos los estados de respuesta",
     "responseStatus": "Estado de respuesta",
     "board": "Filtrar por tablero",
-    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente"
+    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente",
+    "requesterTags": "Etiquetas del solicitante",
+    "clientTags": "Etiquetas del cliente",
+    "tagModeAny": "Cualquiera de",
+    "tagModeNone": "Ninguna de",
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -295,7 +300,8 @@
     "moreActions": "Más acciones",
     "createTemplate": "Crear plantilla desde el ticket",
     "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
-    "printWorkTag": "Imprimir etiqueta de trabajo"
+    "printWorkTag": "Imprimir etiqueta de trabajo",
+    "retry": "Reintentar"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -405,7 +411,8 @@
     "pastedImagesDeleteFailed_many": "No se pudieron eliminar {{count}} imágenes pegadas.",
     "pastedImagesDeleted_few": "Se eliminaron {{count}} imágenes pegadas.",
     "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas.",
-    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
+    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido.",
+    "loadPartyTagsFailed": "No se pudieron cargar las etiquetas del solicitante y del cliente"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -557,6 +564,7 @@
     },
     "filters": {
       "allAssignees": "Todos los asignados",
+      "allContacts": "Todos los contactos",
       "selectStatus": "Seleccionar estado",
       "responseState": "Estado de respuesta",
       "allResponseStates": "Todos los estados de respuesta",
@@ -1025,7 +1033,22 @@
     "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
     "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
     "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
-    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas"
+    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas",
+    "assets": {
+      "heading": "Activos",
+      "selectClientFirst": "Seleccione un cliente para vincular activos.",
+      "unavailable": "Los activos se pueden vincular desde el ticket una vez creado."
+    },
+    "attachments": {
+      "heading": "Archivos adjuntos",
+      "add": "Añadir archivos",
+      "remove": "Quitar {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Añadir observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1742,7 +1765,9 @@
       "templateClientMismatch": "Esta plantilla de lista de verificación está limitada a un cliente distinto del cliente del ticket.",
       "templateClientInvalid": "No se encontró el cliente seleccionado.",
       "ruleClientOutsideTemplateScope": "Esta plantilla pertenece a un cliente, por lo que sus reglas no pueden dirigirse a otros clientes.",
-      "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente."
+      "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente.",
+      "predicateClientOutsideScope": "El cliente {{client}} está fuera del alcance de esta plantilla.",
+      "predicateInvalid": "Regla de lista de verificación no válida: {{detail}}"
     }
   },
   "ticketSection": {

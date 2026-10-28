@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tastenkürzel",
     "mcpServer": "MCP-Server",
     "opportunities": "Verkaufschancen",
-    "settingsFallback": "Einstellungen"
+    "settingsFallback": "Einstellungen",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -1153,6 +1154,50 @@
         "client": "Kunde",
         "allClients": "Alle Kunden",
         "clear": "Filter zurücksetzen"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Board",
+          "category_id": "Kategorie",
+          "subcategory_id": "Unterkategorie",
+          "priority_id": "Priorität",
+          "client_id": "Kunde",
+          "client_tags": "Kunden-Tags",
+          "contact_tags": "Kontakt-Tags",
+          "ticket_origin": "Ticketquelle",
+          "title_folded": "Titel",
+          "description_folded": "Beschreibung",
+          "from_service_request": "Aus Serviceanfrage",
+          "service_request_definition_id": "Serviceanfrage"
+        },
+        "operators": {
+          "equals": "Ist gleich",
+          "not_equals": "Ist ungleich",
+          "in": "Enthält mindestens einen Wert aus",
+          "not_in": "Enthält keinen Wert aus",
+          "contains": "Enthält",
+          "starts_with": "Beginnt mit",
+          "ends_with": "Endet mit",
+          "is_empty": "Ist leer",
+          "is_not_empty": "Ist nicht leer"
+        },
+        "conditions": "Bedingungen",
+        "match": "Übereinstimmung",
+        "and": "Alle Bedingungen",
+        "or": "Mindestens eine Bedingung",
+        "field": "Feld",
+        "operator": "Bedingung",
+        "value": "Wert",
+        "yes": "Ja",
+        "no": "Nein",
+        "advanced": "Diese Regel enthält gruppierte oder erweiterte Bedingungen und kann in diesem Editor nur gelesen werden.",
+        "add": "Bedingung hinzufügen",
+        "save": "Bedingungen speichern",
+        "enabled": "Aktiviert",
+        "matchesAll": "Gilt für alle Tickets im Geltungsbereich der Vorlage.",
+        "matchesNone": "Gilt für keine Tickets.",
+        "tagsFailed": "Die Tag-Auswahl konnte nicht geladen werden. Gespeicherte Auswahlen bleiben erhalten.",
+        "retry": "Erneut versuchen"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "Keine Standardstatus zum Importieren verfügbar",
       "importSelected": "Ausgewählte importieren ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Auf Chips anzeigen",
+    "subtitle": "Tags, die neben Kontakten und Kunden in Ticketlisten, Ticketköpfen und Auswahllisten angezeigt werden.",
+    "loading": "Wird geladen…",
+    "description": "Legen Sie fest, welche Tags als Badges neben Kontakten und Kunden angezeigt werden und in welcher Reihenfolge. Eine Liste ohne Tags zeigt für diese Zielgruppe keine Badges.",
+    "contacts": "Kontakte",
+    "clients": "Kunden",
+    "audienceInternal": "Interne Benutzer",
+    "audienceClient": "Kundenportal",
+    "clientNote": "Startet leer. Hier aufgeführte Tags sind für die eigenen Benutzer des Kunden im Kundenportal sichtbar.",
+    "noneSelected": "Keine Tags angezeigt.",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "remove": "Entfernen",
+    "addTag": "Tag hinzufügen…"
   }
 }

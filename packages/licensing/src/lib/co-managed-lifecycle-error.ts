@@ -31,3 +31,12 @@ export function isCoManagedLifecycleError(error: unknown): error is CoManagedLif
     (state.graceEndsAt === null || typeof state.graceEndsAt === 'string') &&
     candidate.code === (state.state === 'pending_acceptance' ? 'CO_MANAGED_NOT_ACTIVE' : 'CO_MANAGED_READ_ONLY'));
 }
+
+/** Locale key for the user-facing refusal message, shared by every surface that renders one. */
+export function coManagedRefusalMessageKey(
+  error: Pick<CoManagedLifecycleError, 'code'>,
+): 'common:errors.coManaged.acceptancePending' | 'common:errors.coManaged.readOnly' {
+  return error.code === 'CO_MANAGED_NOT_ACTIVE'
+    ? 'common:errors.coManaged.acceptancePending'
+    : 'common:errors.coManaged.readOnly';
+}

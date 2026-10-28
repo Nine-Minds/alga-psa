@@ -25,6 +25,8 @@ import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import EntityChip from '@alga-psa/ui/components/EntityChip';
+import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
@@ -53,6 +55,7 @@ interface TicketPropertiesProps {
   ticket: ITicket;
   client: any;
   contactInfo: any;
+  displayTags?: PartyDisplayTags;
   createdByUser: any;
   board: any;
   isLiveTicketTimerEnabled?: boolean;
@@ -133,6 +136,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   ticket,
   client,
   contactInfo,
+  displayTags,
   createdByUser,
   board,
   isLiveTicketTimerEnabled,
@@ -641,21 +645,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div className="space-y-2">
               <div className={`flex items-center justify-between transition-opacity ${isFieldRemotelyEdited('contact_name_id') ? 'opacity-60' : ''}`}>
                 <div className="flex items-center space-x-2">
-                  {contactInfo && (
-                    <ContactAvatar
-                      contactId={contactInfo.contact_name_id || ''}
-                      contactName={contactInfo.full_name || ''}
-                      avatarUrl={contactAvatarUrl}
-                      size="sm"
-                    />
-                  )}
-                  <p
-                    {...withDataAutomationId({ id: `${id}-contact-name` })}
-                    className="text-sm text-blue-500 cursor-pointer hover:underline"
-                    onClick={onContactClick}
-                  >
-                    {contactInfo?.full_name || t('properties.noContactSelected', 'No contact selected')}
-                  </p>
+                  <EntityChip
+                    kind="contact"
+                    id={contactInfo?.contact_name_id ?? null}
+                    name={contactInfo?.full_name}
+                    imageUrl={contactAvatarUrl}
+                    tags={displayTags?.contact}
+                    maxBadges={3}
+                    buttonId={`${id}-contact-name`}
+                    onClick={contactInfo ? onContactClick : undefined}
+                    emptyLabel={t('properties.noContactSelected', 'No contact selected')}
+                  />
                   <Button
                     {...withDataAutomationId({ id: `${id}-toggle-contact-picker-btn` })}
                     variant="ghost"
@@ -785,20 +785,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold">{t('fields.client', 'Client')}</h5>
             <div className="space-y-2">
               <div className={`flex items-center space-x-2 transition-opacity ${isFieldRemotelyEdited('client_id') ? 'opacity-60' : ''}`}>
-                {client && (
-                  <ClientAvatar
-                    clientId={client.client_id}
-                    clientName={client.client_name}
-                    logoUrl={client.logoUrl}
-                    size="sm"
-                  />
-                )}
-                <p
-                  className="text-sm text-blue-500 cursor-pointer hover:underline"
-                  onClick={onClientClick}
-                >
-                  {client?.client_name || t('properties.notAvailable', 'N/A')}
-                </p>
+                <EntityChip
+                  kind="client"
+                  id={client?.client_id ?? null}
+                  name={client?.client_name}
+                  imageUrl={client?.logoUrl}
+                  tags={displayTags?.client}
+                  maxBadges={3}
+                  buttonId={`${id}-client-name`}
+                  onClick={client ? onClientClick : undefined}
+                  emptyLabel={t('properties.notAvailable', 'N/A')}
+                />
                 <Button
                   {...withDataAutomationId({ id: `${id}-show-client-picker-btn` })}
                   variant="ghost"

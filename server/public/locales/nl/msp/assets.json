@@ -949,12 +949,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud",
-      "held_by_msp": "In bewaring bij MSP"
-    },
     "assetTypes": {
       "workstation": "Werkstation",
       "server": "Server",
@@ -1297,7 +1291,10 @@
       "frequency": "Frequentie *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Volgende onderhoudsdatum *",
-      "active": "Actief"
+      "active": "Actief",
+      "recurrenceUnit": "Eenheid *",
+      "onWeekdays": "Op weekdagen (optioneel)",
+      "onDayOfMonth": "Op dag van de maand (optioneel)"
     },
     "placeholders": {
       "scheduleName": "bijvoorbeeld maandelijks serveronderhoud",
@@ -1312,7 +1309,8 @@
       "weekly": "Wekelijks",
       "monthly": "Maandelijks",
       "quarterly": "Driemaandelijks",
-      "yearly": "Jaarlijks"
+      "yearly": "Jaarlijks",
+      "custom": "Aangepast"
     },
     "errors": {
       "scheduleNameRequired": "Schemanaam is vereist",
@@ -1321,6 +1319,18 @@
       "nextMaintenanceRequired": "Volgende onderhoudsdatum is vereist",
       "frequencyIntervalMin": "Het frequentie-interval moet minimaal 1 zijn",
       "saveFailed": "Kan onderhoudsschema niet maken"
+    },
+    "recurrenceUnits": {
+      "days": "Dagen",
+      "weeks": "Weken",
+      "months": "Maanden",
+      "years": "Jaren"
+    },
+    "dayOfMonthOptions": {
+      "any": "Elke dag"
+    },
+    "hints": {
+      "selectors": "Zonder selectie wordt herhaald vanaf de voltooiingsdatum."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1382,36 @@
         "yearly_other": "jaren",
         "yearly_few": "jaren",
         "yearly_many": "jaren"
+      },
+      "customUnconfigured": "Aangepast (niet geconfigureerd)",
+      "onWeekdays": "{{cadence}} op {{days}}",
+      "onDaysOfMonth": "{{cadence}} op dag {{days}}",
+      "weekdays": {
+        "sun": "zo",
+        "mon": "ma",
+        "tue": "di",
+        "wed": "wo",
+        "thu": "do",
+        "fri": "vr",
+        "sat": "za"
+      },
+      "customUnits": {
+        "days_one": "dag",
+        "days_other": "dagen",
+        "days_few": "dagen",
+        "days_many": "dagen",
+        "weeks_one": "week",
+        "weeks_other": "weken",
+        "weeks_few": "weken",
+        "weeks_many": "weken",
+        "months_one": "maand",
+        "months_other": "maanden",
+        "months_few": "maanden",
+        "months_many": "maanden",
+        "years_one": "jaar",
+        "years_other": "jaren",
+        "years_few": "jaren",
+        "years_many": "jaren"
       }
     },
     "status": {
@@ -1813,8 +1853,8 @@
     "in_stock": "Op voorraad",
     "maintenance": "In onderhoud",
     "inactive": "Inactief",
-    "held_by_msp": "In bewaring bij MSP",
-    "retired": "Afgevoerd"
+    "retired": "Afgevoerd",
+    "held_by_msp": "In bewaring bij MSP"
   },
   "assetStatusKinds": {
     "deployable": "Inzetbaar",
@@ -2078,7 +2118,12 @@
       "doneBody": "{{name}} ({{tag}}) is nu in bewaring bij de MSP.",
       "printLabel": "Assetlabel afdrukken",
       "openAsset": "Asset openen",
-      "close": "Sluiten"
+      "close": "Sluiten",
+      "inCustodyOption": "{{asset}} — In bewaring: {{location}}"
+    },
+    "photos": {
+      "limit": "Maximaal 20 foto’s, samen 10 MB. Foto’s zijn verborgen voor klanten.",
+      "tooLarge": "Kies maximaal 20 foto’s van samen niet meer dan 10 MB."
     }
   }
 }

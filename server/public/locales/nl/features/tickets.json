@@ -156,7 +156,12 @@
     "allResponseStatuses": "Alle antwoordstatussen",
     "responseStatus": "Antwoordstatus",
     "board": "Filteren op bord",
-    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken"
+    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken",
+    "requesterTags": "Tags van aanvrager",
+    "clientTags": "Klanttags",
+    "tagModeAny": "Een van",
+    "tagModeNone": "Geen van",
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -295,7 +300,8 @@
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
     "createWorkflowFromTicket": "Workflow maken van ticket",
-    "printWorkTag": "Werklabel afdrukken"
+    "printWorkTag": "Werklabel afdrukken",
+    "retry": "Opnieuw proberen"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -405,7 +411,8 @@
     "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
     "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
     "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd.",
-    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen.",
+    "loadPartyTagsFailed": "Kon de tags van aanvrager en klant niet laden"
   },
   "conversation": {
     "comments": "Reacties",
@@ -557,6 +564,7 @@
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
+      "allContacts": "Alle contacten",
       "selectStatus": "Status selecteren",
       "responseState": "Reactiestatus",
       "allResponseStates": "Alle reactiestatussen",
@@ -1025,7 +1033,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
-    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Selecteer een klant om assets te koppelen.",
+      "unavailable": "Assets kunnen na het aanmaken vanuit het ticket worden gekoppeld."
+    },
+    "attachments": {
+      "heading": "Bijlagen",
+      "add": "Bestanden toevoegen",
+      "remove": "{{name}} verwijderen"
+    },
+    "watchers": {
+      "heading": "Volgers",
+      "placeholder": "Volgers toevoegen..."
+    },
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1742,7 +1765,9 @@
       "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
       "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
       "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
-      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst."
+      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst.",
+      "predicateClientOutsideScope": "Klant {{client}} valt buiten het bereik van deze sjabloon.",
+      "predicateInvalid": "Ongeldige checklistregel: {{detail}}"
     }
   },
   "ticketSection": {

@@ -172,6 +172,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
 
   tags: Object.freeze({
     findTagsByEntityId: lazy(() => import('@alga-psa/tags/actions'), 'findTagsByEntityId'),
+    getTicketPartyDisplayTags: lazy(() => import('../actions/optimizedTicketActions'), 'getTicketPartyDisplayTags'),
   }),
 
   avatars: Object.freeze({

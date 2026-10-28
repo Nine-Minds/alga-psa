@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server'
 
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -2580,11 +2581,20 @@ async function releaseQuoteConversionForDeletedInvoice(
   const nowIso = new Date().toISOString();
   for (const quote of quotes) {
     const revertToAccepted = quote.status === 'converted' && !quote.converted_contract_id;
+    if (revertToAccepted) {
+      await transitionQuoteStatus(trx, tenant, quote.quote_id, 'accepted', {
+        system: true, reason: 'Converted draft invoice deleted; quote returned to accepted',
+        activity: { activity_type: QUOTE_ACTIVITY_TYPES.convertedInvoiceDeleted, metadata: { invoice_id: invoiceId, previous_status: quote.status, status_reverted: true } },
+        actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+        details: { releasedInvoiceId: invoiceId },
+        patch: { converted_invoice_id: null, converted_at: null, updated_by: userId },
+      });
+      continue;
+    }
     await tenantScopedTable(trx, tenant, 'quotes')
       .where({ quote_id: quote.quote_id })
       .update({
         converted_invoice_id: null,
-        ...(revertToAccepted ? { status: 'accepted', converted_at: null } : {}),
         updated_by: userId,
         updated_at: nowIso,
       });

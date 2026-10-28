@@ -156,7 +156,12 @@
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
     "board": "Filtruj według tablicy",
-    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania",
+    "requesterTags": "Tagi zgłaszającego",
+    "clientTags": "Tagi klienta",
+    "tagModeAny": "Dowolny z",
+    "tagModeNone": "Żaden z",
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -295,7 +300,8 @@
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
-    "printWorkTag": "Drukuj etykietę roboczą"
+    "printWorkTag": "Drukuj etykietę roboczą",
+    "retry": "Ponów"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -405,7 +411,8 @@
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
     "scheduleOpenFailed": "Nie udało się otworzyć planera",
-    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać.",
+    "loadPartyTagsFailed": "Nie udało się załadować tagów zgłaszającego i klienta"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -557,6 +564,7 @@
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
+      "allContacts": "Wszystkie kontakty",
       "selectStatus": "Wybierz status",
       "responseState": "Stan odpowiedzi",
       "allResponseStates": "Wszystkie stany odpowiedzi",
@@ -1025,7 +1033,22 @@
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
     "templateReplaceConfirm": "Zastosuj szablon",
-    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz.",
+    "assets": {
+      "heading": "Zasoby",
+      "selectClientFirst": "Wybierz klienta, aby powiązać zasoby.",
+      "unavailable": "Zasoby można powiązać ze zgłoszeniem po jego utworzeniu."
+    },
+    "attachments": {
+      "heading": "Załączniki",
+      "add": "Dodaj pliki",
+      "remove": "Usuń {{name}}"
+    },
+    "watchers": {
+      "heading": "Obserwatorzy",
+      "placeholder": "Dodaj obserwatorów..."
+    },
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1742,7 +1765,9 @@
       "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
       "templateClientInvalid": "Nie znaleziono wybranego klienta.",
       "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
-      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta."
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
+      "predicateClientOutsideScope": "Klient {{client}} jest poza zakresem tego szablonu.",
+      "predicateInvalid": "Nieprawidłowa reguła listy kontrolnej: {{detail}}"
     }
   },
   "ticketSection": {

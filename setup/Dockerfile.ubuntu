@@ -41,6 +41,7 @@ RUN set -eux; \
 # 3) Copy minimal workspace manifests first for better layer caching
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json ./shared/
+COPY packages/predicates/package.json ./packages/predicates/
 COPY server/package.json ./server/
 
 # 4) Install root workspaces (will create node_modules and workspace links)
@@ -52,6 +53,7 @@ RUN npm ci --workspaces --legacy-peer-deps || npm install --workspaces --legacy-
 #    shared/tsup.config.ts inlines @alga-psa/licensing/lifecycle-error (source
 #    only, no dist) via shared/tsconfig.json paths, so its source must be here.
 COPY packages/licensing/ ./packages/licensing/
+COPY packages/predicates/ ./packages/predicates/
 COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN npm run build

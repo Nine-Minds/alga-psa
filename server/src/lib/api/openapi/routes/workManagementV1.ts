@@ -175,6 +175,15 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ticketNotificationSuppressionProperties = {
+    suppressContactNotifications: zOpenApi.boolean().optional().describe(
+      'When true, suppresses customer-facing email and portal notifications for this operation.',
+    ),
+    suppressInternalNotifications: zOpenApi.boolean().optional().describe(
+      'When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true.',
+    ),
+  };
+
   const CreateTicketBody = registry.registerSchema(
     'WorkV1CreateTicketBody',
     zOpenApi.object({
@@ -198,17 +207,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
-    }),
+      ...ticketNotificationSuppressionProperties,
+    }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
   );
-
-  const ticketNotificationSuppressionProperties = {
-    suppressContactNotifications: zOpenApi.boolean().optional().describe(
-      'When true, suppresses customer-facing email and portal notifications for this operation.',
-    ),
-    suppressInternalNotifications: zOpenApi.boolean().optional().describe(
-      'When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true.',
-    ),
-  };
 
   const TicketUpdateBody = registry.registerSchema(
     'WorkV1TicketUpdateBody',
@@ -414,7 +415,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
     { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create(). Optional suppression flags make this operation silent for customer notifications or for all human notifications while preserving audit, workflow, and webhook records.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/stats', summary: 'Get ticket stats', description: 'Returns ticket aggregate stats for authorized tickets.', family: 'ticket' },

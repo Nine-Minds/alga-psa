@@ -284,6 +284,7 @@ const fakeTrx: any = {
 };
 
 vi.mock('@alga-psa/db', () => ({
+  admitOperationalWrite: vi.fn().mockResolvedValue(undefined),
   tenantDb: (_trx: unknown, tenant: string) => ({
     table: (name: string) => new FakeBuilder(name).where('tenant', tenant),
     tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>

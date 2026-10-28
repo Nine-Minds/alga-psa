@@ -18,6 +18,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { deferFileUploadEvents } from '@alga-psa/storage/fileUploadTransaction';
 import { createTenantKnex, getTenantContext, tenantDb } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
@@ -134,6 +135,8 @@ async function maybePublishProcessingSucceeded(params: {
     return;
   }
 
+  if (deferFileUploadEvents(fileId, () => maybePublishProcessingSucceeded(params))) return;
+
   const currentUser = await getCurrentUser();
   const tenantId =
     (typeof (currentUser as any)?.tenant === 'string' ? (currentUser as any).tenant : undefined) ?? getTenantContext();
@@ -191,6 +194,8 @@ async function maybePublishProcessingFailed(params: {
   if (!shouldProcess || !fileId || !isValidUUID(fileId)) {
     return;
   }
+
+  if (deferFileUploadEvents(fileId, () => maybePublishProcessingFailed(params))) return;
 
   const currentUser = await getCurrentUser();
   const tenantId =

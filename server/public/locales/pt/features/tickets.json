@@ -156,7 +156,12 @@
     "allResponseStatuses": "Todos os status de resposta",
     "responseStatus": "Status da resposta",
     "board": "Filtrar por quadro",
-    "searchSmart": "Pesquisar tickets e comentários… Enter para pesquisa inteligente"
+    "searchSmart": "Pesquisar tickets e comentários… Enter para pesquisa inteligente",
+    "requesterTags": "Tags do solicitante",
+    "clientTags": "Tags do cliente",
+    "tagModeAny": "Qualquer um de",
+    "tagModeNone": "Nenhum de",
+    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados."
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -295,7 +300,8 @@
     "moreActions": "Mais ações",
     "createTemplate": "Criar modelo a partir do ticket",
     "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket",
-    "printWorkTag": "Imprimir etiqueta de trabalho"
+    "printWorkTag": "Imprimir etiqueta de trabalho",
+    "retry": "Tentar novamente"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -405,7 +411,8 @@
     "pastedImagesDeleteFailed_many": "Não foi possível excluir as imagens coladas em {{count}}.",
     "pastedImagesDeleted_few": "Imagens coladas {{count}} excluídas.",
     "pastedImagesDeleted_many": "Imagens coladas {{count}} excluídas.",
-    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo."
+    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo.",
+    "loadPartyTagsFailed": "Falha ao carregar as etiquetas do solicitante e do cliente"
   },
   "conversation": {
     "comments": "Comentários",
@@ -557,6 +564,7 @@
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",
+      "allContacts": "Todos os contatos",
       "selectStatus": "Selecione o status",
       "responseState": "Estado de resposta",
       "allResponseStates": "Todos os estados de resposta",
@@ -1025,7 +1033,22 @@
     "tagCreatePartialFailure_few": "Não foi possível criar tags {{count}}",
     "tagCreatePartialFailure_many": "Não foi possível criar tags {{count}}",
     "tagCreationFailed_few": "Não foi possível criar tags {{count}}",
-    "tagCreationFailed_many": "Não foi possível criar tags {{count}}"
+    "tagCreationFailed_many": "Não foi possível criar tags {{count}}",
+    "assets": {
+      "heading": "Ativos",
+      "selectClientFirst": "Selecione um cliente para associar ativos.",
+      "unavailable": "Os ativos podem ser associados a partir do ticket depois de criado."
+    },
+    "attachments": {
+      "heading": "Anexos",
+      "add": "Adicionar ficheiros",
+      "remove": "Remover {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Adicionar observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -1742,7 +1765,9 @@
       "templateClientMismatch": "Este modelo de checklist está limitado a um cliente diferente do cliente do ticket.",
       "templateClientInvalid": "O cliente selecionado não foi encontrado.",
       "ruleClientOutsideTemplateScope": "Este modelo pertence a um cliente, por isso as suas regras não podem visar outros clientes.",
-      "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente."
+      "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente.",
+      "predicateClientOutsideScope": "O cliente {{client}} está fora do escopo deste modelo.",
+      "predicateInvalid": "Regra de checklist inválida: {{detail}}"
     }
   },
   "ticketSection": {

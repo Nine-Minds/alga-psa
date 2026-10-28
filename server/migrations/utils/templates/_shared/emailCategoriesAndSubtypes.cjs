@@ -68,6 +68,7 @@ const SUBTYPES = [
   { category: 'Authentication', name: 'portal-invitation', description: 'Invitation email for customer portal access' },
   { category: 'Authentication', name: 'team-invitation', description: 'Invitation email for internal MSP team member access' },
   { category: 'Authentication', name: 'tenant-recovery', description: 'Tenant/organization account recovery and login links' },
+  { category: 'Authentication', name: 'msp-tenant-recovery', description: 'Per-organization sign-in links for MSP users whose email is used in more than one organization' },
   { category: 'Authentication', name: 'no-account-found', description: 'Notification when no account is found for email address' },
   // Appointments
   { category: 'Appointments', name: 'appointment-request-received', description: 'Confirmation that appointment request was received' },

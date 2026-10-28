@@ -160,6 +160,10 @@
     "confirmDeletion": "Verwijderen bevestigen"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Deze gezamenlijk beheerde werkruimte is alleen-lezen. Aanmelden, lezen, exporteren en licentieherstel blijven beschikbaar.",
+      "acceptancePending": "De klantbeheerder moet gezamenlijk beheer accepteren voordat deze werkruimte kan worden gebruikt."
+    },
     "validation": {
       "required": "{{field}} is verplicht.",
       "invalidType": "{{field}} heeft het verkeerde type.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Weergave wisselen"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} meer tags: {{names}}"
   }
 }

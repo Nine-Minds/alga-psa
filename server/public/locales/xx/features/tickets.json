@@ -164,7 +164,12 @@
     "allResponseStatuses": "⟦Ȧŀŀ Řḗşƥȯƞşḗ Şŧȧŧŭşḗş⟧",
     "responseStatus": "⟦Řḗşƥȯƞşḗ Şŧȧŧŭş⟧",
     "board": "⟦Ƒīŀŧḗř ƀẏ ƀȯȧřḓ⟧",
-    "searchSmart": "⟦Şḗȧřƈħ ŧīƈķḗŧş ȧƞḓ ƈȯḿḿḗƞŧş… Ḗƞŧḗř ƒȯř şḿȧřŧ şḗȧřƈħ⟧"
+    "searchSmart": "⟦Şḗȧřƈħ ŧīƈķḗŧş ȧƞḓ ƈȯḿḿḗƞŧş… Ḗƞŧḗř ƒȯř şḿȧřŧ şḗȧřƈħ⟧",
+    "requesterTags": "⟦Řḗʠŭḗşŧḗř ŧȧɠş⟧",
+    "clientTags": "⟦Ƈŀīḗƞŧ ŧȧɠş⟧",
+    "tagModeAny": "⟦Ȧƞẏ ȯƒ⟧",
+    "tagModeNone": "⟦Ƞȯƞḗ ȯƒ⟧",
+    "droppedFromLink": "⟦Şȯḿḗ ƒīŀŧḗřş īƞ ŧħīş ŀīƞķ ȧřḗ ƞȯŧ ṽȧŀīḓ ȧƞḓ ẇḗřḗ īɠƞȯřḗḓ.⟧"
   },
   "create": {
     "title": "⟦Ƈřḗȧŧḗ Şŭƥƥȯřŧ Ŧīƈķḗŧ⟧",
@@ -303,7 +308,8 @@
     "moreActions": "⟦Ḿȯřḗ ȧƈŧīȯƞş⟧",
     "createTemplate": "⟦Ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ ƒřȯḿ ŧīƈķḗŧ⟧",
     "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧",
-    "printWorkTag": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠ⟧"
+    "printWorkTag": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠ⟧",
+    "retry": "⟦Řḗŧřẏ⟧"
   },
   "messages": {
     "noTickets": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ⟧",
@@ -413,7 +419,8 @@
     "pastedImagesDeleteFailed_many": "⟦Ƈȯŭŀḓ ƞȯŧ ḓḗŀḗŧḗ {{count}} ƥȧşŧḗḓ īḿȧɠḗş.⟧",
     "pastedImagesDeleted_few": "⟦Ḓḗŀḗŧḗḓ {{count}} ƥȧşŧḗḓ īḿȧɠḗş.⟧",
     "pastedImagesDeleted_many": "⟦Ḓḗŀḗŧḗḓ {{count}} ƥȧşŧḗḓ īḿȧɠḗş.⟧",
-    "sharedWorkspaceReadOnly": "⟦Ẏȯŭ ƈȧƞ şḗḗ ŧħīş ŧīƈķḗŧ ƀḗƈȧŭşḗ īŧ īş ȧƀȯŭŧ ȧ ḓḗṽīƈḗ īƞ ȧ ẇȯřķşƥȧƈḗ ẏȯŭ şħȧřḗ. Ȯƞŀẏ ŧħḗ ƥḗřşȯƞ ẇħȯ řȧīşḗḓ īŧ ƈȧƞ ȧḓḓ ŧȯ īŧ.⟧"
+    "sharedWorkspaceReadOnly": "⟦Ẏȯŭ ƈȧƞ şḗḗ ŧħīş ŧīƈķḗŧ ƀḗƈȧŭşḗ īŧ īş ȧƀȯŭŧ ȧ ḓḗṽīƈḗ īƞ ȧ ẇȯřķşƥȧƈḗ ẏȯŭ şħȧřḗ. Ȯƞŀẏ ŧħḗ ƥḗřşȯƞ ẇħȯ řȧīşḗḓ īŧ ƈȧƞ ȧḓḓ ŧȯ īŧ.⟧",
+    "loadPartyTagsFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗʠŭḗşŧḗř ȧƞḓ ƈŀīḗƞŧ ŧȧɠş⟧"
   },
   "conversation": {
     "comments": "⟦Ƈȯḿḿḗƞŧş⟧",
@@ -565,6 +572,7 @@
     },
     "filters": {
       "allAssignees": "⟦Ȧŀŀ Ȧşşīɠƞḗḗş⟧",
+      "allContacts": "⟦Ȧŀŀ Ƈȯƞŧȧƈŧş⟧",
       "selectStatus": "⟦Şḗŀḗƈŧ Şŧȧŧŭş⟧",
       "responseState": "⟦Řḗşƥȯƞşḗ Şŧȧŧḗ⟧",
       "allResponseStates": "⟦Ȧŀŀ Řḗşƥȯƞşḗ Şŧȧŧḗş⟧",
@@ -1033,7 +1041,22 @@
     "tagCreatePartialFailure_few": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreatePartialFailure_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreationFailed_few": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
-    "tagCreationFailed_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧"
+    "tagCreationFailed_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
+    "assets": {
+      "heading": "⟦Ȧşşḗŧş⟧",
+      "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ŀīƞķ ȧşşḗŧş.⟧",
+      "unavailable": "⟦Ȧşşḗŧş ƈȧƞ ƀḗ ŀīƞķḗḓ ƒřȯḿ ŧħḗ ŧīƈķḗŧ ȧƒŧḗř īŧ īş ƈřḗȧŧḗḓ.⟧"
+    },
+    "attachments": {
+      "heading": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
+      "add": "⟦Ȧḓḓ ƒīŀḗş⟧",
+      "remove": "⟦Řḗḿȯṽḗ {{name}}⟧"
+    },
+    "watchers": {
+      "heading": "⟦Ẇȧŧƈħḗřş⟧",
+      "placeholder": "⟦Ȧḓḓ ẇȧŧƈħḗřş...⟧"
+    },
+    "attachmentsPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ, ƀŭŧ ŧħḗşḗ ƒīŀḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧŧŧȧƈħḗḓ: {{files}}. Ȧḓḓ ŧħḗḿ ƒřȯḿ ŧħḗ ŧīƈķḗŧ.⟧"
   },
   "itil": {
     "calculatedPriority": "⟦Ƥřīȯřīŧẏ (Ƈȧŀƈŭŀȧŧḗḓ)⟧",
@@ -1750,7 +1773,9 @@
       "templateClientMismatch": "⟦Ŧħīş ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗ īş ŀīḿīŧḗḓ ŧȯ ȧ ḓīƒƒḗřḗƞŧ ƈŀīḗƞŧ ŧħȧƞ ŧħīş ŧīƈķḗŧ'ş ƈŀīḗƞŧ.⟧",
       "templateClientInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ẇȧş ƞȯŧ ƒȯŭƞḓ.⟧",
       "ruleClientOutsideTemplateScope": "⟦Ŧħīş ŧḗḿƥŀȧŧḗ ƀḗŀȯƞɠş ŧȯ ȯƞḗ ƈŀīḗƞŧ, şȯ īŧş řŭŀḗş ƈȧƞƞȯŧ ŧȧřɠḗŧ ȯŧħḗř ƈŀīḗƞŧş.⟧",
-      "templateRulesTargetOtherClients": "⟦Şȯḿḗ ȯƒ ŧħīş ŧḗḿƥŀȧŧḗ'ş ȧŭŧȯ-ȧƥƥŀẏ řŭŀḗş ŧȧřɠḗŧ ȯŧħḗř ƈŀīḗƞŧş. Řḗḿȯṽḗ ŧħȯşḗ ƈŀīḗƞŧş ƒřȯḿ ŧħḗ řŭŀḗş ƀḗƒȯřḗ ȧşşīɠƞīƞɠ ŧħḗ ŧḗḿƥŀȧŧḗ ŧȯ ȯƞḗ ƈŀīḗƞŧ.⟧"
+      "templateRulesTargetOtherClients": "⟦Şȯḿḗ ȯƒ ŧħīş ŧḗḿƥŀȧŧḗ'ş ȧŭŧȯ-ȧƥƥŀẏ řŭŀḗş ŧȧřɠḗŧ ȯŧħḗř ƈŀīḗƞŧş. Řḗḿȯṽḗ ŧħȯşḗ ƈŀīḗƞŧş ƒřȯḿ ŧħḗ řŭŀḗş ƀḗƒȯřḗ ȧşşīɠƞīƞɠ ŧħḗ ŧḗḿƥŀȧŧḗ ŧȯ ȯƞḗ ƈŀīḗƞŧ.⟧",
+      "predicateClientOutsideScope": "⟦Ƈŀīḗƞŧ {{client}} īş ȯŭŧşīḓḗ ŧħīş ŧḗḿƥŀȧŧḗ’ş ȯẇƞḗřşħīƥ.⟧",
+      "predicateInvalid": "⟦Īƞṽȧŀīḓ ƈħḗƈķŀīşŧ řŭŀḗ: {{detail}}⟧"
     }
   },
   "ticketSection": {

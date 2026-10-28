@@ -164,7 +164,12 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored."
   },
   "create": {
     "title": "Create Support Ticket",
@@ -303,7 +308,8 @@
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
-    "printWorkTag": "Print work tag"
+    "printWorkTag": "Print work tag",
+    "retry": "Retry"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -413,7 +419,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",
@@ -565,6 +572,7 @@
     },
     "filters": {
       "allAssignees": "All Assignees",
+      "allContacts": "All Contacts",
       "selectStatus": "Select Status",
       "responseState": "Response State",
       "allResponseStates": "All Response States",
@@ -1033,7 +1041,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
-    "tagCreationFailed_many": "{{count}} tags could not be created"
+    "tagCreationFailed_many": "{{count}} tags could not be created",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Select a client to link assets.",
+      "unavailable": "Assets can be linked from the ticket after it is created."
+    },
+    "attachments": {
+      "heading": "Attachments",
+      "add": "Add files",
+      "remove": "Remove {{name}}"
+    },
+    "watchers": {
+      "heading": "Watchers",
+      "placeholder": "Add watchers..."
+    },
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1750,7 +1773,9 @@
       "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
       "templateClientInvalid": "The selected client was not found.",
       "ruleClientOutsideTemplateScope": "This template belongs to one client, so its rules cannot target other clients.",
-      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client."
+      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client.",
+      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
+      "predicateInvalid": "Invalid checklist rule: {{detail}}"
     }
   },
   "ticketSection": {

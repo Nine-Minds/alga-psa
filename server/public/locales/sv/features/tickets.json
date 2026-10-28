@@ -164,7 +164,12 @@
     "allResponseStatuses": "Alla svarsstatusar",
     "responseStatus": "Svarsstatus",
     "board": "Filtrera efter tavla",
-    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning"
+    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning",
+    "requesterTags": "Beställarens taggar",
+    "clientTags": "Kundtaggar",
+    "tagModeAny": "Någon av",
+    "tagModeNone": "Ingen av",
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
   },
   "create": {
     "title": "Skapa supportärende",
@@ -303,7 +308,8 @@
     "moreActions": "Fler åtgärder",
     "createTemplate": "Skapa mall från ärende",
     "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
-    "printWorkTag": "Skriv ut arbetsetikett"
+    "printWorkTag": "Skriv ut arbetsetikett",
+    "retry": "Försök igen"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -413,7 +419,8 @@
     "pastedImagesDeleteFailed_many": "Det gick inte att radera {{count}} inklistrade bilder.",
     "pastedImagesDeleted_few": "{{count}} inklistrade bilder har raderats.",
     "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats.",
-    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något.",
+    "loadPartyTagsFailed": "Det gick inte att läsa in beställarens och kundens taggar"
   },
   "conversation": {
     "comments": "Kommentarer",
@@ -565,6 +572,7 @@
     },
     "filters": {
       "allAssignees": "Alla ansvariga",
+      "allContacts": "Alla kontakter",
       "selectStatus": "Välj status",
       "responseState": "Svarsstatus",
       "allResponseStates": "Alla svarsstatusar",
@@ -1033,7 +1041,22 @@
     "tagCreatePartialFailure_few": "{{count}} taggar kunde inte skapas",
     "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
-    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas"
+    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas",
+    "assets": {
+      "heading": "Tillgångar",
+      "selectClientFirst": "Välj en kund för att länka tillgångar.",
+      "unavailable": "Tillgångar kan länkas från ärendet när det har skapats."
+    },
+    "attachments": {
+      "heading": "Bilagor",
+      "add": "Lägg till filer",
+      "remove": "Ta bort {{name}}"
+    },
+    "watchers": {
+      "heading": "Bevakare",
+      "placeholder": "Lägg till bevakare..."
+    },
+    "attachmentsPartialFailure": "Ärendet skapades, men de här filerna kunde inte bifogas: {{files}}. Lägg till dem från ärendet."
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -1750,7 +1773,9 @@
       "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
       "templateClientInvalid": "Den valda kunden hittades inte.",
       "ruleClientOutsideTemplateScope": "Den här mallen tillhör en kund, så dess regler kan inte rikta sig mot andra kunder.",
-      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund."
+      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
+      "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
+      "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
     }
   },
   "ticketSection": {

@@ -2278,7 +2278,7 @@ components:
           description: Optional maintenance instructions.
         maintenance_type:
           type: string
-          enum: &a1
+          enum:
             - preventive
             - corrective
             - inspection
@@ -2287,15 +2287,16 @@ components:
           description: Maintenance type stored by the UI and database.
         frequency:
           type: string
-          enum: &a2
+          enum:
             - daily
             - weekly
             - monthly
             - quarterly
             - yearly
             - custom
-          description: Recurrence frequency. Does not change the explicit next_maintenance
-            timestamp.
+          description: Recurrence frequency, multiplied by frequency_interval. Does not
+            change the explicit next_maintenance timestamp. `custom` takes its
+            rule from schedule_config.recurrence.
         frequency_interval:
           type: integer
           minimum: 1
@@ -2305,15 +2306,59 @@ components:
           type: string
           format: date-time
           description: Explicit next due timestamp, used unchanged for the initial open
-            occurrence.
+            occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix
+            (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such
+            as -04:00 are rejected.
         is_active:
           type: boolean
           description: Whether the schedule is active.
         schedule_config:
           type: object
+          properties:
+            recurrence:
+              type: object
+              properties:
+                unit:
+                  type: string
+                  enum:
+                    - days
+                    - weeks
+                    - months
+                    - years
+                  description: Unit multiplied by frequency_interval.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                  minItems: 1
+                  description: Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the
+                    next listed weekday in the current week (weeks start on
+                    Sunday); after the last one it jumps frequency_interval
+                    weeks to the first listed weekday.
+                days_of_month:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 31
+                  minItems: 1
+                  description: Months only. The next due date is the next listed day in the
+                    current month; after the last one it jumps
+                    frequency_interval months to the first listed day. Days are
+                    clamped to the month length (31 in February becomes 28/29).
+              required:
+                - unit
+              additionalProperties: false
+              description: 'Required when frequency is `custom`; ignored for the fixed
+                frequencies. Example: frequency_interval 2 with { "unit":
+                "weeks", "weekdays": [1, 4] } is every other week on Monday and
+                Thursday.'
           additionalProperties: {}
-          description: Scheduling configuration; use {} when no custom configuration is
-            needed.
+          description: Scheduling configuration. Use {} for the fixed frequencies.
+            `recurrence` is required for `custom`; other keys such as
+            `checklist` are stored as-is.
       additionalProperties: false
     AssetMaintenanceScheduleResource:
       type: object
@@ -2441,13 +2486,25 @@ components:
           description: Optional maintenance instructions.
         maintenance_type:
           type: string
-          enum: *a1
+          enum:
+            - preventive
+            - corrective
+            - inspection
+            - calibration
+            - replacement
           description: Maintenance type stored by the UI and database.
         frequency:
           type: string
-          enum: *a2
-          description: Recurrence frequency. Does not change the explicit next_maintenance
-            timestamp.
+          enum:
+            - daily
+            - weekly
+            - monthly
+            - quarterly
+            - yearly
+            - custom
+          description: Recurrence frequency, multiplied by frequency_interval. Does not
+            change the explicit next_maintenance timestamp. `custom` takes its
+            rule from schedule_config.recurrence.
         frequency_interval:
           type: integer
           minimum: 1
@@ -2457,16 +2514,60 @@ components:
           type: string
           format: date-time
           description: Explicit next due timestamp, used unchanged for the initial open
-            occurrence.
+            occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix
+            (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such
+            as -04:00 are rejected.
         is_active:
           type: boolean
           default: true
           description: Whether the schedule is active; defaults to true.
         schedule_config:
           type: object
+          properties:
+            recurrence:
+              type: object
+              properties:
+                unit:
+                  type: string
+                  enum:
+                    - days
+                    - weeks
+                    - months
+                    - years
+                  description: Unit multiplied by frequency_interval.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                  minItems: 1
+                  description: Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the
+                    next listed weekday in the current week (weeks start on
+                    Sunday); after the last one it jumps frequency_interval
+                    weeks to the first listed weekday.
+                days_of_month:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 31
+                  minItems: 1
+                  description: Months only. The next due date is the next listed day in the
+                    current month; after the last one it jumps
+                    frequency_interval months to the first listed day. Days are
+                    clamped to the month length (31 in February becomes 28/29).
+              required:
+                - unit
+              additionalProperties: false
+              description: 'Required when frequency is `custom`; ignored for the fixed
+                frequencies. Example: frequency_interval 2 with { "unit":
+                "weeks", "weekdays": [1, 4] } is every other week on Monday and
+                Thursday.'
           additionalProperties: {}
-          description: Scheduling configuration; use {} when no custom configuration is
-            needed.
+          description: Scheduling configuration. Use {} for the fixed frequencies.
+            `recurrence` is required for `custom`; other keys such as
+            `checklist` are stored as-is.
       required:
         - schedule_name
         - maintenance_type
@@ -13019,11 +13120,21 @@ components:
         - client_location.updated
         - client_location.deactivated
         - client_location.deleted
+        - quote.sent
+        - quote.viewed
+        - quote.approved
+        - quote.accepted
+        - quote.rejected
+        - quote.expired
+        - quote.converted
+        - quote.conversion_reverted
+        - quote.superseded
+        - quote.cancelled
       description: Public webhook event name from the single event registry (ticket.*,
-        project.*, client.*, contact.*, client_location.*). Webhooks created
-        earlier may still store retired names (time.entry.*, invoice.*, asset.*,
-        system.*, workflow.*, custom.event); those are returned as stored, never
-        deliver, and are rejected when newly added.
+        project.*, client.*, contact.*, client_location.*, quote.*). Webhooks
+        created earlier may still store retired names (time.entry.*, invoice.*,
+        asset.*, system.*, workflow.*, custom.event); those are returned as
+        stored, never deliver, and are rejected when newly added.
     CreateWebhookBodyV1:
       type: object
       properties:
@@ -13177,6 +13288,45 @@ components:
                 enum:
                   - client_id
                   - changed_fields
+            quote:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - quote_number
+                  - version
+                  - contact_id
+                  - opportunity_id
+                  - previous_status
+                  - new_status
+                  - currency_code
+                  - total_amount
+                  - performed_by_type
+                  - performed_by_id
+                  - sent_at
+                  - viewed_at
+                  - approved_at
+                  - accepted_at
+                  - rejected_at
+                  - expired_at
+                  - converted_at
+                  - conversion_reverted_at
+                  - superseded_at
+                  - cancelled_at
+                  - accepted_by_name
+                  - accepted_on_behalf
+                  - selected_optional_item_ids
+                  - rejection_reason
+                  - conversion_targets
+                  - contract_id
+                  - invoice_id
+                  - sales_order_id
+                  - released_invoice_id
+                  - superseded_by_quote_id
+                  - next_version
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13197,7 +13347,15 @@ components:
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
             due_date, priority_id, priority_name, tags; client: changed_fields;
             contact: client_id, changed_fields; client_location: client_id,
-            changed_fields."
+            changed_fields; quote: client_id, quote_number, version, contact_id,
+            opportunity_id, previous_status, new_status, currency_code,
+            total_amount, performed_by_type, performed_by_id, sent_at,
+            viewed_at, approved_at, accepted_at, rejected_at, expired_at,
+            converted_at, conversion_reverted_at, superseded_at, cancelled_at,
+            accepted_by_name, accepted_on_behalf, selected_optional_item_ids,
+            rejection_reason, conversion_targets, contract_id, invoice_id,
+            sales_order_id, released_invoice_id, superseded_by_quote_id,
+            next_version."
         payload_transformation:
           type: object
           additionalProperties: {}
@@ -13513,6 +13671,45 @@ components:
                 enum:
                   - client_id
                   - changed_fields
+            quote:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - quote_number
+                  - version
+                  - contact_id
+                  - opportunity_id
+                  - previous_status
+                  - new_status
+                  - currency_code
+                  - total_amount
+                  - performed_by_type
+                  - performed_by_id
+                  - sent_at
+                  - viewed_at
+                  - approved_at
+                  - accepted_at
+                  - rejected_at
+                  - expired_at
+                  - converted_at
+                  - conversion_reverted_at
+                  - superseded_at
+                  - cancelled_at
+                  - accepted_by_name
+                  - accepted_on_behalf
+                  - selected_optional_item_ids
+                  - rejection_reason
+                  - conversion_targets
+                  - contract_id
+                  - invoice_id
+                  - sales_order_id
+                  - released_invoice_id
+                  - superseded_by_quote_id
+                  - next_version
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13533,7 +13730,15 @@ components:
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
             due_date, priority_id, priority_name, tags; client: changed_fields;
             contact: client_id, changed_fields; client_location: client_id,
-            changed_fields."
+            changed_fields; quote: client_id, quote_number, version, contact_id,
+            opportunity_id, previous_status, new_status, currency_code,
+            total_amount, performed_by_type, performed_by_id, sent_at,
+            viewed_at, approved_at, accepted_at, rejected_at, expired_at,
+            converted_at, conversion_reverted_at, superseded_at, cancelled_at,
+            accepted_by_name, accepted_on_behalf, selected_optional_item_ids,
+            rejection_reason, conversion_targets, contract_id, invoice_id,
+            sales_order_id, released_invoice_id, superseded_by_quote_id,
+            next_version."
         payload_transformation:
           type:
             - object
@@ -16601,6 +16806,16 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+      description: Ticket fields to create. Notification suppression applies only to
+        this operation.
     WorkV1TicketUpdateBody:
       type: object
       properties:
@@ -27329,7 +27544,10 @@ paths:
       summary: Update asset maintenance schedule
       description: "Updates existing maintenance schedule columns for the
         authenticated tenant. All fields are optional; unknown and legacy fields
-        are rejected. next_maintenance is explicit: changing frequency alone
+        are rejected. Response-only fields (schedule_id, asset_id, tenant,
+        created_by, created_by_name, created_at, updated_at, last_maintenance,
+        archived_at) are accepted and ignored so a row read from GET can be sent
+        back as-is. next_maintenance is explicit: changing frequency alone
         preserves the current due date. Due-date changes synchronize the open
         occurrence and unsent notifications. Disabling cancels the open
         occurrence; re-enabling an unarchived schedule opens one. All writes are
@@ -27360,13 +27578,15 @@ paths:
           name: scheduleId
           in: path
       requestBody:
-        description: Partial maintenance schedule update data.
+        description: Partial maintenance schedule update data. Response-only fields are
+          ignored; legacy and unknown fields return 400.
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/AssetMaintenanceScheduleUpdateRequest"
-            description: Partial maintenance schedule update data.
+            description: Partial maintenance schedule update data. Response-only fields are
+              ignored; legacy and unknown fields return 400.
       responses:
         "200":
           description: Maintenance schedule updated successfully.
@@ -56796,7 +57016,7 @@ paths:
       summary: List available webhook events
       description: Returns the supported webhook event types from
         webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*,
-        client_location.*).
+        client_location.*, quote.*).
       tags:
         - Webhooks
       security:
@@ -64549,7 +64769,10 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create ticket
-      description: Creates ticket via ApiTicketController.create().
+      description: Creates ticket via ApiTicketController.create(). Optional
+        suppression flags make this operation silent for customer notifications
+        or for all human notifications while preserving audit, workflow, and
+        webhook records.
       tags:
         - Work Management v1
       security:
@@ -92659,10 +92882,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92733,10 +92957,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92806,10 +93031,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92879,10 +93105,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92953,10 +93180,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -93028,10 +93256,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -93103,10 +93332,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
