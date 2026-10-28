@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,6 +17,9 @@ import {
 import { getServiceRequestDefinitionEditorData } from '../../lib/service-requests/definitionEditor';
 import { validateServiceRequestDefinitionForPublish } from '../../lib/service-requests/definitionValidation';
 import { publishServiceRequestDefinition } from '../../lib/service-requests/definitionPublishing';
+
+const require = createRequire(import.meta.url);
+const audienceMigration = require('../../../migrations/20261028090000_add_service_request_audience_scoping.cjs');
 
 interface Fixture {
   tenant: string;
@@ -344,6 +348,15 @@ describe('service request audience scoping', () => {
     const f = await createFixture(); const other = await createFixture();
     const requester = await loadRequesterRecord(db, f.tenant, { requesterUserId: other.userA, clientId: f.clientA, contactId: f.contactA1 });
     expect(requester.user).toBeNull();
+  });
+  it('refuses to replace a revision-1 schema without explicit cleanup', async () => {
+    const trx = await db.transaction();
+    try {
+      await trx.schema.alterTable('service_request_definitions', (table) => table.text('audience_mode'));
+      await expect(audienceMigration.up(trx)).rejects.toThrow('Revision-1 service request audience schema exists');
+    } finally {
+      await trx.rollback();
+    }
   });
 
 });
