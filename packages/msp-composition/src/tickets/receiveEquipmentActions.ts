@@ -13,6 +13,7 @@ import {
   toCustodyResult,
   type CustodyActionResult,
 } from "@alga-psa/assets/lib/custody/actionResult";
+import { custodyPhotosWithinLimit } from '@alga-psa/assets/lib/custody/photoLimits';
 import { CustodyError } from "@alga-psa/assets/lib/custody/errors";
 import {
   permissionError,
@@ -96,8 +97,8 @@ export const receiveEquipment = withAuth(
         if (files.length && user.user_type === 'client') {
           throw new CustodyError('permission_denied', 'Only internal users can upload custody photos.');
         }
-        if (files.length > 20 || files.some((file) => typeof file === 'string' || !file.type.startsWith('image/'))) {
-          throw new CustodyError('permission_denied', 'Choose up to 20 image files.');
+        if (files.some((file) => typeof file === 'string' || !file.type.startsWith('image/')) || !custodyPhotosWithinLimit(files.filter((file): file is File => typeof file !== 'string'))) {
+          throw new CustodyError('permission_denied', 'Choose up to 20 image files totalling no more than 10 MB.');
         }
         try {
           await authorizeTicketRecordAccess({
@@ -114,7 +115,7 @@ export const receiveEquipment = withAuth(
           const form = new FormData();
           form.append('file', file);
           const uploaded = await uploadDocument(form, { userId: '', ticketId: parsed.ticket_id, isClientVisible: false });
-          if ('permissionError' in uploaded) throw new CustodyError('permission_denied', uploaded.permissionError);
+          if ('permissionError' in uploaded) throw new CustodyError('permission_denied', String(uploaded.permissionError));
           if (!uploaded.success) throw new CustodyError('permission_denied', uploaded.error);
           documentIds.push(uploaded.document.document_id);
         }

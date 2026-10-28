@@ -17,11 +17,16 @@
   {
     "id": "T004",
     "description": "Backfill justified associations twice and verify idempotence",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T005",
     "description": "Other custody actions upload, persist, display and clean up photos on failure",
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "Verify aggregate photo limits on the picker and server action, including request overhead",
     "implemented": false
   }
 ]

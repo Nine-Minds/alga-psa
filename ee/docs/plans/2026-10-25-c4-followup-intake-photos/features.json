@@ -28,5 +28,10 @@
     "id": "F006",
     "description": "Enforce asset and document read authorization and client-hidden visibility",
     "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Enforce and explain the aggregate upload size limit on client and server",
+    "implemented": true
   }
 ]

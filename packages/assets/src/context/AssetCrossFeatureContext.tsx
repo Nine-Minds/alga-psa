@@ -56,6 +56,7 @@ export interface AssetRmmCallbacks {
 }
 
 export interface AssetCrossFeatureCallbacks {
+  renderCustodyPhotos?: (documentIds: string[]) => ReactNode;
   renderQuickAddTicket: (props: AssetQuickAddTicketRenderProps) => ReactNode;
   openTicketDetailsDrawer: (props: AssetTicketDetailsRenderProps) => Promise<void>;
   createTicketFromAsset: (data: CreateTicketFromAssetData) => Promise<ITicket | ActionMessageError | ActionPermissionError>;

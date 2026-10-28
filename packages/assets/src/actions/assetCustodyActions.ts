@@ -2,8 +2,7 @@
 
 import { z } from 'zod';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
+import { createTenantKnex } from '@alga-psa/db';
 import type {
   IAssetCustody,
   IAssetCustodyDetail,
@@ -150,21 +149,7 @@ export const listCustodyEvents = withAuth(
   async (user, { tenant }, assetId: string): Promise<CustodyActionResult<IAssetCustodyEventDetail[]> | Denied> => {
     const denied = await denyUnless(user, 'read');
     if (denied) return denied;
-    return toCustodyResult(async () => {
-      const knex = await ctx();
-      const events = await listCustodyEventsService(knex, tenant, user as any, idSchema.parse(assetId));
-      if (!await hasPermission(user, 'document', 'read')) {
-        return events.map(event => ({ ...event, document_ids: [] }));
-      }
-      const ids = [...new Set(events.flatMap(event => event.document_ids))];
-      if (!ids.length) return events;
-      const allowed = await knex.transaction(async trx => {
-        const docs = await tenantDb(trx, tenant).table('documents').whereIn('document_id', ids).select('*');
-        const readable = await authorizeAndRedactDocuments(trx, tenant, user, docs);
-        return new Set(readable.map(doc => doc.document_id));
-      });
-      return events.map(event => ({ ...event, document_ids: event.document_ids.filter(id => allowed.has(id)) }));
-    });
+    return toCustodyResult(async () => listCustodyEventsService(await ctx(), tenant, user as any, idSchema.parse(assetId)));
   }
 );
 

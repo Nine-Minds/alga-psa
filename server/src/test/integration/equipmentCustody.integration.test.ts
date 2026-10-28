@@ -250,11 +250,59 @@ describe('equipment custody (integration)', () => {
     expect(existing.event.document_ids).toEqual(ids);
     expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
 
+    const foreign = await seedFixture();
+    const foreignId = randomUUID();
+    await table(foreign.tenantId, 'documents').insert({ tenant: foreign.tenantId, document_id: foreignId, document_name: 'other.jpg', user_id: foreign.userId, created_by: foreign.userId, is_client_visible: false });
+    await table(fx.tenantId, 'asset_custody_events').insert({
+      tenant: fx.tenantId, asset_id: existingId, custody_id: existing.custody.custody_id,
+      event_type: 'moved', occurred_at: new Date(), recorded_at: new Date(), actor_user_id: fx.userId,
+      document_ids: JSON.stringify([ids[0], randomUUID(), foreignId]),
+    });
     await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId }).del();
     const migration = await import('../../../migrations/20261028051434_backfill_custody_photo_asset_associations.cjs');
     await migration.up(db);
     await migration.up(db);
-    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
+    expect((await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).map((row: any) => row.document_id).sort()).toEqual([...ids].sort());
+  });
+
+  it('filters custody documents on the shared read path and refuses unavailable IDs on writes', async () => {
+    const fx = await seedFixture();
+    const id = randomUUID();
+    await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'condition.jpg', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
+    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
+    const received = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, intake(fx, { document_ids: [id] }) as any));
+    const { listCustodyEventsService, recordCustodyEventService } = await import('@alga-psa/assets/lib/custody/service');
+    const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
+    const { hasPermission } = await import('@alga-psa/auth');
+    const principal = { user_id: fx.userId, user_type: 'internal', roles: [] } as const;
+    try {
+      const visible = await listCustodyEventsService(db, fx.tenantId, principal, received.asset.asset_id);
+      expect(visible[0].document_ids).toEqual([id]);
+      expect((await getAssetDocuments(received.asset.asset_id) as any[]).map(doc => doc.document_id)).toEqual([id]);
+      vi.mocked(hasPermission).mockImplementation(async (_user, resource) => resource !== 'document');
+      const hidden = await listCustodyEventsService(db, fx.tenantId, principal, received.asset.asset_id);
+      expect(hidden[0].document_ids).toEqual([]);
+      expect(await getAssetDocuments(received.asset.asset_id)).toHaveProperty('permissionError');
+      await expect(recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [id],
+      } as any)).rejects.toThrow('documents are unavailable');
+      vi.mocked(hasPermission).mockResolvedValue(true);
+      denied.assetIds.add(received.asset.asset_id);
+      expect(await getAssetDocuments(received.asset.asset_id)).toHaveProperty('permissionError');
+      denied.assetIds.delete(received.asset.asset_id);
+      await expect(recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [randomUUID()],
+      } as any)).rejects.toThrow('documents are unavailable');
+      expect(await table(fx.tenantId, 'asset_custody_events').where({ asset_id: received.asset.asset_id })).toHaveLength(1);
+      const shipped = await recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [id],
+      } as any);
+      expect(shipped.event.document_ids).toEqual([id]);
+      expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: received.asset.asset_id, document_id: id })).toHaveLength(1);
+    } finally {
+      denied.assetIds.delete(received.asset.asset_id);
+      vi.mocked(hasPermission).mockResolvedValue(true);
+    }
   });
 
   it('never writes stock, money or time across both intake modes and every step (hard invariant)', async () => {

@@ -142,7 +142,10 @@ export const getAssetDocuments = withAuth(async (
                 'da.entity_type': 'asset'
             })
             .orderBy('documents.entered_at', 'desc');
-            return authorizeAndRedactDocuments(trx, tenant, user, documents);
+            const visible = user.user_type === 'client'
+                ? documents.filter((document: IDocument) => document.is_client_visible === true)
+                : documents;
+            return authorizeAndRedactDocuments(trx, tenant, user, visible);
         });
     } catch (error) {
         console.error('Error getting asset documents:', error);
