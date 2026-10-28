@@ -336,7 +336,7 @@ export default function ProjectMaterialsDrawer({
         } else if (conflict.reason === 'held') {
           setAddError(materialsT(
             'stockHeld',
-            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can\'t be used here.',
+            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can\'t be used here.',
             { free: Math.max(0, conflict.free), held: conflict.held },
           ));
         } else {
@@ -764,6 +764,15 @@ export default function ProjectMaterialsDrawer({
                         {material.description && (
                           <div className="text-xs text-gray-500">{material.description}</div>
                         )}
+                        {material.from_staging_line_id && (
+                          <Badge
+                            variant="info"
+                            className="mt-1"
+                            {...withDataAutomationId({ id: `${id}-from-staging-${material.project_material_id}` })}
+                          >
+                            {materialsT('fromStaging', 'From staging')}
+                          </Badge>
+                        )}
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
                       <td className="py-2 text-right">
@@ -1003,10 +1012,10 @@ export default function ProjectMaterialsDrawer({
           id={`${id}-reserved-stock-confirm`}
           isOpen={reservedConflict !== null}
           onClose={() => setReservedConflict(null)}
-          title={materialsT('reservedStockTitle', 'Stock is reserved for a sales order')}
+          title={materialsT('reservedStockTitle', 'Stock is reserved for a sales order or project')}
           message={reservedConflict ? materialsT(
             'reservedStockMessage',
-            'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.',
+            'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.',
             { free: Math.max(0, reservedConflict.free), reserved: reservedConflict.reserved, requested: reservedConflict.requested },
           ) : ''}
           confirmLabel={materialsT('reservedStockConfirm', 'Add anyway')}

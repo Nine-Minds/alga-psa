@@ -18,7 +18,7 @@ import {
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
-import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
+import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -58,7 +58,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
@@ -275,13 +275,9 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
-/** Overtime entries bill as two lines; the overtime segment says so. */
+/** Overtime segments and late (closed-period) time say so; see describeTimeCharge. */
 function timeChargeDescription(charge: IBillingCharge): string {
-  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
-    ? `${charge.serviceName} (overtime)`
-    : isTimeBasedCharge(charge) && charge.overPrepaidBlock
-      ? overPrepaidBlockDescription(charge.serviceName)
-      : charge.serviceName;
+  return isTimeBasedCharge(charge) ? describeTimeCharge(charge) : charge.serviceName;
 }
 
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {

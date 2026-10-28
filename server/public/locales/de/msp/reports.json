@@ -320,7 +320,8 @@
       "yes": "Ja",
       "no": "Nein",
       "expired": "Abgelaufen",
-      "voided": "Storniert"
+      "voided": "Storniert",
+      "all": "Alle Status"
     },
     "profitability": {
       "formats": {

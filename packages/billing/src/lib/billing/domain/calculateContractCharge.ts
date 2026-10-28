@@ -203,12 +203,17 @@ export function normalizeResolvedContractCharge(input: {
           threshold: charge.inputs.plan.overtime_threshold,
           rate: charge.inputs.plan.overtime_rate,
         },
+        lineTerms: {
+          minimumBillableTime: charge.inputs.plan.minimum_billable_time,
+          roundUpToNearest: charge.inputs.plan.round_up_to_nearest,
+        },
         serviceConfigurations: Array.from(
           charge.inputs.serviceConfigMap,
           ([serviceId, value]) => ({
             serviceId,
             configurationId: value.config.config_id,
             hourlyRate: value.config.hourly_rate,
+            customRate: value.config.custom_rate,
             minimumBillableTime: value.config.minimum_billable_time,
             roundUpToNearest: value.config.round_up_to_nearest,
             userTypeRates: Array.from(
@@ -240,6 +245,7 @@ export function normalizeResolvedContractCharge(input: {
           phaseRateOverride: charge.inputs.resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id),
           projectChargeConfig: entry.project_id ? charge.inputs.getProjectChargeConfig?.(entry.project_id) : undefined,
           billingProfileId: entry.work_item_billing_profile_id,
+          ...(entry.late_for_service_period ? { latePeriod: entry.late_for_service_period } : {}),
         })),
       };
       break;
@@ -468,6 +474,8 @@ export function calculateNormalizedContractCharge(
             enable_overtime: facts.overtime.enabled,
             overtime_threshold: facts.overtime.threshold,
             overtime_rate: facts.overtime.rate,
+            minimum_billable_time: facts.lineTerms?.minimumBillableTime,
+            round_up_to_nearest: facts.lineTerms?.roundUpToNearest,
           },
           serviceConfigMap: new Map(
             facts.serviceConfigurations.map((service) => [
@@ -476,6 +484,7 @@ export function calculateNormalizedContractCharge(
                 config: {
                   config_id: service.configurationId,
                   hourly_rate: service.hourlyRate,
+                  custom_rate: service.customRate,
                   minimum_billable_time: service.minimumBillableTime,
                   round_up_to_nearest: service.roundUpToNearest,
                 },
@@ -509,6 +518,7 @@ export function calculateNormalizedContractCharge(
             project_id: entry.projectId,
             project_phase_id: entry.projectPhaseId,
             work_item_billing_profile_id: entry.billingProfileId,
+            ...(entry.latePeriod ? { late_for_service_period: entry.latePeriod } : {}),
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,

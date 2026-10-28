@@ -1713,7 +1713,11 @@
       "submit": "Opnieuw op voorraad nemen"
     },
     "printLabel": "Label afdrukken",
-    "printWithTemplate": "Afdrukken met {{code}}"
+    "printWithTemplate": "Afdrukken met {{code}}",
+    "claimant": {
+      "project": "Bij project {{number}}",
+      "salesOrder": "Verkooporder {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Regel toevoegen",

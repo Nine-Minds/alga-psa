@@ -152,6 +152,10 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // alga-2026-0002883 (CM T0-2): late approved hourly time loader reads persisted service-period fields.
+  'packages/billing/src/lib/billing/lateHourlyTime.ts',
+  // alga-2026-0002883 (CM T0-2): late approved hourly time integration test seeds persisted service-period fields.
+  'server/src/test/integration/billing/lateApprovedHourlyTime.integration.test.ts',
   // alga-2026-0002714: products-contract recurring-total unit test builds contract-line fixtures with service-period fields.
   'packages/billing/src/lib/billing/compute/recurringMemberRate.test.ts',
   // alga-2026-0002714: products-contract totals integration test seeds and reads persisted service-period fields.
@@ -288,8 +292,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
   // The contract wizard's first-invoice notice derives the first service
   // period a new contract will bill; it landed after the pass-0 snapshot.
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.ts',
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.test.ts',
+  'packages/billing/src/lib/firstInvoiceDate.ts',
+  'packages/billing/src/lib/firstInvoiceDate.test.ts',
+  // The notice renders the first service period resolved by firstInvoiceDate.
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FirstInvoiceNotice.tsx',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.

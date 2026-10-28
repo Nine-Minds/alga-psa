@@ -188,7 +188,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         });
   };
 
-  // LEVERAGE: pattern ymd-local-format — parse a YYYY-MM-DD string as a local date, then format it in the user's locale (also in FirstInvoiceNotice)
+  // LEVERAGE: pattern ymd-local-format — same parse-local-YMD-then-format as useFormatYmd (@alga-psa/ui/lib/i18n/useFormatYmd); not swapped in here because this one falls back to new Date(str) and N/A
   const parseLocalYMD = (ymd: string): Date | null => {
     try {
       const d = parse(ymd, 'yyyy-MM-dd', new Date());

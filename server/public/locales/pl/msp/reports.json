@@ -320,7 +320,8 @@
       "yes": "Tak",
       "no": "Nie",
       "expired": "Wygasły",
-      "voided": "Unieważniony"
+      "voided": "Unieważniony",
+      "all": "Wszystkie statusy"
     },
     "profitability": {
       "formats": {

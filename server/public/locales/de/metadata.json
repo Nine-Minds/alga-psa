@@ -203,7 +203,10 @@
             "title": "Projektaufgabe"
           }
         },
-        "fallbackTitle": "Projektdetails"
+        "fallbackTitle": "Projektdetails",
+        "staging": {
+          "title": "Projektbereitstellung"
+        }
       },
       "title": "Projekte",
       "templates": {
@@ -288,6 +291,9 @@
       },
       "templates": {
         "title": "Ticket-Vorlagen"
+      },
+      "cannedResponses": {
+        "title": "Textbausteine"
       }
     },
     "userActivities": {
@@ -365,7 +371,10 @@
         },
         "fallbackTitle": "Asset-Details"
       },
-      "title": "Asset-Inventar"
+      "title": "Asset-Inventar",
+      "custody": {
+        "title": "Equipment in Verwahrung"
+      }
     },
     "chat": {
       "title": "Chat"

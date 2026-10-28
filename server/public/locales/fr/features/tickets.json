@@ -84,6 +84,7 @@
     "button": "Filtres",
     "unassigned": "Non attribué",
     "category": "Filtrer par catégorie",
+    "removeFilterChip": "Supprimer le filtre : {{label}}",
     "assignee": "Destinataire",
     "allAssignees": "Tous les destinataires",
     "responseState": "État de réponse",
@@ -1412,10 +1413,10 @@
     "availableBadge": "Disponible : {{available}}",
     "availableByLocation": "Stock libre par emplacement",
     "freeOfOnHand": "{{free}} libres sur {{onHand}}",
-    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients et ne peuvent pas être utilisés ici.",
+    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients ou des projets et ne peuvent pas être utilisés ici.",
     "stockInsufficient": "Seulement {{onHand}} en stock, {{requested}} demandés.",
-    "reservedStockTitle": "Le stock est réservé pour une commande client",
-    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client compte et peut la laisser incomplète.",
+    "reservedStockTitle": "Le stock est réservé pour une commande client ou un projet",
+    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients ou des projets et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client ou un projet compte et peut le laisser incomplet.",
     "reservedStockConfirm": "Ajouter quand même"
   },
   "watchList": {
@@ -1689,7 +1690,11 @@
       "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie.",
       "ruleTooManyKeywords": "Utilisez au maximum {{max}} mots-clés par règle.",
       "ruleKeywordTooLong": "Chaque mot-clé doit comporter {{max}} caractères au plus.",
-      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide."
+      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide.",
+      "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
+      "templateClientInvalid": "Le client sélectionné est introuvable.",
+      "ruleClientOutsideTemplateScope": "Ce modèle appartient à un client : ses règles ne peuvent pas cibler d'autres clients.",
+      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client."
     }
   },
   "ticketSection": {
@@ -1815,7 +1820,8 @@
     "remoteFieldUpdated": "{{name}} a mis à jour {{field}}",
     "connection": {
       "reconnecting": "Mises à jour en direct hors ligne - reconnexion...",
-      "unavailable": "Mises à jour en direct indisponibles"
+      "unavailable": "Mises à jour en direct indisponibles",
+      "offlineShort": "Hors ligne"
     }
   },
   "delete": {
@@ -1997,7 +2003,10 @@
       "openScheduleEntry": "Ouvrir l’entrée de planning",
       "acrossEntries_few": "sur {{count}} entrées",
       "acrossEntries_many": "sur {{count}} entrées",
-      "changeLocation": "Changer d'emplacement"
+      "changeLocation": "Changer d'emplacement",
+      "addDescriptionPrompt": "Ajoutez une description — quel est le problème et de quoi le client a-t-il besoin ?",
+      "projectTasks": "Tâches de projet",
+      "timeAndBilling": "Temps et facturation"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",
@@ -2093,6 +2102,17 @@
       "collapseActivity": "Réduire l'activité plus ancienne",
       "replyingToComment": "Réponse à {{name}}",
       "createdFromTemplate": "{{actor}} a créé ce ticket à partir du modèle « {{name}} »"
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Détails"
+    },
+    "groups": {
+      "customer": "Client",
+      "work": "Travail",
+      "who": "Personnes",
+      "linked": "Éléments liés",
+      "empty": "Rien ici pour l'instant"
     }
   },
   "notifications": {
@@ -2524,7 +2544,9 @@
     "discard": "Supprimer le chronomètre",
     "pausedHint": "En pause. Reprenez pour continuer le suivi, ou arrêtez pour enregistrer le temps.",
     "workDescription": "Description du travail",
-    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?"
+    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?",
+    "chipElsewhere": "Chronomètre sur {{label}}",
+    "title": "Chronomètre"
   },
   "templates": {
     "loading": "Chargement…",
@@ -2648,6 +2670,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} j {{hours}} h",
       "days": "{{days}} j"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Réponses prédéfinies",
+      "buttonTooltip": "Insérer une réponse prédéfinie (Ctrl/Cmd+J, ou tapez /)",
+      "title": "Insérer une réponse prédéfinie",
+      "searchPlaceholder": "Rechercher des réponses prédéfinies…",
+      "searchLabel": "Rechercher des réponses prédéfinies",
+      "loading": "Chargement des réponses prédéfinies…",
+      "empty": "Aucune réponse prédéfinie n'est disponible pour le moment.",
+      "noResults": "Aucune réponse prédéfinie ne correspond à votre recherche.",
+      "loadFailed": "Impossible de charger les réponses prédéfinies.",
+      "insertFailed": "Impossible d'insérer la réponse prédéfinie.",
+      "favorites": "Favoris",
+      "recent": "Utilisées récemment",
+      "uncategorized": "Sans catégorie",
+      "slashGroup": "Réponses prédéfinies",
+      "slashBrowse": "Réponses prédéfinies…",
+      "slashBrowseHint": "Parcourir et insérer une réponse enregistrée"
+    },
+    "scope": {
+      "personal": "Personnelle",
+      "team": "Équipe",
+      "board": "Tableau",
+      "clientPortal": "Portail client",
+      "personalHelp": "Vous seul pouvez utiliser cette réponse.",
+      "teamHelp": "Les membres de l'équipe choisie peuvent utiliser cette réponse.",
+      "boardHelp": "Toute personne répondant aux tickets du tableau choisi peut utiliser cette réponse.",
+      "clientPortalHelp": "Réservée aux réponses du portail client. Elle n'est pas proposée lors d'une réponse depuis le portail MSP."
+    },
+    "list": {
+      "title": "Réponses prédéfinies",
+      "new": "Nouvelle réponse prédéfinie",
+      "showInactive": "Afficher les inactives",
+      "searchPlaceholder": "Rechercher par nom, catégorie ou texte…",
+      "searchLabel": "Rechercher des réponses prédéfinies",
+      "allCategories": "Toutes les catégories",
+      "noResults": "Aucune réponse prédéfinie ne correspond à vos filtres.",
+      "empty": "Aucune réponse prédéfinie pour l'instant. Créez-en une pour la réutiliser dans les réponses aux tickets.",
+      "deleteTitle": "Supprimer la réponse prédéfinie",
+      "deleteMessage": "Supprimer « {{name}} » ? Les réponses qui l'ont déjà utilisée ne sont pas modifiées.",
+      "deleted": "Réponse prédéfinie supprimée",
+      "favorite": "Favori",
+      "columns": {
+        "name": "Nom",
+        "category": "Catégorie",
+        "scope": "Disponible pour",
+        "preview": "Aperçu",
+        "status": "Statut"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Désactivée"
+    },
+    "actions": {
+      "favorite": "Ajouter aux favoris",
+      "unfavorite": "Retirer des favoris",
+      "edit": "Modifier",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "delete": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "loading": "Chargement…",
+    "editor": {
+      "back": "Réponses prédéfinies",
+      "newTitle": "Nouvelle réponse prédéfinie",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Réponse prédéfinie enregistrée",
+      "created": "Réponse prédéfinie créée",
+      "viewOnly": "Vous pouvez consulter cette réponse prédéfinie, mais pas la modifier."
+    },
+    "sections": {
+      "details": "Détails",
+      "body": "Réponse"
+    },
+    "fields": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "categoryHelp": "Regroupe les réponses dans le sélecteur. Facultatif.",
+      "scope": "Disponible pour",
+      "team": "Équipe",
+      "teamPlaceholder": "Sélectionner une équipe",
+      "board": "Tableau",
+      "boardPlaceholder": "Sélectionner un tableau",
+      "body": "Texte de la réponse",
+      "bodyPlaceholder": "Rédigez la réponse…"
+    },
+    "mergeFields": {
+      "title": "Champs de fusion",
+      "help": "Renseignés à l'insertion de la réponse dans une réponse. Un champ sans valeur devient vide ; un champ non reconnu est laissé tel quel.",
+      "descriptions": {
+        "contact_first_name": "Le prénom du contact",
+        "contact_last_name": "Le nom de famille du contact",
+        "contact_name": "Le nom complet du contact",
+        "ticket_number": "Le numéro du ticket",
+        "ticket_title": "Le titre du ticket",
+        "agent_name": "Votre nom (l'agent qui répond)",
+        "client_name": "Le nom du client"
+      }
+    },
+    "errors": {
+      "notFound": "Réponse prédéfinie introuvable.",
+      "duplicateName": "Une réponse prédéfinie nommée « {{name}} » existe déjà ici.",
+      "invalidReferences": "L'équipe ou le tableau sélectionné n'existe plus.",
+      "notAvailable": "Cette réponse prédéfinie n'est pas disponible pour ce ticket.",
+      "notATeamMember": "Vous ne pouvez gérer que les réponses des équipes dont vous êtes membre."
     }
   }
 }

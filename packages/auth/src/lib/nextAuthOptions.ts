@@ -17,7 +17,7 @@ import {
     withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
-import { isClientUserType, isInteractiveUserType } from "@alga-psa/types";
+import { isClientUserType, isInteractiveUserType, resolveProductCode, type ProductCode } from "@alga-psa/types";
 import { assertInteractiveUser } from "./assertInteractiveUser";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
@@ -66,6 +66,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection, tenantDb } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { portalDomainServes } from "@alga-psa/shared/core/portalDomainSurface";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
@@ -205,7 +206,7 @@ async function checkTrackedSession(
  */
 interface TenantSubscriptionInfo {
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
@@ -279,7 +280,9 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
 
     return {
         plan: tenantRecord?.plan ?? undefined,
-        product_code: tenantRecord?.product_code === 'algadesk' ? 'algadesk' : 'psa',
+        // Unknown or unrecognised values resolve to psa (the same rule as every
+        // other product-code read), so the session can only ever carry a known product.
+        product_code: resolveProductCode(tenantRecord?.product_code).productCode,
         addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
@@ -444,7 +447,7 @@ function buildAzureADProvider(config: {
     clientId: string;
     clientSecret: string;
     authority: string;
-    checks?: Array<'pkce' | 'state'>;
+    checks: Array<'pkce' | 'state' | 'nonce'>;
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
@@ -455,7 +458,7 @@ function buildAzureADProvider(config: {
             type: 'oauth' as const,
             clientId: config.clientId,
             clientSecret: config.clientSecret,
-            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
+            checks: config.checks,
             authorization: {
                 url: endpoints.authorization,
                 params: {
@@ -476,7 +479,7 @@ function buildAzureADProvider(config: {
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
-        ...(config.checks ? { checks: config.checks } : {}),
+        checks: config.checks,
         profile: config.profile,
     });
 }
@@ -509,6 +512,15 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
         // when invoked via the default registry stubs.
         console.error('[auth] Failed to initialize Enterprise SSO registry', error);
     }
+}
+
+/**
+ * A custom domain a signed-in client user may be handed off to: active AND serving the client
+ * portal. An MSP-only domain would land the user on the middleware surface gate, which sends
+ * portal paths on that host to /auth/signin (alga-2026-0002799).
+ */
+export function isClientPortalHandoffDomain(portalDomain: { status: string; surface?: unknown }): boolean {
+    return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, 'client_portal');
 }
 
 async function computeVanityRedirect({
@@ -555,7 +567,13 @@ async function computeVanityRedirect({
 
         const fetchPortalDomainForTenant = async () => {
             const portalDomain = await getPortalDomain(knex, tenantId);
-            if (!portalDomain || portalDomain.status !== 'active') {
+            if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
+                return null;
+            }
+            // Already on the tenant's own custom domain (an MSP/both domain authenticates in
+            // place, see nextauth/customHostAuth.ts): the session cookie is host-only on this
+            // host, so a handoff to ourselves would be a pointless redirect loop.
+            if (portalDomain.domain.toLowerCase() === base.host.toLowerCase()) {
                 return null;
             }
             return portalDomain;
@@ -569,7 +587,7 @@ async function computeVanityRedirect({
 
             for (const candidate of candidates) {
                 const portalDomain = await getPortalDomainByHostname(knex, candidate);
-                if (!portalDomain || portalDomain.status !== 'active') {
+                if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
                     continue;
                 }
                 if (portalDomain.tenant !== tenantId) {
@@ -702,7 +720,7 @@ interface ExtendedUser {
     contactId?: string;
     authFailure?: OAuthMappingFailure;
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -1570,7 +1588,13 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     authority: secrets.microsoftTenantId || 'common',
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session. Auth.js only
+                    // sends and verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
@@ -2387,7 +2411,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;

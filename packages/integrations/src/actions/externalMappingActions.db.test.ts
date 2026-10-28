@@ -1097,6 +1097,101 @@ describe('unlink (tombstone) and explicit relink', () => {
   });
 });
 
+/**
+ * Ticket alga-2026-0002886. A tombstone used to keep owning its external
+ * target: both unique indexes counted unlinked rows, so after unlinking a
+ * mapping the target it had held could never be used again — the customer saw
+ * "This target is already mapped to another entity in this organisation" while
+ * the mappings list (which hides tombstones) showed nothing to unmap.
+ */
+describe('an unlinked mapping stops owning its target', () => {
+  const unlink = (id: string) =>
+    (deleteExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, id);
+  const create = (mapping: Record<string, unknown>) =>
+    (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      external_realm_id: realmA,
+      ...mapping,
+    });
+
+  it('lets another entity take the target of an unlinked mapping, keeping the tombstone', async () => {
+    const other = await seedService(tenantA);
+    const { id } = await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-shared' });
+    await unlink(id);
+
+    const result = await create({ alga_entity_id: other, external_entity_id: 'item-shared' });
+
+    expect(result).toMatchObject({ id: expect.any(String), external_entity_id: 'item-shared' });
+    expect(result.id).not.toBe(id);
+
+    // The tombstone survives: the invoice export path reads it to decide
+    // relink-or-recreate, so freeing the target must not purge it.
+    const tombstone = await db('tenant_external_entity_mappings').where({ id }).first();
+    expect(tombstone.deleted_at).not.toBeNull();
+    expect(tombstone.external_entity_id).toBe('item-shared');
+  });
+
+  it('relinks a tombstone onto a target another tombstone still holds (tax region DEFAULT -> TAX)', async () => {
+    // The exact prod case: both regions unlinked, then DEFAULT remapped to the
+    // code US had held. The failing statement was the relink UPDATE.
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    const regionUs = await seedTaxRegion(tenantA);
+    const taxCode = { alga_entity_type: 'tax_code' };
+    const defaultRegion = await seedMapping({
+      ...taxCode,
+      alga_entity_id: taxRegionA,
+      external_entity_id: 'NON',
+    });
+    const usRegion = await seedMapping({
+      ...taxCode,
+      alga_entity_id: regionUs,
+      external_entity_id: 'TAX',
+    });
+    await unlink(defaultRegion.id);
+    await unlink(usRegion.id);
+
+    const result = await create({ ...taxCode, alga_entity_id: taxRegionA, external_entity_id: 'TAX' });
+
+    expect(result.id).toBe(defaultRegion.id);
+    expect(result.external_entity_id).toBe('TAX');
+    const relinked = await db('tenant_external_entity_mappings').where({ id: defaultRegion.id }).first();
+    expect(relinked.deleted_at).toBeNull();
+    expect(relinked.sync_status).toBe('manual_link');
+
+    // US keeps its tombstone, still naming the code it used to hold.
+    const stillUnlinked = await db('tenant_external_entity_mappings').where({ id: usRegion.id }).first();
+    expect(stillUnlinked.deleted_at).not.toBeNull();
+    expect(stillUnlinked.external_entity_id).toBe('TAX');
+  });
+
+  it('still refuses a target a LIVE mapping holds, without touching the database', async () => {
+    const other = await seedService(tenantA);
+    await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-held' });
+
+    const result = await create({ alga_entity_id: other, external_entity_id: 'item-held' });
+
+    expect(result.actionError).toMatch(/target is already mapped to another entity/);
+    expect(result.messageKey).toBe('msp/integrations:errors.mappings.duplicateTarget');
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(1);
+    expect(await lastAudit(tenantA, 'CREATE')).toBeUndefined();
+  });
+
+  it('still refuses a second live mapping for an entity whose tombstone was relinked', async () => {
+    const { id } = await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-x' });
+    await unlink(id);
+    expect(await create({ alga_entity_id: serviceA, external_entity_id: 'item-x' })).toMatchObject({ id });
+
+    const again = await create({ alga_entity_id: serviceA, external_entity_id: 'item-z' });
+
+    expect(again.actionError).toMatch(/A mapping already exists for this entity/);
+    expect(again.messageKey).toBe('msp/integrations:errors.mappings.duplicate');
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: serviceA });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].external_entity_id).toBe('item-x');
+  });
+});
+
 describe('createExternalEntityMappings — bulk create with per-row isolation', () => {
   const bulkRow = (serviceId: string, code: string, kind: 'item' | 'account') => ({
     integration_type: 'xero',

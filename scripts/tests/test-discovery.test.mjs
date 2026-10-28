@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { isAdditionalWorkspaceTest, isNodeToolingTest, isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
 
 function inspect(overrides = {}) {
@@ -53,6 +54,7 @@ test('identities outside the workspace cannot be counted as discovered tests', (
 test('DB-less unit exclusions receive a dedicated DB lane without taking over other lanes', () => {
   for (const file of [
     'server/src/test/unit/migrations/rollback.db.test.ts',
+    'server/src/test/contract/hotPathQueryBudget.db.test.ts',
     'server/migrations/__tests__/rollback.integration.test.ts',
     'packages/billing/tests/eligibility.db.test.ts',
     'shared/workflow/tests/identity.db.test.ts',
@@ -63,6 +65,7 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
   for (const file of [
     'server/src/test/integration/rollback.db.test.ts',
     'server/src/test/infrastructure/fixture.db.test.ts',
+    'server/src/test/contract/hotPathScenario.test.ts',
     'packages/billing/tests/eligibility.test.ts',
     'tools/fixture.db.test.ts',
     'services/workflow-worker/dist/v2/launchSkips.db.test.js',
@@ -151,4 +154,22 @@ test('invoice auto-pay Temporal suites are assigned to the lanes that execute th
   for (const file of ['AutopayService', 'invoiceAutopayTemporal']) {
     assert.equal(isAdditionalWorkspaceTest(`ee/server/src/__tests__/unit/payments/${file}.test.ts`, 'enterprise-unit'), true);
   }
+});
+
+test('the portal-domain SSO redirect URI gate must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/portal-domain-redirect-uri-gate.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('worker boot under a failing capability gate must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const readinessConfig = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  assert.ok(readinessConfig.includes("'src/__tests__/worker.capabilityBoot.test.ts'"));
 });

@@ -10,6 +10,7 @@ import type {
   IAdjustment,
   IBillingCharge,
   IBillingPeriod,
+  ILateServicePeriodSource,
 } from "@alga-psa/types";
 import type { DiscountComputeCandidate } from "../compute";
 
@@ -139,10 +140,13 @@ export type ResolvedContractBillingChargeFacts =
         threshold?: number | null;
         rate?: number | null;
       };
+      /** The contract line's own minimum/rounding (contract_lines), which win over the per-service copy. */
+      lineTerms?: { minimumBillableTime?: number | null; roundUpToNearest?: number | null };
       serviceConfigurations: Array<{
         serviceId: string;
         configurationId: string;
-        hourlyRate: number;
+        hourlyRate: number | null;
+        customRate?: number | null;
         minimumBillableTime: number;
         roundUpToNearest: number;
         userTypeRates: Array<{ userType: string; rate: number }>;
@@ -170,6 +174,8 @@ export type ResolvedContractBillingChargeFacts =
         phaseRateOverride?: TimeBasedPhaseRateOverride | null;
         projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
+        /** Set when the activity is dated in a service period an issued invoice already closed. */
+        latePeriod?: ILateServicePeriodSource | null;
       }>;
     })
   | (ContractChargeFactsBase & {

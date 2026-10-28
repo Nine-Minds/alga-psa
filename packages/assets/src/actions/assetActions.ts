@@ -1095,6 +1095,7 @@ export async function createAssetInTransaction(
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
+                ownership: validatedData.ownership ?? 'client',
                 location_id: selectedLocation?.location_id ?? null,
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
@@ -1402,6 +1403,16 @@ export async function updateAssetRecord(
                 await assertValidAssetStatus(trx, tenant, baseCandidate.status, asset.status);
             }
 
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                const openEpisode = await tenantScopedTable(trx, 'asset_custody', tenant)
+                    .where({ asset_id })
+                    .whereNull('closed_at')
+                    .first('custody_id');
+                if (openEpisode) {
+                    throw new Error('This asset is currently in custody and cannot move to another client. Return it first.');
+                }
+            }
+
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {
                 const selectedVendor = await resolveValidatedAssetVendor(
                     trx,
@@ -1689,6 +1700,18 @@ export async function deleteAssetRecord(
 
             if (!asset) {
                 throw new Error('Asset not found');
+            }
+
+            // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
+            // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
+            const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
+                .where({ asset_id })
+                .select('closed_at');
+            if (custodyRows.some((row: { closed_at: unknown }) => row.closed_at === null)) {
+                throw new Error('This asset is currently in custody. Return it to the client before deleting it.');
+            }
+            if (custodyRows.length > 0) {
+                throw new Error('This asset has custody history that must be kept. Set its status to retired instead of deleting it.');
             }
 
             // Citus does not enforce ON DELETE CASCADE across distributed
@@ -2239,6 +2262,20 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
                 if (validatedParams.status) {
                     query.where('assets.status', validatedParams.status);
+                }
+                if (validatedParams.ownership) {
+                    query.where('assets.ownership', validatedParams.ownership);
+                }
+                if (validatedParams.in_custody !== undefined) {
+                    // Keyed off the open custody episode, never off assets.status.
+                    const openCustody = tenantScopedTable(trx, 'asset_custody', tenant)
+                        .whereNull('closed_at')
+                        .select('asset_id');
+                    if (validatedParams.in_custody) {
+                        query.whereIn('assets.asset_id', openCustody);
+                    } else {
+                        query.whereNotIn('assets.asset_id', openCustody);
+                    }
                 }
                 if (validatedParams.vendor_id) {
                     query.where('assets.vendor_id', validatedParams.vendor_id);

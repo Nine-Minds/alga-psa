@@ -93,6 +93,10 @@ export default defineConfig({
       // Accept the ESM .js specifier form used by runtime code (package exports map it to dist/).
       { find: /^@alga-psa\/db\/admin(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db\/tenant(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenant.ts') },
+      // Same as admin/tenant: ./tenantDb maps to src/lib, not a mirror path.
+      // The client-creation seam (shared/models/clientCreation.ts) imports this
+      // subpath directly to dodge the package barrel's turbopack shim.
+      { find: /^@alga-psa\/db\/tenantDb(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenantDb.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src')}/$1` },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/publishers/index.ts') },

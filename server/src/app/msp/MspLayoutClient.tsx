@@ -44,6 +44,8 @@ interface Props {
   dateFormat?: CountryDateFormat | null;
   productCode: ProductCode;
   needsOnboarding: boolean;
+  /** Whether this user may run workspace setup; only they are sent to it. */
+  canRunOnboarding?: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
   /** Server-embedded i18n resources for the route (skips per-namespace HTTP fetches). */
@@ -92,6 +94,7 @@ export function MspLayoutClient({
   dateFormat,
   productCode,
   needsOnboarding,
+  canRunOnboarding = false,
   initialSidebarCollapsed,
   initialLocale,
   preloadedLocaleResources,
@@ -112,7 +115,8 @@ export function MspLayoutClient({
   });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
-  const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
+  // Only a user who can complete workspace setup is ever sent to it.
+  const shouldForceOnboarding = canRunOnboarding && (needsOnboarding || clientNeedsOnboarding);
   const canShowLicenseBanner =
     selfHostLicensing &&
     !isOnboardingPage &&
@@ -132,6 +136,15 @@ export function MspLayoutClient({
     // The server already resolved onboarding from tenant settings; trust it and
     // skip the client re-fetch (avoids a getTenantSettings round-trip on load).
     setClientOnboardingCheckComplete(onboardingResolvedServerSide);
+
+    // A user who cannot run setup is never redirected to it, so there is
+    // nothing to look up: skip the tenant settings fetch.
+    if (!canRunOnboarding) {
+      setClientOnboardingCheckComplete(true);
+      return () => {
+        isCancelled = true;
+      };
+    }
 
     if (onboardingResolvedServerSide || needsOnboarding || isOnboardingPage || !sessionTenant) {
       return () => {
@@ -174,7 +187,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
 

@@ -227,6 +227,7 @@ export const createAssetSchema = z.object({
   asset_tag: z.string(),
   name: z.string(),
   status: z.string(),
+  ownership: z.enum(['client', 'msp']).optional(),
   location_id: z.string().uuid().nullable().optional(),
   // Client contact the device is assigned to (portal contact-scoped visibility).
   contact_name_id: z.string().uuid().nullable().optional(),
@@ -298,6 +299,8 @@ export const assetQuerySchema = z.object({
   contact_name_id: z.string().uuid().optional(),
   asset_type: z.string().optional(),
   status: z.string().optional(),
+  ownership: z.enum(['client', 'msp']).optional(),
+  in_custody: z.boolean().optional(),
   vendor_id: z.string().uuid().optional(),
   group_id: z.string().uuid().optional(),
   /** Only assets that are not in any group (the group drawer's Add assets). */

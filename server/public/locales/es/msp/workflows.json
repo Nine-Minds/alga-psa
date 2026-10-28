@@ -881,6 +881,7 @@
       "add": "Añadir",
       "remove": "Eliminar",
       "empty": "Aún no hay mapeos.",
+      "nameRequired": "Ingrese un nombre para este mapeo.",
       "expressionLabel": "Expresión"
     },
     "schemaForm": {

@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alg
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
-import { getTenantPortalBaseUrl } from '@alga-psa/tenancy/server';
+import { getTenantPortalBaseUrl, resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
@@ -575,10 +575,22 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
-    // Resolve the portal origin (active custom domain, else the configured
-    // public base URL) before opening the transaction: the lookup acquires its
-    // own connection.
-    const portalBaseUrl = await getTenantPortalBaseUrl(tenant);
+    // Resolve the portal origin before opening the transaction: the lookups acquire
+    // their own connection. Prefer the tenant's active custom domain serving the
+    // client portal (so the invitation lands on the host the client portal is served
+    // from); otherwise the tenant portal base URL (configured public base URL).
+    let portalBaseUrl: string | null = null;
+    try {
+      const resolved = await resolveTenantAppBase(tenant, 'client_portal');
+      if (resolved.source === 'vanity') {
+        portalBaseUrl = resolved.baseUrl;
+      }
+    } catch (domainError) {
+      console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
+    }
+    if (!portalBaseUrl) {
+      portalBaseUrl = await getTenantPortalBaseUrl(tenant);
+    }
 
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {

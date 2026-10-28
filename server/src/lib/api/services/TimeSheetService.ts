@@ -49,6 +49,7 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
+import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -344,6 +345,18 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
+        // Delegation guard: opening a sheet for someone else needs the same rights as acting
+        // on that user's time elsewhere (time_sheet approve + read_all or manager-of-subject).
+        if (data.user_id && data.user_id !== context.userId) {
+          try {
+            await assertCanActOnBehalf(context.user, context.tenant, data.user_id, trx);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('Permission denied:')) {
+              throw new ForbiddenError(error.message);
+            }
+            throw error;
+          }
+        }
         // Human-work guard: an explicit owner must be a licensed user; a defaulted owner
         // (the caller) must be one too.
         if (data.user_id) {
@@ -355,9 +368,7 @@ export class TimeSheetService extends BaseService<any> {
           ...data,
           user_id: data.user_id || context.userId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -404,10 +415,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        // time_sheets has no updated_at column: write only the caller's fields.
+        const updateData = { ...data };
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ [this.primaryKey]: id })
@@ -1275,15 +1284,7 @@ export class TimeSheetService extends BaseService<any> {
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
           // Human-work guard: validate only assignees this write adds (legacy ones are kept).
-          const currentAssignees = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
-            .where({ entry_id: id })
-            .select('user_id');
-          const currentAssigneeIds = new Set(currentAssignees.map((row: { user_id: string }) => row.user_id));
-          await assertHumanWorkAssignee(
-            trx,
-            context.tenant,
-            data.assigned_user_ids.filter((userId: string) => !currentAssigneeIds.has(userId))
-          );
+          await assertHumanWorkAssignee(trx, context.tenant, addedToEntry);
 
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })

@@ -1713,7 +1713,11 @@
       "submit": "Restock"
     },
     "printLabel": "Print label",
-    "printWithTemplate": "Print with {{code}}"
+    "printWithTemplate": "Print with {{code}}",
+    "claimant": {
+      "project": "Project {{number}}",
+      "salesOrder": "Sales order {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Add Line",

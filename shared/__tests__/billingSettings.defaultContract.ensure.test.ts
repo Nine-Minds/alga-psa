@@ -10,6 +10,17 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// defaultContract.ts imports tenantDb from this subpath, not the barrel
+// above, to dodge a turbopack shim — it needs the same fake table lookup
+// mocked here too, or it falls through to the real tenantDb, which issues a
+// two-arg `.where(column, value)` tenant-scoping call the fake knex above
+// can't filter on, and every lookup comes back empty.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (name: string) => conn(name),
+  }),
+}));
+
 import { ensureClientBillingSettingsRow, updateClientBillingSettings } from '../billingClients/billingSettings';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 

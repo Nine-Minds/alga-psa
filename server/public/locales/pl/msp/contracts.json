@@ -1748,10 +1748,6 @@
       "recurringQuantityLabel": "Ilość cykliczna",
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
-    },
-    "advanceSuggestion": {
-      "message": "Przy rozliczaniu z dołu tę pozycję można zafakturować dopiero po zakończeniu pierwszego okresu usługi. Przy rozliczaniu z góry według cyklu umowy zostanie zafakturowana w dniu rozpoczęcia.",
-      "action": "Rozliczaj z góry według cyklu umowy"
     }
   },
   "wizardProducts": {
@@ -2783,7 +2779,8 @@
       "advance": "Rozliczana z góry według cyklu umowy: pierwsza faktura jest dostępna od {{date}}, czyli daty rozpoczęcia umowy."
     },
     "client": {
-      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się bieżący okres rozliczeniowy klienta.",
+      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia.",
+      "arrearsPartial": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia. Ponieważ data rozpoczęcia przypada w trakcie tego okresu, obejmuje ona {{periodStart}} – {{periodEnd}}.",
       "advance": "Rozliczana z góry według harmonogramu rozliczeń klienta: pierwsza faktura jest dostępna od {{date}}, czyli początku okresu rozliczeniowego klienta, w którym przypada data rozpoczęcia umowy."
     }
   },
@@ -3013,5 +3010,9 @@
       "invalidBlock": "Uzupełnij rozmiar, cenę i wyzwalacze każdej pozycji bloku przedpłaconego przed zakończeniem.",
       "rateRequired": "Usługa bloku przedpłaconego \"{{serviceName}}\" wymaga stawki godzinowej powyżej zera (godziny ponad blok są fakturowane według tej stawki)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Pierwsza faktura: faktura z dnia {{invoiceDate}} obejmuje {{periodStart}} – {{periodEnd}} (rozliczane z dołu). Wybierz „Z góry”, aby rozliczyć to na fakturze za okres rozpoczynający się {{advanceInvoiceDate}}.",
+    "billInAdvance": "Rozlicz z góry"
   }
 }

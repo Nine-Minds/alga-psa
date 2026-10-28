@@ -148,6 +148,8 @@ export interface IStockUnit extends TenantEntity {
   client_id?: string | null;
   asset_id?: string | null;
   allocated_so_line_id?: string | null;
+  /** Serialized project staging claim (C6); never set together with allocated_so_line_id. */
+  allocated_staging_line_id?: string | null;
   warranty_expires_at?: string | Date | null;
   warranty_term?: string | null;
   loan_due_at?: string | Date | null;
@@ -164,6 +166,10 @@ export interface IStockUnit extends TenantEntity {
   location_name?: string | null;
   client_name?: string | null;
   product_name?: string | null;
+  /** The claimant of an `allocated` unit: a sales order's number, or a project staging claim (C6). */
+  allocated_so_number?: string | null;
+  allocated_project_id?: string | null;
+  allocated_project_number?: string | null;
 }
 
 export interface IStockMovement extends TenantEntity {

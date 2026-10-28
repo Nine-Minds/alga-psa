@@ -1713,7 +1713,11 @@
       "submit": "Wieder einlagern"
     },
     "printLabel": "Etikett drucken",
-    "printWithTemplate": "Mit {{code}} drucken"
+    "printWithTemplate": "Mit {{code}} drucken",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Verkaufsauftrag {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Position hinzufügen",

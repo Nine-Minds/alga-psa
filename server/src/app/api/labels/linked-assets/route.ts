@@ -2,7 +2,7 @@
  * GET /api/labels/linked-assets?ticketId=…
  *
  * Read-only lookup for the single-ticket print dialog's linked-asset picker: the assets linked to the
- * ticket that the caller may read (tag and name only). The ticket must itself be readable. Anything
+ * ticket that the caller may read: tag, name and the custody facts the tag would print for each. The ticket must itself be readable. Anything
  * else is the uniform 404, so the response reveals nothing. Session-authenticated in-handler.
  */
 

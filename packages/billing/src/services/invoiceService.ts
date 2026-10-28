@@ -453,7 +453,27 @@ function getRecurringChargeFamilyForInvoiceLinkage(
   }
 }
 
+/**
+ * Line description for a time charge: overtime segments say so, and late time
+ * names the service period of the invoice that closed its window. Shared by the
+ * preview and persist paths so the preview, PDF and API show the same wording.
+ */
+export function describeTimeCharge(
+  charge: Pick<ITimeBasedCharge, 'serviceName' | 'timeSegment' | 'lateForServicePeriod' | 'overPrepaidBlock'>,
+): string {
+  const base = charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.overPrepaidBlock
+      ? overPrepaidBlockDescription(charge.serviceName)
+      : charge.serviceName;
+  const late = charge.lateForServicePeriod;
+  return late ? `${base} (late time, service period ${late.servicePeriodStart}–${late.servicePeriodEnd})` : base;
+}
+
 function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  // Late time belongs to a period an earlier invoice already closed; this
+  // invoice's own period is claimed by its own charges or the chargeless sweep.
+  if (charge.lateForServicePeriod) return false;
   return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
@@ -1965,13 +1985,11 @@ export async function persistInvoiceCharges(
             ? prepaidBlockFeeDescription({ name: charge.serviceName, hours: (charge as IPrepaidBlockCharge).quantity })
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+            : charge.type === 'time'
               // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
-              ? `${charge.serviceName} (overtime)`
-              : charge.type === 'time' && (charge as ITimeBasedCharge).overPrepaidBlock
-                ? overPrepaidBlockDescription(charge.serviceName)
-                : charge.serviceName;
+              ? describeTimeCharge(charge as ITimeBasedCharge)
+              : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,

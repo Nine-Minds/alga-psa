@@ -328,6 +328,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             SCIM_MANAGED_INACTIVE: 'userDetails.messages.error.scimManagedInactive',
             INVALID_TIMEZONE: 'userDetails.messages.error.invalidTimezone',
             PERMISSION_DENIED: 'userDetails.messages.error.permissionDenied',
+            INVALID_ACTIVE_STATE: 'userDetails.messages.error.updateFailed',
+            LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
+            SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
             USER_UPDATE_FAILED: 'userDetails.messages.error.updateFailed',
           };
           toast.error(t(errorKeys[result.code], { defaultValue: result.error }));

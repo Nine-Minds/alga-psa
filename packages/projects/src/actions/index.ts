@@ -14,3 +14,4 @@ export * from './projectTemplateWizardActions';
 export * from './regenerateOrderKeys';
 export * from './serviceCatalogActions';
 export * from './materialCatalogActions';
+export * from './stagingActions';

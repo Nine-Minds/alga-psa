@@ -1,0 +1,172 @@
+[
+  {
+    "id": "F001",
+    "description": "assets.ownership column (client|msp, CHECK, default client, backfill)",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "held_by_msp asset status seeded for all tenants + onboarding seed",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "asset_custody table with CHECKs and partial unique open index",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "asset_custody_events table, indexes, Postgres append-only trigger",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Citus distribution + tenantTableMetadata + tenantDb.cjs registration",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "ASSET_CUSTODY_CHANGED catalog upsert migration",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Custody types and Zod schemas",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "ASSET_CUSTODY_CHANGED event schema, eventBus registration, catalog entry and payload builder",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Pure custody state machine",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "openCustody core",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "recordCustodyEvent core (moved/handed_off/shipped/received/returned) with history rows",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "updateCustodyDetails core with custody_updated history",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "getOpenCustodyForAssets",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "listCustodyQueue with tabs, filters, record-level filtering",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "formatCustodyForLabel (no note, location/bin, vendor, n items)",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Server actions: receiveEquipment, move, handOff, ship, receiveBack, returnToClient, update",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Server actions: getAssetCustody, listCustodyEvents, listHeldEquipment, listCustodyBins, listCustodyLocations",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Intake: client match, no-client, inactive location, open-episode refusals; tag generator",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Post-commit publish of ASSET_* and ASSET_CUSTODY_CHANGED (swallowed)",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "REST /api/v1/assets/{id}/custody (GET/POST)",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "REST /api/v1/assets/{id}/custody/events (POST)",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "REST /api/v1/asset-custody queue (GET), 404 without access",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Asset detail Custody card + dialogs",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Timeline rendering of custody_* and custody_updated",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "description": "Asset list filters (In MSP custody, Ownership), badge, ownership in form and REST schema",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "description": "Ticket renderReceiveEquipment seam + dialog + photo upload",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "description": "Custody chip in AssociatedAssets",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "description": "Queue page /msp/assets/custody and nav entry",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "description": "Work-tag custodyLocation/nextAction via getLinkedAssetParts seam, bindings, template",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "description": "Guard: deleteAsset refused with open episode",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "description": "Guard: deactivateStockLocation refused with open episodes",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "description": "Return moves held_by_msp -> active only",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "description": "Static no-inventory/billing import test",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "description": "i18n keys for all UI copy",
+    "implemented": true
+  }
+]

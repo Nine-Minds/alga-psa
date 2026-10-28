@@ -1713,7 +1713,11 @@
       "submit": "Réapprovisionner"
     },
     "printLabel": "Imprimer l'étiquette",
-    "printWithTemplate": "Imprimer avec {{code}}"
+    "printWithTemplate": "Imprimer avec {{code}}",
+    "claimant": {
+      "project": "Projet {{number}}",
+      "salesOrder": "Commande de vente {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Ajouter une ligne",

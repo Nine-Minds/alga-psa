@@ -22,7 +22,7 @@ import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
@@ -34,12 +34,25 @@ function getBaseUrl(): string {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 }
 
+/**
+ * Origin for links to internal (MSP) recipients: the tenant's custom domain when it
+ * serves the MSP app, otherwise the canonical base.
+ */
+async function getMspBaseUrl(tenantId: string, knex?: Knex): Promise<string> {
+  const resolved = await resolveTenantAppBase(tenantId, 'msp', knex ? { knex } : {});
+  return resolved.source === 'vanity' ? resolved.baseUrl : getBaseUrl();
+}
+
 function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
+// LEVERAGE: pattern tenant-link-context — ticketEmailSubscriber and projectEmailSubscriber each hand-build the same internal/portal link context (canonical base + vanity host + tenant slug).
 type PortalLinkContext = {
+  /** Origin for MSP (internal recipient) links: the tenant's MSP custom domain when one is active. */
   internalBase: string;
+  /** Canonical origin (NEXTAUTH_URL); used for portal links when no portal custom domain applies. */
+  canonicalBase: string;
   portalHost: string | null;
   isActiveVanityDomain: boolean;
   tenantSlug: string;
@@ -54,18 +67,25 @@ async function resolvePortalLinkContext(
   knex: Knex,
   tenantId: string
 ): Promise<PortalLinkContext> {
-  const internalBase = getBaseUrl();
+  const canonicalBase = getBaseUrl();
+  let internalBase = canonicalBase;
   let portalHost: string | null = null;
   let isActiveVanityDomain = false;
 
   try {
-    const portalDomain = await getPortalDomain(knex, tenantId);
     // Only use a portal-specific host when the tenant has an *active* custom
-    // (vanity) domain. Otherwise leave portalHost null so we emit
-    // https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
-      portalHost = portalDomain.domain;
+    // (vanity) domain that serves the client portal. Otherwise leave portalHost
+    // null so we emit https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
+    const portal = await resolveTenantAppBase(tenantId, 'client_portal', { knex });
+    if (portal.source === 'vanity') {
+      portalHost = portal.baseUrl;
       isActiveVanityDomain = true;
+    }
+    // Internal (MSP) recipients only move off the canonical host when a custom
+    // domain serves the MSP app.
+    const msp = await resolveTenantAppBase(tenantId, 'msp', { knex });
+    if (msp.source === 'vanity') {
+      internalBase = msp.baseUrl;
     }
   } catch (error) {
     logger.warn('[ProjectEmailSubscriber] Failed to resolve portal domain for project link', {
@@ -76,6 +96,7 @@ async function resolvePortalLinkContext(
 
   return {
     internalBase,
+    canonicalBase,
     portalHost,
     isActiveVanityDomain,
     tenantSlug: buildTenantPortalSlug(tenantId),
@@ -105,7 +126,7 @@ function buildProjectLinks(
       portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
     }
   } else {
-    const fallbackBase = ctx.internalBase.endsWith('/') ? ctx.internalBase.slice(0, -1) : ctx.internalBase;
+    const fallbackBase = ctx.canonicalBase.endsWith('/') ? ctx.canonicalBase.slice(0, -1) : ctx.canonicalBase;
     baseParams.set('tenant', ctx.tenantSlug);
     portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
   }
@@ -1282,7 +1303,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
           descriptionHtml: projectDescriptionHtml,
           startDate: project.start_date,
           assignedBy: assigner ? `${assigner.first_name} ${assigner.last_name}` : 'Someone',
-          url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
+          url: `${await getMspBaseUrl(tenantId)}/msp/projects/${project.project_id}`,
           client: project.client_name || 'No Client'
         }
       },
@@ -1357,7 +1378,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     const taskUrlParams = new URLSearchParams();
     taskUrlParams.set('phaseId', task.phase_id);
     taskUrlParams.set('taskId', task.task_id);
-    const taskUrl = `${getBaseUrl()}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
+    const taskUrl = `${await getMspBaseUrl(tenantId)}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
 
     // Use assigner name from payload, fallback to 'Someone' if not available
     const assignedByName = assignedByNameFromPayload || 'Someone';
@@ -1496,7 +1517,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const taskUrlParams = new URLSearchParams();
     taskUrlParams.set('phaseId', task.phase_id);
     taskUrlParams.set('taskId', task.task_id);
-    const taskUrl = `${getBaseUrl()}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
+    const taskUrl = `${await getMspBaseUrl(tenantId)}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
 
     const emailContext = {
       task: {
