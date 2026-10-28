@@ -35,6 +35,10 @@ export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
   { id: 'rest-routes', glob: 'server/src/app/api/**/co-management/**', ruleA: true },
   { id: 'server-actions', glob: 'server/src/lib/actions/coManaged*', ruleA: true },
   { id: 'package-actions', glob: 'packages/co-managed/src/**/actions*', ruleA: true },
+  // Shared PSA/customer actions discover product and trusted tenant first; their
+  // co-managed branch delegates to the separately registered guard below.
+  { id: 'user-invitation-actions', glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', ruleA: false },
+  { id: 'user-invitation-gate', glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', ruleA: true },
   { id: 'jobs', glob: 'packages/jobs/**/coManaged*', ruleA: true },
   { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', ruleA: true },
   { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
@@ -65,6 +69,8 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
   'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 2 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
+  'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
+  'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
   jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
   subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },

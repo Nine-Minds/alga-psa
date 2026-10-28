@@ -19,7 +19,8 @@ const actorState = vi.hoisted(() => ({ user: null as any }));
 const appliance = vi.hoisted(() => ({ check: vi.fn(async () => ({ seats: 0 })) }));
 vi.mock('@alga-psa/db', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
-  return { ...actual, createTenantKnex: async (tenant?: string) => ({ knex: db, tenant: tenant ?? actual.getTenantContext() }) };
+  return { ...actual, getAdminConnection: async () => db,
+    createTenantKnex: async (tenant?: string) => ({ knex: db, tenant: tenant ?? actual.getTenantContext() }) };
 });
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),

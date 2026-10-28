@@ -15,6 +15,7 @@ import { OZ, USERS } from '../../../../../../scripts/dev/co-managed-fixtures/bas
 import { DISPOSABLE_CLIENTS, OZ_ESCALATION_BOARD } from '../../../../../../scripts/dev/co-managed-fixtures/L1a';
 import { runOnboardingSeeds } from '../../../db/onboarding-seeds-operations';
 import { getCoManagedManagementOptions } from '../../../../../../packages/co-managed/src/managementPolicy';
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 
 interface Harness {
   getDb: () => Knex;
@@ -55,12 +56,54 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
     process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.test'; });
 
   describe('co-managed provisioning', () => {
+    it('keeps PSA invitation behavior and query count unchanged when the co-managed switch is off', async () => {
+      const db = getDb(), operation = await prepare(), roleId = randomUUID();
+      const sponsor = tenantDb(db, operation.tenant);
+      await sponsor.table('roles').insert({ tenant: operation.tenant, role_id: roleId, role_name: `PSA ${roleId}`, msp: true, client: false });
+      actorState.user = { tenant: operation.tenant, user_id: operation.requested_by, user_type: 'internal', username: 'admin' };
+      appliance.check.mockResolvedValue(null);
+      const { sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const captured: string[] = [];
+      const record = (query: { sql: string }) => captured.push(query.sql);
+      const invite = () => runWithTenant(operation.tenant, () => sendUserInvitation({ email: `${randomUUID()}@example.test`,
+        firstName: 'PSA', lastName: 'User', roleId }));
+      db.on('query', record);
+      try {
+        delete process.env.FORCE_CAPABILITIES;
+        expect((await invite()).success).toBe(true);
+        const ordinary = [...captured];
+        captured.length = 0;
+        process.env.FORCE_CAPABILITIES = 'co-managed:off';
+        expect((await invite()).success).toBe(true);
+        expect(captured.length).toBe(ordinary.length);
+        expect([...ordinary, ...captured].some(sql => /co_manag/i.test(sql))).toBe(false);
+      } finally {
+        db.removeListener('query', record);
+        appliance.check.mockReset();
+        appliance.check.mockResolvedValue({ seats: 0 });
+      }
+    });
+
     it('completes the initial invitation through the public signup adapter and consumes it atomically', async () => {
       const db = getDb(), operation = await prepare();
       await bootstrapCoManagedCustomer(input(operation));
       const customer = tenantDb(db, operation.customer_tenant);
       const invitation = await customer.table('user_invitations').first();
       const { completeUserInvitationSetup, sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const expiredToken = randomUUID();
+      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: `${randomUUID()}@example.test`,
+        first_name: 'Expired', last_name: 'Invite', token: expiredToken, expires_at: new Date(Date.now() - 60000) });
+      const rolesBefore = await customer.table('user_roles');
+      process.env.FORCE_CAPABILITIES = 'co-managed:off';
+      expect(await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026'))
+        .toMatchObject({ success: false, errorCode: 'CAPABILITY_UNAVAILABLE' });
+      expect(await customer.table('users')).toHaveLength(0);
+      expect(await customer.table('user_roles')).toEqual(rolesBefore);
+      expect((await customer.table('user_invitations').where('token', invitation.token).first()).used_at).toBeNull();
+      expect(await customer.table('user_invitations').where('token', expiredToken)).toHaveLength(1);
+      delete process.env.FORCE_CAPABILITIES;
+      const rolloutFlag = vi.fn(async () => false);
+      registerFeatureFlagChecker(rolloutFlag);
       const result = await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026');
       expect(result).toMatchObject({ success: true });
       expect(await customer.table('users').where({ email: invitation.email })).toHaveLength(1);
@@ -74,6 +117,13 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       actorState.user = { tenant: actor.tenant, user_id: actor.userId, user_type: 'internal', username: invitation.email };
       appliance.check.mockClear();
       const invite = (email: string) => runWithTenant(actor.tenant, () => sendUserInvitation({ email, firstName: 'Next', lastName: 'User', roleId: invitation.role_id }));
+      const pendingBefore = await customer.table('user_invitations');
+      delivery.send.mockClear();
+      process.env.FORCE_CAPABILITIES = 'co-managed:off';
+      expect(await invite(`blocked-${randomUUID()}@example.test`)).toMatchObject({ success: false, errorCode: 'CAPABILITY_UNAVAILABLE' });
+      expect(await customer.table('user_invitations')).toEqual(pendingBefore);
+      expect(delivery.send).not.toHaveBeenCalled();
+      delete process.env.FORCE_CAPABILITIES;
       const attempts = await Promise.all([invite(`next-${randomUUID()}@example.test`), invite(`excess-${randomUUID()}@example.test`)]);
       const next = attempts.find(result => result.success)!;
       expect(attempts.filter(result => result.success)).toHaveLength(1);
@@ -82,6 +132,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       expect((await completeUserInvitationSetup(pending.token, 'ValidPassword!2026')).success).toBe(true);
       expect(await customer.table('users').where({ user_type: 'internal', is_inactive: false })).toHaveLength(2);
       expect(appliance.check).not.toHaveBeenCalled();
+      expect(rolloutFlag).not.toHaveBeenCalled();
     });
 
     it('cannot consume the initial invitation while cancellation wins the shared lock', async () => {

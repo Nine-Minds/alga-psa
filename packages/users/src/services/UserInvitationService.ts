@@ -138,17 +138,20 @@ export class UserInvitationService {
    * Verify a team invitation token. Discovers the owning tenant from the
    * token itself, same as portal invitations.
    */
-  static async verifyToken(token: string): Promise<UserTokenVerificationResult> {
+  static async verifyToken(token: string, options?: { deferCoManagedCleanup?: boolean }): Promise<UserTokenVerificationResult> {
     try {
       const { knex } = await createTenantKnex();
 
       return await withTransaction(knex, async (trx) => {
-        const tokenInfo = await tenantDb(trx, USER_INVITATION_TENANT_DISCOVERY)
+        const discovery = tenantDb(trx, USER_INVITATION_TENANT_DISCOVERY)
           .unscoped('user_invitations', 'tenant discovery from user invitation token')
           .where({ token, used_at: null })
           .where('expires_at', '>', trx.fn.now())
-          .select('tenant')
-          .first();
+          .select('tenant');
+        if (options?.deferCoManagedCleanup) {
+          discovery.select(trx.raw('(SELECT product_code FROM tenants WHERE tenants.tenant = user_invitations.tenant) AS product_code'));
+        }
+        const tokenInfo = await discovery.first();
 
         if (!tokenInfo) {
           return {
@@ -161,9 +164,11 @@ export class UserInvitationService {
         const tokenTenant = tokenInfo.tenant;
 
         // Clean up expired tokens for this tenant (single-shard query)
-        await tenantDb(trx, tokenTenant).table('user_invitations')
-          .where('expires_at', '<', trx.fn.now())
-          .del();
+        if (tokenInfo.product_code !== 'co_managed') {
+          await tenantDb(trx, tokenTenant).table('user_invitations')
+            .where('expires_at', '<', trx.fn.now())
+            .del();
+        }
 
         const scopedDb = tenantDb(trx, tokenTenant);
         const invitationQuery = scopedDb.table('user_invitations as ui');

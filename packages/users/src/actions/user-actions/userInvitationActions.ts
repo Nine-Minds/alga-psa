@@ -10,6 +10,7 @@ import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
+import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -32,6 +33,7 @@ export type UserInvitationErrorCode =
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | 'CAPABILITY_UNAVAILABLE'
   | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
   | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
 
@@ -138,6 +140,9 @@ export const sendUserInvitation = withAuth(async (
     const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats, deferCoManaged: true });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
+    }
+    if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+      return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' };
     }
 
     const tenantEmailService = TenantEmailService.getInstance(tenant);
@@ -281,7 +286,7 @@ export async function completeUserInvitationSetup(
       return { success: false, error: passwordPolicyError, errorCode: 'PASSWORD_POLICY', messageKey: passwordPolicyKey };
     }
 
-    const verificationResult = await UserInvitationService.verifyToken(token);
+    const verificationResult = await UserInvitationService.verifyToken(token, { deferCoManagedCleanup: true });
     if (!verificationResult.valid || !verificationResult.invitee || !verificationResult.tenant) {
       return { success: false, error: 'Invalid or expired invitation token', errorCode: 'INVALID_OR_EXPIRED_TOKEN' };
     }
@@ -311,6 +316,9 @@ export async function completeUserInvitationSetup(
       const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { deferCoManaged: true });
       if (isInternalUserLicenseLimitRejected(licenseCheck)) {
         return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
+      }
+      if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+        return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' } as const;
       }
 
       // The invitation's role must still exist — creating the account without
