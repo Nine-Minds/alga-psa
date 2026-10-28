@@ -31,6 +31,7 @@ import type {
   IDisplayTag,
 } from '@alga-psa/types';
 import { loadDisplayTagsForEntities, displayTagKey } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayTagsForEntityQuery } from '@alga-psa/tags/lib/displayTagsQuery';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import {
   withTransaction,
@@ -698,7 +699,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
             tenantScopedTable(trx, 'clients as c', tenant)
               .select(
                 'c.*',
-                'd.file_id'
+                'd.file_id',
+                displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'client', 'c.client_id').as('displayTags')
               ),
             'document_associations as da',
             'c.client_id',
@@ -716,6 +718,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .first(),
 
         tenantScopedTable(trx, 'contacts', tenant)
+          .select(
+            'contacts.*',
+            displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 'contacts.contact_name_id').as('displayTags')
+          )
           .where({
             client_id: ticket.client_id
           })
@@ -745,22 +751,19 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     if (ticket.contact_name_id) {
       contactInfo = await tenantScopedTable(trx, 'contacts', tenant)
+        .select(
+          'contacts.*',
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 'contacts.contact_name_id').as('displayTags')
+        )
         .where({
           contact_name_id: ticket.contact_name_id
         })
         .first();
     }
 
-    // Chip tags for the requester and client, restricted to the caller's audience by display rules.
-    const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
-      { taggedType: 'contact', ids: [ticket.contact_name_id, ...contacts.map((c) => c.contact_name_id)] },
-      { taggedType: 'client', ids: [ticket.client_id] },
-    ]);
-    // The requester picker shows the same chips as the header.
-    contacts = contacts.map((c) => ({ ...c, displayTags: chipTags.get(displayTagKey('contact', c.contact_name_id)) ?? [] }));
     const displayTags = {
-      contact: ticket.contact_name_id ? (chipTags.get(displayTagKey('contact', ticket.contact_name_id)) ?? []) : [],
-      client: ticket.client_id ? (chipTags.get(displayTagKey('client', ticket.client_id)) ?? []) : [],
+      contact: contactInfo?.displayTags ?? [],
+      client: client?.displayTags ?? [],
     };
 
     // Fetch created by user
@@ -1702,7 +1705,8 @@ function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFil
 function buildTicketListItemsQuery(
   trx: Knex.Transaction,
   tenant: string,
-  baseQuery: Knex.QueryBuilder
+  baseQuery: Knex.QueryBuilder,
+  audience: TagDisplayAudience
 ): Knex.QueryBuilder {
   const db = tenantDb(trx, tenant);
   const latestActivity = ticketLatestActivitySql(tenant);
@@ -1784,6 +1788,8 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
+      displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
+      displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
       trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
       'tm.team_name as assigned_team_name',
@@ -1967,8 +1973,7 @@ async function attachLatestActivityActors(
 async function enrichTicketListItems(
   trx: Knex.Transaction,
   tenant: string,
-  ticketListItems: ITicketListItem[],
-  audience: TagDisplayAudience
+  ticketListItems: ITicketListItem[]
 ): Promise<TicketListRowsWithMetadata> {
   // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
   const ticketIds = ticketListItems
@@ -2006,7 +2011,7 @@ async function enrichTicketListItems(
     }
   });
 
-  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap, chipTags] = await Promise.all([
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap] = await Promise.all([
     agentUserIds.size > 0
       ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
@@ -2040,11 +2045,6 @@ async function enrichTicketListItems(
     contactIds.size > 0
       ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
-    // Chip tags: which contact/client tags show is decided by the display rules for this audience.
-    loadDisplayTagsForEntities(trx, tenant, audience, [
-      { taggedType: 'contact', ids: Array.from(contactIds) },
-      { taggedType: 'client', ids: Array.from(clientIds) },
-    ]),
   ]);
 
   // Attach batched client logo and contact avatar URLs to each row (single query each, no N+1).
@@ -2053,12 +2053,6 @@ async function enrichTicketListItems(
     ticket.contact_avatar_url = ticket.contact_name_id
       ? (contactAvatarUrlsMap.get(ticket.contact_name_id) ?? null)
       : null;
-    ticket.contact_tags = ticket.contact_name_id
-      ? (chipTags.get(displayTagKey('contact', ticket.contact_name_id)) ?? [])
-      : [];
-    ticket.client_tags = ticket.client_id
-      ? (chipTags.get(displayTagKey('client', ticket.client_id)) ?? [])
-      : [];
   });
 
   await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
@@ -2145,7 +2139,7 @@ export const getTicketsForList = withAuth(async (
         .first();
 
       const pageQuery = applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder),
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user)),
         tenant,
         validatedFilters
       )
@@ -2159,7 +2153,7 @@ export const getTicketsForList = withAuth(async (
       // Future ABAC templates/constraints may not be representable in SQL yet.
       // Fall back to the exact JS kernel path instead of risking overexposure.
       const tickets = await applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, baseQuery),
+        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user)),
         tenant,
         validatedFilters
       );
@@ -2172,7 +2166,7 @@ export const getTicketsForList = withAuth(async (
       ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
     }
 
-    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems, displayAudienceForUser(user));
+    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     return {
       tickets: enriched.tickets,
       totalCount,
@@ -2288,11 +2282,11 @@ export const loadTicketListItemsByIds = withAuth(async (
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
       let rows: any[];
       if (authSqlResult.supported) {
-        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder)
+        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
       } else {
-        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery)
+        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
         rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
@@ -2308,7 +2302,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         .map((id) => byId.get(id))
         .filter((row): row is any => Boolean(row));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), displayAudienceForUser(user));
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {
@@ -3898,6 +3892,8 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           'cat.category_name',
           'comp.client_name as client_name',
           'cn.full_name as contact_name',
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 't.contact_name_id').as('contact_tags'),
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'client', 't.client_id').as('client_tags'),
           trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
           trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
           'tm.team_name as assigned_team_name',
@@ -3955,7 +3951,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
 
       // Same enrichment as the list page: avatars, logos, ticket tags and chip tags, so an expanded
       // bundle child renders exactly like a top-level row.
-      return enrichTicketListItems(trx, tenant, mapped, displayAudienceForUser(user));
+      return enrichTicketListItems(trx, tenant, mapped);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

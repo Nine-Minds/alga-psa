@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import type { IDisplayTag, TagDisplayAudience, TagDisplayEntityType } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
-import { resolveDisplayedTags } from './tagDisplayRules';
+import { displayTagsQuery } from './displayTagsQuery';
 
 export interface DisplayTagRef {
   taggedType: TagDisplayEntityType;
@@ -18,7 +17,8 @@ export const displayTagKey = (taggedType: TagDisplayEntityType, id: string): str
  * client-portal caller (`displayAudienceForUser`) sees nothing until a 'client' rule exists. This
  * function never reads tags outside the rules, whatever the caller asks for.
  *
- * One query for the rules and one per entity type for the mappings, regardless of how many ids.
+ * One query per entity type, regardless of how many ids. Reads that already select the entity can
+ * compose displayTagsForEntityQuery instead to avoid an additional round trip.
  */
 export async function loadDisplayTagsForEntities(
   knexOrTrx: Knex | Knex.Transaction,
@@ -27,50 +27,35 @@ export async function loadDisplayTagsForEntities(
   refs: readonly DisplayTagRef[],
 ): Promise<Map<string, IDisplayTag[]>> {
   const result = new Map<string, IDisplayTag[]>();
-  const db = tenantDb(knexOrTrx, tenant);
 
   for (const ref of refs) {
     const ids = Array.from(new Set(ref.ids.filter((id): id is string => !!id)));
     if (ids.length === 0) continue;
 
-    const rules = await db
-      .table('tag_display_rules')
-      .where({ tagged_type: ref.taggedType, audience })
-      .orderBy('position', 'asc')
-      .select('tag_id', 'position') as Array<{ tag_id: string; position: number }>;
-    if (rules.length === 0) continue;
-
-    const rows = await db
-      .table('tag_mappings as tm')
-      .join('tag_definitions as td', function joinDefinitions() {
-        this.on('td.tenant', '=', 'tm.tenant').andOn('td.tag_id', '=', 'tm.tag_id');
-      })
-      .where('tm.tagged_type', ref.taggedType)
-      .whereIn('tm.tagged_id', ids)
-      .whereIn('tm.tag_id', rules.map((rule) => rule.tag_id))
+    const rows = await displayTagsQuery(knexOrTrx, tenant, audience, ref.taggedType)
+      .whereIn('dtm.tagged_id', ids)
+      .orderBy('dtr.position', 'asc')
       .select(
-        'tm.tagged_id',
-        'td.tag_id',
-        'td.tag_text',
-        'td.background_color',
-        'td.text_color',
+        'dtm.tagged_id',
+        'dtd.tag_id',
+        'dtd.tag_text',
+        'dtd.background_color',
+        'dtd.text_color',
       ) as Array<IDisplayTag & { tagged_id: string }>;
 
     const byEntity = new Map<string, IDisplayTag[]>();
     for (const row of rows) {
-      const list = byEntity.get(row.tagged_id) ?? [];
+      const key = displayTagKey(ref.taggedType, row.tagged_id);
+      const list = byEntity.get(key) ?? [];
       list.push({
         tag_id: row.tag_id,
         tag_text: row.tag_text,
         background_color: row.background_color,
         text_color: row.text_color,
       });
-      byEntity.set(row.tagged_id, list);
+      byEntity.set(key, list);
     }
-    for (const [entityId, tags] of byEntity) {
-      const shown = resolveDisplayedTags(rules, tags);
-      if (shown.length > 0) result.set(displayTagKey(ref.taggedType, entityId), shown);
-    }
+    for (const [key, tags] of byEntity) result.set(key, tags);
   }
   return result;
 }

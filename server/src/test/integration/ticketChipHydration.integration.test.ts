@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import pg from 'pg';
 
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -143,6 +144,90 @@ describeDb('ticket chip tag hydration (DB)', () => {
     expect(b.client_tags.map((t: any) => t.tag_text)).toEqual(['VIP']);
   });
 
+  it('display rules add no database round trips to listing or opening tickets', async () => {
+    // Warm module/auth caches before measuring the real PostgreSQL calls across all pools.
+    await rowsById();
+    await optimized.getConsolidatedTicketData(ids.A);
+    const rules = await db('tag_display_rules').where({ tenant: ids.tenant });
+    const queries = vi.spyOn(pg.Client.prototype, 'query');
+    const read = async () => {
+      queries.mockClear();
+      const rows = await rowsById();
+      const listStatements = queries.mock.calls.length;
+      queries.mockClear();
+      const detail = await optimized.getConsolidatedTicketData(ids.A);
+      const openStatements = queries.mock.calls.length;
+      expect(listStatements).toBeGreaterThan(0);
+      expect(openStatements).toBeGreaterThan(0);
+      expect(detail.ticket.ticket_id).toBe(ids.A);
+      return { rows, detail, listStatements, openStatements };
+    };
+    try {
+      const enabled = await read();
+      expect(enabled.rows.get(ids.A).contact_tags.map((t: any) => t.tag_id)).toEqual([defs.contactVip]);
+      expect(enabled.detail.displayTags.contact.map((t: any) => t.tag_id)).toEqual([defs.contactVip]);
+      expect(enabled.detail.displayTags.client.map((t: any) => t.tag_id)).toEqual([defs.clientVip]);
+      expect(enabled.detail.contacts.find((c: any) => c.contact_name_id === ids.k1).displayTags)
+        .toEqual(enabled.detail.displayTags.contact);
+      expect(enabled.detail.contacts.find((c: any) => c.contact_name_id === ids.k2).displayTags).toEqual([]);
+
+      await db('tag_display_rules').where({ tenant: ids.tenant }).del();
+      const disabled = await read();
+      expect(disabled.detail.displayTags).toEqual({ contact: [], client: [] });
+      for (const row of disabled.rows.values()) {
+        expect(row.contact_tags).toEqual([]);
+        expect(row.client_tags).toEqual([]);
+      }
+      expect(enabled.listStatements).toBe(disabled.listStatements);
+      expect(enabled.openStatements).toBe(disabled.openStatements);
+    } finally {
+      queries.mockRestore();
+      await db('tag_display_rules').where({ tenant: ids.tenant }).del();
+      await db('tag_display_rules').insert(rules);
+    }
+  });
+
+  it('projected tags follow rule order on list rows, reloaded rows and ticket details', async () => {
+    await db('tag_display_rules').insert({
+      tenant: ids.tenant, tagged_type: 'client', audience: 'internal', tag_id: defs.clientGold, position: 1,
+    });
+    try {
+      const rows = await rowsById();
+      const reloaded: any = await optimized.loadTicketListItemsByIds(base, [ids.A]);
+      const detail = await optimized.getConsolidatedTicketData(ids.A);
+      const expected = [defs.clientVip, defs.clientGold];
+      expect(rows.get(ids.A).client_tags.map((t: any) => t.tag_id)).toEqual(expected);
+      expect(reloaded.tickets[0].client_tags.map((t: any) => t.tag_id)).toEqual(expected);
+      expect(detail.displayTags.client.map((t: any) => t.tag_id)).toEqual(expected);
+    } finally {
+      await db('tag_display_rules').where({ tenant: ids.tenant, tag_id: defs.clientGold }).del();
+    }
+  });
+
+  it('display-tag projections and batch loads isolate tenants even when entity and tag ids collide', async () => {
+    const { displayTagsForEntityQuery } = await import('../../../../packages/tags/src/lib/displayTagsQuery');
+    const { loadDisplayTagsForEntities, displayTagKey } = await import('../../../../packages/tags/src/lib/loadDisplayTags');
+    const trx = await db.transaction();
+    try {
+      const otherTenant = uuidv4();
+      await trx('tenants').insert({ tenant: otherTenant, client_name: 'Other tenant', email: 'other@example.com', product_code: 'psa' });
+      await trx('tag_definitions').insert({ tenant: otherTenant, tag_id: defs.clientVip, tag_text: 'Other VIP', tagged_type: 'client' });
+      await trx('tag_mappings').insert({ tenant: otherTenant, tag_id: defs.clientVip, tagged_id: ids.c1, tagged_type: 'client' });
+      await trx('tag_display_rules').insert({ tenant: otherTenant, tagged_type: 'client', audience: 'internal', tag_id: defs.clientVip, position: 0 });
+
+      for (const [tenant, text] of [[ids.tenant, 'VIP'], [otherTenant, 'Other VIP']]) {
+        const entity = trx.select(trx.raw('?::uuid as client_id', [ids.c1])).as('c');
+        const projected = await trx.from(entity)
+          .select(displayTagsForEntityQuery(trx, tenant, 'internal', 'client', 'c.client_id').as('tags')).first();
+        const loaded = await loadDisplayTagsForEntities(trx, tenant, 'internal', [{ taggedType: 'client', ids: [ids.c1] }]);
+        expect(projected.tags.map((t: any) => t.tag_text)).toEqual([text]);
+        expect(projected.tags).toEqual(loaded.get(displayTagKey('client', ids.c1)));
+      }
+    } finally {
+      await trx.rollback();
+    }
+  });
+
   it('T019: a client-audience load returns no chip tags without a client rule, and follows one once it exists', async () => {
     const { loadDisplayTagsForEntities, displayTagKey } = await import('../../../../packages/tags/src/lib/loadDisplayTags');
     const { displayAudienceForUser } = await import('../../../../packages/tags/src/lib/tagDisplayRules');
@@ -170,16 +255,28 @@ describeDb('ticket chip tag hydration (DB)', () => {
     const portalUser = uuidv4();
     await db('users').insert({
       tenant: ids.tenant, user_id: portalUser, username: `portal-${portalUser.slice(0, 8)}`, hashed_password: 'not-used',
-      email: `portal-${portalUser.slice(0, 8)}@example.com`, first_name: 'Portal', last_name: 'User', user_type: 'client', is_inactive: false,
+      email: `portal-${portalUser.slice(0, 8)}@example.com`, first_name: 'Portal', last_name: 'User', user_type: 'client', is_inactive: false, contact_id: ids.k1,
     });
-    authMocks.user = { user_id: portalUser, user_type: 'client', clientId: ids.c1, tenant: ids.tenant };
+    authMocks.user = { user_id: portalUser, user_type: 'client', clientId: ids.c1, contact_id: ids.k1, tenant: ids.tenant };
     try {
       const rows = await rowsById();
+      expect(rows.has(ids.A)).toBe(true);
       for (const row of rows.values()) {
         expect(row.contact_tags).toEqual([]);
         expect(row.client_tags).toEqual([]);
       }
+      const detail = await optimized.getConsolidatedTicketData(ids.A);
+      expect(detail.displayTags).toEqual({ contact: [], client: [] });
+      expect(detail.contacts.every((c: any) => c.displayTags.length === 0)).toBe(true);
+
+      await db('tag_display_rules').insert({ tenant: ids.tenant, tagged_type: 'client', audience: 'client', tag_id: defs.clientGold, position: 0 });
+      const withClientRule = await rowsById();
+      expect(withClientRule.get(ids.A).client_tags.map((t: any) => t.tag_id)).toEqual([defs.clientGold]);
+      const clientDetail = await optimized.getConsolidatedTicketData(ids.A);
+      expect(clientDetail.displayTags.client.map((t: any) => t.tag_id)).toEqual([defs.clientGold]);
+      expect(clientDetail.displayTags.contact).toEqual([]);
     } finally {
+      await db('tag_display_rules').where({ tenant: ids.tenant, audience: 'client' }).del();
       authMocks.user = { user_id: ids.actor, user_type: 'internal', tenant: ids.tenant };
     }
   });
