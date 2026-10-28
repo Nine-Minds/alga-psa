@@ -12,7 +12,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
 import { useCustodyBadges } from '@alga-psa/assets/components/custody/CustodyBadge';
 import { custodyOutcome, useCustodyLocations } from '@alga-psa/assets/components/custody/custodyClient';
@@ -26,7 +25,6 @@ import {
 import { DialogShell, HolderPicker, type DialogSubmitError } from '@alga-psa/assets/components/custody/CustodyDialogs';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
 import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { receiveEquipment, type ReceiveEquipmentActionData } from './receiveEquipmentActions';
 
 const MAX_PHOTOS = 20;
@@ -136,17 +134,8 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
 
   const id = `receive-equipment-${ticketId}`;
   const submit = async (): Promise<DialogSubmitError | null> => {
-    // Photos first: the documents are client-hidden and removed server-side if the receive fails.
-    const documentIds: string[] = [];
-    for (const file of photos) {
-      const formData = new FormData();
-      formData.append('file', file);
-      // The server uses the authenticated user; `userId` is required by the type only.
-      const uploaded = await uploadDocument(formData, { userId: '', ticketId, isClientVisible: false });
-      if (isActionPermissionError(uploaded)) return uploaded.permissionError;
-      if (!uploaded.success) return uploaded.error;
-      documentIds.push(uploaded.document.document_id);
-    }
+    const photoForm = new FormData();
+    for (const file of photos) photoForm.append('photos', file);
 
     const outcome = custodyOutcome<ReceiveEquipmentActionData>(
       await receiveEquipment({
@@ -172,8 +161,7 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         follow_up_on: details.follow_up_on || null,
         condition_note: details.condition_note.trim() || null,
         accessories: cleanAccessories(details.accessories),
-        document_ids: documentIds,
-      })
+      }, photoForm)
     );
     if (!outcome.ok) {
       const message = outcome.messageKey

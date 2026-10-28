@@ -2,7 +2,7 @@
 
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@alga-psa/db";
-import { deleteDocument } from "@alga-psa/documents/actions/documentActions";
+import { deleteDocument, uploadDocument } from "@alga-psa/documents/actions/documentActions";
 import { authorizeTicketRecordAccess } from "@alga-psa/tickets/lib/ticketRecordAuthorization";
 import {
   receiveEquipmentInputSchema,
@@ -28,8 +28,8 @@ import type { IAssetCustody, IAssetCustodyEvent } from "@alga-psa/types";
  * plus the ticket record check, `asset:update` for an existing device, `asset:create` as well for a new
  * one. Nothing here touches stock, billing or time.
  *
- * Photos are uploaded by the dialog BEFORE this call (client-hidden documents). When the receive fails,
- * the documents passed in are deleted so no orphans remain.
+ * Photos are uploaded within this invocation as client-hidden ticket documents. Only documents created
+ * by this invocation are eligible for cleanup if upload or receive fails.
  */
 export interface ReceiveEquipmentActionData {
   asset: {
@@ -48,26 +48,26 @@ export const receiveEquipment = withAuth(
     user,
     { tenant },
     input: unknown,
+    photos?: FormData,
   ): Promise<
     CustodyActionResult<ReceiveEquipmentActionData> | ActionPermissionError
   > => {
     const { knex } = await createTenantKnex();
     let parsed: ReceiveEquipmentInput | null = null;
-    const documentIds: string[] = Array.isArray((input as any)?.document_ids)
-      ? (input as any).document_ids
-      : [];
-
+    // Only IDs returned by uploads in this invocation are eligible for cleanup.
+    const documentIds: string[] = [];
     const cleanup = async () => {
+      const failures: string[] = [];
       for (const documentId of documentIds) {
         try {
-          await deleteDocument(documentId, user.user_id);
+          const deletion = await deleteDocument(documentId, user.user_id);
+          if (!deletion.success) failures.push(documentId);
         } catch (error) {
-          console.error(
-            `Failed to remove intake photo ${documentId} after a failed receive:`,
-            error,
-          );
+          console.error('Failed to remove intake photo:', error);
+          failures.push(documentId);
         }
       }
+      if (failures.length) throw new Error('Failed to clean up one or more intake photos. Contact an administrator.');
     };
 
     if (
@@ -86,6 +86,19 @@ export const receiveEquipment = withAuth(
     try {
       result = await toCustodyResult(async () => {
         parsed = receiveEquipmentInputSchema.parse(input);
+        if (parsed.document_ids.length) {
+          throw new CustodyError('permission_denied', 'Existing documents cannot be submitted as intake photos.');
+        }
+        const files = photos?.getAll('photos') ?? [];
+        if (files.length && !await hasPermission(user, 'document', 'read')) {
+          throw new CustodyError('permission_denied', 'Permission denied: Cannot read documents.');
+        }
+        if (files.length && user.user_type === 'client') {
+          throw new CustodyError('permission_denied', 'Only internal users can upload custody photos.');
+        }
+        if (files.length > 20 || files.some((file) => typeof file === 'string' || !file.type.startsWith('image/'))) {
+          throw new CustodyError('permission_denied', 'Choose up to 20 image files.');
+        }
         try {
           await authorizeTicketRecordAccess({
             trx: knex,
@@ -97,6 +110,15 @@ export const receiveEquipment = withAuth(
         } catch {
           throw new CustodyError("ticket_not_found", "Ticket not found.");
         }
+        for (const file of files) {
+          const form = new FormData();
+          form.append('file', file);
+          const uploaded = await uploadDocument(form, { userId: '', ticketId: parsed.ticket_id, isClientVisible: false });
+          if ('permissionError' in uploaded) throw new CustodyError('permission_denied', uploaded.permissionError);
+          if (!uploaded.success) throw new CustodyError('permission_denied', uploaded.error);
+          documentIds.push(uploaded.document.document_id);
+        }
+        parsed.document_ids = documentIds;
         const r = await receiveEquipmentService(
           knex,
           tenant,

@@ -2394,7 +2394,7 @@ export const uploadDocument = withAuth(async (
         uploaded_by_id: authenticatedUserId
       });
 
-      if (options.commentAttachmentDraft) unclaimedStorageFileId = uploadResult.file_id;
+      unclaimedStorageFileId = uploadResult.file_id;
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
@@ -2472,7 +2472,7 @@ export const uploadDocument = withAuth(async (
       // Documents uploaded by client users are automatically client-visible.
       // For internal users, inherit visibility from the target folder.
       let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
-      if (!isClientVisible && resolvedFolderPath) {
+      if (!isClientVisible && options.isClientVisible !== false && resolvedFolderPath) {
         try {
           const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
             .select('is_client_visible')
@@ -2655,13 +2655,17 @@ export const uploadDocument = withAuth(async (
         );
       }
 
-      await publishDocumentUpdatedSearchEvent(
-        tenant,
-        document.document_id,
-        user.user_id,
-        ['document_name', 'file_id', 'storage_path'],
-        'uploadDocument',
-      );
+      try {
+        await publishDocumentUpdatedSearchEvent(
+          tenant,
+          document.document_id,
+          user.user_id,
+          ['document_name', 'file_id', 'storage_path'],
+          'uploadDocument',
+        );
+      } catch (error) {
+        console.error('[uploadDocument] Failed to publish search update:', error);
+      }
 
       // Generate previews after the transaction completes.
       // Awaited so the preview is ready before the response reaches the client.

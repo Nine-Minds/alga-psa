@@ -195,7 +195,7 @@ async function cleanupTenant(tenant: string) {
     await db.raw('ALTER TABLE asset_custody_events DISABLE TRIGGER USER').catch(() => undefined);
   }
   for (const name of [
-    'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'assets', 'tickets',
+    'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'document_associations', 'documents', 'assets', 'tickets',
     'asset_type_registry', 'stock_locations', 'asset_statuses', 'tenant_settings', 'clients', 'users',
   ]) await del(name);
   if (!isCitus) await db.raw('ALTER TABLE asset_custody_events ENABLE TRIGGER USER').catch(() => undefined);
@@ -220,6 +220,42 @@ describe('equipment custody (integration)', () => {
     for (const tenant of cleanupTenants) await cleanupTenant(tenant);
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
+
+  it('associates both intake photos atomically and preserves ticket links', async () => {
+    const fx = await seedFixture();
+    const ids = [randomUUID(), randomUUID()];
+    for (const id of ids) {
+      await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'photo', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
+      await table(fx.tenantId, 'document_associations').insert({ tenant: fx.tenantId, document_id: id, entity_type: 'ticket', entity_id: fx.ticketId });
+    }
+    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
+    const input = intake(fx, { document_ids: ids }) as any;
+    await expect(db.transaction(async trx => {
+      await receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input);
+      throw new Error('rollback');
+    })).rejects.toThrow('rollback');
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset' })).toHaveLength(0);
+    expect(await table(fx.tenantId, 'asset_custody_events')).toHaveLength(0);
+    const result = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input));
+    expect(result.event.document_ids).toEqual(ids);
+    const links = await table(fx.tenantId, 'document_associations').whereIn('document_id', ids);
+    expect(links.filter((row: any) => row.entity_type === 'ticket')).toHaveLength(2);
+    expect(links.filter((row: any) => row.entity_type === 'asset' && row.entity_id === result.asset.asset_id)).toHaveLength(2);
+    expect((await table(fx.tenantId, 'documents').whereIn('document_id', ids)).every((row: any) => !row.is_client_visible)).toBe(true);
+
+    const existingId = await newAsset(fx);
+    const existing = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, {
+      ...input, new_asset: undefined, asset_id: existingId,
+    }));
+    expect(existing.event.document_ids).toEqual(ids);
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
+
+    await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId }).del();
+    const migration = await import('../../../migrations/20261028051434_backfill_custody_photo_asset_associations.cjs');
+    await migration.up(db);
+    await migration.up(db);
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
+  });
 
   it('never writes stock, money or time across both intake modes and every step (hard invariant)', async () => {
     const fx = await seedFixture();

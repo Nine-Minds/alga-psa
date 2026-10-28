@@ -27,8 +27,7 @@ already authorised here).
 
 Consequences that satisfy the card's C4 rule:
 
-- **Failed receive** → transaction rolls back, so no event and no asset association exists; the dialog's
-  upload cleanup already removes the uploaded documents (keep it as-is).
+- **Failed receive** → transaction rolls back, so no event and no asset association exists; the server cleans only uploads created within the current receive attempt and reports cleanup failures.
 - **Existing-asset receive** → same insertion; photos attach to the existing asset.
 - **Idempotent** → a retried receive cannot double-associate.
 
@@ -74,7 +73,7 @@ nothing: events without stored ids are left alone and that limitation is recorde
 | Area | Test |
 | --- | --- |
 | Association | Integration: `receiveEquipment` with two `document_ids` → both `document_associations('asset')` rows exist for the new asset and for an existing asset. |
-| Rollback | Integration: force `openCustody` to refuse after upload → no event, no asset association, and the uploaded documents are gone (C4's cleanup still holds). |
+| Rollback | Integration: force `openCustody` to refuse after upload → no event, no asset association, and the attempt uploads are removed without deleting existing documents. |
 | Idempotency | Integration: repeat the receive (or re-run the backfill twice) → no duplicate associations. |
 | Documents area | Component: an `asset` association makes the document appear in `DocumentsPasswordsTab`. |
 | History | Component: the "Received into custody" entry renders two thumbnails from `documentIds`; an entry with none renders no strip. |
