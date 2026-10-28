@@ -19,6 +19,8 @@ test('workspace DB runner collects and executes outbound diagnostics with its is
     cpSync(path.join(repository, file), path.join(root, file));
   }
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  // The runner launches the hoisted root vitest, as every other lane does.
+  symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   writeFileSync(path.join(root, 'server/vitest.workspace-db.config.ts'), `export default ${JSON.stringify({
     test: { include: ['../packages/**/*.db.test.ts'], globals: true, environment: 'node', maxWorkers: 1 },
