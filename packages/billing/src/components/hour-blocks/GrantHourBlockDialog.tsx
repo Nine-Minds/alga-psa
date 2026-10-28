@@ -48,7 +48,7 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
     let cancelled = false;
     setServicesLoading(true);
     setError(null);
-    getServices(1, 999, { is_active: true, item_kind: 'service' })
+    getServices(1, 999, { is_active: true, item_kind: 'service', billing_method: 'hourly' })
       .then((result) => {
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result) || 'error' in result) {

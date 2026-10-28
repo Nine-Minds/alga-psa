@@ -94,6 +94,16 @@ describe.each(variants)('$name hour block service picker', ({ renderDialog, trig
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 
+  it('only loads active hourly services', async () => {
+    await openPicker();
+
+    expect(mocks.getServices).toHaveBeenCalledWith(1, 999, {
+      is_active: true,
+      item_kind: 'service',
+      billing_method: 'hourly',
+    });
+  });
+
   it('lists every service, inside the dialog, when opened', async () => {
     await openPicker();
 
