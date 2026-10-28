@@ -3255,14 +3255,19 @@ export class BillingEngine {
       timing.servicePeriodStartExclusive,
       timing.servicePeriodEndExclusive,
     );
-    return await query
+    query
       .where({
         "hb.client_id": clientId,
         "hb.contract_line_id": clientContractLine.contract_line_id,
         "te.invoiced": false,
       })
-      .where("te.approval_status", "APPROVED")
-      .where(function (this: Knex.QueryBuilder) {
+      .where("te.approval_status", "APPROVED");
+    if (carriedWindows.length === 0) {
+      query
+        .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
+        .where("te.end_time", "<", timing.servicePeriodEndExclusive);
+    } else {
+      query.where(function (this: Knex.QueryBuilder) {
         this.where(function (this: Knex.QueryBuilder) {
           this.where("te.start_time", ">=", timing.servicePeriodStartExclusive).where(
             "te.end_time",
@@ -3280,7 +3285,9 @@ export class BillingEngine {
               .where("te.start_time", "<", window.endExclusive);
           });
         }
-      })
+      });
+    }
+    return await query
       .orderBy("hb.purchased_at", "asc")
       .orderBy("hb.block_id", "asc")
       .select(
