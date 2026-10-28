@@ -5,6 +5,7 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 const createTable = require(path.resolve(__dirname, '../20261029130000_create_contact_locations.cjs'));
 const workArrangement = require(path.resolve(__dirname, '../20261029130100_add_contact_work_arrangement.cjs'));
+const validateWorkArrangement = require(path.resolve(__dirname, '../20261029130200_validate_contact_work_arrangement.cjs'));
 
 type Recorded = { kind: string; args: unknown[] };
 
@@ -14,7 +15,13 @@ type Recorded = { kind: string; args: unknown[] };
  * delete rules); what can drift silently is the shape the migration emits, so that is what this
  * asserts. `probe` decides what the Citus probes in utils/citusDistribution.cjs see.
  */
-function fakeKnex(probe: { citus: boolean; contactsDistributed: boolean; tableDistributed?: boolean } = {
+function fakeKnex(probe: {
+  citus: boolean;
+  contactsDistributed: boolean;
+  tableDistributed?: boolean;
+  /** What the validate migration's pg_constraint probe finds: NOT VALID, validated, or gone. */
+  workArrangementCheck?: 'not_valid' | 'validated' | 'absent';
+} = {
   citus: false, contactsDistributed: false,
 }) {
   const raw = vi.fn(async (statement: string, bindings?: unknown[]) => {
@@ -27,6 +34,11 @@ function fakeKnex(probe: { citus: boolean; contactsDistributed: boolean; tableDi
         ? Boolean(probe.tableDistributed)
         : probe.contactsDistributed;
       return { rows: [{ is_distributed: distributed }] };
+    }
+    if (sql.includes('convalidated')) {
+      const state = probe.workArrangementCheck ?? 'not_valid';
+      if (state === 'absent') return { rows: [] };
+      return { rows: [{ convalidated: state === 'validated' }] };
     }
     if (sql.includes('pg_constraint')) return { rows: [{ present: false }] };
     return { rows: [] };
@@ -138,9 +150,10 @@ describe('add_contact_work_arrangement migration', () => {
     const sql = k.sql().join('\n');
 
     expect(k.columns.map(c => [c.kind, c.args[0]])).toContainEqual(['text', 'work_arrangement']);
+    // NOT VALID keeps the ADD catalog-only on a hot table; 20261029130200 does the one scan.
     expect(sql).toContain(
       "ADD CONSTRAINT contacts_work_arrangement_check CHECK (work_arrangement IS NULL OR " +
-      "work_arrangement IN ('on_site', 'hybrid', 'remote'))",
+      "work_arrangement IN ('on_site', 'hybrid', 'remote')) NOT VALID",
     );
   });
 
@@ -151,5 +164,23 @@ describe('add_contact_work_arrangement migration', () => {
 
     expect(k.sql().join('\n')).toContain('DROP CONSTRAINT IF EXISTS contacts_work_arrangement_check');
     expect(k.columns.map(c => [c.kind, c.args[0]])).toContainEqual(['dropColumn', 'work_arrangement']);
+  });
+});
+
+describe('validate_contact_work_arrangement migration', () => {
+  it('validates the NOT VALID check outside a transaction', async () => {
+    const k = fakeKnex();
+    await validateWorkArrangement.up(k.knex as never);
+
+    expect(validateWorkArrangement.config).toEqual({ transaction: false });
+    expect(k.sql().join('\n')).toContain('ALTER TABLE contacts VALIDATE CONSTRAINT contacts_work_arrangement_check');
+  });
+
+  it('re-runs clean when the check is already validated or no longer there', async () => {
+    for (const workArrangementCheck of ['validated', 'absent'] as const) {
+      const k = fakeKnex({ citus: false, contactsDistributed: false, workArrangementCheck });
+      await validateWorkArrangement.up(k.knex as never);
+      expect(k.sql().join('\n')).not.toContain('VALIDATE CONSTRAINT');
+    }
   });
 });
