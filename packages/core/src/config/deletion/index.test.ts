@@ -6,6 +6,7 @@ function makeTrx() {
   const builder = {
     where: vi.fn().mockReturnThis(),
     whereNull: vi.fn().mockReturnThis(),
+    whereNotIn: vi.fn().mockReturnThis(),
     count: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue({ count: '0' }),
     select: vi.fn().mockReturnThis()
@@ -369,6 +370,20 @@ describe('deletion configs', () => {
     // Maintenance schedules and ticket-entity links are cascaded inside
     // deleteAsset rather than blocking deletion validation.
     expect(DELETION_CONFIGS.asset.dependencies).toEqual([]);
+  });
+
+  it('quote activity dependency ignores created/updated rows so edited drafts stay deletable', async () => {
+    const dep = DELETION_CONFIGS.quote.dependencies.find((d) => d.type === 'quote_activity');
+    const { trx, builder } = makeTrx();
+
+    await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'quote-1' });
+
+    // Every save writes an 'updated' activity; counting it made any edited
+    // draft permanently undeletable (silently, from the quotes list).
+    expect(trx).toHaveBeenCalledWith('quote_activities');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'quote_activities.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, { quote_id: 'quote-1' });
+    expect(builder.whereNotIn).toHaveBeenCalledWith('activity_type', ['created', 'updated']);
   });
 });
 

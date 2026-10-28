@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseCustomRecurrence } from '../maintenanceRecurrence';
 
 const assetClientInfoSchema = z.object({
   client_id: z.string().uuid(),
@@ -181,8 +182,11 @@ const maintenanceFrequencySchema = z.enum([
   'custom'
 ]);
 
+// Mirrors the asset_maintenance_schedules / _history CHECK constraints, widened
+// to include 'corrective' by migration 20260728100000.
 const maintenanceTypeSchema = z.enum([
   'preventive',
+  'corrective',
   'inspection',
   'calibration',
   'replacement'
@@ -267,7 +271,7 @@ export const createAssetAssociationSchema = z.object({
   relationship_type: z.string()
 });
 
-export const createMaintenanceScheduleSchema = z.object({
+const maintenanceScheduleWriteSchema = z.object({
   asset_id: z.string().uuid(),
   schedule_name: z.string(),
   description: z.string().optional(),
@@ -278,9 +282,25 @@ export const createMaintenanceScheduleSchema = z.object({
   next_maintenance: z.string()
 });
 
-export const updateMaintenanceScheduleSchema = createMaintenanceScheduleSchema.partial().extend({
+// `custom` needs a rule in schedule_config.recurrence. Partial updates that
+// send only one of the two fields are re-checked against the stored row.
+const requireCustomRecurrence = (
+  data: { frequency?: string; schedule_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx
+): void => {
+  if (data.frequency !== 'custom' || data.schedule_config === undefined) return;
+  try {
+    parseCustomRecurrence(data.schedule_config);
+  } catch (error) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schedule_config', 'recurrence'], message: (error as Error).message });
+  }
+};
+
+export const createMaintenanceScheduleSchema = maintenanceScheduleWriteSchema.superRefine(requireCustomRecurrence);
+
+export const updateMaintenanceScheduleSchema = maintenanceScheduleWriteSchema.partial().extend({
   is_active: z.boolean().optional()
-});
+}).superRefine(requireCustomRecurrence);
 
 export const createMaintenanceHistorySchema = z.object({
   asset_id: z.string().uuid(),

@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Raccourcis clavier",
     "opportunities": "Opportunités",
     "mcpServer": "Serveur MCP",
-    "settingsFallback": "Paramètres"
+    "settingsFallback": "Paramètres",
+    "tags": "Étiquettes"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -3972,5 +3973,21 @@
       "empty": "Aucun statut standard disponible à importer",
       "importSelected": "Importer la sélection ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Afficher sur les puces",
+    "subtitle": "Étiquettes affichées à côté des contacts et des clients dans les listes de tickets, les en-têtes de ticket et les sélecteurs.",
+    "loading": "Chargement…",
+    "description": "Choisissez les étiquettes affichées sous forme de badges à côté des contacts et des clients, et leur ordre. Une liste sans étiquette n'affiche aucun badge pour ce public.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Utilisateurs internes",
+    "audienceClient": "Portail client",
+    "clientNote": "Vide au départ. Les étiquettes listées ici sont visibles par les utilisateurs du client dans le portail client.",
+    "noneSelected": "Aucune étiquette affichée.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "remove": "Retirer",
+    "addTag": "Ajouter une étiquette…"
   }
 }

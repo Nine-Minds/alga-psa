@@ -297,7 +297,7 @@
         "description": "Configurer les options avancées de traitement des e-mails",
         "folderFiltersLabel": "Filtres de dossiers",
         "folderFiltersPlaceholder": "Boîte de réception, support, dossier personnalisé",
-        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception)",
+        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception). Utilisez le nom exact du dossier tel qu’il apparaît dans Outlook et écrivez les dossiers imbriqués sous la forme Boîte de réception/Sous-dossier.",
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
       },
       "readiness": {

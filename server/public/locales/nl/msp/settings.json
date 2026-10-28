@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Sneltoetsen",
     "mcpServer": "MCP-server",
     "opportunities": "Verkoopkansen",
-    "settingsFallback": "Instellingen"
+    "settingsFallback": "Instellingen",
+    "tags": "Labels"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",
@@ -3972,5 +3973,21 @@
       "empty": "Geen standaardstatussen beschikbaar om te importeren",
       "importSelected": "Selectie importeren ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Weergeven op chips",
+    "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
+    "loading": "Laden…",
+    "description": "Kies welke tags als badges naast contactpersonen en klanten worden getoond en in welke volgorde. Een lijst zonder tags toont geen badges voor dat publiek.",
+    "contacts": "Contactpersonen",
+    "clients": "Klanten",
+    "audienceInternal": "Interne gebruikers",
+    "audienceClient": "Klantenportaal",
+    "clientNote": "Begint leeg. Tags in deze lijst zijn zichtbaar voor de eigen gebruikers van de klant in het klantenportaal.",
+    "noneSelected": "Geen tags getoond.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "remove": "Verwijderen",
+    "addTag": "Tag toevoegen…"
   }
 }

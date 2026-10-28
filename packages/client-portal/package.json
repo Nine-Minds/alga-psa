@@ -35,6 +35,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/msp-composition": "*",
     "@alga-psa/opportunities": "*",
     "@alga-psa/projects": "*",

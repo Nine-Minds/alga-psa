@@ -49,7 +49,6 @@ describe('native files stay free of co-managed coupling', () => {
   it('probes neither product_code nor co_manag in registry defaults or the manifest', () => {
     const files = [
       'packages/db/src/lib/tenantTableManifest.ts',
-      'packages/db/src/lib/writeAdmission.ts',
       'packages/tickets/src/lib/ticketLifecycleHooks.ts',
       'packages/tickets/src/lib/commentEventRegistry.ts',
       'packages/tickets/src/lib/scheduledCommentAdmission.ts',

@@ -204,6 +204,10 @@
     "passwordMismatch": "As senhas não coincidem"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Este espaço de trabalho cogerido é somente leitura. Login, leitura, exportação e recuperação da licença continuam disponíveis.",
+      "acceptancePending": "O administrador do cliente deve aceitar a cogestão antes de usar este espaço de trabalho."
+    },
     "validation": {
       "required": "{{field}} é obrigatório.",
       "invalidType": "{{field}} tem o tipo incorreto.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Alternar visualização"
+  },
+  "entityChip": {
+    "moreTags": "mais {{count}} tags: {{names}}"
   }
 }

@@ -1,6 +1,7 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
-import { ITaggable } from './tag.interfaces';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { ITaggable, type IDisplayTag } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
@@ -122,6 +123,10 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
+  contact_tags?: IDisplayTag[];
+  /** Chip tags for the client, already filtered to the caller's audience by the display rules. */
+  client_tags?: IDisplayTag[];
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
@@ -165,6 +170,11 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
+   * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.
+   */
+  where?: PredicateGroup;
 }
 
 export interface IPriority extends TenantEntity {

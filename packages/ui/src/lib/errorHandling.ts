@@ -181,6 +181,7 @@ export function permissionError(
   return { permissionError: message, ...(key ? { messageKey: key } : {}), ...(params ? { messageParams: params } : {}) } as ActionPermissionError;
 }
 
+// LEVERAGE: pattern action-error-mapper — 22 per-module *ActionErrorFrom mappers; withAuth now owns the co-managed lifecycle case. Not resolved here: the remaining cases are product-specific copy.
 /**
  * Creates a user-safe error return value for server actions.
  *

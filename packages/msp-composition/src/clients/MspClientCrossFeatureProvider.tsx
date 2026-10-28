@@ -6,6 +6,7 @@ import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySumm
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
@@ -44,6 +45,7 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
         prefilledClient={props.prefilledClient}
         prefilledContact={props.prefilledContact}
         prefilledDescription={props.prefilledDescription}
+        renderAssetPicker={renderQuickAddAssetPicker}
       />
     ),
     []

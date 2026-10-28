@@ -160,6 +160,10 @@
     "passwordMismatch": "Hasła nie są zgodne"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Ten współzarządzany obszar roboczy jest tylko do odczytu. Logowanie, odczyt, eksport i odzyskiwanie licencji pozostają dostępne.",
+      "acceptancePending": "Administrator klienta musi zaakceptować współzarządzanie, zanim będzie można korzystać z tego obszaru roboczego."
+    },
     "validation": {
       "required": "Pole {{field}} jest wymagane.",
       "invalidType": "Pole {{field}} ma nieprawidłowy typ.",
@@ -2219,5 +2223,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Przełącz widok"
+  },
+  "entityChip": {
+    "moreTags": "Kolejne tagi ({{count}}): {{names}}"
   }
 }

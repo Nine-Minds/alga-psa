@@ -789,9 +789,11 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'quote_activities',
         label: 'quote activity',
         countQuery: async (trx, options) => {
+          // Every save writes an 'updated' row; only real history (sent, status
+          // changes, conversions...) should block a hard delete of a draft.
           const result = await tenantScopedTable(trx, options.tenant, 'quote_activities')
             .where({ quote_id: options.entityId })
-            .whereNot('activity_type', 'created')
+            .whereNotIn('activity_type', ['created', 'updated'])
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);

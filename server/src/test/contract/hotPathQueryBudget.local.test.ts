@@ -11,7 +11,7 @@
  * the SQL path is real) against a fixture tenant. Only the withAuth bootstrap needs a
  * running server (session/auth); it is not exercised here.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 // @ts-expect-error plain ESM helper
 import { startRecording, emitStep } from '../../../../scripts/review/hotpathRecorder.mjs';
@@ -24,9 +24,21 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: ctx.knex, tenant: ctx.tenant })),
 }));
+// CM L0c A2: a real request's getCurrentUser hands the session product code to write admission
+// (noteTenantProductCode) before any action body runs. The stub does the same, so the capture shows
+// what a PSA request pays under production config. HOTPATH_SEED_PRODUCT_CODE=0 turns the seed off to
+// show the cold `tenants.product_code` read the seam removes.
+async function seedSessionProductCode(tenant: string) {
+  if (process.env.HOTPATH_SEED_PRODUCT_CODE === '0') return;
+  const { noteTenantProductCode } = await import('@alga-psa/db');
+  noteTenantProductCode(tenant, 'psa');
+}
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth')>()),
-  withAuth: (action: any) => (...args: any[]) => action(ctx.user, { tenant: ctx.tenant }, ...args),
+  withAuth: (action: any) => async (...args: any[]) => {
+    await seedSessionProductCode(ctx.tenant);
+    return action(ctx.user, { tenant: ctx.tenant }, ...args);
+  },
   hasPermission: vi.fn(async () => true),
 }));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
@@ -67,11 +79,24 @@ async function ticketFixture() {
   await admin('priorities').insert({ tenant, priority_id: priorityId, priority_name: 'Normal', order_number: 1, color: '#888888', item_type: 'ticket', created_by: userId });
   ctx.knex = admin;
   ctx.tenant = tenant;
+  // The factory writes above went through guarded builders and warmed the admission cache. Measured
+  // steps must see a fresh process's first write, so start from an empty cache (absent on the base commit).
+  try { (await import('@alga-psa/db/testing') as any).clearWriteAdmissionCacheForTests?.(); } catch { /* base commit */ }
+  await seedSessionProductCode(tenant);
   ctx.user = { user_id: userId, user_type: 'internal', first_name: 'Test', last_name: 'User' };
   return { admin, tenant, clientId, userId, boardId, statusOpen, statusProgress, priorityId };
 }
 
 describe.skipIf(!enabled)('hot path query budget', () => {
+  // Production config: server/src/instrumentation.ts always installs the co-managed resolver.
+  // The base commit has no such module, so the install is skipped there (the capture is what is compared).
+  beforeAll(async () => {
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch { /* base commit: nothing to install */ }
+  });
+
   it('with-transaction-after-commit', async () => {
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');

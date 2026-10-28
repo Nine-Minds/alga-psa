@@ -119,7 +119,12 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored."
   },
   "create": {
     "title": "Create Support Ticket",
@@ -258,7 +263,8 @@
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
-    "printWorkTag": "Print work tag"
+    "printWorkTag": "Print work tag",
+    "retry": "Retry"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -368,7 +374,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",
@@ -988,7 +995,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
-    "tagCreationFailed_many": "{{count}} tags could not be created"
+    "tagCreationFailed_many": "{{count}} tags could not be created",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Select a client to link assets.",
+      "unavailable": "Assets can be linked from the ticket after it is created."
+    },
+    "attachments": {
+      "heading": "Attachments",
+      "add": "Add files",
+      "remove": "Remove {{name}}"
+    },
+    "watchers": {
+      "heading": "Watchers",
+      "placeholder": "Add watchers..."
+    },
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1283,6 +1305,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
+      "defaultReplyInternalTitle": "Default reply visibility",
+      "defaultReplyInternalDescription": "Start new ticket replies as Internal for all team members. Users can still switch a reply to Client. Client portal replies and replies within existing threads are unchanged.",
+      "defaultReplyInternalLabel": "Default ticket replies to Internal",
       "responseStateTrackingDescription": "When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). Disabling this hides response state badges, filters, and related SLA pause options.",
       "responseStateTrackingEnabled": "Response state tracking enabled",
       "responseStateTrackingDisabled": "Response state tracking disabled",

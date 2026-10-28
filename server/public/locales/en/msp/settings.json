@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "opportunities": "Opportunities",
     "mcpServer": "MCP Server",
-    "settingsFallback": "Settings"
+    "settingsFallback": "Settings",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -3972,5 +3973,21 @@
       "empty": "No standard statuses available for import",
       "importSelected": "Import Selected ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Display on chips",
+    "subtitle": "Tags shown next to contacts and clients in ticket lists, ticket headers and pickers.",
+    "loading": "Loading…",
+    "description": "Choose which tags show as badges next to contacts and clients, and in what order. A list with no tags shows no badges for that audience.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Internal users",
+    "audienceClient": "Client portal",
+    "clientNote": "Starts empty. Tags listed here are visible to the client's own users in the client portal.",
+    "noneSelected": "No tags shown.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "addTag": "Add a tag…"
   }
 }
