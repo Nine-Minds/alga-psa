@@ -7,8 +7,8 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 // Behavioral DB test for the tombstone partial-index migration (ticket
 // alga-2026-0002886). `up` is called on a DB that may already be migrated; it
-// is idempotent (DROP IF EXISTS + CREATE). The suite leaves the index in its
-// migrated (partial) state.
+// is idempotent (CONCURRENTLY build under a staging name, drop, rename back).
+// The suite leaves the index in its migrated (partial) state.
 
 const require = createRequire(import.meta.url);
 const MIGRATION_PATH = path.resolve(
@@ -91,6 +91,47 @@ afterAll(async () => {
 });
 
 describe('external mapping tombstone partial index (DB-backed)', () => {
+  it('keeps writes available while an existing reader delays the index rebuild', async () => {
+    await migration.up(db);
+    const reader = await db.transaction();
+    const connection = await db.client.acquireConnection();
+    let rebuilding: Promise<unknown> | undefined;
+    try {
+      await reader(MAPPINGS).select('id').limit(1);
+      const { rows: [{ pid }] } = await db.raw('SELECT pg_backend_pid() AS pid').connection(connection);
+      // Pin both migration statements to one session so we can observe its
+      // lock wait without timing assumptions about when DROP INDEX starts.
+      rebuilding = migration.up({
+        raw: (sql: string, bindings?: readonly unknown[]) => db.raw(sql, bindings as any).connection(connection),
+      } as Knex);
+      const deadline = Date.now() + 5000;
+      let waiting = false;
+      while (Date.now() < deadline) {
+        const { rows } = await db.raw(
+          'SELECT 1 FROM pg_locks WHERE pid = ? AND NOT granted', [pid]
+        );
+        if (rows.length) {
+          waiting = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(waiting).toBe(true);
+      await db.transaction(async (writer) => {
+        await writer.raw("SET LOCAL lock_timeout = '500ms'");
+        // Even an empty UPDATE takes the same table lock as an app write.
+        await writer(MAPPINGS).where({ tenant: randomUUID() }).update({ sync_status: 'manual_link' });
+      });
+    } finally {
+      await reader.rollback();
+      try {
+        await rebuilding;
+      } finally {
+        await db.client.releaseConnection(connection);
+      }
+    }
+  }, 15_000);
+
   it('up: an unlinked row no longer reserves its target, live rows still do', async () => {
     await migration.up(db);
     expect(await indexDef(EXTERNAL_INDEX)).toMatch(/deleted_at IS NULL/i);
@@ -139,6 +180,50 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
       code: '23505',
     });
   });
+
+  it('up permits inserts while the index build waits for an older writer', async () => {
+    const tenant = await makeTenant('concurrent-build');
+    // Start with no external index so the older writer holds up CREATE, not DROP.
+    await db.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping');
+    const writer = await db.transaction();
+    let build: Promise<unknown> | undefined;
+    try {
+      await writer(MAPPINGS).insert({
+        id: randomUUID(), tenant, integration_type: 'quickbooks_online',
+        alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+        external_entity_id: 'OLDER-WRITER', external_realm_id: 'realm-1',
+      });
+      // Attach rejection handling immediately so cleanup can always release the writer.
+      build = migration.up(db).then(() => null, (error) => error);
+      await expect.poll(async () => {
+        const waiting = await db.raw(`
+          SELECT 1 FROM pg_stat_activity
+          WHERE datname = current_database() AND pid <> pg_backend_pid()
+            AND query ILIKE '%CREATE UNIQUE INDEX%idx_unique_external_mapping%'
+            AND wait_event_type = 'Lock'
+        `);
+        return waiting.rows.length;
+      }, { timeout: 5000 }).toBeGreaterThan(0);
+
+      // A regular CREATE INDEX queues a ShareLock and blocks this INSERT.
+      // CONCURRENTLY lets it finish while still waiting for the older writer.
+      await db.transaction(async (inserter) => {
+        await inserter.raw("SET LOCAL lock_timeout = '1s'");
+        await inserter(MAPPINGS).insert({
+          id: randomUUID(), tenant, integration_type: 'quickbooks_online',
+          alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+          external_entity_id: 'NEW-WRITER', external_realm_id: 'realm-1',
+        });
+      });
+    } finally {
+      await writer.rollback();
+      if (build) expect(await build).toBeNull();
+    }
+    expect(await indexDef(EXTERNAL_INDEX)).toMatch(/deleted_at IS NULL/i);
+    // Reapplying the migration must also leave a usable unique index.
+    await migration.up(db);
+    await expect(insertMapping(tenant, { target: 'NEW-WRITER' })).rejects.toMatchObject({ code: '23505' });
+  }, 15000);
 
   it('leaves idx_unique_alga_mapping total, so ON CONFLICT on its key still infers it', async () => {
     await migration.up(db);

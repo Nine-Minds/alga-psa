@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { ClientPortalSignIn, ClientPortalSsoFailureNotice, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { requestClientPortalLoginLinksAction } from '../../../actions/tenantDiscoveryActions';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import {
@@ -110,7 +111,7 @@ export default async function ClientSignInPage({
       <I18nWrapper portal="client" initialLocale={discoveryLocale}>
         {/* An SSO mapping failure can land here with no tenant to brand against;
             discovery renders no error of its own, so say why sign-in failed. */}
-        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} notice={<ClientPortalSsoFailureNotice />} />
+        <ClientPortalTenantDiscovery requestLoginLinks={requestClientPortalLoginLinksAction} callbackUrl={callbackUrl} notice={<ClientPortalSsoFailureNotice />} />
       </I18nWrapper>
     );
   }

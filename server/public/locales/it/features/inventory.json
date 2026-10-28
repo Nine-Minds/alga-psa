@@ -1577,6 +1577,10 @@
       "inProgress": "Ricostruzione…"
     },
     "receive": {
+      "searchProducts": "Cerca prodotti o SKU...",
+      "noProductsFound": "Nessun prodotto trovato",
+      "searchLocations": "Cerca ubicazioni...",
+      "noLocationsFound": "Nessuna ubicazione trovata",
       "costNonNegative": "Il costo unitario non può essere negativo.",
       "failed": "Impossibile ricevere la giacenza.",
       "inProgress": "Ricezione…",

@@ -399,19 +399,20 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const MaintenanceScheduleWrite = zOpenApi.object({
+    schedule_name: zOpenApi.string().trim().min(1).max(255).describe('Name displayed in the asset maintenance UI.'),
+    description: zOpenApi.string().nullable().optional().describe('Optional maintenance instructions.'),
+    maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']).describe('Maintenance type stored by the UI and database.'),
+    frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Recurrence frequency. Does not change the explicit next_maintenance timestamp.'),
+    frequency_interval: zOpenApi.number().int().min(1).describe('Positive integer frequency multiplier; monthly with 6 means every six months.'),
+    next_maintenance: zOpenApi.string().datetime().describe('Explicit next due timestamp, used unchanged for the initial open occurrence.'),
+    is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
+    schedule_config: zOpenApi.record(zOpenApi.unknown()).describe('Scheduling configuration; use {} when no custom configuration is needed.'),
+  }).strict();
+
   const MaintenanceScheduleUpdateRequest = registry.registerSchema(
     'AssetMaintenanceScheduleUpdateRequest',
-    zOpenApi.object({
-      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).optional().describe('Type of maintenance schedule.'),
-      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).optional().describe('Recurrence frequency. Changing this triggers next_maintenance recalculation.'),
-      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier used when calculating the next maintenance date.'),
-      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. Changing this triggers next_maintenance recalculation.'),
-      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
-      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
-    }),
+    MaintenanceScheduleWrite.partial(),
   );
 
   const MaintenanceScheduleResource = registry.registerSchema(
@@ -419,17 +420,18 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       schedule_id: zOpenApi.string().uuid().describe('Primary key from asset_maintenance_schedules.schedule_id.'),
       asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_maintenance_schedules.asset_id.'),
-      schedule_type: zOpenApi.string().optional().describe('Maintenance schedule type as used by ApiAssetController.'),
-      frequency: zOpenApi.string().optional().describe('Recurrence frequency.'),
-      frequency_interval: zOpenApi.number().nullable().optional().describe('Frequency multiplier.'),
-      start_date: zOpenApi.string().nullable().optional().describe('Schedule start date/time.'),
-      end_date: zOpenApi.string().nullable().optional().describe('Schedule end date/time.'),
+      schedule_name: zOpenApi.string().describe('Maintenance schedule name.'),
+      description: zOpenApi.string().nullable().describe('Maintenance instructions.'),
+      maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
+      frequency: zOpenApi.string().describe('Recurrence frequency.'),
+      frequency_interval: zOpenApi.number().int().describe('Frequency multiplier.'),
       last_maintenance: zOpenApi.string().nullable().optional().describe('Last recorded maintenance date/time.'),
-      next_maintenance: zOpenApi.string().nullable().optional().describe('Next calculated maintenance date/time.'),
-      notes: zOpenApi.string().nullable().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().nullable().optional().describe('Assigned user UUID.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).nullable().optional().describe('Custom scheduling configuration.'),
+      next_maintenance: zOpenApi.string().datetime().describe('Next due date/time.'),
+      created_by: zOpenApi.string().uuid().describe('Authenticated caller who created the schedule; not a writable assignee.'),
+      created_by_name: zOpenApi.string().optional().describe('Creator display name included in list results.'),
+      archived_at: zOpenApi.string().nullable().optional().describe('Archive timestamp.'),
+      is_active: zOpenApi.boolean().describe('Whether the schedule is active.'),
+      schedule_config: zOpenApi.record(zOpenApi.unknown()).describe('Custom scheduling configuration.'),
       created_at: zOpenApi.string().datetime().optional().describe('Creation timestamp.'),
       updated_at: zOpenApi.string().datetime().optional().describe('Last update timestamp.'),
       tenant: zOpenApi.string().uuid().describe('Tenant UUID scoped from the request context.'),
@@ -439,7 +441,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const MaintenanceSchedulePayload = registry.registerSchema(
     'AssetMaintenanceSchedulePayload',
     zOpenApi.object({
-      data: MaintenanceScheduleResource.optional().describe('Updated schedule row. Undefined when the schedule ID does not exist or belongs to another tenant.'),
+      data: MaintenanceScheduleResource.describe('Created or updated schedule row.'),
     }),
   );
 
@@ -454,16 +456,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
 
   const MaintenanceScheduleCreateRequest = registry.registerSchema(
     'AssetMaintenanceScheduleCreateRequest',
-    zOpenApi.object({
-      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).describe('Required type of maintenance schedule.'),
-      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Required recurrence frequency used to calculate next_maintenance.'),
-      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier. Defaults to service logic when absent.'),
-      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. The current schema makes this optional; the service falls back to now when absent.'),
-      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
-      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active. Defaults to true in validation.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
+    MaintenanceScheduleWrite.extend({
+      is_active: zOpenApi.boolean().default(true).describe('Whether the schedule is active; defaults to true.'),
     }),
   );
 
@@ -1124,7 +1118,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/maintenance/{scheduleId}',
     summary: 'Update asset maintenance schedule',
     description:
-      'Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.',
+      'Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1137,7 +1131,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     responses: {
       200: {
-        description: 'Maintenance schedule updated successfully. If the ID is not found, the nested data field may be absent.',
+        description: 'Maintenance schedule updated successfully.',
         schema: MaintenanceScheduleResponse,
       },
       400: {
@@ -1152,6 +1146,10 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         description: 'Authenticated request context lacks permission to update asset maintenance schedules when auth wiring is present.',
         schema: ApiErrorEnvelope,
       },
+      404: {
+        description: 'Schedule not found in the authenticated tenant.',
+        schema: ApiErrorEnvelope,
+      },
       500: {
         description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
@@ -1161,8 +1159,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'update',
-      'x-recalculates-next-maintenance': true,
-      'x-no-not-found-on-missing-id': true,
+      'x-recalculates-next-maintenance': false,
+      'x-no-not-found-on-missing-id': false,
     },
     edition: 'both',
   });
@@ -2112,7 +2110,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'List asset maintenance schedules',
     description:
-      'Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
+      'Returns maintenance schedule rows using the existing UI/database columns for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add created_by_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
@@ -2137,7 +2135,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'Create asset maintenance schedule',
     description:
-      'Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.',
+      'Creates a maintenance schedule using the existing UI/database columns: schedule_name, description, maintenance_type, frequency, frequency_interval, schedule_config, next_maintenance, and is_active. The asset must belong to the authenticated tenant. asset_id comes from the path; tenant and created_by come from authentication. next_maintenance is stored unchanged. The schedule, upcoming notification, and initial open occurrence (if active) are created in one transaction. Legacy schedule_type, notes, start_date, end_date, and assigned_to fields are rejected. No database migration is required.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -2149,6 +2147,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       400: { description: 'Request body validation failed or the database rejected an invalid reference.', schema: ApiErrorEnvelope },
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to create or update asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found in the authenticated tenant.', schema: ApiErrorEnvelope },
       409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
       500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
@@ -2156,9 +2155,9 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'update',
-      'x-no-asset-existence-check': true,
-      'x-calculates-next-maintenance': true,
-      'x-created-by-set': false,
+      'x-no-asset-existence-check': false,
+      'x-calculates-next-maintenance': false,
+      'x-created-by-set': true,
       'x-no-event-published': true,
     },
     edition: 'both',
