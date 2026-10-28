@@ -150,7 +150,7 @@ describe('deletion configs', () => {
     });
     expect(deps.checklist_apply_rule).toMatchObject({
       table: 'checklist_template_apply_rules',
-      foreignKey: 'board_id',
+      countQuery: expect.any(Function),
       label: 'checklist apply rule'
     });
     // A board-scoped canned response cannot give up its board_id (the

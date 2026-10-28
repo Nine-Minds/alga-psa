@@ -10,3 +10,5 @@ export * from './path';
 export * from './evaluate';
 export * from './querySchema';
 export * from './conformance';
+export * from './references';
+export * from './unicodeLower';

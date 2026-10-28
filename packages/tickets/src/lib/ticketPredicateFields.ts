@@ -1,4 +1,4 @@
-import { allowedOperators, resolvePath } from '@alga-psa/predicates';
+import { allowedOperators, resolvePath, unicodeLowerV1 } from '@alga-psa/predicates';
 import type { PredicateClause, PredicateGroup, PredicateOperator } from '@alga-psa/predicates';
 import { ticketQuerySchema } from './ticketQuerySchema';
 import { WHERE_TAG_FILTERS } from './ticketWhereFilters';
@@ -75,7 +75,7 @@ export function normalizeChecklistEditorWhere(where: PredicateGroup): PredicateG
       if ('clauses' in node) return normalizeChecklistEditorWhere(node);
       const descriptor = TICKET_PREDICATE_FIELDS.find((candidate) => candidate.path === node.path);
       return descriptor?.fold === 'lower' && typeof node.value === 'string'
-        ? { ...node, value: node.value.toLowerCase() }
+        ? { ...node, value: unicodeLowerV1(node.value) }
         : node;
     }),
   };

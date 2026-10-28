@@ -77,20 +77,22 @@ describe('descriptor-driven checklist rule editor', () => {
     });
   });
 
-  it('folds text literals on explicit save without persisting partial typing', async () => {
-    const input = props();
-    render(<ChecklistRuleMatchers {...input} />);
-    fireEvent.click(screen.getByText(`${P}.add`));
-    fireEvent.change(screen.getByLabelText(`${P}.field`), { target: { value: 'title_folded' } });
-    fireEvent.change(screen.getByLabelText(`${P}.operator`), { target: { value: 'contains' } });
-    fireEvent.change(screen.getByLabelText(`${P}.value`), { target: { value: 'OnBoarding İ' } });
-    expect(input.onChange).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText(`${P}.save`));
-    expect(input.onChange).toHaveBeenCalledWith({
-      join: 'and',
-      clauses: [{ path: 'title_folded', operator: 'contains', value: 'onboarding i\u0307' }],
-    });
-  });
+  it.each([['OnBoarding İ', 'onboarding i\u0307'], ['A\ua7ceΣ', 'a\ua7ceσ']])(
+    'folds %j on explicit save without persisting partial typing', async (typed, folded) => {
+      const input = props();
+      render(<ChecklistRuleMatchers {...input} />);
+      fireEvent.click(screen.getByText(`${P}.add`));
+      fireEvent.change(screen.getByLabelText(`${P}.field`), { target: { value: 'title_folded' } });
+      fireEvent.change(screen.getByLabelText(`${P}.operator`), { target: { value: 'contains' } });
+      fireEvent.change(screen.getByLabelText(`${P}.value`), { target: { value: typed } });
+      expect(input.onChange).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText(`${P}.save`));
+      expect(input.onChange).toHaveBeenCalledWith({
+        join: 'and',
+        clauses: [{ path: 'title_folded', operator: 'contains', value: folded }],
+      });
+    },
+  );
 
   it('renders nested persisted predicates read-only and preserves them across enabled-state changes', () => {
     const where: PredicateGroup = {

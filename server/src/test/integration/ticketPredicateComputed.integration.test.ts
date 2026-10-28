@@ -4,7 +4,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import { createTicketQuerySchema } from '@alga-psa/tickets/lib/ticketQuerySchema';
-import type { PredicateClause } from '@alga-psa/predicates';
+import { unicodeLowerV1, type PredicateClause } from '@alga-psa/predicates';
 
 const describeDb = await describeWithDb();
 
@@ -78,14 +78,14 @@ describeDb('ticket folded attributes in PostgreSQL', () => {
     expect(result.rows[0].matches).toBe(true);
   });
 
-  it('matches ECMAScript casing for all single-codepoint case mappings and their sigma contexts', async () => {
+  it('matches frozen v1 casing for all Unicode code points that change case and their sigma contexts', async () => {
     const input: string[] = [];
     for (let codepoint = 1; codepoint <= 0x10ffff; codepoint++) {
       if (codepoint >= 0xd800 && codepoint <= 0xdfff) continue;
       const character = String.fromCodePoint(codepoint);
-      if (character !== character.toLowerCase()) input.push(character, `A${character}Σ`, `ΑΣ${character}`);
+      if (character !== unicodeLowerV1(character) || character !== character.toLowerCase()) input.push(character, `A${character}Σ`, `ΑΣ${character}`);
     }
-    const cases = input.map((text) => [text, text.toLowerCase()]);
+    const cases = input.map((text) => [text, unicodeLowerV1(text)]);
     const result = await db.raw(`SELECT item->>0 AS input FROM jsonb_array_elements(?::jsonb) AS item
       WHERE alga_predicate_lower_v1(item->>0) IS DISTINCT FROM item->>1 LIMIT 5`, [JSON.stringify(cases)]);
     expect(result.rows).toEqual([]);

@@ -1,3 +1,4 @@
+import { predicateReferencesValue, type PredicateNode } from '@alga-psa/predicates';
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -7,6 +8,14 @@ import type { Knex } from 'knex';
 // the predicate by table name matches tenantDb.table()'s behaviour exactly.
 const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
   trx(table).where(`${table}.tenant`, tenant);
+
+const countPredicateReferences = (table: string, column: string, path: string) =>
+  async (trx: Knex | Knex.Transaction, { tenant, entityId }: { tenant: string; entityId: string }): Promise<number> => {
+    const rows: Array<Record<string, PredicateNode>> = await tenantScopedTable(trx, tenant, table).select(column);
+    return rows.filter((row) => predicateReferencesValue(row[column], path, entityId)).length;
+  };
+
+export const countBoardChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'board_id');
 
 const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
@@ -660,7 +669,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         label: 'recurring ticket schedule',
         countQuery: countActiveBoardRecurringDefinitions
       },
-      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' },
+      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', countQuery: countBoardChecklistApplyRules, label: 'checklist apply rule' },
       // board_id is only ever set when scope='board' (canned_responses_scope_target_check),
       // so a plain board_id count already means "board-scoped response".
       { type: 'canned_response', table: 'canned_responses', foreignKey: 'board_id', label: 'board canned response' }

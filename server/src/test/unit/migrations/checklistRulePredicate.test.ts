@@ -1,8 +1,8 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { legacyChecklistRuleToPredicate: convert } = require('../../../../migrations/utils/checklistRulePredicate.cjs');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { legacyChecklistRuleToPredicate as convert } from '../../../../migrations/utils/checklistRulePredicate.cjs';
 
-const predicateEngine = import('../../../../../packages/predicates/dist/index.js');
+const predicateEngine = import('@alga-psa/predicates');
 
 test('unconstrained rules and empty values match', async () => {
   const { evaluatePredicate: matches } = await predicateEngine;
@@ -34,4 +34,13 @@ test('any keyword and title-only target', async () => {
   const predicate = convert({ keywords: ['FIRST', 'SECOND'], keyword_target: 'title' });
   assert.equal(matches(predicate, { title_folded: 'second', description_folded: '' }), true);
   assert.equal(matches(predicate, { title_folded: '', description_folded: 'first' }), false);
+});
+
+
+test('keyword conversion keeps frozen v1 casing on newer Unicode runtimes', () => {
+  const predicate = convert({ keywords: [' A\ua7ceΣ ', 'İ ΟΣ'], keyword_target: 'title' });
+  assert.deepEqual(predicate.clauses, [{ join: 'or', clauses: [
+    { path: 'title_folded', operator: 'contains', value: 'a\ua7ceσ' },
+    { path: 'title_folded', operator: 'contains', value: 'i\u0307 ος' },
+  ] }]);
 });

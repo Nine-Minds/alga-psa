@@ -97,6 +97,30 @@ async function submission(ticketId: string, request: { id: string; version: stri
   });
 }
 
+async function createLegacyRuleTable(trx: Knex.Transaction) {
+  await trx.schema.createTable('checklist_template_apply_rules', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('apply_rule_id').primary();
+    table.uuid('template_id');
+    table.boolean('is_enabled').defaultTo(true);
+    table.timestamp('created_at').defaultTo(trx.fn.now());
+    for (const column of [
+      'board_id',
+      'category_id',
+      'subcategory_id',
+      'priority_id',
+      'service_request_definition_id',
+    ])
+      table.uuid(column);
+    table.specificType('client_ids', 'uuid[]');
+    table.specificType('ticket_origins', 'text[]');
+    table.boolean('from_service_request');
+    table.specificType('keywords', 'text[]');
+    table.text('keyword_mode');
+    table.text('keyword_target');
+  });
+}
+
 describe('checklist persisted predicates', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -108,6 +132,35 @@ describe('checklist persisted predicates', () => {
   }, 600_000);
   afterAll(async () => {
     await db?.destroy();
+  });
+
+  it('migrates more than one backfill batch without losing rules and can be invoked again', async () => {
+    const trx = await db.transaction();
+    try {
+      const schema = `checklist_batch_${uuid().replaceAll('-', '')}`;
+      await trx.raw('CREATE SCHEMA ??', [schema]);
+      await trx.raw('SET LOCAL search_path TO ??, public', [schema]);
+      await createLegacyRuleTable(trx);
+      const rows = Array.from({ length: 501 }, (_, index) => ({
+        tenant: index % 2 ? base.tenantId : uuid(), apply_rule_id: uuid(),
+        keywords: [` KEYWORD ${index} `], keyword_target: 'title',
+      }));
+      await trx('checklist_template_apply_rules').insert(rows);
+      await migration.up(trx);
+      const expected = new Map(rows.map((row, index) => [row.apply_rule_id, `keyword ${index}`]));
+      const migrated = await trx('checklist_template_apply_rules').select('*').orderBy('apply_rule_id');
+      expect(migrated).toHaveLength(501);
+      for (const row of migrated) {
+        expect(row.where_version).toBe(1);
+        expect(row.where).toEqual({ join: 'and', clauses: [{ join: 'or', clauses: [
+          { path: 'title_folded', operator: 'contains', value: expected.get(row.apply_rule_id) },
+        ] }] });
+      }
+      await migration.up(trx);
+      expect(await trx('checklist_template_apply_rules').select('*').orderBy('apply_rule_id')).toEqual(migrated);
+    } finally {
+      await trx.rollback();
+    }
   });
 
   it('migrates every legacy dimension and keyword combination and proves the SQL truth table against seeded tickets', async () => {
@@ -260,27 +313,7 @@ describe('checklist persisted predicates', () => {
       const schema = `checklist_migration_${uuid().replaceAll('-', '')}`;
       await trx.raw('CREATE SCHEMA ??', [schema]);
       await trx.raw('SET LOCAL search_path TO ??, public', [schema]);
-      await trx.schema.createTable('checklist_template_apply_rules', (table) => {
-        table.uuid('tenant').notNullable();
-        table.uuid('apply_rule_id').primary();
-        table.uuid('template_id');
-        table.boolean('is_enabled').defaultTo(true);
-        table.timestamp('created_at').defaultTo(trx.fn.now());
-        for (const column of [
-          'board_id',
-          'category_id',
-          'subcategory_id',
-          'priority_id',
-          'service_request_definition_id',
-        ])
-          table.uuid(column);
-        table.specificType('client_ids', 'uuid[]');
-        table.specificType('ticket_origins', 'text[]');
-        table.boolean('from_service_request');
-        table.specificType('keywords', 'text[]');
-        table.text('keyword_mode');
-        table.text('keyword_target');
-      });
+      await createLegacyRuleTable(trx);
       for (const { rule, templateId } of rules)
         await trx('checklist_template_apply_rules').insert({
           tenant: base.tenantId,
@@ -301,7 +334,9 @@ describe('checklist persisted predicates', () => {
         'keyword_target',
       ]))
         expect(columns).not.toHaveProperty(column);
-      const stored = await trx('checklist_template_apply_rules').select('where', 'where_version');
+      const stored = await trx('checklist_template_apply_rules').select('where', 'where_version').orderBy('apply_rule_id');
+      await migration.up(trx);
+      expect(await trx('checklist_template_apply_rules').select('where', 'where_version').orderBy('apply_rule_id')).toEqual(stored);
       expect(stored).toHaveLength(rules.length);
       expect(stored.every((rule) => rule.where_version === 1)).toBe(true);
       for (const ticket of tickets) {

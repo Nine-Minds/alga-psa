@@ -1720,8 +1720,8 @@
       "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
       "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
       "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst.",
-      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
-      "predicateInvalid": "Invalid checklist rule: {{detail}}"
+      "predicateClientOutsideScope": "Klant {{client}} valt buiten het bereik van deze sjabloon.",
+      "predicateInvalid": "Ongeldige checklistregel: {{detail}}"
     }
   },
   "ticketSection": {

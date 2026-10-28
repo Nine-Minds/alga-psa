@@ -1720,8 +1720,8 @@
       "templateClientInvalid": "Il cliente selezionato non è stato trovato.",
       "ruleClientOutsideTemplateScope": "Questo modello appartiene a un cliente, quindi le sue regole non possono riguardare altri clienti.",
       "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente.",
-      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
-      "predicateInvalid": "Invalid checklist rule: {{detail}}"
+      "predicateClientOutsideScope": "Il cliente {{client}} non rientra nell’ambito di questo modello.",
+      "predicateInvalid": "Regola della lista di controllo non valida: {{detail}}"
     }
   },
   "ticketSection": {

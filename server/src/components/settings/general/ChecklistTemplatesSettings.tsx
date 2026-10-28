@@ -59,7 +59,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ChecklistRuleMatchers from './ChecklistRuleMatchers';
-import { findAllTagsByType } from '@alga-psa/tags/actions';
+import { findAllTagsByType } from '@alga-psa/tags/actions/tagActions';
 import type { ITag } from '@alga-psa/types';
 import type { PredicateGroup, PredicateNode } from '@alga-psa/predicates';
 

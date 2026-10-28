@@ -1,3 +1,5 @@
+const { unicodeLowerV1 } = require('./checklistUnicodeLower.cjs');
+
 /** Convert the pre-predicate checklist rule format to predicate format version 1. */
 function legacyChecklistRuleToPredicate(rule) {
   const clauses = [];
@@ -12,7 +14,7 @@ function legacyChecklistRuleToPredicate(rule) {
   } else if (rule.from_service_request) {
     clauses.push({ path: 'from_service_request', operator: 'equals', value: true });
   }
-  const keywords = (rule.keywords ?? []).map((keyword) => keyword.trim().toLowerCase()).filter(Boolean);
+  const keywords = (rule.keywords ?? []).map((keyword) => unicodeLowerV1(keyword.trim())).filter(Boolean);
   if (keywords.length) {
     const target = rule.keyword_target ?? 'title_and_description';
     const keywordClauses = keywords.map((keyword) => {
