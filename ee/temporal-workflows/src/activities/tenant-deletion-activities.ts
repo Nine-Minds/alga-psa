@@ -541,6 +541,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'users',
   'sla_policies',
   'business_hours_schedules',
+  // Webhook receipts and deliveries must be deleted before webhooks.
+  'webhook_event_receipts',
   'webhook_deliveries',
   'webhooks',
   'api_rate_limit_settings',

@@ -1,3 +1,4 @@
+import { assertQuoteLifecycleTransition, recordQuoteLifecycleTransition, transitionQuoteStatus, type QuoteLifecycleOptions } from '../../../../lib/quotes/quoteLifecycleEvents';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -14,6 +15,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import {
   allocatedOneTimeAmountFor,
@@ -148,26 +150,7 @@ export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((valu
   }
 });
 
-const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
-  draft: ['pending_approval', 'sent', 'cancelled'],
-  pending_approval: ['approved', 'draft', 'cancelled'],
-  approved: ['sent', 'cancelled'],
-  sent: ['accepted', 'rejected', 'expired', 'cancelled'],
-  accepted: ['converted', 'cancelled'],
-  rejected: ['cancelled'],
-  expired: ['cancelled'],
-  converted: [],
-  cancelled: [],
-  superseded: [],
-  archived: [],
-};
 
-function canTransitionQuoteStatus(currentStatus: QuoteStatus, nextStatus: QuoteStatus): boolean {
-  if (currentStatus === nextStatus) {
-    return true;
-  }
-  return QUOTE_ALLOWED_STATUS_TRANSITIONS[currentStatus]?.includes(nextStatus) ?? false;
-}
 
 function toNumber(value: unknown): number {
   return Number(value ?? 0);
@@ -592,6 +575,7 @@ function isExpiredOnAccess(quote: Pick<IQuote, 'status' | 'valid_until'>): boole
   return new Date(quote.valid_until) < getTodayStartUTC();
 }
 
+// LEVERAGE: pattern quote-expire-on-read — billing and worker duplicate the same transition.
 async function expireQuoteIfNeeded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -601,24 +585,32 @@ async function expireQuoteIfNeeded(
     return quote;
   }
 
-  const [expiredQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-    .where('quote_id', quote.quote_id)
-    .update({
-      status: 'expired',
-      expired_at: knexOrTrx.fn.now(),
-      updated_at: knexOrTrx.fn.now(),
-    })
-    .returning('*');
+  const candidate = quote;
+  return withTransaction(knexOrTrx, async (trx) => {
+    const [expiredQuote] = await tenantScopedTable(trx, tenant, 'quotes')
+      .where({ quote_id: candidate.quote_id, status: 'sent' }).where('valid_until', '<', getTodayStartUTC().toISOString())
+      .update({
+        status: 'expired',
+        expired_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      })
+      .returning('*');
 
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quote.quote_id,
-    activity_type: 'expired',
-    description: 'Quote automatically expired on access',
-    performed_by: null,
-    metadata: { previous_status: quote.status },
+    if (!expiredQuote) {
+      return (await tenantScopedTable(trx, tenant, 'quotes').where({ quote_id: candidate.quote_id }).first() as IQuote | undefined) ?? null;
+    }
+
+    const activity = await QuoteActivity.create(trx, tenant, {
+      quote_id: candidate.quote_id,
+      activity_type: 'expired',
+      description: 'Quote automatically expired on access',
+      performed_by: null,
+      metadata: { previous_status: candidate.status },
+    });
+
+    await recordQuoteLifecycleTransition(trx, tenant, candidate, expiredQuote as IQuote, activity, { actor: { actorType: 'SYSTEM' } });
+    return expiredQuote as IQuote;
   });
-
-  return expiredQuote as IQuote;
 }
 
 async function mapQuoteRecord(
@@ -882,58 +874,33 @@ export const Quote = {
     return createdQuote as IQuote;
   },
 
+  // LEVERAGE: pattern quote-update-dal — billing and worker share transition semantics but duplicate record persistence and recalculation.
   async update(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     quoteId: string,
-    updateData: Partial<IQuote>
+    updateData: Partial<IQuote>,
+    options: QuoteLifecycleOptions = {}
   ): Promise<IQuote> {
-    if (!tenant) {
-      throw new Error('Tenant context is required for updating quote');
-    }
-
-    const existingQuote = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-      .where({ quote_id: quoteId })
-      .first();
-
-    if (!existingQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-    }
-
-    if (existingQuote.is_template && updateData.status !== undefined && updateData.status !== null) {
-      throw new Error('Quote templates do not participate in status transitions');
-    }
-
-    if (updateData.status && existingQuote.status && !canTransitionQuoteStatus(existingQuote.status, updateData.status)) {
-      throw new Error(`Invalid quote status transition from ${existingQuote.status} to ${updateData.status}`);
-    }
-
-    const [updatedQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-      .where({ quote_id: quoteId })
-      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
-      .returning('*');
-
-    await QuoteActivity.create(knexOrTrx, tenant, {
-      quote_id: quoteId,
-      activity_type: updateData.status && updateData.status !== existingQuote.status ? 'status_changed' : 'updated',
-      description: updateData.status && updateData.status !== existingQuote.status
-        ? `Quote status changed from ${existingQuote.status} to ${updateData.status}`
-        : 'Quote updated',
-      performed_by: updatedQuote.updated_by ?? null,
-      metadata: updateData.status && updateData.status !== existingQuote.status
-        ? { previous_status: existingQuote.status, next_status: updateData.status }
-        : {},
+    if (!tenant) throw new Error('Tenant context is required for updating quote');
+    return withTransaction(knexOrTrx, async (trx) => {
+      const existingQuote = await tenantScopedTable(trx, tenant, 'quotes').where({ quote_id: quoteId }).forUpdate().first();
+      if (!existingQuote) throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+      if (updateData.status) assertQuoteLifecycleTransition(existingQuote as IQuote, updateData.status, options);
+      const [updatedQuote] = await tenantScopedTable(trx, tenant, 'quotes').where({ quote_id: quoteId })
+        .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: trx.fn.now() }).returning('*');
+      const changed = updateData.status && updateData.status !== existingQuote.status;
+      const activity = await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId, activity_type: changed ? 'status_changed' : 'updated',
+        description: changed ? `Quote status changed from ${existingQuote.status} to ${updateData.status}` : 'Quote updated',
+        performed_by: updateData.updated_by ?? null,
+        metadata: changed ? { previous_status: existingQuote.status, next_status: updateData.status } : {},
+      });
+      if (!updatedQuote.is_template) await recalculateQuoteFinancials(trx, tenant, quoteId);
+      const finalQuote = (await tenantScopedTable(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
+      await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
+      return finalQuote;
     });
-
-    if (!updatedQuote.is_template) {
-      await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
-      const recalculatedQuote = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-        .where({ quote_id: quoteId })
-        .first();
-      return (recalculatedQuote ?? updatedQuote) as IQuote;
-    }
-
-    return updatedQuote as IQuote;
   },
 };
 
@@ -1252,7 +1219,7 @@ const Contract = {
   },
 };
 
-export async function convertQuoteToDraftContract(
+async function convertQuoteToDraftContractRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1268,7 +1235,7 @@ export async function convertQuoteToDraftContract(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -1502,7 +1469,7 @@ export async function convertQuoteToDraftContract(
   };
 }
 
-export async function convertQuoteToDraftInvoice(
+async function convertQuoteToDraftInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1518,7 +1485,7 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1675,7 +1642,7 @@ export async function convertQuoteToDraftInvoice(
   };
 }
 
-export async function convertQuoteToDraftContractAndInvoice(
+async function convertQuoteToDraftContractAndInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1687,7 +1654,7 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1702,30 +1669,8 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error('Quote must contain both recurring and one-time items to convert to both records');
   }
 
-  const contractResult = await convertQuoteToDraftContract(knexOrTrx, tenant, quoteId, performedBy);
-  const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
-  const nowIso = new Date().toISOString();
-
-  await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-    .where({ quote_id: quoteId })
-    .update({
-      status: 'converted',
-      converted_at: nowIso,
-      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
-      updated_at: nowIso,
-    });
-
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quoteId,
-    activity_type: 'converted',
-    description: 'Quote converted to both a draft contract and a draft invoice',
-    performed_by: performedBy ?? null,
-    metadata: {
-      contract_id: contractResult.contract.contract_id,
-      invoice_id: invoiceResult.invoice.invoice_id,
-    },
-  });
-
+  const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
+  const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);
   const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
   return {
@@ -1848,3 +1793,70 @@ export const TagMapping = {
     return inserted;
   },
 };
+
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContract(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+  options: QuoteLifecycleOptions = {},
+): Promise<QuoteToContractConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      ...options,
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+  options: QuoteLifecycleOptions = {},
+): Promise<QuoteToInvoiceConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      ...options,
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContractAndInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+  options: QuoteLifecycleOptions = {},
+): Promise<QuoteToBothConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractAndInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      ...options,
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}

@@ -987,7 +987,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
-    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Selecteer een klant om assets te koppelen.",
+      "unavailable": "Assets kunnen na het aanmaken vanuit het ticket worden gekoppeld."
+    },
+    "attachments": {
+      "heading": "Bijlagen",
+      "add": "Bestanden toevoegen",
+      "remove": "{{name}} verwijderen"
+    },
+    "watchers": {
+      "heading": "Volgers",
+      "placeholder": "Volgers toevoegen..."
+    },
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",

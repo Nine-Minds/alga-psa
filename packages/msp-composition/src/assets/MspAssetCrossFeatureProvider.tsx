@@ -4,6 +4,7 @@ import React, { useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { AssetCrossFeatureProvider } from '@alga-psa/assets/context/AssetCrossFeatureContext';
 import type { AssetCrossFeatureCallbacks, AssetQuickAddTicketRenderProps, AssetTicketDetailsRenderProps } from '@alga-psa/assets/context/AssetCrossFeatureContext';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -35,6 +36,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
         prefilledTitle={props.prefilledTitle}
         prefilledDescription={props.prefilledDescription}
         prefilledDueDate={props.prefilledDueDate}
+        renderAssetPicker={renderQuickAddAssetPicker}
       />
     ),
     []

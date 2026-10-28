@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
@@ -145,6 +146,11 @@ async function getAuthorizedClientQuote(
     return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
   }
 
+  if (allowedStatuses?.length) {
+    // Serialize selection and acceptance together; a second accepter must recheck status
+    // before it can change the optional items represented by the first acceptance event.
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
+  }
   const quote = await Quote.getById(trx, tenant, quoteId);
   if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
     return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
@@ -553,7 +559,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
           });
 
         if (markedViewed) {
-          await QuoteActivity.create(trx, tenant, {
+          const activity = await QuoteActivity.create(trx, tenant, {
             quote_id: quoteId,
             activity_type: 'viewed',
             description: 'Quote viewed by client in portal',
@@ -562,6 +568,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
               viewed_at: viewedAt,
             },
           });
+          await recordQuoteLifecycleTransition(trx, tenant, quote, { ...quote, viewed_at: viewedAt }, activity, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! } }, 'QUOTE_VIEWED');
         }
       }
 
@@ -651,7 +658,7 @@ export const acceptClientQuote = withAuth(async (
         accepted_at: acceptedAt,
         accepted_by: user.user_id,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
@@ -709,7 +716,7 @@ export const rejectClientQuote = withAuth(async (
         rejected_at: rejectedAt,
         rejection_reason: trimmedReason,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,

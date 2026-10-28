@@ -987,7 +987,22 @@
     "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
     "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
     "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
-    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas"
+    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas",
+    "assets": {
+      "heading": "Activos",
+      "selectClientFirst": "Seleccione un cliente para vincular activos.",
+      "unavailable": "Los activos se pueden vincular desde el ticket una vez creado."
+    },
+    "attachments": {
+      "heading": "Archivos adjuntos",
+      "add": "Añadir archivos",
+      "remove": "Quitar {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Añadir observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
