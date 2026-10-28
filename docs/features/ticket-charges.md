@@ -2,7 +2,7 @@
 
 ## Add a fixed-fee service
 
-In the ticket's **Grid** view, find **Fixed-fee services** in the **Work** section below **Time & Billing**. In the **Entry** view, the fixed-fee services card appears above **Materials**.
+In the ticket's **Grid** view, find **Services** in the **Work** section below **Time & Billing**. In the **Entry** view, the Services card appears above **Materials**. Services covers fixed-fee catalog entries, including software configured as a fixed-fee service.
 
 1. Select **Add service**.
 2. Search the catalog and select an active fixed-fee service.
@@ -11,6 +11,8 @@ In the ticket's **Grid** view, find **Fixed-fee services** in the **Work** secti
 5. Optionally enter a description, then select **Add service**.
 
 The form shows the catalog unit price for the selected currency and the quantity-based total. The server resolves and stores the catalog price when adding the entry; this feature does not introduce price overrides. Fixed-fee services are not inventory products: the service picker does not show stock availability, and adding a service does not consume stock.
+
+Services and Materials use the same quantity, rate, total, status, and inline edit/remove controls, with unbilled totals grouped by currency. Narrow cards stack each item's details without a horizontal scrollbar.
 
 ## Edit an unbilled charge
 

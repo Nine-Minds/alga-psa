@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 const state = vi.hoisted(() => ({
@@ -104,6 +104,30 @@ beforeEach(() => {
 });
 
 describe('ticket fixed-fee service card', () => {
+  it('uses the same columns, badges, inline actions and per-currency totals as materials', async () => {
+    state.fixedFees.listTicketFixedFeeServices.mockResolvedValue([
+      { entry_id: 'fee-1', service_name: 'Software', quantity: 2, rate: 2500, currency_code: 'USD', is_billed: false },
+      { entry_id: 'fee-2', service_name: 'Setup', quantity: 1, rate: 1000, currency_code: 'EUR', is_billed: false },
+      { entry_id: 'fee-3', service_name: 'Billed setup', quantity: 1, rate: 9000, currency_code: 'USD', is_billed: true },
+    ]);
+    render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
+    const row = await screen.findByRole('row', { name: /Software/ });
+    const table = screen.getByRole('table');
+    for (const label of ['materials.qty', 'materials.rate', 'materials.total', 'materials.status']) {
+      expect(within(table).getByRole('columnheader', { name: label })).toBeInTheDocument();
+    }
+    expect(within(row).getByText('materials.pending')).toBeInTheDocument();
+    const edit = within(row).getByRole('button', { name: 'chargeEdit.edit' });
+    const remove = within(row).getByRole('button', { name: 'fixedFeeServices.remove' });
+    expect(edit.parentElement).toBe(remove.parentElement);
+    expect(edit).toHaveClass('h-8', 'w-8', 'p-0');
+    expect(remove).toHaveClass('h-8', 'w-8', 'p-0');
+    expect(screen.getAllByText('USD 50')).toHaveLength(2);
+    expect(screen.getAllByText('EUR 10')).toHaveLength(3);
+    const billedRow = screen.getByRole('row', { name: /Billed setup/ });
+    expect(within(billedRow).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('uses the real async picker with fixed-fee search filters, without stock badges', async () => {
     render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
@@ -186,6 +210,21 @@ describe('shared fixed-fee/material edit dialog', () => {
 });
 
 describe('ticket material editing controls', () => {
+  it('keeps material row actions aligned in one shared action group', async () => {
+    state.materials.listTicketMaterials.mockResolvedValue([
+      { ticket_material_id: 'material-1', service_name: 'Long product name', sku: 'SKU-1', quantity: 2, rate: 2500, currency_code: 'USD', is_billed: false },
+    ]);
+    render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
+    const row = await screen.findByRole('row', { name: /Long product name \(SKU-1\)/ });
+    const edit = within(row).getByRole('button', { name: 'chargeEdit.edit' });
+    const remove = within(row).getByRole('button', { name: 'actions.remove' });
+    expect(edit.parentElement).toBe(remove.parentElement);
+    expect(edit.parentElement).toHaveClass('flex', 'items-center', 'gap-1');
+    expect(edit).toHaveClass('h-8', 'w-8', 'p-0');
+    expect(remove).toHaveClass('h-8', 'w-8', 'p-0');
+    expect(edit.id).not.toBe(remove.id);
+  });
+
   it('edits unbilled material quantity/description through the shared dialog and datasource', async () => {
     state.materials.listTicketMaterials.mockResolvedValue([
       { ticket_material_id: 'material-1', service_name: 'Widget', quantity: 2, rate: 2500, currency_code: 'USD', description: 'Initial', is_billed: false },

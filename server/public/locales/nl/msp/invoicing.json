@@ -493,7 +493,7 @@
     }
   },
   "quickInvoice": {
-    "fixedFeeServices": "Vaste-vergoedingsservices",
+    "fixedFeeServices": "Services",
     "excludedFixedFees": "Vaste-vergoedingsserviceregels uitgesloten wegens een afwijkende factuurvaluta: {{count}}.",
     "currencyExcluded": "{{count}} product(en) uitgesloten omdat hun valuta afwijkt van {{currency}}.",
     "action": "Snelfactuur",
