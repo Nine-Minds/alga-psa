@@ -160,6 +160,10 @@
     "confirmDeletion": "Löschung bestätigen"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Dieser gemeinsam verwaltete Arbeitsbereich ist schreibgeschützt. Anmeldung, Lesen, Export und Lizenzwiederherstellung bleiben verfügbar.",
+      "acceptancePending": "Ein Kundenadministrator muss die gemeinsame Verwaltung akzeptieren, bevor dieser Arbeitsbereich verwendet werden kann."
+    },
     "validation": {
       "required": "{{field}} ist erforderlich.",
       "invalidType": "{{field}} hat den falschen Typ.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Ansicht wechseln"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} weitere Tags: {{names}}"
   }
 }

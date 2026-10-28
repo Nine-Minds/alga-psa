@@ -62,6 +62,7 @@ import type {
   updateTicketWithCache,
   updateTicketWithCacheForCurrentUser,
   getAdjacentTicketIds,
+  getTicketPartyDisplayTags,
 } from '../actions/optimizedTicketActions';
 import type {
   getTicketById,
@@ -504,6 +505,7 @@ export interface TicketTileMethods {
 
 export interface TicketTagMethods {
   findTagsByEntityId: typeof findTagsByEntityId;
+  getTicketPartyDisplayTags: typeof getTicketPartyDisplayTags;
 }
 
 /**

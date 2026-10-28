@@ -1577,6 +1577,10 @@
       "inProgress": "Reconstruyendo…"
     },
     "receive": {
+      "searchProducts": "Buscar productos o SKU...",
+      "noProductsFound": "No se encontraron productos",
+      "searchLocations": "Buscar ubicaciones...",
+      "noLocationsFound": "No se encontraron ubicaciones",
       "costNonNegative": "El costo unitario no puede ser negativo.",
       "failed": "No se pudieron recibir las existencias.",
       "inProgress": "Recibiendo…",

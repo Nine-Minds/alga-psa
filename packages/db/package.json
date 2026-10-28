@@ -18,6 +18,10 @@
       "import": "./dist/lib/tenantDb.js",
       "types": "./src/lib/tenantDb.ts"
     },
+    "./writeAdmission": {
+      "import": "./dist/writeAdmission.js",
+      "types": "./src/writeAdmission.ts"
+    },
     ".": {
       "import": "./dist/index.js",
       "types": "./src/index.ts"

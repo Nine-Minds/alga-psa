@@ -2435,6 +2435,7 @@ export class TicketService extends BaseService<ITicket> {
       userIds.map(async (uid) => {
         try {
           avatarMap[uid] = await getUserAvatarUrl(uid, context.tenant);
+        // write-admission: exempt — avatar URL read, never a write
         } catch {
           avatarMap[uid] = null;
         }

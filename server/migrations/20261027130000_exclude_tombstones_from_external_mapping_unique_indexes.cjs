@@ -37,7 +37,7 @@
  * original name so every existing reference (23505 handling, comments, tests)
  * stays valid. Neither step blocks writes on tenant_external_entity_mappings.
  * A CONCURRENTLY build that fails leaves an INVALID index behind, which a
- * rerun would otherwise keep (IF NOT EXISTS); dropInvalidIndex clears it first.
+ * rerun would otherwise keep (IF NOT EXISTS); dropInvalidStagingIndex clears it first.
  * The new index is strictly looser than the old one, so the build cannot fail
  * on duplicates and `up` needs no dedupe.
  *
@@ -100,6 +100,8 @@ async function swapExternalMappingIndex(knex, predicate) {
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
+  // Keep the old index enforcing uniqueness until the replacement is valid.
+  // A retry after DROP but before RENAME reuses the completed replacement.
   await swapExternalMappingIndex(knex, `${XERO_PREDICATE} AND ${DESKTOP_PREDICATE} AND ${LIVE_PREDICATE}`);
 };
 

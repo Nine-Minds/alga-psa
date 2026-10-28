@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tastenkürzel",
     "mcpServer": "MCP-Server",
     "opportunities": "Verkaufschancen",
-    "settingsFallback": "Einstellungen"
+    "settingsFallback": "Einstellungen",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -3972,5 +3973,21 @@
       "empty": "Keine Standardstatus zum Importieren verfügbar",
       "importSelected": "Ausgewählte importieren ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Auf Chips anzeigen",
+    "subtitle": "Tags, die neben Kontakten und Kunden in Ticketlisten, Ticketköpfen und Auswahllisten angezeigt werden.",
+    "loading": "Wird geladen…",
+    "description": "Legen Sie fest, welche Tags als Badges neben Kontakten und Kunden angezeigt werden und in welcher Reihenfolge. Eine Liste ohne Tags zeigt für diese Zielgruppe keine Badges.",
+    "contacts": "Kontakte",
+    "clients": "Kunden",
+    "audienceInternal": "Interne Benutzer",
+    "audienceClient": "Kundenportal",
+    "clientNote": "Startet leer. Hier aufgeführte Tags sind für die eigenen Benutzer des Kunden im Kundenportal sichtbar.",
+    "noneSelected": "Keine Tags angezeigt.",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "remove": "Entfernen",
+    "addTag": "Tag hinzufügen…"
   }
 }
