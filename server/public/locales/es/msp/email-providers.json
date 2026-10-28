@@ -297,7 +297,7 @@
         "description": "Configurar opciones avanzadas de procesamiento de correo electrónico",
         "folderFiltersLabel": "Filtros de carpeta",
         "folderFiltersPlaceholder": "Bandeja de entrada, Soporte, Carpeta personalizada",
-        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada)",
+        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada). Use el nombre exacto de la carpeta tal como aparece en Outlook y escriba las carpetas anidadas como Bandeja de entrada/Subcarpeta.",
         "maxEmailsPerSync": "Máximo de correos electrónicos por sincronización"
       },
       "readiness": {
