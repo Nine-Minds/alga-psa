@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Scorciatoie da tastiera",
     "opportunities": "Opportunità",
     "mcpServer": "Server MCP",
-    "settingsFallback": "Impostazioni"
+    "settingsFallback": "Impostazioni",
+    "tags": "Tag"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -1153,6 +1154,50 @@
         "client": "Cliente",
         "allClients": "Tutti i clienti",
         "clear": "Cancella filtro"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Bacheca",
+          "category_id": "Categoria",
+          "subcategory_id": "Sottocategoria",
+          "priority_id": "Priorità",
+          "client_id": "Cliente",
+          "client_tags": "Etichette del cliente",
+          "contact_tags": "Etichette del contatto",
+          "ticket_origin": "Origine del ticket",
+          "title_folded": "Titolo",
+          "description_folded": "Descrizione",
+          "from_service_request": "Da richiesta di servizio",
+          "service_request_definition_id": "Richiesta di servizio"
+        },
+        "operators": {
+          "equals": "È uguale a",
+          "not_equals": "È diverso da",
+          "in": "Contiene uno qualsiasi di",
+          "not_in": "Non contiene nessuno di",
+          "contains": "Contiene",
+          "starts_with": "Inizia con",
+          "ends_with": "Termina con",
+          "is_empty": "È vuoto",
+          "is_not_empty": "Non è vuoto"
+        },
+        "conditions": "Condizioni",
+        "match": "Corrispondenza",
+        "and": "Tutte le condizioni",
+        "or": "Qualsiasi condizione",
+        "field": "Campo",
+        "operator": "Condizione",
+        "value": "Valore",
+        "yes": "Sì",
+        "no": "No",
+        "advanced": "Questa regola contiene condizioni raggruppate o avanzate ed è di sola lettura in questo editor.",
+        "add": "Aggiungi condizione",
+        "save": "Salva condizioni",
+        "enabled": "Abilitata",
+        "matchesAll": "Corrisponde a tutti i ticket nell’ambito del modello.",
+        "matchesNone": "Non corrisponde ad alcun ticket.",
+        "tagsFailed": "Impossibile caricare le opzioni delle etichette. Le selezioni salvate vengono conservate.",
+        "retry": "Riprova"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "Nessuno stato standard disponibile per l’importazione",
       "importSelected": "Importa selezionati ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Mostra sui chip",
+    "subtitle": "Tag mostrati accanto a contatti e clienti negli elenchi dei ticket, nelle intestazioni dei ticket e nei selettori.",
+    "loading": "Caricamento…",
+    "description": "Scegli quali tag vengono mostrati come badge accanto a contatti e clienti e in quale ordine. Un elenco senza tag non mostra badge per quel pubblico.",
+    "contacts": "Contatti",
+    "clients": "Clienti",
+    "audienceInternal": "Utenti interni",
+    "audienceClient": "Portale clienti",
+    "clientNote": "Parte vuoto. I tag elencati qui sono visibili agli utenti del cliente nel portale clienti.",
+    "noneSelected": "Nessun tag mostrato.",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "remove": "Rimuovi",
+    "addTag": "Aggiungi un tag…"
   }
 }

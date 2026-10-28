@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "opportunities": "Opportunities",
     "mcpServer": "MCP Server",
-    "settingsFallback": "Settings"
+    "settingsFallback": "Settings",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -1153,6 +1154,50 @@
         "client": "Client",
         "allClients": "All clients",
         "clear": "Clear filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Board",
+          "category_id": "Category",
+          "subcategory_id": "Subcategory",
+          "priority_id": "Priority",
+          "client_id": "Client",
+          "client_tags": "Client tags",
+          "contact_tags": "Contact tags",
+          "ticket_origin": "Ticket source",
+          "title_folded": "Title",
+          "description_folded": "Description",
+          "from_service_request": "From service request",
+          "service_request_definition_id": "Service request"
+        },
+        "operators": {
+          "equals": "Equals",
+          "not_equals": "Does not equal",
+          "in": "Has any of",
+          "not_in": "Has none of",
+          "contains": "Contains",
+          "starts_with": "Starts with",
+          "ends_with": "Ends with",
+          "is_empty": "Is empty",
+          "is_not_empty": "Is not empty"
+        },
+        "conditions": "Conditions",
+        "match": "Match",
+        "and": "All conditions",
+        "or": "Any condition",
+        "field": "Field",
+        "operator": "Condition",
+        "value": "Value",
+        "yes": "Yes",
+        "no": "No",
+        "advanced": "This rule contains grouped or advanced conditions and is read-only in this editor.",
+        "add": "Add condition",
+        "save": "Save conditions",
+        "enabled": "Enabled",
+        "matchesAll": "Matches every ticket within the template’s ownership.",
+        "matchesNone": "Matches no tickets.",
+        "tagsFailed": "Could not load tag choices. Saved tag selections are preserved.",
+        "retry": "Retry"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "No standard statuses available for import",
       "importSelected": "Import Selected ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Display on chips",
+    "subtitle": "Tags shown next to contacts and clients in ticket lists, ticket headers and pickers.",
+    "loading": "Loading…",
+    "description": "Choose which tags show as badges next to contacts and clients, and in what order. A list with no tags shows no badges for that audience.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Internal users",
+    "audienceClient": "Client portal",
+    "clientNote": "Starts empty. Tags listed here are visible to the client's own users in the client portal.",
+    "noneSelected": "No tags shown.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "addTag": "Add a tag…"
   }
 }

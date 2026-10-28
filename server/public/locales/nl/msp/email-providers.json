@@ -297,7 +297,7 @@
         "description": "Configureer geavanceerde opties voor e-mailverwerking",
         "folderFiltersLabel": "Mapfilters",
         "folderFiltersPlaceholder": "Inbox, Ondersteuning, Aangepaste map",
-        "folderFiltersHelp": "Door komma's gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox)",
+        "folderFiltersHelp": "Door komma’s gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox). Gebruik de exacte mapnaam zoals weergegeven in Outlook en schrijf geneste mappen als Inbox/Submap.",
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {

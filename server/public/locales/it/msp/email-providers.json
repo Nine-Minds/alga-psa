@@ -297,7 +297,7 @@
         "description": "Configura le opzioni avanzate di elaborazione della posta elettronica",
         "folderFiltersLabel": "Filtri delle cartelle",
         "folderFiltersPlaceholder": "Posta in arrivo, Supporto, Cartella personalizzata",
-        "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo)",
+        "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo). Usa il nome esatto della cartella come appare in Outlook e scrivi le cartelle nidificate come Posta in arrivo/Sottocartella.",
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {

@@ -212,6 +212,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
+          initialDisplayTags={ticketData.displayTags}
           {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}

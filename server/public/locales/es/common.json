@@ -262,6 +262,10 @@
     }
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Este espacio de trabajo cogestionado es de solo lectura. Se puede iniciar sesión, leer, exportar y recuperar la licencia.",
+      "acceptancePending": "El administrador del cliente debe aceptar la cogestión antes de usar este espacio de trabajo."
+    },
     "validation": {
       "required": "{{field}} es obligatorio.",
       "invalidType": "{{field}} tiene un tipo incorrecto.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Cambiar vista"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} etiquetas más: {{names}}"
   }
 }

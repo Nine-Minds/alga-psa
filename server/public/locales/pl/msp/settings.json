@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Skróty klawiaturowe",
     "mcpServer": "Serwer MCP",
     "opportunities": "Szanse sprzedaży",
-    "settingsFallback": "Ustawienia"
+    "settingsFallback": "Ustawienia",
+    "tags": "Tagi"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -1153,6 +1154,50 @@
         "client": "Klient",
         "allClients": "Wszyscy klienci",
         "clear": "Wyczyść filtr"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tablica",
+          "category_id": "Kategoria",
+          "subcategory_id": "Podkategoria",
+          "priority_id": "Priorytet",
+          "client_id": "Klient",
+          "client_tags": "Tagi klienta",
+          "contact_tags": "Tagi kontaktu",
+          "ticket_origin": "Źródło zgłoszenia",
+          "title_folded": "Tytuł",
+          "description_folded": "Opis",
+          "from_service_request": "Z wniosku o usługę",
+          "service_request_definition_id": "Wniosek o usługę"
+        },
+        "operators": {
+          "equals": "Jest równe",
+          "not_equals": "Nie jest równe",
+          "in": "Zawiera dowolną z wartości",
+          "not_in": "Nie zawiera żadnej z wartości",
+          "contains": "Zawiera",
+          "starts_with": "Zaczyna się od",
+          "ends_with": "Kończy się na",
+          "is_empty": "Jest puste",
+          "is_not_empty": "Nie jest puste"
+        },
+        "conditions": "Warunki",
+        "match": "Dopasowanie",
+        "and": "Wszystkie warunki",
+        "or": "Dowolny warunek",
+        "field": "Pole",
+        "operator": "Warunek",
+        "value": "Wartość",
+        "yes": "Tak",
+        "no": "Nie",
+        "advanced": "Ta reguła zawiera zgrupowane lub zaawansowane warunki i jest w tym edytorze tylko do odczytu.",
+        "add": "Dodaj warunek",
+        "save": "Zapisz warunki",
+        "enabled": "Włączona",
+        "matchesAll": "Pasuje do wszystkich zgłoszeń w zakresie szablonu.",
+        "matchesNone": "Nie pasuje do żadnego zgłoszenia.",
+        "tagsFailed": "Nie udało się wczytać opcji tagów. Zapisane wybory zostały zachowane.",
+        "retry": "Spróbuj ponownie"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "Brak standardowych statusów do zaimportowania",
       "importSelected": "Importuj wybrane ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Wyświetlaj na chipach",
+    "subtitle": "Tagi wyświetlane obok kontaktów i klientów na listach zgłoszeń, w nagłówkach zgłoszeń i w selektorach.",
+    "loading": "Ładowanie…",
+    "description": "Wybierz, które tagi są wyświetlane jako odznaki obok kontaktów i klientów oraz w jakiej kolejności. Lista bez tagów nie pokazuje odznak dla tej grupy odbiorców.",
+    "contacts": "Kontakty",
+    "clients": "Klienci",
+    "audienceInternal": "Użytkownicy wewnętrzni",
+    "audienceClient": "Portal klienta",
+    "clientNote": "Domyślnie pusta. Tagi z tej listy są widoczne dla użytkowników klienta w portalu klienta.",
+    "noneSelected": "Nie wyświetlono żadnych tagów.",
+    "moveUp": "Przenieś w górę",
+    "moveDown": "Przenieś w dół",
+    "remove": "Usuń",
+    "addTag": "Dodaj tag…"
   }
 }

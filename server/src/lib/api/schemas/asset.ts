@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { 
   uuidSchema, 
   createListQuerySchema, 
@@ -241,7 +242,8 @@ export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
   
   maintenance_schedules: z.array(z.object({
     schedule_id: uuidSchema,
-    schedule_type: z.string(),
+    schedule_name: z.string(),
+    maintenance_type: z.string(),
     frequency: z.string(),
     next_maintenance: dateSchema.nullable(),
     is_active: z.boolean()
@@ -304,45 +306,72 @@ export const assetDocumentResponseSchema = z.object({
 });
 
 // Asset maintenance schemas
-export const createMaintenanceScheduleSchema = z.object({
-  schedule_type: z.enum(['preventive', 'inspection', 'calibration', 'replacement']),
+const maintenanceScheduleWriteSchema = z.object({
+  schedule_name: z.string().trim().min(1).max(255),
+  description: z.string().nullable().optional(),
+  maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
+  // `custom` reads its rule from schedule_config.recurrence (see maintenanceRecurrence.ts).
   frequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']),
-  frequency_interval: z.number().min(1).optional(),
-  start_date: dateSchema,
-  end_date: dateSchema.optional(),
-  notes: z.string().optional(),
-  assigned_to: uuidSchema.optional(),
+  frequency_interval: z.number().int().min(1),
+  // UTC only (`Z` suffix); timestamps with a numeric offset are rejected.
+  next_maintenance: z.string().datetime(),
   is_active: z.boolean().optional().default(true),
-  schedule_config: z.record(z.any()).optional()
-});
+  schedule_config: z.record(z.unknown())
+}).strict();
 
-export const updateMaintenanceScheduleSchema = createUpdateSchema(createMaintenanceScheduleSchema);
+// A custom frequency needs a valid rule. On partial updates this only runs
+// when both fields are present; AssetService re-checks the merged row.
+const requireCustomRecurrence = (
+  data: { frequency?: string; schedule_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx
+): void => {
+  if (data.frequency !== 'custom' || data.schedule_config === undefined) return;
+  try {
+    parseCustomRecurrence(data.schedule_config);
+  } catch (error) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schedule_config', 'recurrence'], message: (error as Error).message });
+  }
+};
+
+export const createMaintenanceScheduleSchema = maintenanceScheduleWriteSchema.superRefine(requireCustomRecurrence);
+
+// Response-only columns are tolerated on update (and dropped) so a client can
+// PUT back a row it read; legacy and unknown fields are still rejected.
+const maintenanceScheduleReadOnlyFields = [
+  'schedule_id', 'asset_id', 'tenant', 'created_by', 'created_by_name',
+  'created_at', 'updated_at', 'last_maintenance', 'archived_at'
+] as const;
+
+export const updateMaintenanceScheduleSchema = maintenanceScheduleWriteSchema
+  .partial()
+  .extend(Object.fromEntries(maintenanceScheduleReadOnlyFields.map((field) => [field, z.unknown().optional()])))
+  .strict()
+  .superRefine(requireCustomRecurrence)
+  .transform((data) => {
+    const writable = { ...data };
+    for (const field of maintenanceScheduleReadOnlyFields) delete writable[field];
+    return writable as Omit<typeof data, (typeof maintenanceScheduleReadOnlyFields)[number]>;
+  });
 
 export const maintenanceScheduleResponseSchema = z.object({
   schedule_id: uuidSchema,
   asset_id: uuidSchema,
-  schedule_type: z.string(),
+  schedule_name: z.string(),
+  description: z.string().nullable(),
+  maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
   frequency: z.string(),
-  frequency_interval: z.number().nullable(),
-  start_date: dateSchema,
-  end_date: dateSchema.nullable(),
+  frequency_interval: z.number().int(),
   last_maintenance: dateSchema.nullable(),
-  next_maintenance: dateSchema.nullable(),
-  notes: z.string().nullable(),
-  assigned_to: uuidSchema.nullable(),
+  next_maintenance: z.string().datetime(),
   is_active: z.boolean(),
-  schedule_config: z.record(z.any()).nullable(),
+  schedule_config: z.record(z.unknown()),
+  created_by: uuidSchema,
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   
-  // Assigned user details
-  assigned_user: z.object({
-    user_id: uuidSchema,
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string()
-  }).optional()
+  archived_at: dateSchema.nullable(),
+  created_by_name: z.string().optional()
 });
 
 export const recordMaintenanceSchema = z.object({

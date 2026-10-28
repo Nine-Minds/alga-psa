@@ -1,5 +1,7 @@
 'use server'
 
+import { countBoardChecklistApplyRules } from '@alga-psa/core/config/deletion';
+
 import { IBoard } from '@alga-psa/types';
 import Board from '../../models/board';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -688,7 +690,7 @@ export const deleteBoard = withAuth(async (
     // 3c. Settings that point at the board cannot be cleaned up safely:
     // ticket_templates/recurring_ticket_definitions have no FK on board_id at
     // all, so the rows would silently dangle instead of erroring, nulling a
-    // checklist apply rule's board_id widens it to every board, and a
+    // checklist apply rule's board predicate changes its meaning, and a
     // board-scoped canned response cannot drop its board_id at all (the
     // scope_target_check requires it) — it would survive as a library entry
     // that silently never applies again. Block, so the admin retargets or
@@ -709,7 +711,7 @@ export const deleteBoard = withAuth(async (
         .whereNull('archived_at')
         .count('* as count')
         .first(),
-      tenantScopedTable('checklist_template_apply_rules').where({ board_id: boardId }).count('* as count').first(),
+      countBoardChecklistApplyRules(trx, { tenant, entityId: boardId }).then((count) => ({ count })),
       // Inactive responses count too: they can be switched back on later, and a
       // reactivated one pointing at a dead board would never match again.
       tenantScopedTable('canned_responses').where({ board_id: boardId }).count('* as count').first(),

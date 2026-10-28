@@ -949,12 +949,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance",
-      "held_by_msp": "Held by MSP"
-    },
     "assetTypes": {
       "workstation": "Workstation",
       "server": "Server",
@@ -1297,7 +1291,10 @@
       "frequency": "Frequency *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Next Maintenance Date *",
-      "active": "Active"
+      "active": "Active",
+      "recurrenceUnit": "Unit *",
+      "onWeekdays": "On weekdays (optional)",
+      "onDayOfMonth": "On day of the month (optional)"
     },
     "placeholders": {
       "scheduleName": "e.g., Monthly Server Maintenance",
@@ -1312,7 +1309,8 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "quarterly": "Quarterly",
-      "yearly": "Yearly"
+      "yearly": "Yearly",
+      "custom": "Custom"
     },
     "errors": {
       "scheduleNameRequired": "Schedule name is required",
@@ -1321,6 +1319,18 @@
       "nextMaintenanceRequired": "Next maintenance date is required",
       "frequencyIntervalMin": "Frequency interval must be at least 1",
       "saveFailed": "Failed to create maintenance schedule"
+    },
+    "recurrenceUnits": {
+      "days": "Days",
+      "weeks": "Weeks",
+      "months": "Months",
+      "years": "Years"
+    },
+    "dayOfMonthOptions": {
+      "any": "Any day"
+    },
+    "hints": {
+      "selectors": "Leave unselected to repeat from the completion date."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1382,36 @@
         "yearly_other": "years",
         "yearly_few": "years",
         "yearly_many": "years"
+      },
+      "customUnconfigured": "Custom (not configured)",
+      "onWeekdays": "{{cadence}} on {{days}}",
+      "onDaysOfMonth": "{{cadence}} on day {{days}}",
+      "weekdays": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      },
+      "customUnits": {
+        "days_one": "day",
+        "days_other": "days",
+        "days_few": "days",
+        "days_many": "days",
+        "weeks_one": "week",
+        "weeks_other": "weeks",
+        "weeks_few": "weeks",
+        "weeks_many": "weeks",
+        "months_one": "month",
+        "months_other": "months",
+        "months_few": "months",
+        "months_many": "months",
+        "years_one": "year",
+        "years_other": "years",
+        "years_few": "years",
+        "years_many": "years"
       }
     },
     "status": {
@@ -1813,8 +1853,8 @@
     "in_stock": "In stock",
     "maintenance": "In maintenance",
     "inactive": "Inactive",
-    "held_by_msp": "Held by MSP",
-    "retired": "Retired"
+    "retired": "Retired",
+    "held_by_msp": "Held by MSP"
   },
   "assetStatusKinds": {
     "deployable": "Deployable",
@@ -2078,7 +2118,12 @@
       "doneBody": "{{name}} ({{tag}}) is now in MSP custody.",
       "printLabel": "Print asset label",
       "openAsset": "Open asset",
-      "close": "Close"
+      "close": "Close",
+      "inCustodyOption": "{{asset}} — In custody: {{location}}"
+    },
+    "photos": {
+      "limit": "Up to 20 photos, 10 MB total. Photos are hidden from clients.",
+      "tooLarge": "Choose at most 20 photos totalling no more than 10 MB."
     }
   }
 }
