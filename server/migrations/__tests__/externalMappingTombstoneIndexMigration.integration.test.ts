@@ -7,8 +7,8 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 // Behavioral DB test for the tombstone partial-index migration (ticket
 // alga-2026-0002886). `up` is called on a DB that may already be migrated; it
-// is idempotent (DROP IF EXISTS + CREATE). The suite leaves the index in its
-// migrated (partial) state.
+// is idempotent (CONCURRENTLY build under a staging name, drop, rename back).
+// The suite leaves the index in its migrated (partial) state.
 
 const require = createRequire(import.meta.url);
 const MIGRATION_PATH = path.resolve(
@@ -102,7 +102,7 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
       // Pin both migration statements to one session so we can observe its
       // lock wait without timing assumptions about when DROP INDEX starts.
       rebuilding = migration.up({
-        raw: (sql: string) => db.raw(sql).connection(connection),
+        raw: (sql: string, bindings?: readonly unknown[]) => db.raw(sql, bindings as any).connection(connection),
       } as Knex);
       const deadline = Date.now() + 5000;
       let waiting = false;
