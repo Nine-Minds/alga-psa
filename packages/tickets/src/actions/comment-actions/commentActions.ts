@@ -11,6 +11,7 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { publishEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
@@ -333,28 +334,36 @@ export const createComment = withAuth(async (
         // Persist notification intent with the comment; failed intent writes must roll back.
         try {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          await persistCommentPublication(trx, {
+          await publishCommentEvent(trx, 'ticket', {
+            tenantId: commentTenant,
+            ticketId: comment.ticket_id!,
+            commentId,
+            userId: comment.user_id,
             eventType: 'TICKET_COMMENT_ADDED',
-            payload: buildTicketCommentAddedPayload({
-              tenantId: commentTenant,
-              occurredAt: new Date().toISOString(),
-              ticketId: comment.ticket_id!,
-              commentId,
-              userId: comment.user_id,
-              thread_id: eventComment?.thread_id,
-              parent_comment_id: eventComment?.parent_comment_id ?? null,
-              is_reply: Boolean(eventComment?.parent_comment_id),
-              comment: {
-                content: comment.note!,
-                author: authorName,
-                isInternal: comment.is_internal || false,
-                authorType: comment.author_type, // F039: Include author_type in event payload
+          }, async () => {
+            await persistCommentPublication(trx, {
+              eventType: 'TICKET_COMMENT_ADDED',
+              payload: buildTicketCommentAddedPayload({
+                tenantId: commentTenant,
+                occurredAt: new Date().toISOString(),
+                ticketId: comment.ticket_id!,
+                commentId,
+                userId: comment.user_id,
                 thread_id: eventComment?.thread_id,
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
-                is_reply: Boolean(eventComment?.parent_comment_id)
-              }
-            })
-          }, publishStoredWorkflowEvent);
+                is_reply: Boolean(eventComment?.parent_comment_id),
+                comment: {
+                  content: comment.note!,
+                  author: authorName,
+                  isInternal: comment.is_internal || false,
+                  authorType: comment.author_type, // F039: Include author_type in event payload
+                  thread_id: eventComment?.thread_id,
+                  parent_comment_id: eventComment?.parent_comment_id ?? null,
+                  is_reply: Boolean(eventComment?.parent_comment_id)
+                }
+              })
+            }, publishStoredWorkflowEvent);
+          });
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -633,32 +642,37 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
       if (updatedComment && commentTenant) {
-        const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
-          .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id ?? updatedComment.user_id ?? user.user_id })
-          .first();
-        const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
+        // Authorship is not editable, so the edited comment's author is the one already resolved.
+        const newAuthorName = oldAuthorName;
 
         try {
-          await publishEvent({
+          await publishCommentEvent(trx, 'ticket', {
+            tenantId: commentTenant,
+            ticketId: updatedComment.ticket_id!,
+            commentId: updatedComment.comment_id!,
+            userId: user.user_id,
             eventType: 'TICKET_COMMENT_UPDATED',
-            payload: {
-              tenantId: commentTenant,
-              ticketId: updatedComment.ticket_id!,
-              userId: user.user_id,
-              oldComment: {
-                id: oldCommentData.id,
-                content: oldCommentData.content,
-                author: oldAuthorName,
-                isInternal: oldCommentData.isInternal
-              },
-              newComment: {
-                id: updatedComment.comment_id!,
-                content: updatedComment.note!,
-                author: newAuthorName,
-                isInternal: updatedComment.is_internal || false
+          }, async () => {
+            await publishEvent({
+              eventType: 'TICKET_COMMENT_UPDATED',
+              payload: {
+                tenantId: commentTenant,
+                ticketId: updatedComment.ticket_id!,
+                userId: user.user_id,
+                oldComment: {
+                  id: oldCommentData.id,
+                  content: oldCommentData.content,
+                  author: oldAuthorName,
+                  isInternal: oldCommentData.isInternal
+                },
+                newComment: {
+                  id: updatedComment.comment_id!,
+                  content: updatedComment.note!,
+                  author: newAuthorName,
+                  isInternal: updatedComment.is_internal || false
+                }
               }
-            }
+            });
           });
           console.log(`[updateComment] Published TICKET_COMMENT_UPDATED event for comment:`, id);
         } catch (eventError) {

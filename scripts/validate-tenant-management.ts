@@ -24,6 +24,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import knex, { Knex } from 'knex';
+import {
+  TENANT_TABLE_MANIFEST,
+  TenantManifestCycleError,
+  computeTenantDeletionOrder,
+  tenantDeletionOrder,
+} from '../packages/db/src/lib/tenantTableManifest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +71,8 @@ interface ValidationResult {
   tablesInDatabase: string[];
   tablesInDeletionOrder: string[];
   fkOrderingViolations: FkOrderingViolation[];
+  /** Problems found by the manifest ordering engine (snapshot-based, in addition to the DB FK checks). */
+  manifestProblems: string[];
 }
 
 /**
@@ -198,7 +206,7 @@ function createDbConnection(): Knex {
 /**
  * Validate the deletion order against the database schema
  */
-async function validateDeletionOrder(): Promise<ValidationResult> {
+export async function validateDeletionOrder(): Promise<ValidationResult> {
   console.log('Reading TENANT_TABLES_DELETION_ORDER from source file...');
   const tablesInDeletionOrder = parseDeletionOrderFromSource();
   console.log(`  Found ${tablesInDeletionOrder.length} tables in deletion order`);
@@ -270,16 +278,42 @@ async function validateDeletionOrder(): Promise<ValidationResult> {
       }
     }
 
+    // === Manifest engine checks ===
+    // The deletion order is a projection of the tenant table manifest; validate the
+    // manifest through its own engine (restrictive-FK DAG, declared resolutions) and
+    // confirm the activity literal still equals it. The DB checks above stay the
+    // ground truth for FKs the committed snapshot may lag.
+    const manifestProblems: string[] = [];
+    try {
+      const computed = computeTenantDeletionOrder();
+      for (const v of computed.violations) {
+        manifestProblems.push(`${v.child} (idx ${v.childIndex}) must be deleted before ${v.parent} (idx ${v.parentIndex}) [${v.column}, ${v.deleteRule}]`);
+      }
+    } catch (error) {
+      if (error instanceof TenantManifestCycleError) manifestProblems.push(`cycle: ${error.cycle.join(' -> ')}`);
+      else throw error;
+    }
+    const manifestOrder = tenantDeletionOrder();
+    if (manifestOrder.length !== tablesInDeletionOrder.length || manifestOrder.some((t, i) => t !== tablesInDeletionOrder[i])) {
+      manifestProblems.push('TENANT_TABLES_DELETION_ORDER differs from the manifest deletion order');
+    }
+    const manifestTables = new Set(TENANT_TABLE_MANIFEST.map((entry) => entry.table));
+    for (const t of relevantDbTables) {
+      if (!manifestTables.has(t)) manifestProblems.push(`${t} has a tenant column and no manifest entry`);
+    }
+
     return {
       success:
         missingTables.length === 0 &&
         duplicatesInOrder.length === 0 &&
-        fkOrderingViolations.length === 0,
+        fkOrderingViolations.length === 0 &&
+        manifestProblems.length === 0,
       missingTables,
       duplicatesInOrder,
       tablesInDatabase: relevantDbTables,
       tablesInDeletionOrder,
       fkOrderingViolations,
+      manifestProblems,
     };
   } finally {
     await db.destroy();
@@ -336,6 +370,13 @@ async function main() {
       console.log('\n   (CASCADE and SET NULL FKs are allowed in either order and are not flagged.)');
     }
 
+    if (result.manifestProblems.length > 0) {
+      console.log('\n❌ TENANT TABLE MANIFEST PROBLEMS:');
+      result.manifestProblems.forEach((p) => console.log(`   - ${p}`));
+      console.log('\n   Fix packages/db/src/lib/tenantTableManifest.ts; use');
+      console.log('   `npx tsx scripts/generate-tenant-manifest.ts --place <table>` for a legal position.');
+    }
+
     if (result.success) {
       console.log('\n✅ All tenant-scoped tables are included in the deletion order!');
       process.exit(0);
@@ -349,4 +390,7 @@ async function main() {
   }
 }
 
-main();
+// Run only when executed directly, so tests can import validateDeletionOrder.
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main();
+}

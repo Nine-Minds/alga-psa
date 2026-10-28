@@ -4,7 +4,7 @@ import { matchesQueueTab } from './queries';
 const tz = vi.hoisted(() => ({ value: 'UTC' }));
 vi.mock('@alga-psa/db', () => ({ resolveEffectiveTimeZone: async () => tz.value }));
 import { allowedCustodyEvents, assertCustodyTransition, nextCustodyState, CustodyTransitionError } from './stateMachine';
-import { formatCustodyForLabel, formatCustodyForLabelMulti, formatFollowUpDate } from './labelFormat';
+import { formatCustodyForLabel, formatCustodyForLabelSubject, formatFollowUpDate } from './labelFormat';
 // Static imports (the @alga-psa/db mock above is hoisted): loading these module graphs at collection time keeps
 // cold-import cost out of each test's 5s timeout, which a loaded CI runner exceeded with in-test dynamic imports.
 import { resolveCustodyToday } from './today';
@@ -35,7 +35,7 @@ const base = { state: 'in_office', location_name: 'Main Office', bin: 'Shelf B3'
 
 describe('custody label format', () => {
   it('prints location and who acts next, date-only without time zones', () => {
-    expect(formatCustodyForLabel(base)).toEqual({ custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
+    expect(formatCustodyForLabel(base)).toEqual({ custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29', followUpOn: '2026-10-29' });
     expect(formatFollowUpDate('2026-01-01')).toBe('Jan 1');
     expect(formatFollowUpDate('garbage')).toBeNull();
   });
@@ -51,11 +51,34 @@ describe('custody label format', () => {
     const withNote = { ...base, next_action_note: 'call Bob on 555-0100', condition_note: 'cracked' } as any;
     expect(JSON.stringify(formatCustodyForLabel(withNote))).not.toMatch(/Bob|555|cracked/);
   });
-  it('several held items give a count and no next action', () => {
-    const one = formatCustodyForLabel(base)!;
-    expect(formatCustodyForLabelMulti([one, one, one])).toEqual({ custodyLocation: '3 items held', nextAction: null });
-    expect(formatCustodyForLabelMulti([one])).toEqual(one);
-    expect(formatCustodyForLabelMulti([])).toBeNull();
+  describe('formatCustodyForLabelSubject', () => {
+    const at = (bin: string, date: string | null, party: 'msp' | 'vendor' = 'msp') =>
+      formatCustodyForLabel({ ...base, bin, next_action_party: party, follow_up_on: date })!;
+    const a = at('Shelf A1', '2026-11-02');
+    const b = at('Shelf B3', '2026-10-29', 'vendor');
+    const c = at('Shelf C2', '2026-12-01');
+
+    it('0 held, no pick: nothing', () => {
+      expect(formatCustodyForLabelSubject([], null)).toBeNull();
+    });
+    it('1 held, no pick: that item', () => {
+      expect(formatCustodyForLabelSubject([a], null)).toBe(a);
+    });
+    it('3 held, no pick: count plus the earliest follow-up, without a party', () => {
+      const r = formatCustodyForLabelSubject([a, b, c], null)!;
+      expect(r.custodyLocation).toBe('3 items held');
+      expect(r.nextAction).toBe('Follow up Oct 29');
+    });
+    it('3 held, none with a date: count and no next action', () => {
+      const undated = [at('A', null), at('B', null), at('C', null)];
+      expect(formatCustodyForLabelSubject(undated, null)).toMatchObject({ custodyLocation: '3 items held', nextAction: null });
+    });
+    it('3 held, pick with custody: the picked item decides', () => {
+      expect(formatCustodyForLabelSubject([a, b, c], { facts: c })).toBe(c);
+    });
+    it('3 held, pick not held: nothing, never the ticket count', () => {
+      expect(formatCustodyForLabelSubject([a, b, c], { facts: null })).toBeNull();
+    });
   });
 });
 

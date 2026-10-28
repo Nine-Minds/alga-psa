@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { getJobCapabilityFilter, getJobDescriptor, listJobDescriptorNames, setNativeJobProbe } from './jobDescriptors';
+import type { JobDescriptor } from './jobDescriptors';
 import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -68,7 +70,7 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 export type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
@@ -189,13 +191,27 @@ export type MaintenanceJobResult = {
  * definition, which keeps dev hot-reload and repeated boots idempotent.
  */
 export function registerMaintenanceJob(jobName: string, def: MaintenanceJobDef): void {
+  if (getJobDescriptor(jobName)) {
+    throw new Error(`registerMaintenanceJob: "${jobName}" is already registered through defineJob`);
+  }
   MAINTENANCE_JOBS[jobName] = def;
 }
 
-export const listMaintenanceJobNames = (): string[] => Object.keys(MAINTENANCE_JOBS);
+const isNativeMaintenanceJob = (jobName: string): boolean =>
+  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);
+
+// defineJob rejects native names (and this throws if one was defined before load).
+setNativeJobProbe(isNativeMaintenanceJob);
+
+// Native names first, then descriptor names (disjoint by construction).
+export const listMaintenanceJobNames = (): string[] => {
+  const extra = listJobDescriptorNames();
+  const native = Object.keys(MAINTENANCE_JOBS);
+  return extra.length ? [...native, ...extra] : native;
+};
 
 export const isKnownMaintenanceJob = (jobName: string): boolean =>
-  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);
+  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName) || getJobDescriptor(jobName) !== undefined;
 
 async function runWithConcurrency<T>(
   items: T[],
@@ -218,7 +234,7 @@ export async function runMaintenanceJob(
   jobName: string,
   opts: { concurrency?: number } = {},
 ): Promise<MaintenanceJobResult> {
-  const def = MAINTENANCE_JOBS[jobName];
+  const def: MaintenanceJobDef | JobDescriptor | undefined = MAINTENANCE_JOBS[jobName] ?? getJobDescriptor(jobName);
   if (!def) {
     throw new Error(`Unknown maintenance job: ${jobName}`);
   }
@@ -244,15 +260,27 @@ export async function runMaintenanceJob(
     return { jobName, scope: 'system', total, succeeded, failed };
   }
 
+  // A capability-gated job never reaches tenant SQL unless the gate is wired.
+  const capability = 'capability' in def && typeof def.capability === 'string' ? def.capability : undefined;
+  const capabilityFilter = capability ? getJobCapabilityFilter() : undefined;
+  if (capability && !capabilityFilter) {
+    logger.info('[maintenance] capability-gated job skipped: no capability filter registered', { jobName, capability });
+    return { jobName, scope: 'tenant', total: 0, succeeded: 0, failed: 0 };
+  }
+
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
-  const active = await db
-    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
-    .whereNull('suspended_at')
-    .select('tenant');
+  const tenantQuery = db
+    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs');
+  if (!def.includeSuspended) tenantQuery.whereNull('suspended_at');
+  const active = await tenantQuery.select('tenant');
   let tenants = active;
   if (def.tenants) {
     const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));
     tenants = active.filter((row) => eligible.has(String(row.tenant)));
+  }
+  if (capability && capabilityFilter) {
+    const served = new Set(await capabilityFilter(capability, tenants.map((row) => String(row.tenant))));
+    tenants = tenants.filter((row) => served.has(String(row.tenant)));
   }
   let succeeded = 0;
   let failed = 0;

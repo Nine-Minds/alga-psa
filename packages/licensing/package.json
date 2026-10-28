@@ -11,6 +11,16 @@
       "import": "./src/index.ts",
       "require": "./src/index.ts"
     },
+    "./lifecycle": {
+      "types": "./src/lifecycle.ts",
+      "import": "./src/lifecycle.ts",
+      "require": "./src/lifecycle.ts"
+    },
+    "./lifecycle-error": {
+      "types": "./src/lifecycle-error.ts",
+      "import": "./src/lifecycle-error.ts",
+      "require": "./src/lifecycle-error.ts"
+    },
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts",

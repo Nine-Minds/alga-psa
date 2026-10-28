@@ -160,3 +160,38 @@ export type {
   BundleSettingsLike,
   BundleWorkflowMode,
 } from './bundleWorkflowLock';
+
+// Substrate registries (L0b): client-safe, default no-op.
+export {
+  registerTicketLifecycleHandler,
+  dispatchTicketLifecycle,
+  resetTicketLifecycleHandlers,
+} from './ticketLifecycleHooks';
+export type {
+  TicketLifecycleEvent,
+  TicketLifecycleKind,
+  TicketLifecycleHandler,
+  TicketLifecycleHandlerOptions,
+} from './ticketLifecycleHooks';
+export {
+  registerCommentEventContributor,
+  publishCommentEvent,
+  resetCommentEventContributors,
+} from './commentEventRegistry';
+export type {
+  CommentEvent,
+  CommentEventContributor,
+  CommentEventEnvelope,
+  CommentEventSource,
+  CommentEventType,
+  CommentEventTypesBySource,
+  CommentEventsBySource,
+  ProjectTaskCommentEvent,
+  TicketCommentEvent,
+} from './commentEventRegistry';
+export {
+  registerScheduledCommentAdmission,
+  admitScheduledComment,
+  resetScheduledCommentAdmission,
+} from './scheduledCommentAdmission';
+export type { ScheduledCommentAdmissionChecker, ScheduledCommentAdmissionContext } from './scheduledCommentAdmission';

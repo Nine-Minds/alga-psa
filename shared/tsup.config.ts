@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
@@ -161,5 +162,6 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });
