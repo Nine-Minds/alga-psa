@@ -280,7 +280,7 @@ describe('Ticket templates (integration)', () => {
 
   async function addBoardApplyRule() {
     await tt('checklist_template_apply_rules').insert({
-      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, board_id: boardId, is_enabled: true,
+      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, where: JSON.stringify({ join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: boardId }] }), is_enabled: true,
     });
   }
 

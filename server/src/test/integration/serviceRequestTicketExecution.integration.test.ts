@@ -267,7 +267,7 @@ describe('service request ticket-only execution', () => {
     const templateId = uuidv4();
     await tenantTable(fixture.tenant, 'checklist_templates').insert({ tenant: fixture.tenant, template_id: templateId, name: 'Service request steps', is_active: true });
     await tenantTable(fixture.tenant, 'checklist_template_items').insert({ tenant: fixture.tenant, template_id: templateId, item_name: 'Linked before auto-apply', order_number: 0, is_required: false });
-    await tenantTable(fixture.tenant, 'checklist_template_apply_rules').insert({ tenant: fixture.tenant, template_id: templateId, is_enabled: true, service_request_definition_id: definitionId });
+    await tenantTable(fixture.tenant, 'checklist_template_apply_rules').insert({ tenant: fixture.tenant, template_id: templateId, is_enabled: true, where: JSON.stringify({ join: 'and', clauses: [{ path: 'service_request_definition_id', operator: 'equals', value: definitionId }] }) });
 
     const result = await submitPortalServiceRequest({
       knex: db,

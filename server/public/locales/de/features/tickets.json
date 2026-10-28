@@ -1719,7 +1719,9 @@
       "templateClientMismatch": "Diese Checklistenvorlage ist auf einen anderen Client beschränkt als den des Tickets.",
       "templateClientInvalid": "Der ausgewählte Client wurde nicht gefunden.",
       "ruleClientOutsideTemplateScope": "Diese Vorlage gehört zu einem Kunden, daher können ihre Regeln keine anderen Kunden ansprechen.",
-      "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen."
+      "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen.",
+      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
+      "predicateInvalid": "Invalid checklist rule: {{detail}}"
     }
   },
   "ticketSection": {

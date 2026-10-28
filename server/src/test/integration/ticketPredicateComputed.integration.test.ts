@@ -57,16 +57,38 @@ describeDb('ticket folded attributes in PostgreSQL', () => {
     });
   });
 
-  it('exposes the serialized rich-text discrepancy for follow-up', async () => {
+  it('searches visible text rather than serialized JSON markup', async () => {
     const serialized = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Visible' }] }]);
-    // The SQL string branch currently sees JSON keys; the legacy matcher parses this representation.
-    expect(await evaluate({ path: 'description_folded', operator: 'contains', value: 'paragraph' }, null, serialized)).toBe(true);
+    // Serialized and parsed documents have the same visible-text projection.
+    expect(await evaluate({ path: 'description_folded', operator: 'contains', value: 'paragraph' }, null, serialized)).toBe(false);
   });
 
-  it('compares PostgreSQL and JavaScript folding without assuming their locales match', async () => {
-    const result = await db.raw('SELECT lower(?::text) AS folded', ['İ']);
-    expect(typeof result.rows[0].folded).toBe('string');
-    console.info('Folding probe:', JSON.stringify({ postgres: result.rows[0].folded, javascript: 'İ'.toLowerCase() }));
+  it('uses JavaScript Unicode casing, including dotted I and contextual final sigma', async () => {
+    for (const text of ['İ', 'ΟΣ', 'ΟΣΑ', 'Ο\u0301Σ', 'Σ', 'École', '𐐀']) {
+      const result = await db.raw('SELECT alga_predicate_lower_v1(?::text) AS folded', [text]);
+      expect(result.rows[0].folded).toBe(text.toLowerCase());
+      expect(await evaluate({ path: 'title_folded', operator: 'contains', value: text.toLowerCase() }, text, null)).toBe(true);
+    }
+  });
+
+  it('decodes a serialized attributes object before projecting its description', async () => {
+    const fragment = compilePredicateFragment(createTicketQuerySchema(), { path: 'description_folded', operator: 'contains', value: 'visible' }, { rootAlias: 't' });
+    const attributes = JSON.stringify(JSON.stringify({ description: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Visible' }] }]) }));
+    const result = await db.raw(`SELECT (${fragment.sql}) AS matches FROM (SELECT ?::jsonb AS attributes) AS t`, [...fragment.bindings, attributes]);
+    expect(result.rows[0].matches).toBe(true);
+  });
+
+  it('matches ECMAScript casing for all single-codepoint case mappings and their sigma contexts', async () => {
+    const input: string[] = [];
+    for (let codepoint = 1; codepoint <= 0x10ffff; codepoint++) {
+      if (codepoint >= 0xd800 && codepoint <= 0xdfff) continue;
+      const character = String.fromCodePoint(codepoint);
+      if (character !== character.toLowerCase()) input.push(character, `A${character}Σ`, `ΑΣ${character}`);
+    }
+    const cases = input.map((text) => [text, text.toLowerCase()]);
+    const result = await db.raw(`SELECT item->>0 AS input FROM jsonb_array_elements(?::jsonb) AS item
+      WHERE alga_predicate_lower_v1(item->>0) IS DISTINCT FROM item->>1 LIMIT 5`, [JSON.stringify(cases)]);
+    expect(result.rows).toEqual([]);
   });
 
   it('treats missing text as empty and comparisons as two-valued', async () => {

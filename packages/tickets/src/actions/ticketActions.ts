@@ -73,7 +73,7 @@ import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalytic
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
-import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -1671,14 +1671,6 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         try {
           await applyMatchingChecklistTemplates(trx, tenant, {
             ticket_id: id,
-            board_id: updatedTicket.board_id,
-            category_id: updatedTicket.category_id,
-            subcategory_id: updatedTicket.subcategory_id,
-            priority_id: updatedTicket.priority_id,
-            client_id: updatedTicket.client_id,
-            ticket_origin: updatedTicket.ticket_origin,
-            title: updatedTicket.title,
-            description: ticketDescriptionFromAttributes(updatedTicket.attributes),
           }, {
             actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
             source: TICKET_ACTIVITY_SOURCE.UI,

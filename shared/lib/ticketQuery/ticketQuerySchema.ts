@@ -37,6 +37,7 @@ const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : valu
 
 const COMPUTED_RESOLVERS = (() => {
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
+  // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
   const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: unknown): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
@@ -61,11 +62,10 @@ const COMPUTED_RESOLVERS = (() => {
     throw new Error(`Unsupported computed operator ${operator}`);
   };
   return {
-  title_folded: (alias, value, _now, operator) => compare({ sql: 'LOWER(??)', bindings: [`${alias}.title`] }, 'string', operator, value),
+  title_folded: (alias, value, _now, operator) => compare({ sql: 'alga_predicate_lower_v1(??)', bindings: [`${alias}.title`] }, 'string', operator, value),
   description_folded: (alias, value, _now, operator) => compare({
-    sql: `CASE WHEN jsonb_typeof(??->'description') = 'string' THEN LOWER(??->>'description')
-      ELSE LOWER((SELECT string_agg(v #>> '{}', ' ') FROM jsonb_path_query(??->'description', '$.**.text') AS v)) END`,
-    bindings: [`${alias}.attributes`, `${alias}.attributes`, `${alias}.attributes`],
+    sql: `alga_predicate_lower_v1(alga_checklist_description_v1(??))`,
+    bindings: [`${alias}.attributes`],
   }, 'string', operator, value),
   from_service_request: (alias, value) => value === null ? { sql: 'FALSE', bindings: [] } : ({
     sql: `EXISTS (SELECT 1 FROM service_request_submissions AS __sr WHERE __sr.tenant = ?? AND __sr.created_ticket_id = ??) = ?`,

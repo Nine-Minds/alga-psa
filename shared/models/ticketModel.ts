@@ -16,7 +16,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
-import { applyMatchingChecklistTemplates, ticketDescriptionToPlainText } from '../lib/ticketChecklists';
+import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
@@ -1043,19 +1043,11 @@ export class TicketModel {
       if (!updated) throw new Error('Service request submission not found');
     }
 
-    // Auto-apply matching checklist templates (idempotent; null matcher =
-    // match any). Failure here must not break ticket creation.
+    // Auto-apply predicates against the inserted ticket in this transaction.
+    // Application is idempotent; validation failures are logged without a fallback.
     try {
       await applyMatchingChecklistTemplates(trx, tenant, {
         ticket_id: ticketId,
-        board_id: cleanedInput.board_id,
-        category_id: cleanedInput.category_id ?? null,
-        subcategory_id: cleanedInput.subcategory_id ?? null,
-        priority_id: cleanedInput.priority_id ?? null,
-        client_id: cleanedInput.client_id ?? null,
-        ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
-        title: cleanedInput.title,
-        description: ticketDescriptionToPlainText(cleanedInput.description),
       });
     } catch (error) {
       console.error('Failed to auto-apply checklist templates:', error);

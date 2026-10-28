@@ -1719,7 +1719,9 @@
       "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
       "templateClientInvalid": "Nie znaleziono wybranego klienta.",
       "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
-      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta."
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
+      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
+      "predicateInvalid": "Invalid checklist rule: {{detail}}"
     }
   },
   "ticketSection": {
