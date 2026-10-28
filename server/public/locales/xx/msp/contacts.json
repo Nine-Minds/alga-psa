@@ -806,7 +806,9 @@
         "viewClientUsers": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ṽīḗẇ ƈŀīḗƞŧ ŭşḗřş⟧"
       },
       "field": "⟦ƒīḗŀḓ⟧",
-      "locationClientMismatch": "⟦Ŧħȧŧ ŀȯƈȧŧīȯƞ ƀḗŀȯƞɠş ŧȯ ȧƞȯŧħḗř ƈŀīḗƞŧ.⟧"
+      "locationClientMismatch": "⟦Ŧħȧŧ ŀȯƈȧŧīȯƞ ƀḗŀȯƞɠş ŧȯ ȧƞȯŧħḗř ƈŀīḗƞŧ.⟧",
+      "importLocationUnknown": "⟦Ƈȧƞƞȯŧ īḿƥȯřŧ {{name}}: ŧħḗ ŀȯƈȧŧīȯƞ \"{{location}}\" ḓȯḗş ƞȯŧ ḗẋīşŧ ƒȯř ŧħȧŧ ƈŀīḗƞŧ⟧",
+      "importLocationNoClient": "⟦Ƈȧƞƞȯŧ īḿƥȯřŧ {{name}}: ŀȯƈȧŧīȯƞş ƞḗḗḓ ȧ ƈŀīḗƞŧ ȯƞ ŧħḗ şȧḿḗ řȯẇ⟧"
     }
   },
   "portal": {

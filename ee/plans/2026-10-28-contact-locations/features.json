@@ -393,7 +393,7 @@
     "prdRefs": [
       "FR-E1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST v1 contactResponseSchema gains work_arrangement and locations[] with address fields; ContactService.getById/list attach them"
   },
   {
@@ -402,7 +402,7 @@
     "prdRefs": [
       "FR-E1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST v1 createContactSchema and updateContactSchema accept work_arrangement and locations[{location_id, is_primary?}]; cross-client location returns 400 with code contact_location_client_mismatch"
   },
   {
@@ -411,7 +411,7 @@
     "prdRefs": [
       "FR-E2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/contacts and /api/v1/clients/{id}/contacts accept location_id and work_arrangement filters"
   },
   {
@@ -420,7 +420,7 @@
     "prdRefs": [
       "FR-E3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/clients/{id}/locations rows include contact_count"
   },
   {
@@ -430,7 +430,7 @@
       "FR-E4",
       "FR-I3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Route docs in server/src/lib/api/openapi/routes/clientsContacts.ts describe locations, work_arrangement, the location_id and work_arrangement filters and contact_count on every contact and location operation; npm run generate:artifacts regenerates the OpenAPI spec and the MCP registry; spec synced to the developer portal"
   },
   {
@@ -439,7 +439,7 @@
     "prdRefs": [
       "FR-E5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV export and template add work_arrangement, locations ('A; B') and primary_location columns"
   },
   {
@@ -448,7 +448,7 @@
     "prdRefs": [
       "FR-E5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import maps the three columns; MappableField union extended; a location name not found under the contact's client fails that row with a message naming it"
   },
   {
@@ -529,7 +529,7 @@
     "prdRefs": [
       "FR-E6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/contacts/export and GET /api/v1/contacts/search rows carry work_arrangement, locations[] and primary location like the list response"
   },
   {
@@ -538,7 +538,7 @@
     "prdRefs": [
       "FR-I1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact search indexer loads links per batch like phone numbers; primary location name joins the subtitle after the client name, all linked location names and cities join the body, remote adds 'Remote' to the body"
   },
   {
@@ -547,7 +547,7 @@
     "prdRefs": [
       "FR-I2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Saving contact links reindexes the contact; renaming or deactivating a location reindexes every linked contact"
   },
   {
@@ -556,7 +556,7 @@
     "prdRefs": [
       "FR-I3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MCP registry entries for contact and location operations mention the new parameters in their summaries so search_api_registry ranks them for location queries; call_api_endpoint passes location_id and work_arrangement filters through"
   },
   {

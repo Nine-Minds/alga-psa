@@ -806,7 +806,9 @@
         "viewClientUsers": "You do not have permission to view client users"
       },
       "field": "field",
-      "locationClientMismatch": "That location belongs to another client."
+      "locationClientMismatch": "That location belongs to another client.",
+      "importLocationUnknown": "Cannot import {{name}}: the location \"{{location}}\" does not exist for that client",
+      "importLocationNoClient": "Cannot import {{name}}: locations need a client on the same row"
     }
   },
   "portal": {

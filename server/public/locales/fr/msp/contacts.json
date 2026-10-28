@@ -806,7 +806,9 @@
         "viewClientUsers": "Vous n’avez pas l’autorisation de consulter les utilisateurs clients"
       },
       "field": "champ",
-      "locationClientMismatch": "Ce site appartient à un autre client."
+      "locationClientMismatch": "Ce site appartient à un autre client.",
+      "importLocationUnknown": "Impossible d’importer {{name}} : le site « {{location}} » n’existe pas pour ce client",
+      "importLocationNoClient": "Impossible d’importer {{name}} : les sites exigent un client sur la même ligne"
     }
   },
   "portal": {

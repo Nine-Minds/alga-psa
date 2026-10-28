@@ -806,7 +806,9 @@
         "viewClientUsers": "Sie haben keine Berechtigung, Kundenbenutzer anzuzeigen"
       },
       "field": "Feld",
-      "locationClientMismatch": "Dieser Standort gehört zu einem anderen Kunden."
+      "locationClientMismatch": "Dieser Standort gehört zu einem anderen Kunden.",
+      "importLocationUnknown": "{{name}} kann nicht importiert werden: der Standort „{{location}}“ existiert für diesen Kunden nicht",
+      "importLocationNoClient": "{{name}} kann nicht importiert werden: Standorte brauchen einen Kunden in derselben Zeile"
     }
   },
   "portal": {

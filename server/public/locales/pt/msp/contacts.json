@@ -806,7 +806,9 @@
         "viewClientUsers": "Você não tem permissão para visualizar usuários de clientes"
       },
       "field": "campo",
-      "locationClientMismatch": "Essa localização pertence a outro cliente."
+      "locationClientMismatch": "Essa localização pertence a outro cliente.",
+      "importLocationUnknown": "Não é possível importar {{name}}: a localização \"{{location}}\" não existe para esse cliente",
+      "importLocationNoClient": "Não é possível importar {{name}}: as localizações exigem um cliente na mesma linha"
     }
   },
   "portal": {

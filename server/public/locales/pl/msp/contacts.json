@@ -806,7 +806,9 @@
         "viewClientUsers": "Nie masz uprawnień do wyświetlania użytkowników klientów"
       },
       "field": "pole",
-      "locationClientMismatch": "Ta lokalizacja należy do innego klienta."
+      "locationClientMismatch": "Ta lokalizacja należy do innego klienta.",
+      "importLocationUnknown": "Nie można zaimportować {{name}}: lokalizacja „{{location}}” nie istnieje dla tego klienta",
+      "importLocationNoClient": "Nie można zaimportować {{name}}: lokalizacje wymagają klienta w tym samym wierszu"
     }
   },
   "portal": {

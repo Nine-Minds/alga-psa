@@ -371,10 +371,13 @@ function contactImportFailureResults(
   }));
 }
 
-type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses'> & {
+type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses' | 'locations'> & {
   additional_email_addresses?: CreateContactInput['additional_email_addresses'];
   tags?: string;
   primary_email_custom_type?: string | null;
+  /** Location names as written in the CSV; resolved against the contact's client during import. */
+  location_names?: string[];
+  primary_location_name?: string | null;
 };
 
 export type AddContactResult =
@@ -1190,6 +1193,9 @@ export async function exportContactsToCSV(
     'role',
     'notes',
     'tags',
+    'work_arrangement',
+    'locations',
+    'primary_location',
   ];
 
   const data = contacts.map((contact): Record<string, string> => {
@@ -1206,7 +1212,11 @@ export async function exportContactsToCSV(
       client: client?.client_name || '',
       role: contact.role || '',
       notes: contact.notes || '',
-      tags: tagText
+      tags: tagText,
+      work_arrangement: contact.work_arrangement || '',
+      // Semicolon-separated so a location name may contain a comma; import reads the same form.
+      locations: (contact.locations ?? []).map((location) => location.location_name ?? '').filter(Boolean).join('; '),
+      primary_location: (contact.locations ?? []).find((location) => location.is_primary)?.location_name || '',
     };
   });
 
@@ -1224,7 +1234,10 @@ export async function generateContactCSVTemplate(): Promise<string> {
       client: 'Mad Hatter Tea Client',
       role: await contactText('csvTemplate.explorerRole'),
       notes: await contactText('csvTemplate.explorerNotes'),
-      tags: await contactText('csvTemplate.explorerTags')
+      tags: await contactText('csvTemplate.explorerTags'),
+      work_arrangement: 'hybrid',
+      locations: 'Tea Room; Rabbit Hole Depot',
+      primary_location: 'Tea Room'
     },
     {
       full_name: 'Mad Hatter',
@@ -1235,7 +1248,10 @@ export async function generateContactCSVTemplate(): Promise<string> {
       client: 'Mad Hatter Tea Client',
       role: await contactText('csvTemplate.teaRole'),
       notes: await contactText('csvTemplate.teaNotes'),
-      tags: await contactText('csvTemplate.teaTags')
+      tags: await contactText('csvTemplate.teaTags'),
+      work_arrangement: 'remote',
+      locations: '',
+      primary_location: ''
     }
   ];
 
@@ -1249,6 +1265,9 @@ export async function generateContactCSVTemplate(): Promise<string> {
     'role',
     'notes',
     'tags',
+    'work_arrangement',
+    'locations',
+    'primary_location',
   ];
 
   return unparseCSV(templateData, fields);
@@ -1305,6 +1324,48 @@ function toContactEmailAddressInput(
     custom_type: row.custom_type ?? null,
     display_order: row.display_order,
   };
+}
+
+/**
+ * CSV carries location *names*, so the import resolves them against the contact's own client. An
+ * unknown name fails that row naming the location rather than skipping it silently — a quietly
+ * dropped site is exactly the data loss this feature exists to prevent. A row with locations but
+ * no client fails too: there is nothing to resolve against.
+ */
+async function resolveImportedContactLocations(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactName: string,
+  clientId: string | null | undefined,
+  locationNames: string[],
+  primaryLocationName: string | null | undefined,
+): Promise<ContactLocationInput[]> {
+  if (locationNames.length === 0) return [];
+  if (!clientId) {
+    throw await contactError('errors.contact.importLocationNoClient', 'VALIDATION_ERROR: ', { name: contactName });
+  }
+
+  const rows = await tenantScopedTable(trx, 'client_locations', tenant)
+    .where({ client_id: clientId })
+    .select('location_id', 'location_name') as Array<{ location_id: string; location_name: string | null }>;
+  const byName = new Map(rows.map((row) => [(row.location_name ?? '').trim().toLowerCase(), row.location_id]));
+
+  const links: ContactLocationInput[] = [];
+  for (const name of locationNames) {
+    const locationId = byName.get(name.trim().toLowerCase());
+    if (!locationId) {
+      throw await contactError('errors.contact.importLocationUnknown', 'VALIDATION_ERROR: ', {
+        name: contactName,
+        location: name,
+      });
+    }
+    links.push({
+      location_id: locationId,
+      is_primary: Boolean(primaryLocationName)
+        && name.trim().toLowerCase() === primaryLocationName!.trim().toLowerCase(),
+    });
+  }
+  return links;
 }
 
 export const importContactsFromCSV = withAuth(async (
@@ -1455,6 +1516,7 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive ?? undefined,
               role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
               notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
+              work_arrangement: contactData.work_arrangement ?? undefined,
             };
 
             if (contactData.primary_email_canonical_type !== undefined || contactData.primary_email_custom_type !== undefined) {
@@ -1467,6 +1529,25 @@ export const importContactsFromCSV = withAuth(async (
             }
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
+
+            // Mapped and non-blank states the whole set (including "clear them all"); absent leaves
+            // whatever the contact already has.
+            if (contactData.location_names !== undefined) {
+              await replaceContactLocations(
+                trx,
+                tenant,
+                savedContact.contact_name_id,
+                await resolveImportedContactLocations(
+                  trx,
+                  tenant,
+                  contactData.full_name!.trim(),
+                  updateData.client_id ?? existingContact.client_id,
+                  contactData.location_names,
+                  contactData.primary_location_name,
+                ),
+                { createdBy: user?.user_id ?? null },
+              );
+            }
             queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
             // A blank Tags value is "no opinion": it neither clears nor writes tags.
@@ -1492,9 +1573,26 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive || false,
               role: normalizeOptionalText(contactData.role),
               notes: normalizeOptionalText(contactData.notes),
+              work_arrangement: contactData.work_arrangement ?? undefined,
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            if (contactData.location_names !== undefined) {
+              await replaceContactLocations(
+                trx,
+                tenant,
+                savedContact.contact_name_id,
+                await resolveImportedContactLocations(
+                  trx,
+                  tenant,
+                  contactData.full_name!.trim(),
+                  contactData.client_id,
+                  contactData.location_names,
+                  contactData.primary_location_name,
+                ),
+                { createdBy: user?.user_id ?? null },
+              );
+            }
             queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
             if (hasImportedTags(contactData.tags)) {

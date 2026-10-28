@@ -6,6 +6,7 @@
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
+import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
@@ -884,7 +885,18 @@ export class ClientService extends BaseService<IClient> {
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
 
-      return locations;
+      // contact_count tells an API caller (and the MCP agent) how many people work at each site,
+      // and therefore why a delete would be refused. One batched read for the whole list.
+      const counts = await getContactCountsByLocation(
+        trx,
+        context.tenant,
+        locations.map((location) => location.location_id),
+      );
+
+      return locations.map((location) => ({
+        ...location,
+        contact_count: counts.get(location.location_id) ?? 0,
+      }));
     });
   }
 

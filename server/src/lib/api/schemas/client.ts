@@ -239,6 +239,8 @@ export const clientLocationResponseSchema = z.object({
   email: z.string().nullable(),
   notes: z.string().nullable(),
   is_active: z.boolean(),
+  /** How many contacts work at this location; a non-zero count is why a delete is refused. */
+  contact_count: z.number().int().min(0).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema

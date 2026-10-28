@@ -806,7 +806,9 @@
         "viewClientUsers": "U heeft geen toestemming om klantgebruikers te bekijken"
       },
       "field": "veld",
-      "locationClientMismatch": "Die locatie hoort bij een andere klant."
+      "locationClientMismatch": "Die locatie hoort bij een andere klant.",
+      "importLocationUnknown": "{{name}} kan niet worden geïmporteerd: de locatie ‘{{location}}’ bestaat niet voor die klant",
+      "importLocationNoClient": "{{name}} kan niet worden geïmporteerd: locaties vereisen een klant op dezelfde regel"
     }
   },
   "portal": {

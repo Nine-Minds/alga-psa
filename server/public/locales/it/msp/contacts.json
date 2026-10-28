@@ -806,7 +806,9 @@
         "viewClientUsers": "Non hai l’autorizzazione per visualizzare gli utenti dei clienti"
       },
       "field": "campo",
-      "locationClientMismatch": "Questa sede appartiene a un altro cliente."
+      "locationClientMismatch": "Questa sede appartiene a un altro cliente.",
+      "importLocationUnknown": "Impossibile importare {{name}}: la sede «{{location}}» non esiste per quel cliente",
+      "importLocationNoClient": "Impossibile importare {{name}}: le sedi richiedono un cliente sulla stessa riga"
     }
   },
   "portal": {

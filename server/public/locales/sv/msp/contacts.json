@@ -806,7 +806,9 @@
         "viewClientUsers": "Du har inte behörighet att visa kundanvändare"
       },
       "field": "fält",
-      "locationClientMismatch": "Den platsen hör till en annan klient."
+      "locationClientMismatch": "Den platsen hör till en annan klient.",
+      "importLocationUnknown": "Kan inte importera {{name}}: platsen ”{{location}}” finns inte för den klienten",
+      "importLocationNoClient": "Kan inte importera {{name}}: platser kräver en klient på samma rad"
     }
   },
   "portal": {
