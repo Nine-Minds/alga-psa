@@ -403,11 +403,17 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     schedule_name: zOpenApi.string().trim().min(1).max(255).describe('Name displayed in the asset maintenance UI.'),
     description: zOpenApi.string().nullable().optional().describe('Optional maintenance instructions.'),
     maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']).describe('Maintenance type stored by the UI and database.'),
-    frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Recurrence frequency. Does not change the explicit next_maintenance timestamp.'),
+    frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Recurrence frequency, multiplied by frequency_interval. Does not change the explicit next_maintenance timestamp. `custom` takes its rule from schedule_config.recurrence.'),
     frequency_interval: zOpenApi.number().int().min(1).describe('Positive integer frequency multiplier; monthly with 6 means every six months.'),
-    next_maintenance: zOpenApi.string().datetime().describe('Explicit next due timestamp, used unchanged for the initial open occurrence.'),
+    next_maintenance: zOpenApi.string().datetime().describe('Explicit next due timestamp, used unchanged for the initial open occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such as -04:00 are rejected.'),
     is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
-    schedule_config: zOpenApi.record(zOpenApi.unknown()).describe('Scheduling configuration; use {} when no custom configuration is needed.'),
+    schedule_config: zOpenApi.object({
+      recurrence: zOpenApi.object({
+        unit: zOpenApi.enum(['days', 'weeks', 'months', 'years']).describe('Unit multiplied by frequency_interval.'),
+        weekdays: zOpenApi.array(zOpenApi.number().int().min(0).max(6)).min(1).optional().describe('Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the next listed weekday in the current week (weeks start on Sunday); after the last one it jumps frequency_interval weeks to the first listed weekday.'),
+        days_of_month: zOpenApi.array(zOpenApi.number().int().min(1).max(31)).min(1).optional().describe('Months only. The next due date is the next listed day in the current month; after the last one it jumps frequency_interval months to the first listed day. Days are clamped to the month length (31 in February becomes 28/29).'),
+      }).strict().optional().describe('Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { "unit": "weeks", "weekdays": [1, 4] } is every other week on Monday and Thursday.'),
+    }).catchall(zOpenApi.unknown()).describe('Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is.'),
   }).strict();
 
   const MaintenanceScheduleUpdateRequest = registry.registerSchema(
@@ -1118,14 +1124,14 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/maintenance/{scheduleId}',
     summary: 'Update asset maintenance schedule',
     description:
-      'Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.',
+      'Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. Response-only fields (schedule_id, asset_id, tenant, created_by, created_by_name, created_at, updated_at, last_maintenance, archived_at) are accepted and ignored so a row read from GET can be sent back as-is. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
       params: MaintenanceScheduleParams,
       body: {
         schema: MaintenanceScheduleUpdateRequest,
-        description: 'Partial maintenance schedule update data.',
+        description: 'Partial maintenance schedule update data. Response-only fields are ignored; legacy and unknown fields return 400.',
         required: true,
       },
     },
