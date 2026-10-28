@@ -647,27 +647,34 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(await simulatedWindow(context, contract, 2, { 2: 14 })).toEqual(feb.lines);
   }, 300_000);
 
-  it("late time (c): dated in a period whose block has expired bills as overage and never draws the current block", async () => {
+  it.each([
+    { minutes: 480, covered: 8, overage: 0, remaining: 120 },
+    { minutes: 840, covered: 10, overage: 4, remaining: 0 },
+  ])("late time: expired historical block covers $covered hours and $overage hours are overage", async ({ minutes, covered, overage, remaining }) => {
     const contract = await seedCadenceBlockContract(context, { rolloverPeriods: 0 });
     await generateCadenceWindow(context, contract, NOV, { finalize: true });
     await generateCadenceWindow(context, contract, DEC, { finalize: true });
-    // What the nightly expiry pass does to November's block once its date passed.
-    await context
-      .db("hour_blocks")
+    const blocks = await context.db("hour_blocks")
       .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
-      .orderBy("valid_from")
-      .limit(1)
+      .orderBy("valid_from").select("block_id", "status");
+    await context.db("hour_blocks")
+      .where({ tenant: context.tenantId, block_id: blocks[0].block_id })
       .update({ status: "expired" });
-    await logHours(context, contract, "2025-11-10", [480]);
-    const jan = await generateCadenceWindow(context, contract, JAN);
-    expect(jan.lines.filter((line) => line.kind === "hourly")).toMatchObject([{ quantity: 8, net: 120_000 }]);
-    expect(jan.lines.filter((line) => line.kind === "hour_block")).toEqual([]);
-    expect(jan.descriptions.some((text) => text.includes("late time, service period 2025-11-01"))).toBe(true);
-    const blocks = await context
-      .db("hour_blocks")
-      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
-      .orderBy("valid_from");
-    expect(blocks.slice(0, 2).map((row) => Number(row.remaining_minutes))).toEqual([600, 600]);
+    await logHours(context, contract, "2025-11-10", [minutes]);
+    const jan = await generateCadenceWindow(context, contract, JAN, { finalize: true });
+    expect(jan.lines.filter((line) => line.kind === "hour_block")).toMatchObject([{ quantity: covered, net: 0 }]);
+    const hourly = jan.lines.filter((line) => line.kind === "hourly");
+    expect(hourly).toHaveLength(overage ? 1 : 0);
+    if (overage) {
+      expect(hourly).toMatchObject([{ quantity: overage, net: overage * 15_000 }]);
+      expect(jan.descriptions.some((text) => text.includes("late time, service period 2025-11-01"))).toBe(true);
+    }
+    expect(await simulatedWindow(context, contract, 1, { 1: minutes / 60 })).toEqual(jan.lines);
+    const priorBlocks = await context.db("hour_blocks").where({ tenant: context.tenantId })
+      .whereIn("block_id", blocks.map((block) => block.block_id)).orderBy("valid_from");
+    expect(priorBlocks.map((block) => [block.status, Number(block.remaining_minutes)])).toEqual([["expired", remaining], ["active", 600]]);
+    const feb = await generateCadenceWindow(context, contract, FEB);
+    expect(feb.lines.filter((line) => line.kind === "hourly" || line.kind === "hour_block")).toEqual([]);
   }, 300_000);
 
   it("cadence block mid-period start prorates hours and price together, with an indivisible price", async () => {

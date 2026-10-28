@@ -1257,6 +1257,28 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
     }
   });
 
+  it('draws eligible historical capacity in FIFO order, excluding voided and out-of-window blocks', async () => {
+    const w = await setup();
+    try {
+      const outside = await block(w, { line: w.lineA, status: 'expired', expiration: '2026-08-09', remaining: 600 });
+      const voided = await block(w, { line: w.lineA, status: 'voided', expiration: '2026-08-11', remaining: 600 });
+      const historical = await block(w, { line: w.lineA, status: 'expired', validFrom: '2026-08-01', expiration: '2026-08-15', remaining: 90 });
+      const active = await block(w, { line: w.lineA, status: 'active', validFrom: '2026-08-01', expiration: '2026-08-31', remaining: 60 });
+      const future = await block(w, { line: w.lineA, status: 'active', validFrom: '2026-09-01', remaining: 600 });
+      const pending = await block(w, { line: w.lineA, status: 'pending', expiration: '2026-08-12', remaining: 40 });
+      const work = await entry(w, w.svcA, 200, w.lineA, '2026-08-10');
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, work)).toEqual([
+          { block_id: historical, minutes: 90 }, { block_id: active, minutes: 60 }, { block_id: pending, minutes: 40 },
+        ]);
+      });
+      expect(await Promise.all([outside, voided, historical, active, future, pending].map((id) => remaining(w, id))))
+        .toEqual([600, 600, 0, 0, 600, 0]);
+    } finally {
+      await teardown(w);
+    }
+  });
+
   it('reconcileLineAllocations keeps entries drawn against an expired contract block', async () => {
     const w = await setup();
     try {

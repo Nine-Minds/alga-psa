@@ -546,7 +546,9 @@ export async function isEntryEligibleForBlockBurn(
 }
 
 /**
- * Selects the FIFO-ordered blocks eligible to burn for one entry: active, with
+ * Selects the FIFO-ordered blocks eligible to burn for one entry: paid contract
+ * blocks (including those subsequently expired), or a pending contract block,
+ * with
  * remaining minutes, inside the block's validity window at the entry's date
  * (`valid_from <= date <= expiration_date`, either bound may be null), and whose scope covers
  * the entry's service. Scope semantics: a block with zero scope rows covers all
@@ -584,10 +586,9 @@ async function selectEligibleBlocks(
     .where({ 'hb.client_id': clientId })
     .where(function (this: Knex.QueryBuilder) {
       if (target.kind === 'contract') {
-        // Contract-issued blocks of THIS line only: active, plus the line's
-        // pending block for the gap draw (time logged before the follow-on
-        // invoice is finalized).
-        this.where('hb.contract_line_id', target.contractLineId).whereIn('hb.status', ['active', 'pending']);
+        // The work date, not the date the entry is approved, determines whether
+        // a paid contract block can cover it. Pending blocks still hold gap draws.
+        this.where('hb.contract_line_id', target.contractLineId).whereIn('hb.status', ['active', 'expired', 'pending']);
       } else {
         this.whereNull('hb.contract_line_id').where('hb.status', 'active');
       }
@@ -638,8 +639,8 @@ async function selectEligibleBlocks(
   // FIFO burn order on the already-locked rows: expiration first (soonest
   // first, never-expiring last), then purchase, then creation.
   locked.sort((a, b) => {
-    // Gap draw: a line's pending block only after all of its active blocks.
-    if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+    // Paid blocks retain FIFO order across status changes; pending comes last.
+    if ((a.status === 'pending') !== (b.status === 'pending')) return a.status === 'pending' ? 1 : -1;
     if (a.expiration_date === null && b.expiration_date !== null) return 1;
     if (a.expiration_date !== null && b.expiration_date === null) return -1;
     if (a.expiration_date !== null && b.expiration_date !== null && a.expiration_date !== b.expiration_date) {

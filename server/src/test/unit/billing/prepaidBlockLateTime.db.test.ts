@@ -241,21 +241,36 @@ describe.runIf(enabled)('Prepaid Block late time on a cadence line (real engine,
     expect(feb.rows.filter((row) => text(row).includes('late time'))).toEqual([]);
   }, 300_000);
 
-  it('bills late time whose block has expired entirely as overage at the full rate', async () => {
+  it.each([
+    { minutes: 480, covered: 8, overage: 0, remaining: 120 },
+    { minutes: 840, covered: 10, overage: 4, remaining: 0 },
+  ])('draws $covered hours from the expired historical block and bills $overage overage once', async ({ minutes, covered, overage, remaining }) => {
     const world = await seedWorld(0);
     await invoiceWindow(world, NOV, { finalize: true });
     await invoiceWindow(world, DEC, { finalize: true });
-    // What the nightly expiry pass does to November's block once its date passed.
-    await db('hour_blocks')
+    const blocks = await db('hour_blocks')
       .where({ tenant: context.tenantId, contract_line_id: world.hourlyLineId })
-      .orderBy('valid_from').limit(1).update({ status: 'expired' });
-    await logApprovedHours(world, '2025-11-10', 480);
+      .orderBy('valid_from').select('block_id', 'status');
+    await db('hour_blocks').where({ tenant: context.tenantId, block_id: blocks[0].block_id }).update({ status: 'expired' });
+    const entryId = await logApprovedHours(world, '2025-11-10', minutes);
 
-    const jan = await invoiceWindow(world, JAN);
-    const overage = jan.rows.filter((row) => text(row).includes('late time, service period 2025-11-01'));
-    expect(overage).toHaveLength(1);
-    expect(Number(overage[0].quantity)).toBe(8);
-    expect(Number(overage[0].net_amount)).toBe(120_000);
-    expect((await blockRemaining(world)).slice(0, 2)).toEqual([600, 600]);
+    const jan = await invoiceWindow(world, JAN, { finalize: true });
+    const draws = jan.rows.filter((row) => text(row).startsWith('Prepaid hour block'));
+    expect(draws).toHaveLength(1);
+    expect(Number(draws[0].quantity)).toBe(covered);
+    const charges = jan.rows.filter(isOverage);
+    expect(charges).toHaveLength(overage ? 1 : 0);
+    if (overage) {
+      expect(Number(charges[0].quantity)).toBe(overage);
+      expect(Number(charges[0].net_amount)).toBe(overage * 15_000);
+      expect(text(charges[0])).toContain('late time, service period 2025-11-01');
+    }
+    const priorBlocks = await db('hour_blocks').where({ tenant: context.tenantId })
+      .whereIn('block_id', blocks.map((block: any) => block.block_id)).orderBy('valid_from');
+    expect(priorBlocks.map((block: any) => [block.status, Number(block.remaining_minutes)])).toEqual([['expired', remaining], ['active', 600]]);
+    expect((await db('time_entries').where({ tenant: context.tenantId, entry_id: entryId }).first()).invoiced).toBe(true);
+    const feb = await invoiceWindow(world, FEB);
+    expect(feb.rows.filter(isOverage)).toEqual([]);
+    expect(feb.rows.filter((row) => text(row).startsWith('Prepaid hour block'))).toEqual([]);
   }, 300_000);
 });
