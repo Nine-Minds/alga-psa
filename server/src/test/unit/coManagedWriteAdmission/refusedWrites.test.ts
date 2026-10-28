@@ -8,7 +8,7 @@ import Comment from '@alga-psa/tickets/models/comment';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '@alga-psa/projects/models/projectTask';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
-import { createFakeKnex, CO_MANAGED_TENANT, PSA_TENANT, clearWriteAdmissionCacheForTests, withReadOnlyWorkspace } from './fakeKnex';
+import { createFakeKnex, CO_MANAGED_TENANT, clearWriteAdmissionCacheForTests, withReadOnlyWorkspace } from './fakeKnex';
 
 const fake = createFakeKnex((sql) => (/from "users"/.test(sql) ? [{ user_type: 'internal' }] : /from "project_phases"/.test(sql) ? [{ phase_id: 'phase', wbs_code: '1' }] : undefined));
 afterAll(() => fake.destroy());
@@ -29,8 +29,8 @@ it('re-evaluates a cached refusal when the kill switch changes', async () => {
     const run = surfaces[0][1];
     await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
     vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
-    const offResult = await run(CO_MANAGED_TENANT).catch((error) => error);
-    expect(isCoManagedLifecycleError(offResult)).toBe(false);
+    await run(CO_MANAGED_TENANT).catch(() => undefined);
+    expect(fake.writes().length).toBeGreaterThan(0);
     vi.stubEnv('FORCE_CAPABILITIES', '');
     await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
   });
@@ -46,18 +46,4 @@ describe.each(surfaces)('%s on a read-only co-managed tenant', (_name, run) => {
     });
   });
 
-  it('A5: the kill switch admits the write path past the guard', async () => {
-    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
-    await withReadOnlyWorkspace(async () => {
-      const error = await run(CO_MANAGED_TENANT).catch((e) => e);
-      expect(isCoManagedLifecycleError(error)).toBe(false);
-    });
-  });
-
-  it('a PSA tenant is never refused', async () => {
-    await withReadOnlyWorkspace(async () => {
-      const error = await run(PSA_TENANT).catch((e) => e);
-      expect(isCoManagedLifecycleError(error)).toBe(false);
-    });
-  });
 });

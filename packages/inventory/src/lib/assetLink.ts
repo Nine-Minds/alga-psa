@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { withTransaction, admitOperationalWrite } from '@alga-psa/db';
-import { IStockUnit, CreateAssetRequest, Asset } from '@alga-psa/types';
+import { IStockUnit, CreateAssetRequest } from '@alga-psa/types';
 import { createAsset } from '@alga-psa/assets/actions';
 
 /** A delivered serialized unit awaiting post-commit asset creation (F029). */
@@ -48,8 +48,11 @@ export async function createAndLinkDeliveredAsset(
       : {}),
   };
   // createAsset is an ABAC-respecting server action; it runs in its own transaction.
-  const asset = (await createAsset(req)) as Asset;
-  if (!asset?.asset_id) return null;
+  const asset = await createAsset(req);
+  if (!asset || !('asset_id' in asset)) {
+    const error = asset as { actionError?: string; permissionError?: string; messageKey?: string } | null;
+    throw Object.assign(new Error(error?.actionError ?? error?.permissionError ?? 'Asset creation did not return an asset'), { messageKey: error?.messageKey });
+  }
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     await admitOperationalWrite(trx, tenant, 'assets', 'asset-link-unit');

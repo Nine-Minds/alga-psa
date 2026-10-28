@@ -1,5 +1,4 @@
 import { admitOperationalWrite } from '@alga-psa/db';
-import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { Knex } from 'knex';
 import {
   IProjectMaterial,
@@ -200,6 +199,7 @@ export async function addMaterial(
   }
 
   const { row, pendingAsset, pendingStockLow } = await runInTransaction(db, async (trx: Knex.Transaction) => {
+    await admitOperationalWrite(trx, tenant, cfg.table, 'add-material');
     const parent = await trx(cfg.parentTable)
       .where({ tenant, [cfg.parentPk]: input.parent_id })
       .select(cfg.parentPk, 'client_id')
@@ -281,6 +281,7 @@ export async function addMaterial(
       }
     }
 
+    await admitOperationalWrite(trx, tenant, cfg.table, 'insert-material');
     const [row] = await trx(cfg.table)
       .insert({
         tenant,
@@ -378,7 +379,6 @@ export async function addMaterial(
       const { createAndLinkDeliveredAsset } = await import('./assetLink');
       await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
     } catch (e) {
-      if (isCoManagedLifecycleError(e)) throw e;
       console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
     }
   }
@@ -494,6 +494,7 @@ export async function removeMaterialInTransaction(
   performedBy: string | null,
 ): Promise<RemovedMaterial | null> {
   const cfg = PARENTS[parentType];
+  await admitOperationalWrite(trx, tenant, cfg.table, 'remove-material');
   const row = await trx(cfg.table)
     .where({ tenant, [cfg.pk]: materialId })
     .select('is_billed', 'service_id', 'quantity')
@@ -550,6 +551,7 @@ export async function deleteMaterial(
         });
     }
 
+    await admitOperationalWrite(trx, tenant, cfg.table, 'delete-material');
     await trx(cfg.table).where({ tenant, [cfg.pk]: materialId }).delete();
     return true;
   });

@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import knexFactory, { type Knex } from 'knex';
+import { Writable } from 'node:stream';
 import { tenantDb } from './tenantDb';
 import {
   WRITE_ADMISSION_TTL_MS,
@@ -78,6 +79,8 @@ describe('tenantDb write admission: guard matrix (co-managed, refusing resolver)
     ['scoped().builder', (db: any) => db.scoped('comments').builder.insert({ note: 'x' })],
     ['scoped().clone()', (db: any) => db.scoped('comments').clone().builder.update({ note: 'x' })],
     ['clone of table()', (db: any) => db.table('tickets').clone().update({ title: 'z' })],
+    ['clone after update', (db: any) => db.table('tickets').update({ title: 'z' }).clone()],
+    ['clone after insert', (db: any) => db.table('comments').insert({ note: 'z' }).clone()],
     ['parentScopedTable', (db: any) => db.parentScopedTable('tax_holidays').update({ done: true })],
     ['parentScopedTable', (db: any) => db.parentScopedTable('tax_holidays').where({ x: 1 }).del()],
     ['insertParentScoped', (db: any) => db.insertParentScoped('tax_holidays', { tax_rate_id: 't1', x: 1 })],
@@ -85,6 +88,41 @@ describe('tenantDb write admission: guard matrix (co-managed, refusing resolver)
     const db = tenantDb(knex, 'cm');
     await expect(Promise.resolve().then(() => run(db))).rejects.toBeInstanceOf(Refusal);
     expect(nonLookup()).toEqual([]);
+  });
+
+  it.each(['stream', 'pipe'] as const)('refuses an armed write executed by %s', async (method) => {
+    const builder = tenantDb(knex, 'cm').table('tickets').update({ title: 'z' }).clone();
+    let stream: any;
+    if (method === 'pipe') {
+      const originalStream = builder.stream;
+      builder.stream = function (...args: any[]) { stream = originalStream.apply(this, args as any); return stream; } as any;
+      builder.pipe(new Writable({ objectMode: true, write(_chunk, _encoding, done) { done(); } }));
+    } else {
+      stream = builder.stream();
+    }
+    const error = new Promise((resolve) => stream.once('error', resolve));
+    if (method === 'stream') stream.resume();
+    expect(await error).toBeInstanceOf(Refusal);
+    expect(nonLookup()).toEqual([]);
+  });
+
+  it('permits a streamed write and preserves its rows when admission allows it', async () => {
+    registerWriteAdmissionResolver(allow);
+    const client = knex.client as any;
+    const original = client._stream;
+    client._stream = async (_connection: unknown, obj: any, stream: any) => {
+      statements.push(obj.sql);
+      stream.write({ ticket_id: 'created' });
+      stream.end();
+    };
+    try {
+      const rows: unknown[] = [];
+      for await (const row of tenantDb(knex, 'cm').table('tickets').insert({ title: 'x' }).returning('*').clone().stream()) rows.push(row);
+      expect(rows).toEqual([{ ticket_id: 'created' }]);
+      expect(nonLookup()).toHaveLength(1);
+    } finally {
+      client._stream = original;
+    }
   });
 
   it('refuses through catch and finally chains too', async () => {

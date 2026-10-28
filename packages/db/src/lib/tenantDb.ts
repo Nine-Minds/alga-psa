@@ -1,4 +1,6 @@
 import type { Knex } from 'knex';
+import { PassThrough } from 'node:stream';
+import { finished } from 'node:stream/promises';
 import {
   parseTableExpression,
   requireTenantTableScope,
@@ -105,32 +107,60 @@ function guardWrites<B extends Knex.QueryBuilder>(
   builder: B,
   conn: Knex | Knex.Transaction,
   tenant: string,
-  tableName: string
+  tableName: string,
+  armedOperation?: string,
 ): B {
   if (!isOperationalWriteTable(tableName) || !isTenantWriteGuarded(tenant)) return builder;
   const target = builder as any;
+
+  const arm = (result: any, operation: string) => {
+    if (!result || result[WRITE_GUARDED]) return result;
+    const originalThen = result.then;
+    const originalStream = result.stream;
+    result[WRITE_GUARDED] = true;
+    const admit = () => admitTenantWrite(conn, tenant, { table: tableName, operation: `${operation}:${tableName}` });
+    result.then = function guardedThen(onFulfilled?: any, onRejected?: any) {
+      return admit().then(() => originalThen.call(result)).then(onFulfilled, onRejected);
+    };
+    result.stream = function guardedStream(optionsOrHandler?: any, handlerOrNil?: any) {
+      const handler = typeof optionsOrHandler === 'function' ? optionsOrHandler : handlerOrNil;
+      const options = typeof optionsOrHandler === 'function' ? undefined : optionsOrHandler;
+      const output = new PassThrough({ objectMode: true });
+      const run = admit().then(() => {
+        if (output.destroyed) return;
+        const source = originalStream.call(result, options);
+        source.on('error', (error: Error) => output.destroy(error));
+        output.on('close', () => source.destroy());
+        source.pipe(output);
+        return finished(source);
+      });
+      if (typeof handler === 'function') {
+        handler(output);
+        return run;
+      }
+      run.catch((error) => output.destroy(error));
+      return output;
+    };
+    result.pipe = function guardedPipe(writable: any, options?: any) {
+      return result.stream(options).pipe(writable);
+    };
+    return result;
+  };
 
   for (const terminal of WRITE_TERMINALS) {
     const original = target[terminal];
     if (typeof original !== 'function') continue;
     target[terminal] = function guardedTerminal(this: any, ...args: unknown[]) {
       const result = original.apply(this, args);
-      if (!result || result[WRITE_GUARDED]) return result;
-      const originalThen = result.then;
-      result[WRITE_GUARDED] = true;
-      result.then = function guardedThen(onFulfilled?: any, onRejected?: any) {
-        return admitTenantWrite(conn, tenant, { table: tableName, operation: `${terminal}:${tableName}` })
-          .then(() => originalThen.call(result))
-          .then(onFulfilled, onRejected);
-      };
-      return result;
+      return arm(result, terminal);
     };
   }
 
   const originalClone = target.clone;
   target.clone = function guardedClone(this: any, ...args: unknown[]) {
-    return guardWrites(originalClone.apply(this, args), conn, tenant, tableName);
+    return guardWrites(originalClone.apply(this, args), conn, tenant, tableName, this[WRITE_GUARDED] ? this._method : undefined);
   };
+  if (armedOperation) arm(target, armedOperation);
   return builder;
 }
 
