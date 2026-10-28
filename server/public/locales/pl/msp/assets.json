@@ -949,12 +949,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja",
-      "held_by_msp": "Przechowywane przez MSP"
-    },
     "assetTypes": {
       "workstation": "Stacja robocza",
       "server": "Serwer",
@@ -1813,8 +1807,8 @@
     "in_stock": "W magazynie",
     "maintenance": "W serwisie",
     "inactive": "Nieaktywny",
-    "held_by_msp": "Przechowywane przez MSP",
-    "retired": "Wycofany"
+    "retired": "Wycofany",
+    "held_by_msp": "W posiadaniu MSP"
   },
   "assetStatusKinds": {
     "deployable": "Do użycia",
@@ -2080,7 +2074,8 @@
       "doneBody": "{{name}} ({{tag}}) jest teraz w przechowaniu MSP.",
       "printLabel": "Drukuj etykietę zasobu",
       "openAsset": "Otwórz zasób",
-      "close": "Zamknij"
+      "close": "Zamknij",
+      "inCustodyOption": "{{asset}} — W przechowaniu: {{location}}"
     }
   }
 }

@@ -2211,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "〖Şẇīŧƈħ ṽīḗẇ ·····〗"
+  },
+  "entityChip": {
+    "moreTags": "〖{{count}} ḿȯřḗ ŧȧɠş: {{names}} ············〗"
   }
 }

@@ -196,7 +196,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
     }
     if (process.env.GITHUB_ACTIONS && !report.error) {
-      for (const v of [...report.violations, ...report.undecided]) console.log(`::error file=${v.file},line=${v.line}::R${v.rule} ${v.message}`);
+      // Keep stdout machine-readable in --json mode; workflow diagnostics use stderr.
+      for (const v of [...report.violations, ...report.undecided]) console.error(`::error file=${v.file},line=${v.line}::R${v.rule} ${v.message}`);
     }
     process.exit(exit);
   } catch (err) {

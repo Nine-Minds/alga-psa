@@ -87,7 +87,7 @@ export {
 } from './lib/invoiceExternalSyncLock';
 
 // Tenant Slug utilities
-export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
+export { getTenantIdBySlug, getTenantDisplayNameBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
 
 // Tenant suspension (reversible gate on background activity)
 export { isTenantSuspended, suspendTenant, resumeTenant } from './lib/tenantSuspension';

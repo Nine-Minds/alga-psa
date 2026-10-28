@@ -2223,5 +2223,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Przełącz widok"
+  },
+  "entityChip": {
+    "moreTags": "Kolejne tagi ({{count}}): {{names}}"
   }
 }

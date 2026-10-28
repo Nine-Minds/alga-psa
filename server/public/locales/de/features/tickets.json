@@ -111,7 +111,12 @@
     "allResponseStatuses": "Alle Antwortstatus",
     "responseStatus": "Antwortstatus",
     "board": "Nach Board filtern",
-    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche"
+    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche",
+    "requesterTags": "Tags des Anfragenden",
+    "clientTags": "Kunden-Tags",
+    "tagModeAny": "Mindestens eines von",
+    "tagModeNone": "Keines von",
+    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert."
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -250,7 +255,8 @@
     "moreActions": "Weitere Aktionen",
     "createTemplate": "Vorlage aus Ticket erstellen",
     "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
-    "printWorkTag": "Arbeitsetikett drucken"
+    "printWorkTag": "Arbeitsetikett drucken",
+    "retry": "Erneut versuchen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -360,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "{{count}} eingefügte Bilder konnten nicht gelöscht werden.",
     "pastedImagesDeleted_few": "{{count}} eingefügte Bilder gelöscht.",
     "pastedImagesDeleted_many": "{{count}} eingefügte Bilder gelöscht.",
-    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen."
+    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen.",
+    "loadPartyTagsFailed": "Tags für Anforderer und Kunde konnten nicht geladen werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -980,7 +987,22 @@
     "tagCreatePartialFailure_few": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreatePartialFailure_many": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_few": "{{count}} Tags konnten nicht erstellt werden",
-    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden"
+    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Wählen Sie einen Kunden aus, um Assets zu verknüpfen.",
+      "unavailable": "Assets können nach dem Erstellen im Ticket verknüpft werden."
+    },
+    "attachments": {
+      "heading": "Anhänge",
+      "add": "Dateien hinzufügen",
+      "remove": "{{name}} entfernen"
+    },
+    "watchers": {
+      "heading": "Beobachter",
+      "placeholder": "Beobachter hinzufügen..."
+    },
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",
