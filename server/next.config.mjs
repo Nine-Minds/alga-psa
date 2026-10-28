@@ -288,12 +288,15 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
-      // core exports whose name does not mirror src/ (they live in src/lib/) need
-      // an explicit entry: the '@alga-psa/core/' prefix would send them to
-      // src/<name>, and the dist/ fallback is absent wherever packages/ is
-      // mounted from source (e.g. the Teams development browser lane).
+      // Any core export whose source lives under src/lib/ with no same-named
+      // mirror at the src/ root needs an explicit entry: the '@alga-psa/core/'
+      // prefix would send it to src/<name>, and the dist/ fallback is absent
+      // wherever packages/ is mounted from source (e.g. the Teams development
+      // browser lane). nextConfigCoreAliases.contract.test.ts guards this list.
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
+      '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
+      '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
