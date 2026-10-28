@@ -16,8 +16,18 @@ Verification against `alga2684_prepaid` at `127.0.0.1:5472`:
 - [66 service-period inventory tests](evidence/tests/takeover-renewal/inventory.log), including T003.
 - Shared, billing, jobs and EE server typechecks; command logs are in the same evidence directory.
 
-The production review artifact uses `server/.next-review-takeover`; its `BUILD_ID` and `.alga-review-revision` identify the compiled revision. No application server was started or restarted. Current-revision live acceptance remains outstanding; the existing screenshots and walkthrough show an older revision.
+No current-revision production review artifact has been verified. No application server was started or restarted. Current-revision live acceptance remains outstanding; the existing screenshots and walkthrough show an older revision.
 
 The [migration-lint scan](evidence/tests/takeover-renewal/migration-lint.log) still reports the previously identified migration findings. This repair changes no migrations.
 
 Blocks follow the line cadence, as accepted in O7. Cycle-change money preview remains on card `f0083794`.
+
+## Post-main merge
+
+The merge of main at `c37e24a86a` retains late-service-period marking, shared resolver coverage, the bucket-hours status filter and report columns, and the T003 inventory reference. The tenant deletion manifest and foreign-key snapshot now match the prepaid migration: hour blocks are deleted before issuances, and their issuance foreign key is `NO ACTION`.
+
+At code revision `22429d8ca1`, the [database run](evidence/tests/post-main-merge/database.log) passed 183 tests across 20 files, including all nine acceptance tests, without skips. [Parity](evidence/tests/post-main-merge/parity.log) passed 34, [simulator](evidence/tests/post-main-merge/simulator.log) passed 67, [inventory](evidence/tests/post-main-merge/inventory.log) passed 66, and the [manifest suite](evidence/tests/post-main-merge/alga2684-final-manifest.log) passed 10. Shared, billing, jobs, EE server, and DB typechecks passed. The $3,000 and $3,600 saved-contract results are automated checks; the screenshots and walkthrough are historical live evidence.
+
+The [current migration scan](evidence/tests/post-main-merge/alga2684-final-migration-lint.log) reports nine violations and four undecided findings across three already-applied prepaid migrations. The prior PR CI run also failed tenant management schema validation because its deletion order differed from the manifest; the manifest repair has not yet been verified by a new PR CI run. The isolated database lacks unrelated EE schema needed for the full foreign-key snapshot check.
+
+The host build lock is held by a build in another checkout. `server/.next-review-takeover` has no verified `BUILD_ID`, revision stamp, or build-result record for this revision. A production build and current-revision live verification remain outstanding.
