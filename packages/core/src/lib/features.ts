@@ -5,6 +5,10 @@ export const isEnterprise =
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
+import { resolveFlagTargeting } from './featureFlagTargeting';
+
+export { flagTargetingEnvName, resolveFlagTargeting } from './featureFlagTargeting';
+
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 
 function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -56,21 +60,10 @@ export async function isFeatureFlagEnabled(
   flagKey: string,
   context: FeatureFlagContext = {},
 ): Promise<boolean> {
-  // Runtime server targeting shared by admission, the probe and RSC bootstrap.
-  // An absent allowlist leaves PostHog in charge. A configured allowlist is
-  // authoritative (including empty => off), so control tenants stay closed.
-  // This changes only the release flag; capability eligibility still applies.
-  if (typeof window === 'undefined' && flagKey === 'release-v2-0-feature') {
-    const raw = process.env.RELEASE_V2_0_FEATURE_TENANTS;
-    if (raw !== undefined) {
-      const tenants = raw.split(',').map((id) => id.trim().toLowerCase());
-      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-      // Reject the entire malformed configuration rather than partially
-      // enabling a release. No wildcard or user-supplied identity is accepted.
-      if (!context.tenantId || tenants.some((id) => !uuid.test(id))) return false;
-      return tenants.includes(context.tenantId.toLowerCase());
-    }
-  }
+  // Flag-agnostic tenant targeting (see featureFlagTargeting.ts). Authoritative
+  // for a targeted flag, including over the global disable override.
+  const targeted = resolveFlagTargeting(flagKey, context.tenantId);
+  if (targeted !== null) return targeted;
 
   if (featureFlagsAreDisabled()) {
     return true;

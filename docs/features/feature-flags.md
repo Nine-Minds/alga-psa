@@ -6,33 +6,54 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 
 ## Current Feature Flags
 
-### `release-v2-0-feature` tenant override
+### Server tenant targeting (any flag)
 
-Operators can set the runtime server environment variable
-`RELEASE_V2_0_FEATURE_TENANTS` to a comma-separated list of tenant UUIDs.
-When configured, it enables only `release-v2-0-feature` for those tenants and
-disables that flag for all other tenants. An empty value or any malformed entry
-disables the release flag for everyone. There is no wildcard. When unset, the
-existing PostHog evaluation applies; the override admits nobody by default.
+Operators can target any flag to specific tenants with a runtime, server-only
+environment variable, with no rebuild and no `NEXT_PUBLIC_*` value:
 
-For example, set `RELEASE_V2_0_FEATURE_TENANTS=<oz-tenant-uuid>,<emerald-tenant-uuid>`
-on the server and restart it after the matching Temporal worker is ready. Kansas
-must be omitted. No rebuild or browser environment variable is required. Server
-admission, the capability probe and the browser bootstrap use the same evaluation.
-This also supplies the release flag's existing Timeline bootstrap value for the
-listed tenants; other feature flags keep their existing evaluation.
+```
+FEATURE_FLAG_TENANTS__<KEY>=<tenant-uuid>[,<tenant-uuid>...]
+```
 
-Co-managed admission still requires a durable entitlement: Oz can enable a client,
-while Emerald (flag on without an entitlement) gets no co-managed UI. Existing
-participants remain served independently of the release flag. Keep
-`FORCE_CAPABILITIES` unset for this review;
-`FORCE_CAPABILITIES=co-managed:on` bypasses eligibility. The kill switch
-`FORCE_CAPABILITIES=co-managed:off` still closes admission and service even for
-listed tenants. Workers use participation and do not evaluate release targeting.
+`<KEY>` is the flag key upper-cased with each run of non-alphanumeric characters
+replaced by `_` (`release-v2-0-feature` becomes `RELEASE_V2_0_FEATURE`).
 
-To close new admission, set the allowlist to an empty value and restart. To return
-targeting to PostHog, remove the variable and restart. This operator override does
-not establish that PostHog targeting is configured.
+- Unset: not targeted; PostHog (or the existing evaluator) decides.
+- Set and valid: authoritative for that flag only. On for the listed tenants, off
+  for every other tenant, and not openable by `DISABLE_FEATURE_FLAGS`.
+- Set but empty or containing any malformed entry: off for everyone (the whole
+  value is rejected, never partly applied). There is no wildcard.
+- A tenant id is required; a user id is never treated as a tenant.
+
+The same source is applied by `isFeatureFlagEnabled` (server admission, the
+capability probe and the browser bootstrap) and by the `FeatureFlags` runtime
+(direct callers and `/api/v1/feature-flags`), so they cannot disagree. It is
+separate from the in-process `FeatureFlags.setOverride`, which is untenanted,
+set from code and cannot be configured by an operator.
+
+#### Co-managed review: only `release-v2-0-feature` is needed
+
+Co-managed is gated by `release-v2-0-feature` AND a durable entitlement. To run
+the production review:
+
+1. Set `FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE=<oz-uuid>,<emerald-uuid>` on
+   the server, using the fixture uuidv5 tenant IDs (never names: the wired
+   database has two tenants named "Oz"). Leave Kansas out.
+2. Restart the server only after the Temporal worker reports the deployed SHA.
+3. Keep `FORCE_CAPABILITIES` unset (`co-managed:on` bypasses eligibility).
+
+Oz (flag on plus the fixture `admin_grant` entitlement) is admitted and served.
+Emerald (flag on, no entitlement) sees no co-managed UI. Kansas (flag off) is
+closed. Existing participants remain served independently of the flag. Workers
+use participation and never evaluate targeting.
+
+Kill switch: `FORCE_CAPABILITIES=co-managed:off` closes admission and service for
+every tenant, listed or not, and overrides targeting and participation. To stop
+new admission only, set the variable to an empty value and restart; to return to
+PostHog, remove it and restart.
+
+This does not prove PostHog targeting is configured; that remains an accepted
+limitation.
 
 ### 1. `billing-enabled`
 Controls access to billing-related features across the application.

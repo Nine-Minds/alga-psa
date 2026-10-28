@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { isFeatureFlagEnabled, registerFeatureFlagChecker } from '@alga-psa/core/features';
+import { flagTargetingEnvName, isFeatureFlagEnabled, registerFeatureFlagChecker, resolveFlagTargeting } from '@alga-psa/core/features';
 import {
   evaluateCapability,
   registerCapabilityEligibility,
   registerCapabilityParticipation,
 } from '@alga-psa/core/capability';
 import { resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
+import { FeatureFlags } from '@alga-psa/core/server';
 import { resolveCapabilityBootstrap } from './bootstrap';
 
 const OZ = '00000000-0000-4000-8000-000000000001';
@@ -13,10 +14,10 @@ const EMERALD = '00000000-0000-4000-8000-000000000002';
 const KANSAS = '00000000-0000-4000-8000-000000000003';
 const checker = vi.fn(async () => false);
 
-describe('production release tenant targeting', () => {
+describe('production release tenant targeting (co-managed)', () => {
   beforeEach(() => {
     vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('RELEASE_V2_0_FEATURE_TENANTS', `${OZ}, ${EMERALD}`);
+    vi.stubEnv('FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE', `${OZ}, ${EMERALD}`);
     vi.stubEnv('FORCE_CAPABILITIES', '');
     vi.stubEnv('DISABLE_FEATURE_FLAGS', 'false');
     vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', 'false');
@@ -64,14 +65,14 @@ describe('production release tenant targeting', () => {
   });
 
   it('defers to PostHog when no override is configured', async () => {
-    vi.stubEnv('RELEASE_V2_0_FEATURE_TENANTS', undefined);
+    vi.stubEnv('FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE', undefined);
     expect(await isFeatureFlagEnabled('release-v2-0-feature', { tenantId: OZ })).toBe(false);
     checker.mockResolvedValue(true);
     expect(await isFeatureFlagEnabled('release-v2-0-feature', { tenantId: OZ })).toBe(true);
   });
 
   it.each(['', '*', `${OZ},*`, `${OZ},`, 'true', 'not-a-tenant'])('fails closed for empty or invalid targeting %j', async (raw) => {
-    vi.stubEnv('RELEASE_V2_0_FEATURE_TENANTS', raw);
+    vi.stubEnv('FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE', raw);
     checker.mockResolvedValue(true);
     expect(await isFeatureFlagEnabled('release-v2-0-feature', { tenantId: OZ })).toBe(false);
     expect(checker).not.toHaveBeenCalled();
@@ -87,5 +88,80 @@ describe('production release tenant targeting', () => {
     vi.stubEnv('DISABLE_FEATURE_FLAGS', 'true');
     expect(await isFeatureFlagEnabled('release-v2-0-feature', { tenantId: KANSAS })).toBe(false);
     expect(await isFeatureFlagEnabled('knowledge-base', { tenantId: KANSAS })).toBe(true);
+  });
+});
+
+describe('flag-agnostic tenant targeting', () => {
+  const OTHER = 'some-other-flag';
+  const OTHER_ENV = 'FEATURE_FLAG_TENANTS__SOME_OTHER_FLAG';
+
+  beforeEach(() => {
+    vi.stubEnv('DISABLE_FEATURE_FLAGS', 'false');
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', 'false');
+    checker.mockReset().mockResolvedValue(false);
+    registerFeatureFlagChecker(checker);
+  });
+
+  afterEach(() => {
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for('alga.core.featureFlagChecker')];
+    vi.unstubAllEnvs();
+  });
+
+  it('derives the variable name from any flag key', () => {
+    expect(flagTargetingEnvName('release-v2-0-feature')).toBe('FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE');
+    expect(flagTargetingEnvName(OTHER)).toBe(OTHER_ENV);
+  });
+
+  it('is not configured by default, so the normal evaluator decides', async () => {
+    expect(resolveFlagTargeting(OTHER, OZ)).toBeNull();
+    checker.mockResolvedValue(true);
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: OZ })).toBe(true);
+  });
+
+  it('is authoritative for the configured flag only, case- and space-insensitive', async () => {
+    vi.stubEnv(OTHER_ENV, ` ${OZ.toUpperCase()} , ${EMERALD}`);
+    checker.mockResolvedValue(true);
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: OZ })).toBe(true);
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: KANSAS })).toBe(false);
+    expect(await isFeatureFlagEnabled('release-v2-0-feature', { tenantId: KANSAS })).toBe(true);
+    expect(checker).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['', ' ', '*', `${OZ},*`, `${OZ},`, 'true', 'not-a-tenant'])('fails closed for %j', async (raw) => {
+    vi.stubEnv(OTHER_ENV, raw);
+    checker.mockResolvedValue(true);
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: OZ })).toBe(false);
+    expect(checker).not.toHaveBeenCalled();
+  });
+
+  it('does not accept a user id as the tenant', () => {
+    vi.stubEnv(OTHER_ENV, OZ);
+    expect(resolveFlagTargeting(OTHER, undefined)).toBe(false);
+  });
+
+  it('cannot be opened by DISABLE_FEATURE_FLAGS, which still opens untargeted flags', async () => {
+    vi.stubEnv(OTHER_ENV, OZ);
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', undefined);
+    vi.stubEnv('DISABLE_FEATURE_FLAGS', 'true');
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: KANSAS })).toBe(false);
+    expect(await isFeatureFlagEnabled('untargeted', { tenantId: KANSAS })).toBe(true);
+  });
+
+  it('is read at runtime on every evaluation', async () => {
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: OZ })).toBe(false);
+    vi.stubEnv(OTHER_ENV, OZ);
+    expect(await isFeatureFlagEnabled(OTHER, { tenantId: OZ })).toBe(true);
+  });
+
+  it('applies identically on the FeatureFlags runtime used by direct callers and the flags route', async () => {
+    vi.stubEnv(OTHER_ENV, OZ);
+    vi.stubEnv('ALGA_USAGE_STATS', 'false');
+    const flags = new FeatureFlags();
+    expect(await flags.isEnabled(OTHER, { tenantId: OZ })).toBe(true);
+    expect(await flags.isEnabled(OTHER, { tenantId: KANSAS })).toBe(false);
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', undefined);
+    vi.stubEnv('DISABLE_FEATURE_FLAGS', 'true');
+    expect(await flags.isEnabled(OTHER, { tenantId: KANSAS })).toBe(false);
+    expect(await flags.isEnabled('untargeted', { tenantId: KANSAS })).toBe(true);
   });
 });
