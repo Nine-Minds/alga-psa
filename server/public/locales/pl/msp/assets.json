@@ -199,10 +199,6 @@
         "msp": "Własność MSP"
       },
       "custody": {
-    "photos": {
-      "limit": "Do 20 zdjęć, łącznie 10 MB. Zdjęcia są ukryte przed klientami.",
-      "tooLarge": "Wybierz maksymalnie 20 zdjęć o łącznym rozmiarze do 10 MB."
-    },
         "any": "Dowolne przechowanie",
         "inCustody": "W przechowaniu MSP",
         "notInCustody": "Poza przechowaniem MSP"
@@ -2080,6 +2076,10 @@
       "openAsset": "Otwórz zasób",
       "close": "Zamknij",
       "inCustodyOption": "{{asset}} — W przechowaniu: {{location}}"
+    },
+    "photos": {
+      "limit": "Do 20 zdjęć, łącznie 10 MB. Zdjęcia są ukryte przed klientami.",
+      "tooLarge": "Wybierz maksymalnie 20 zdjęć o łącznym rozmiarze do 10 MB."
     }
   }
 }

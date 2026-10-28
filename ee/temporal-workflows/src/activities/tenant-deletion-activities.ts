@@ -523,6 +523,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoices',
 
   // External files and documents
+  // file_upload_session_files references file_upload_sessions.
+  'file_upload_session_files', 'file_upload_sessions',
   'external_files', 'documents', 'document_types',
 
   // === Ticket close rules (2026-06-10) ===

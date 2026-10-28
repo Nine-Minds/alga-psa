@@ -199,10 +199,6 @@
         "msp": "Propriété du MSP"
       },
       "custody": {
-    "photos": {
-      "limit": "Jusqu’à 20 photos, 10 Mo au total. Les photos sont masquées pour les clients.",
-      "tooLarge": "Choisissez au maximum 20 photos ne dépassant pas 10 Mo au total."
-    },
         "any": "Toute garde",
         "inCustody": "Sous garde du MSP",
         "notInCustody": "Hors garde du MSP"
@@ -2078,6 +2074,10 @@
       "openAsset": "Ouvrir l'actif",
       "close": "Fermer",
       "inCustodyOption": "{{asset}} — En dépôt : {{location}}"
+    },
+    "photos": {
+      "limit": "Jusqu’à 20 photos, 10 Mo au total. Les photos sont masquées pour les clients.",
+      "tooLarge": "Choisissez au maximum 20 photos ne dépassant pas 10 Mo au total."
     }
   }
 }

@@ -199,10 +199,6 @@
         "msp": "MSP-ägd"
       },
       "custody": {
-    "photos": {
-      "limit": "Upp till 20 foton, totalt 10 MB. Foton är dolda för kunder.",
-      "tooLarge": "Välj högst 20 foton på sammanlagt högst 10 MB."
-    },
         "any": "Valfritt förvar",
         "inCustody": "I MSP:ns förvar",
         "notInCustody": "Inte i MSP:ns förvar"
@@ -2078,6 +2074,10 @@
       "openAsset": "Öppna tillgång",
       "close": "Stäng",
       "inCustodyOption": "{{asset}} — I förvar: {{location}}"
+    },
+    "photos": {
+      "limit": "Upp till 20 foton, totalt 10 MB. Foton är dolda för kunder.",
+      "tooLarge": "Välj högst 20 foton på sammanlagt högst 10 MB."
     }
   }
 }

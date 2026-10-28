@@ -68,8 +68,26 @@ describe('asset-associated document authorization', () => {
   it('allows a user with document and asset access', async () => {
     expect(await read(world.tech)).toHaveLength(1);
   });
-  it('refuses document permission denial', async () => {
+  it('refuses a user without asset access', async () => {
     expect(await read(world.noPerm)).toEqual([]);
+  });
+  it('honours a verified mailbox grant for a roleless recipient but never for an asset-linked document', async () => {
+    // Callers own document RBAC; a verified recipient has no roles, only the lifecycle grant.
+    const document_id = randomUUID();
+    await db('documents').insert({ tenant: world.tenant, document_id, document_name: 'public reply', user_id: world.tech.user_id, created_by: world.tech.user_id, is_client_visible: true });
+    await db('document_associations').insert({ tenant: world.tenant, document_id, entity_type: 'ticket', entity_id: world.tickets.a1 });
+    const ticketDoc = await db('documents').where({ tenant: world.tenant, document_id }).first();
+    const recipient = { tenant: world.tenant, user_id: randomUUID(), user_type: 'client', clientId: world.clientA,
+      email: 'mailbox@example.com', is_inactive: false } as any;
+    const granted = (documents: any[]) => db.transaction(trx =>
+      authorizeAndRedactDocuments(trx, world.tenant, recipient, documents, async () => true));
+    expect((await granted([ticketDoc])).map(d => d.document_id)).toEqual([document_id]);
+    await db('documents').where({ tenant: world.tenant, document_id: doc.document_id }).update({ is_client_visible: true });
+    try {
+      expect(await granted([{ ...doc, is_client_visible: true }])).toEqual([]);
+    } finally {
+      await db('documents').where({ tenant: world.tenant, document_id: doc.document_id }).update({ is_client_visible: false });
+    }
   });
   it('refuses asset permission denial despite document and ticket access', async () => {
     const roleId = (await db('user_roles').where({ tenant: world.tenant, user_id: world.noPerm.user_id }).first()).role_id;

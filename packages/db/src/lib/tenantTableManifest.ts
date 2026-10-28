@@ -708,6 +708,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'template_sections', deletion: 'ordered' },
   { table: 'invoice_templates', deletion: 'ordered' },
   { table: 'invoices', deletion: 'ordered', export: { rank: 16 }, clientKeyed: true },
+  { table: 'file_upload_session_files', deletion: 'ordered' },
+  { table: 'file_upload_sessions', deletion: 'ordered' },
   { table: 'external_files', deletion: 'ordered' },
   { table: 'documents', deletion: 'ordered', export: { rank: 25 } },
   { table: 'document_types', deletion: 'ordered' },

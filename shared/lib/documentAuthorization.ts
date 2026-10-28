@@ -350,8 +350,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     return [];
   }
 
-  if (!await hasPermission({ ...user, tenant }, 'document', 'read', trx)) return [];
-
+  // Document RBAC belongs to callers (see rbacEvaluator below): verified mailbox
+  // recipients hold no roles yet are granted access through the lifecycle check.
   // Every associated asset must be readable, regardless of other associations.
   const assetLinks = await tenantScopedTable(trx, 'document_associations', tenant)
     .where({ entity_type: 'asset' }).whereIn('document_id', documents.map(doc => doc.document_id))
