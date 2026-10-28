@@ -54323,7 +54323,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "method": "post",
     "path": "/api/v1/tickets/{id}/agents",
     "displayName": "Add Ticket Additional Agent",
-    "summary": "Add an internal staff member as an additional agent",
+    "summary": "Add an internal staff member (technician, coworker or colleague) as an additional agent; internal staff only",
     "description": "Adds an INTERNAL user (staff) as an additional agent working the ticket and publishes the additional-agent-assigned event so notifications fire unless suppressed. Internal staff only: to copy an external person, client contact or bare email on updates, use POST /tickets/{id}/watchers instead; for a one-off copy of a single comment use the comment cc/bcc fields. A ticket with no primary agent promotes the user to primary. A duplicate returns 409.",
     "tags": [
       "Work Management v1"
@@ -54395,7 +54395,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "playbooks": [
+      "Add another technician to this ticket: POST the agents endpoint with the internal user_id so a second agent can help work the ticket.",
+      "Add a coworker or colleague to help on a ticket, or assign additional staff as another agent: use the additional agents endpoint.",
+      "Add an additional agent to help work the ticket (internal staff only, never an external person)."
+    ]
   },
   {
     "id": "delete-_api_v1_tickets_id_agents_userid",
