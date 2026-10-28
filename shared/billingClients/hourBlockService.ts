@@ -800,21 +800,39 @@ export async function reverseTimeEntryAllocations(
   timeEntryId: string,
 ): Promise<void> {
   const db = tenantDb(trx, tenant);
-  const allocations = await db.table('hour_block_time_allocations')
+  const allocatedBlocks = await db.table('hour_block_time_allocations')
     .where({ tenant, time_entry_id: timeEntryId })
-    .select('block_id', 'minutes');
+    .select('block_id');
 
-  if (allocations.length === 0) return;
+  if (allocatedBlocks.length === 0) return;
 
-  // Lock the affected blocks in canonical block_id order BEFORE writing, so a
-  // reversal can't take block locks in allocation-row order against a writer
-  // that locks them canonically (e.g. reconcileLineAllocations).
+  // A reversal is the first half of a redraw. Lock the whole affected lines,
+  // not just the allocated blocks: a subsequent burn locks every line block,
+  // including earlier voided/pending blocks. Taking that earlier lock only
+  // after restoring a later block deadlocks against a line reconciliation.
+  // The subquery expands all affected lines in one canonically ordered lock
+  // statement; ad-hoc allocations retain their individual block locks.
+  const blockIds = allocatedBlocks.map((allocation) => allocation.block_id);
   await db.table('hour_blocks')
     .where({ tenant })
-    .whereIn('block_id', allocations.map((allocation) => allocation.block_id))
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereIn('block_id', blockIds).orWhereIn(
+        'contract_line_id',
+        db.table('hour_blocks as allocated_block')
+          .whereIn('allocated_block.block_id', blockIds)
+          .whereNotNull('allocated_block.contract_line_id')
+          .select('allocated_block.contract_line_id'),
+      );
+    })
     .select('block_id')
     .orderBy('block_id', 'asc')
     .forUpdate();
+
+  // A concurrent redraw may have changed the allocations while we waited.
+  // Restore only the balances represented by the now-committed rows.
+  const allocations = await db.table('hour_block_time_allocations')
+    .where({ tenant, time_entry_id: timeEntryId })
+    .select('block_id', 'minutes');
 
   const now = new Date().toISOString();
   for (const allocation of allocations) {
