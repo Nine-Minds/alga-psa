@@ -119,7 +119,12 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored."
   },
   "create": {
     "title": "Create Support Ticket",
@@ -258,7 +263,8 @@
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
-    "printWorkTag": "Print work tag"
+    "printWorkTag": "Print work tag",
+    "retry": "Retry"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -368,7 +374,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",

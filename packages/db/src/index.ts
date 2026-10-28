@@ -48,6 +48,21 @@ export type {
 export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
 export { admitWrite, registerWriteAdmissionProvider, resetWriteAdmissionProvider } from './lib/writeAdmission';
 export type { WriteAdmissionContext, WriteAdmissionProvider } from './lib/writeAdmission';
+export {
+  CO_MANAGED_PRODUCT_CODE,
+  WRITE_ADMISSION_TTL_MS,
+  admitOperationalWrite,
+  admitTenantWrite,
+  noteTenantProductCode,
+  hasWriteAdmissionResolver,
+  invalidateWriteAdmission,
+  isTenantWriteGuarded,
+  registerWriteAdmissionResolver,
+  resetWriteAdmissionResolver,
+} from './lib/writeAdmission';
+export type { TenantWriteContext, WriteAdmissionDecision, WriteAdmissionResolver } from './lib/writeAdmission';
+export { OPERATIONAL_WRITE_TABLES, RETAINED_COMMAND_TABLES, isOperationalWriteTable } from './lib/operationalWriteTables';
+export type { OperationalWriteTable } from './lib/operationalWriteTables';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)

@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { 
   uuidSchema, 
   createListQuerySchema, 
@@ -305,18 +306,52 @@ export const assetDocumentResponseSchema = z.object({
 });
 
 // Asset maintenance schemas
-export const createMaintenanceScheduleSchema = z.object({
+const maintenanceScheduleWriteSchema = z.object({
   schedule_name: z.string().trim().min(1).max(255),
   description: z.string().nullable().optional(),
   maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
+  // `custom` reads its rule from schedule_config.recurrence (see maintenanceRecurrence.ts).
   frequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']),
   frequency_interval: z.number().int().min(1),
+  // UTC only (`Z` suffix); timestamps with a numeric offset are rejected.
   next_maintenance: z.string().datetime(),
   is_active: z.boolean().optional().default(true),
   schedule_config: z.record(z.unknown())
 }).strict();
 
-export const updateMaintenanceScheduleSchema = createMaintenanceScheduleSchema.partial();
+// A custom frequency needs a valid rule. On partial updates this only runs
+// when both fields are present; AssetService re-checks the merged row.
+const requireCustomRecurrence = (
+  data: { frequency?: string; schedule_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx
+): void => {
+  if (data.frequency !== 'custom' || data.schedule_config === undefined) return;
+  try {
+    parseCustomRecurrence(data.schedule_config);
+  } catch (error) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schedule_config', 'recurrence'], message: (error as Error).message });
+  }
+};
+
+export const createMaintenanceScheduleSchema = maintenanceScheduleWriteSchema.superRefine(requireCustomRecurrence);
+
+// Response-only columns are tolerated on update (and dropped) so a client can
+// PUT back a row it read; legacy and unknown fields are still rejected.
+const maintenanceScheduleReadOnlyFields = [
+  'schedule_id', 'asset_id', 'tenant', 'created_by', 'created_by_name',
+  'created_at', 'updated_at', 'last_maintenance', 'archived_at'
+] as const;
+
+export const updateMaintenanceScheduleSchema = maintenanceScheduleWriteSchema
+  .partial()
+  .extend(Object.fromEntries(maintenanceScheduleReadOnlyFields.map((field) => [field, z.unknown().optional()])))
+  .strict()
+  .superRefine(requireCustomRecurrence)
+  .transform((data) => {
+    const writable = { ...data };
+    for (const field of maintenanceScheduleReadOnlyFields) delete writable[field];
+    return writable as Omit<typeof data, (typeof maintenanceScheduleReadOnlyFields)[number]>;
+  });
 
 export const maintenanceScheduleResponseSchema = z.object({
   schedule_id: uuidSchema,

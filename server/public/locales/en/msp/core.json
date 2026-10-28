@@ -508,7 +508,8 @@
       "extensions": "Extensions",
       "experimentalFeatures": "Experimental Features",
       "profile": "Profile",
-      "security": "Security"
+      "security": "Security",
+      "tags": "Tags"
     }
   },
   "dashboard": {

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { writeDocument } from './lib/write-openapi-document.mjs';
+import { writeDocument, type OpenApiFormat } from './lib/write-openapi-document.mjs';
 import { buildBaseRegistry, buildDocument, DocumentBuildOptions } from '../../server/src/lib/api/openapi';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +14,7 @@ interface CliOptions {
   version: string;
   title?: string;
   description?: string;
-  formats: Array<'json' | 'yaml'>;
+  formats: OpenApiFormat[];
 }
 
 function readRootPackageVersion(rootDir: string): string {

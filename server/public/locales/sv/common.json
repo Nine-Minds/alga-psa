@@ -204,6 +204,10 @@
     "passwordMismatch": "Lösenorden matchar inte"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Den här gemensamt hanterade arbetsytan är skrivskyddad. Inloggning, läsning, export och licensåterställning är fortfarande tillgängliga.",
+      "acceptancePending": "Kundens administratör måste godkänna gemensam hantering innan arbetsytan kan användas."
+    },
     "validation": {
       "required": "{{field}} krävs.",
       "invalidType": "{{field}} har fel typ.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Byt vy"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} taggar till: {{names}}"
   }
 }

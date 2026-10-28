@@ -317,7 +317,7 @@
         "description": "Configure advanced email processing options",
         "folderFiltersLabel": "Folder Filters",
         "folderFiltersPlaceholder": "Inbox, Support, Custom Folder",
-        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox)",
+        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox). Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.",
         "maxEmailsPerSync": "Max Emails Per Sync"
       }
     },

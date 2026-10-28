@@ -5808,7 +5808,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/maintenance/{scheduleId}",
     "displayName": "Update asset maintenance schedule",
     "summary": "Update asset maintenance schedule",
-    "description": "Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.",
+    "description": "Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. Response-only fields (schedule_id, asset_id, tenant, created_by, created_by_name, created_at, updated_at, last_maintenance, archived_at) are accepted and ignored so a row read from GET can be sent back as-is. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.",
     "tags": [
       "Assets"
     ],
@@ -5863,7 +5863,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "yearly",
             "custom"
           ],
-          "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
+          "description": "Recurrence frequency, multiplied by frequency_interval. Does not change the explicit next_maintenance timestamp. `custom` takes its rule from schedule_config.recurrence."
         },
         "frequency_interval": {
           "type": "integer",
@@ -5873,7 +5873,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "next_maintenance": {
           "type": "string",
           "format": "date-time",
-          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
+          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such as -04:00 are rejected."
         },
         "is_active": {
           "type": "boolean",
@@ -5881,8 +5881,50 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "schedule_config": {
           "type": "object",
+          "properties": {
+            "recurrence": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "days",
+                    "weeks",
+                    "months",
+                    "years"
+                  ],
+                  "description": "Unit multiplied by frequency_interval."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "minItems": 1,
+                  "description": "Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the next listed weekday in the current week (weeks start on Sunday); after the last one it jumps frequency_interval weeks to the first listed weekday."
+                },
+                "days_of_month": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
+                  },
+                  "minItems": 1,
+                  "description": "Months only. The next due date is the next listed day in the current month; after the last one it jumps frequency_interval months to the first listed day. Days are clamped to the month length (31 in February becomes 28/29)."
+                }
+              },
+              "required": [
+                "unit"
+              ],
+              "additionalProperties": false,
+              "description": "Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { \"unit\": \"weeks\", \"weekdays\": [1, 4] } is every other week on Monday and Thursday."
+            }
+          },
           "additionalProperties": {},
-          "description": "Scheduling configuration; use {} when no custom configuration is needed."
+          "description": "Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is."
         }
       },
       "additionalProperties": false
@@ -7537,7 +7579,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "yearly",
             "custom"
           ],
-          "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
+          "description": "Recurrence frequency, multiplied by frequency_interval. Does not change the explicit next_maintenance timestamp. `custom` takes its rule from schedule_config.recurrence."
         },
         "frequency_interval": {
           "type": "integer",
@@ -7547,7 +7589,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "next_maintenance": {
           "type": "string",
           "format": "date-time",
-          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
+          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such as -04:00 are rejected."
         },
         "is_active": {
           "type": "boolean",
@@ -7556,8 +7598,50 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "schedule_config": {
           "type": "object",
+          "properties": {
+            "recurrence": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "days",
+                    "weeks",
+                    "months",
+                    "years"
+                  ],
+                  "description": "Unit multiplied by frequency_interval."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "minItems": 1,
+                  "description": "Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the next listed weekday in the current week (weeks start on Sunday); after the last one it jumps frequency_interval weeks to the first listed weekday."
+                },
+                "days_of_month": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
+                  },
+                  "minItems": 1,
+                  "description": "Months only. The next due date is the next listed day in the current month; after the last one it jumps frequency_interval months to the first listed day. Days are clamped to the month length (31 in February becomes 28/29)."
+                }
+              },
+              "required": [
+                "unit"
+              ],
+              "additionalProperties": false,
+              "description": "Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { \"unit\": \"weeks\", \"weekdays\": [1, 4] } is every other week on Monday and Thursday."
+            }
+          },
           "additionalProperties": {},
-          "description": "Scheduling configuration; use {} when no custom configuration is needed."
+          "description": "Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is."
         }
       },
       "required": [
@@ -37856,9 +37940,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "changed_fields"
                 ]
               }
+            },
+            "quote": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "quote_number",
+                  "version",
+                  "contact_id",
+                  "opportunity_id",
+                  "previous_status",
+                  "new_status",
+                  "currency_code",
+                  "total_amount",
+                  "performed_by_type",
+                  "performed_by_id",
+                  "sent_at",
+                  "viewed_at",
+                  "approved_at",
+                  "accepted_at",
+                  "rejected_at",
+                  "expired_at",
+                  "converted_at",
+                  "conversion_reverted_at",
+                  "superseded_at",
+                  "cancelled_at",
+                  "accepted_by_name",
+                  "accepted_on_behalf",
+                  "selected_optional_item_ids",
+                  "rejection_reason",
+                  "conversion_targets",
+                  "contract_id",
+                  "invoice_id",
+                  "sales_order_id",
+                  "released_invoice_id",
+                  "superseded_by_quote_id",
+                  "next_version"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
         },
         "payload_transformation": {
           "type": "object",
@@ -37979,7 +38106,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/events",
     "displayName": "List available webhook events",
     "summary": "List available webhook events",
-    "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*).",
+    "description": "Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*).",
     "tags": [
       "Webhooks"
     ],
@@ -38349,9 +38476,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "changed_fields"
                 ]
               }
+            },
+            "quote": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "quote_number",
+                  "version",
+                  "contact_id",
+                  "opportunity_id",
+                  "previous_status",
+                  "new_status",
+                  "currency_code",
+                  "total_amount",
+                  "performed_by_type",
+                  "performed_by_id",
+                  "sent_at",
+                  "viewed_at",
+                  "approved_at",
+                  "accepted_at",
+                  "rejected_at",
+                  "expired_at",
+                  "converted_at",
+                  "conversion_reverted_at",
+                  "superseded_at",
+                  "cancelled_at",
+                  "accepted_by_name",
+                  "accepted_on_behalf",
+                  "selected_optional_item_ids",
+                  "rejection_reason",
+                  "conversion_targets",
+                  "contract_id",
+                  "invoice_id",
+                  "sales_order_id",
+                  "released_invoice_id",
+                  "superseded_by_quote_id",
+                  "next_version"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
         },
         "payload_transformation": {
           "type": "object",
@@ -38867,9 +39037,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "changed_fields"
                 ]
               }
+            },
+            "quote": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "client_id",
+                  "quote_number",
+                  "version",
+                  "contact_id",
+                  "opportunity_id",
+                  "previous_status",
+                  "new_status",
+                  "currency_code",
+                  "total_amount",
+                  "performed_by_type",
+                  "performed_by_id",
+                  "sent_at",
+                  "viewed_at",
+                  "approved_at",
+                  "accepted_at",
+                  "rejected_at",
+                  "expired_at",
+                  "converted_at",
+                  "conversion_reverted_at",
+                  "superseded_at",
+                  "cancelled_at",
+                  "accepted_by_name",
+                  "accepted_on_behalf",
+                  "selected_optional_item_ids",
+                  "rejection_reason",
+                  "conversion_targets",
+                  "contract_id",
+                  "invoice_id",
+                  "sales_order_id",
+                  "released_invoice_id",
+                  "superseded_by_quote_id",
+                  "next_version"
+                ]
+              }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
         },
         "payload_transformation": {
           "type": "object",

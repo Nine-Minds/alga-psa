@@ -12,6 +12,7 @@ import { admitWrite, withTransaction } from '@alga-psa/db';
 export {
   CoManagedLifecycleError,
   isCoManagedLifecycleError,
+  coManagedRefusalMessageKey,
   type CoManagedOperationalState,
 } from './co-managed-lifecycle-error';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';

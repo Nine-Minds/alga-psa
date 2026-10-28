@@ -62,6 +62,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
             initialBoard={ticketData.board}
             initialClient={ticketData.client}
             initialContactInfo={ticketData.contactInfo}
+            initialDisplayTags={ticketData.displayTags}
             {...ticketDetailsInitialProps(ticketData)}
             initialAdditionalAgents={ticketData.additionalAgents}
             initialAvailableAgents={ticketData.availableAgents}

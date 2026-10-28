@@ -160,6 +160,10 @@
     "confirmDeletion": "Confirmer la suppression"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Cet espace de travail cogéré est en lecture seule. La connexion, la lecture, l’exportation et la récupération de licence restent disponibles.",
+      "acceptancePending": "L’administrateur du client doit accepter la cogestion avant de pouvoir utiliser cet espace de travail."
+    },
     "validation": {
       "required": "{{field}} est obligatoire.",
       "invalidType": "{{field}} n’est pas du bon type.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Changer de vue"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} autres étiquettes : {{names}}"
   }
 }

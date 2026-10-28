@@ -156,7 +156,8 @@
       "extensions": "Extensies",
       "experimentalFeatures": "Experimentele functies",
       "profile": "Profiel",
-      "security": "Beveiliging"
+      "security": "Beveiliging",
+      "tags": "Labels"
     }
   },
   "dashboard": {

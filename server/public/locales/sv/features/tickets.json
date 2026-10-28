@@ -119,7 +119,12 @@
     "allResponseStatuses": "Alla svarsstatusar",
     "responseStatus": "Svarsstatus",
     "board": "Filtrera efter tavla",
-    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning"
+    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning",
+    "requesterTags": "Beställarens taggar",
+    "clientTags": "Kundtaggar",
+    "tagModeAny": "Någon av",
+    "tagModeNone": "Ingen av",
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
   },
   "create": {
     "title": "Skapa supportärende",
@@ -258,7 +263,8 @@
     "moreActions": "Fler åtgärder",
     "createTemplate": "Skapa mall från ärende",
     "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
-    "printWorkTag": "Skriv ut arbetsetikett"
+    "printWorkTag": "Skriv ut arbetsetikett",
+    "retry": "Försök igen"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -368,7 +374,8 @@
     "pastedImagesDeleteFailed_many": "Det gick inte att radera {{count}} inklistrade bilder.",
     "pastedImagesDeleted_few": "{{count}} inklistrade bilder har raderats.",
     "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats.",
-    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något.",
+    "loadPartyTagsFailed": "Det gick inte att läsa in beställarens och kundens taggar"
   },
   "conversation": {
     "comments": "Kommentarer",

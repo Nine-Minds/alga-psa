@@ -54,6 +54,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
+import { usePartyDisplayTags } from './usePartyDisplayTags';
 import type { ITicketAutoCloseState } from "../../actions/close-rules/closeRuleActions";
 import type { ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
@@ -155,6 +157,8 @@ interface TicketDetailsProps {
     initialClient?: IClient | null;
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
+    /** Chip tags for the requester and client, already filtered to the viewer's audience. */
+    initialDisplayTags?: PartyDisplayTags;
     initialCreatedByUser?: IUser | null;
     initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
@@ -294,6 +298,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
+    initialDisplayTags = EMPTY_PARTY_DISPLAY_TAGS,
     initialCreatedByUser = null,
     initialUpdatedByUser = null,
     initialBoard = null,
@@ -646,6 +651,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
+    // The requester or client can be changed in place; the chips follow the new party (see the hook).
+    const displayTags = usePartyDisplayTags({
+      ticketId: ticket.ticket_id,
+      contactId: contactInfo?.contact_name_id,
+      clientId: client?.client_id,
+      initial: initialDisplayTags,
+      onError: (error, retry) => {
+        const message = isReturnedActionError(error)
+          ? getErrorMessage(error)
+          : t('messages.loadPartyTagsFailed', 'Failed to load requester and client tags');
+        toast.error(
+          <span>
+            {message}{' '}
+            <button type="button" className="underline" onClick={() => { toast.dismiss(); retry(); }}>
+              {t('actions.retry', 'Retry')}
+            </button>
+          </span>,
+          { id: 'ticket-party-tags-failed' },
+        );
+      },
+    });
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
@@ -4530,6 +4556,7 @@ const handleClose = () => {
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                     createdByUser={createdByUser}
                     contactInfo={contactInfo}
+                    displayTags={displayTags}
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
@@ -4749,6 +4776,7 @@ const handleClose = () => {
                                     ticket={ticket}
                                 client={client}
                                 contactInfo={contactInfo}
+                                displayTags={displayTags}
                                 createdByUser={createdByUser}
                                 board={board}
                                 timeDescription={timeDescription}

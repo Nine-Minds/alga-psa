@@ -111,7 +111,12 @@
     "allResponseStatuses": "Tutti gli stati di risposta",
     "responseStatus": "Stato risposta",
     "board": "Filtra per bacheca",
-    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente"
+    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente",
+    "requesterTags": "Tag del richiedente",
+    "clientTags": "Tag del cliente",
+    "tagModeAny": "Almeno uno tra",
+    "tagModeNone": "Nessuno tra",
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -250,7 +255,8 @@
     "moreActions": "Altre azioni",
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
-    "printWorkTag": "Stampa etichetta di lavoro"
+    "printWorkTag": "Stampa etichetta di lavoro",
+    "retry": "Riprova"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -360,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleted_few": "{{count}} immagini incollate eliminate.",
     "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate.",
-    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti.",
+    "loadPartyTagsFailed": "Impossibile caricare i tag del richiedente e del cliente"
   },
   "conversation": {
     "comments": "Commenti",

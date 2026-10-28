@@ -35,12 +35,47 @@ describe('asset maintenance schedule REST contract', () => {
   );
 
   it.each(['schedule_type', 'notes', 'start_date', 'end_date', 'assigned_to', 'created_by', 'tenant', 'asset_id'])(
-    'rejects unsupported or server-owned %s instead of silently discarding it',
+    'rejects unsupported or server-owned %s on create instead of silently discarding it',
     (field) => {
       expect(createMaintenanceScheduleSchema.safeParse({ ...request, [field]: 'obsolete' }).success).toBe(false);
+    }
+  );
+
+  it.each(['schedule_type', 'notes', 'start_date', 'end_date', 'assigned_to', 'unknown_field'])(
+    'rejects legacy or unknown %s on update',
+    (field) => {
       expect(updateMaintenanceScheduleSchema.safeParse({ [field]: 'obsolete' }).success).toBe(false);
     }
   );
+
+  it('ignores response-only fields on update so a GET row can be sent back', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const readBack = {
+      ...request, is_active: false, schedule_id: id, asset_id: id, tenant: id, created_by: id,
+      created_by_name: 'Jane Doe', created_at: request.next_maintenance, updated_at: request.next_maintenance,
+      last_maintenance: null, archived_at: null,
+    };
+    expect(updateMaintenanceScheduleSchema.parse(readBack)).toEqual({ ...request, is_active: false });
+  });
+
+  it('requires a recurrence rule for the custom frequency', () => {
+    const recurrence = { unit: 'weeks', weekdays: [1, 4] };
+    const custom = { ...request, frequency: 'custom', schedule_config: { recurrence, checklist: ['Dust fans'] } };
+    expect(createMaintenanceScheduleSchema.parse(custom).schedule_config).toEqual(custom.schedule_config);
+    const missing = createMaintenanceScheduleSchema.safeParse({ ...request, frequency: 'custom' });
+    expect(missing.success).toBe(false);
+    if (!missing.success) expect(missing.error.issues[0].path).toEqual(['schedule_config', 'recurrence']);
+    expect(createMaintenanceScheduleSchema.safeParse({
+      ...request, frequency: 'custom', schedule_config: { recurrence: { unit: 'days', weekdays: [1] } },
+    }).success).toBe(false);
+    // Fixed frequencies ignore a stray rule.
+    expect(createMaintenanceScheduleSchema.safeParse({ ...request, schedule_config: { recurrence: { unit: 'bogus' } } }).success).toBe(true);
+    // Partial updates check the pair when both are sent; the service checks the merged row otherwise.
+    expect(updateMaintenanceScheduleSchema.safeParse({ frequency: 'custom', schedule_config: {} }).success).toBe(false);
+    expect(updateMaintenanceScheduleSchema.parse({ frequency: 'custom', schedule_config: { recurrence } }))
+      .toEqual({ frequency: 'custom', schedule_config: { recurrence } });
+    expect(updateMaintenanceScheduleSchema.safeParse({ frequency: 'custom' }).success).toBe(true);
+  });
 
   it.each([0, -1, 1.5])('rejects frequency interval %s', (frequency_interval) => {
     expect(createMaintenanceScheduleSchema.safeParse({ ...request, frequency_interval }).success).toBe(false);
@@ -50,9 +85,13 @@ describe('asset maintenance schedule REST contract', () => {
     expect(createMaintenanceScheduleSchema.safeParse({ ...request, schedule_name }).success).toBe(false);
   });
 
-  it.each(['2026-11-01', 'invalid'])('rejects non-datetime due date %s', (next_maintenance) => {
-    expect(createMaintenanceScheduleSchema.safeParse({ ...request, next_maintenance }).success).toBe(false);
-  });
+  it.each(['2026-11-01', 'invalid', '2026-11-01T09:00:00-04:00', '2026-11-01T13:00:00'])(
+    'rejects non-UTC or non-datetime due date %s',
+    (next_maintenance) => {
+      expect(createMaintenanceScheduleSchema.safeParse({ ...request, next_maintenance }).success).toBe(false);
+      expect(updateMaintenanceScheduleSchema.safeParse({ next_maintenance }).success).toBe(false);
+    }
+  );
 
   it('does not apply creation defaults to partial updates', () => {
     expect(updateMaintenanceScheduleSchema.parse({ description: 'Revised instructions' }))
@@ -88,6 +127,10 @@ describe('asset maintenance schedule REST contract', () => {
       }
     }
     expect(schemas.AssetMaintenanceScheduleUpdateRequest.required ?? []).toEqual([]);
+    for (const name of ['AssetMaintenanceScheduleCreateRequest', 'AssetMaintenanceScheduleUpdateRequest']) {
+      expect(schemas[name].properties.frequency.enum).toContain('custom');
+      expect(schemas[name].properties.schedule_config.properties.recurrence.properties).toHaveProperty('unit');
+    }
     expect(document.paths['/api/v1/assets/maintenance/{scheduleId}'].put.responses).toHaveProperty('404');
   });
 
