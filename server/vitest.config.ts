@@ -37,13 +37,6 @@ const SERVER_UNIT_INCLUDE = [
 const SERVER_UNIT_EXCLUDE = [
   '**/node_modules/**',
   ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
-  // The co-managed native-access suites own their module graph (auth barrel
-  // re-exports, alias set) and run under their dedicated configs:
-  // ee/temporal-workflows/vitest.co-managed-access.config.ts, and the opt-in
-  // vitest.co-managed-worker-access.config.ts that spawns the compiled worker
-  // against a live Temporal, Redis and Mailpit.
-  '../ee/temporal-workflows/src/__tests__/integration/coManagedNativeAccess.integration.test.ts',
-  '../ee/temporal-workflows/src/__tests__/integration/coManagedBuiltWorkerAccess.integration.test.ts',
   // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
   // live Postgres database and mutate DB_* env for the whole fork — they
   // are integration tests by naming convention. The CI unit-coverage job

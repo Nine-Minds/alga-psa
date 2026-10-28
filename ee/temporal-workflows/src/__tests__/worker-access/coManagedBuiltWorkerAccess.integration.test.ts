@@ -1,4 +1,4 @@
-import { registerNativeAccessTests } from './helpers/coManagedNativeAccessCases';
+import { registerNativeAccessTests } from '../integration/helpers/coManagedNativeAccessCases';
 import { expect } from 'vitest';
 import { Connection, Client } from '@temporalio/client';
 import { createClient } from 'redis';

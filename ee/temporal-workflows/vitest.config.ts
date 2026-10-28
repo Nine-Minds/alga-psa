@@ -41,7 +41,9 @@ export default defineConfig({
   test: {
     globals: true,
     // These suites use the server integration runner and its migrated DB.
-    exclude: [...configDefaults.exclude, 'src/__tests__/integration/**'],
+    // worker-access spawns the compiled worker against live Temporal, Redis and
+    // Mailpit; it runs only under vitest.co-managed-worker-access.config.ts.
+    exclude: [...configDefaults.exclude, 'src/__tests__/integration/**', 'src/__tests__/worker-access/**'],
     environment: 'node',
     setupFiles: ['./src/test-utils/setup.ts'],
     globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],

@@ -6,6 +6,6 @@ export default {
     !('replacement' in alias && alias.replacement.endsWith('/stubs/redis.ts'))) },
   test: {
     ...base.test,
-    include: ['src/__tests__/integration/coManagedBuiltWorkerAccess.integration.test.ts'],
+    include: ['src/__tests__/worker-access/coManagedBuiltWorkerAccess.integration.test.ts'],
   },
 };
