@@ -980,7 +980,22 @@
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
     "templateReplaceConfirm": "Zastosuj szablon",
-    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz.",
+    "assets": {
+      "heading": "Zasoby",
+      "selectClientFirst": "Wybierz klienta, aby powiązać zasoby.",
+      "unavailable": "Zasoby można powiązać ze zgłoszeniem po jego utworzeniu."
+    },
+    "attachments": {
+      "heading": "Załączniki",
+      "add": "Dodaj pliki",
+      "remove": "Usuń {{name}}"
+    },
+    "watchers": {
+      "heading": "Obserwatorzy",
+      "placeholder": "Dodaj obserwatorów..."
+    },
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",

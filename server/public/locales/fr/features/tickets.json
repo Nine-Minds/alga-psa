@@ -980,7 +980,22 @@
     "tagCreatePartialFailure_few": "Impossible de créer {{count}} balises",
     "tagCreatePartialFailure_many": "Impossible de créer {{count}} balises",
     "tagCreationFailed_few": "{{count}} tags n'ont pas pu être créés",
-    "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés"
+    "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés",
+    "assets": {
+      "heading": "Actifs",
+      "selectClientFirst": "Sélectionnez un client pour lier des actifs.",
+      "unavailable": "Les actifs peuvent être liés depuis le ticket après sa création."
+    },
+    "attachments": {
+      "heading": "Pièces jointes",
+      "add": "Ajouter des fichiers",
+      "remove": "Supprimer {{name}}"
+    },
+    "watchers": {
+      "heading": "Observateurs",
+      "placeholder": "Ajouter des observateurs..."
+    },
+    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket."
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",

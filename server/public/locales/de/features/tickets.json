@@ -980,7 +980,22 @@
     "tagCreatePartialFailure_few": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreatePartialFailure_many": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_few": "{{count}} Tags konnten nicht erstellt werden",
-    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden"
+    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Wählen Sie einen Kunden aus, um Assets zu verknüpfen.",
+      "unavailable": "Assets können nach dem Erstellen im Ticket verknüpft werden."
+    },
+    "attachments": {
+      "heading": "Anhänge",
+      "add": "Dateien hinzufügen",
+      "remove": "{{name}} entfernen"
+    },
+    "watchers": {
+      "heading": "Beobachter",
+      "placeholder": "Beobachter hinzufügen..."
+    },
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",

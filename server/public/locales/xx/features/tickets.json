@@ -988,7 +988,22 @@
     "tagCreatePartialFailure_few": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreatePartialFailure_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
     "tagCreationFailed_few": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
-    "tagCreationFailed_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧"
+    "tagCreationFailed_many": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
+    "assets": {
+      "heading": "⟦Ȧşşḗŧş⟧",
+      "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ŀīƞķ ȧşşḗŧş.⟧",
+      "unavailable": "⟦Ȧşşḗŧş ƈȧƞ ƀḗ ŀīƞķḗḓ ƒřȯḿ ŧħḗ ŧīƈķḗŧ ȧƒŧḗř īŧ īş ƈřḗȧŧḗḓ.⟧"
+    },
+    "attachments": {
+      "heading": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
+      "add": "⟦Ȧḓḓ ƒīŀḗş⟧",
+      "remove": "⟦Řḗḿȯṽḗ {{name}}⟧"
+    },
+    "watchers": {
+      "heading": "⟦Ẇȧŧƈħḗřş⟧",
+      "placeholder": "⟦Ȧḓḓ ẇȧŧƈħḗřş...⟧"
+    },
+    "attachmentsPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ, ƀŭŧ ŧħḗşḗ ƒīŀḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧŧŧȧƈħḗḓ: {{files}}. Ȧḓḓ ŧħḗḿ ƒřȯḿ ŧħḗ ŧīƈķḗŧ.⟧"
   },
   "itil": {
     "calculatedPriority": "⟦Ƥřīȯřīŧẏ (Ƈȧŀƈŭŀȧŧḗḓ)⟧",

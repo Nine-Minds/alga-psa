@@ -988,7 +988,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
-    "tagCreationFailed_many": "{{count}} tags could not be created"
+    "tagCreationFailed_many": "{{count}} tags could not be created",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Select a client to link assets.",
+      "unavailable": "Assets can be linked from the ticket after it is created."
+    },
+    "attachments": {
+      "heading": "Attachments",
+      "add": "Add files",
+      "remove": "Remove {{name}}"
+    },
+    "watchers": {
+      "heading": "Watchers",
+      "placeholder": "Add watchers..."
+    },
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",

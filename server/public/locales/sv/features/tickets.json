@@ -988,7 +988,22 @@
     "tagCreatePartialFailure_few": "{{count}} taggar kunde inte skapas",
     "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
-    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas"
+    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas",
+    "assets": {
+      "heading": "Tillgångar",
+      "selectClientFirst": "Välj en kund för att länka tillgångar.",
+      "unavailable": "Tillgångar kan länkas från ärendet när det har skapats."
+    },
+    "attachments": {
+      "heading": "Bilagor",
+      "add": "Lägg till filer",
+      "remove": "Ta bort {{name}}"
+    },
+    "watchers": {
+      "heading": "Bevakare",
+      "placeholder": "Lägg till bevakare..."
+    },
+    "attachmentsPartialFailure": "Ärendet skapades, men de här filerna kunde inte bifogas: {{files}}. Lägg till dem från ärendet."
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",

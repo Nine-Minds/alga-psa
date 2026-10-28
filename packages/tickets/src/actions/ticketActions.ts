@@ -25,6 +25,8 @@ import type {
   TicketTemplateDraftFromTicket,
 } from '@alga-psa/types';
 import { TICKET_ORIGINS } from '@alga-psa/types';
+import { parseTicketCreateExtras } from '../lib/ticketCreateExtras';
+import { mergeTicketWatchListRecipients, type TicketWatchListRecipientInput } from '@alga-psa/shared/lib/tickets/watchList';
 import Ticket from '../models/ticket';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
@@ -452,6 +454,48 @@ async function publishResponseStateChangedEvent(
     // Don't throw - allow the operation to succeed even if event publishing fails
   }
 }
+/**
+ * Links assets to a freshly created ticket, one `asset_associations` row each, inside the caller's
+ * transaction. Ids are deduplicated; every asset must exist in the tenant (and, when `clientId` is
+ * given, belong to that client), otherwise this throws and the caller's create rolls back.
+ * LEVERAGE: pattern ticket-asset-association-insert — assetActions.createAssetAssociation inserts the same row for an existing ticket
+ */
+async function linkAssetsToNewTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { ticketId: string; assetIds: string[]; userId: string; clientId?: string }
+): Promise<void> {
+  const assetIds = Array.from(new Set(params.assetIds.filter(Boolean)));
+  if (assetIds.length === 0) return;
+
+  const rows = await tenantScopedTable(trx, 'assets', tenant)
+    .whereIn('asset_id', assetIds)
+    .select('asset_id', 'client_id');
+  const byId = new Map<string, { client_id: string | null }>(rows.map((row: any) => [row.asset_id, row]));
+  for (const assetId of assetIds) {
+    const row = byId.get(assetId);
+    if (!row) {
+      throw new Error(`Invalid asset: ${assetId} was not found`);
+    }
+    if (params.clientId && row.client_id !== params.clientId) {
+      throw new Error(`Invalid asset: ${assetId} does not belong to the selected client`);
+    }
+  }
+
+  const createdAt = new Date().toISOString();
+  await tenantScopedTable(trx, 'asset_associations', tenant).insert(
+    assetIds.map((assetId) => ({
+      tenant,
+      asset_id: assetId,
+      entity_id: params.ticketId,
+      entity_type: 'ticket',
+      relationship_type: 'affected',
+      created_by: params.userId,
+      created_at: createdAt,
+    }))
+  );
+}
+
 interface CreateTicketFromAssetData {
     title: string;
     description: string;
@@ -488,14 +532,10 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             );
 
             // Server-specific: Create the asset association
-            await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-              tenant,
-              asset_id: data.asset_id,
-              entity_id: ticketResult.ticket_id,
-              entity_type: 'ticket',
-              relationship_type: 'affected',
-              created_by: user.user_id,
-              created_at: new Date().toISOString(),
+            await linkAssetsToNewTicket(trx, tenant, {
+              ticketId: ticketResult.ticket_id,
+              assetIds: [data.asset_id],
+              userId: user.user_id,
             });
 
             // Server-specific: Get full ticket data for return
@@ -570,6 +610,22 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
 
+      // Optional create extras (linked assets, watchers). Parsed and validated before anything is
+      // written; both are optional so callers that send none behave as before.
+      const extras = parseTicketCreateExtras(data);
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      if (hasCreateExtras) {
+        if (user.user_type !== 'internal') {
+          throw new Error('Permission denied: operation not available in client portal');
+        }
+        if (extras.assetIds.length > 0 && !await hasPermission(user, 'asset', 'update', trx)) {
+          throw new Error('Permission denied: Cannot link assets to tickets');
+        }
+      }
+      const linkedAssetIds = Array.from(
+        new Set([...(asset_id ? [asset_id as string] : []), ...extras.assetIds])
+      );
+
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
       // row inside this transaction, never round-tripped through the client.
@@ -641,12 +697,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // is the QuickAddTicket path used by the asset header, the asset list,
       // service history and maintenance — `createTicketFromAsset` does the
       // same for its own dialog.
-      if (asset_id && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      if (linkedAssetIds.length > 0 && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            asset_id as string,
+            linkedAssetIds[0],
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -694,6 +750,36 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         createTicketInput.attributes = provenance.attributes;
       }
 
+      // Watchers go into `attributes.watch_list`, so they are written by the same insert as the ticket.
+      if (extras.watcherIds.length > 0) {
+        const attributes: Record<string, unknown> = { ...(createTicketInput.attributes ?? {}) };
+        const watcherRows = await tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', extras.watcherIds)
+          .where({ user_type: 'internal' })
+          .select('user_id', 'email', 'first_name', 'last_name');
+        const watchersById = new Map<string, any>(watcherRows.map((row: any) => [row.user_id, row]));
+        const recipients: TicketWatchListRecipientInput[] = [];
+        for (const watcherId of extras.watcherIds) {
+          const watcher = watchersById.get(watcherId);
+          if (!watcher) {
+            throw new Error(`Invalid watcher: user ${watcherId} was not found`);
+          }
+          if (!watcher.email) {
+            throw new Error(`Invalid watcher: user ${watcherId} has no email address`);
+          }
+          recipients.push({
+            email: watcher.email,
+            source: 'manual',
+            name: `${watcher.first_name || ''} ${watcher.last_name || ''}`.trim() || undefined,
+            entity_type: 'user',
+            entity_id: watcher.user_id,
+          });
+        }
+        const watchList = mergeTicketWatchListRecipients(attributes.watch_list, recipients);
+        if (watchList.length > 0) attributes.watch_list = watchList;
+        createTicketInput.attributes = Object.keys(attributes).length > 0 ? attributes : undefined;
+      }
+
       // Server-specific: Create adapters for dependency injection.
       // Passing trx defers event publishing until the commit.
       const eventPublisher = new TicketModelEventPublisher(trx);
@@ -712,16 +798,16 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         3 // max retries
       );
 
-      // Server-specific: Create asset association if asset_id is provided
-      if (asset_id) {
-        await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-          tenant,
-          asset_id: asset_id as string,
-          entity_id: ticketResult.ticket_id,
-          entity_type: 'ticket',
-          relationship_type: 'affected',
-          created_by: user.user_id,
-          created_at: new Date().toISOString(),
+      // Asset associations, in the same transaction as the insert: the single `asset_id` ("opened from
+      // an asset") merged with the optional `asset_ids` list. Any failure rolls the whole create back.
+      if (linkedAssetIds.length > 0) {
+        await linkAssetsToNewTicket(trx, tenant, {
+          ticketId: ticketResult.ticket_id,
+          assetIds: linkedAssetIds,
+          userId: user.user_id,
+          // The picker is client-scoped, so a supplied list must match the ticket's client. The legacy
+          // single `asset_id` on its own keeps its old behaviour (existence only).
+          clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
       }
 
