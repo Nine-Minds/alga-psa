@@ -179,7 +179,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     );
     expect(compilerSource).toContain('const tenant = tenantColumnOf(this.schema);');
     expect(compilerSource).toContain("bindings: [`${childAlias}.${tenant}`, `${parentAlias}.${tenant}`]");
-    const schemaSource = fs.readFileSync(path.resolve(__dirname, '../lib/ticketQuerySchema.ts'), 'utf8');
+    const schemaSource = fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/ticketQuery/ticketQuerySchema.ts'), 'utf8');
     const resolverTables = schemaSource.match(/FROM \w+ AS __\w+ WHERE __\w+\.tenant = \?\?/g) ?? [];
     const resolverSubqueries = schemaSource.match(/FROM \w+ AS __\w+/g) ?? [];
     expect(resolverSubqueries.length).toBeGreaterThan(0);

@@ -46,7 +46,7 @@ describe('shared breached-SLA predicate', () => {
 
   it('is the predicate the breached filter applies', () => {
     // The list filter compiles through the ticket query schema's sla_state resolver.
-    const source = read('lib/ticketQuerySchema.ts');
+    const source = read('../../../shared/lib/ticketQuery/ticketQuerySchema.ts');
     const breachedBranch = source.slice(
       source.indexOf("case 'breached':"),
       source.indexOf("case 'paused':"),

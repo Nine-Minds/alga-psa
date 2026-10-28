@@ -2120,6 +2120,10 @@
       "openAsset": "Open asset",
       "close": "Close",
       "inCustodyOption": "{{asset}} — In custody: {{location}}"
+    },
+    "photos": {
+      "limit": "Up to 20 photos, 10 MB total. Photos are hidden from clients.",
+      "tooLarge": "Choose at most 20 photos totalling no more than 10 MB."
     }
   }
 }

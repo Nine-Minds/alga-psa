@@ -11,6 +11,10 @@ const schema = createTicketQuerySchema(() => NOW);
 const UUID = '11111111-1111-4111-8111-111111111111';
 
 const SAMPLE_VALUES: Record<string, PredicateClause['value']> = {
+  title_folded: 'onboarding',
+  description_folded: 'onboarding',
+  from_service_request: true,
+  service_request_definition_id: UUID,
   board_inactive: true,
   status_closed: false,
   status_name: 'Open',
@@ -32,7 +36,10 @@ describe('ticket query schema: computed attributes (T032)', () => {
   it.each(TICKET_COMPUTED_ATTRIBUTES)('%s compiles for every allowed operator and correlates on tenant', (name) => {
     const attribute = schema.attributes[name];
     for (const operator of allowedOperators(attribute)) {
-      const value = SAMPLE_VALUES[name] as PredicateClause["value"];
+      const sample = SAMPLE_VALUES[name] as PredicateClause["value"];
+      const value = operator === 'is_empty' || operator === 'is_not_empty' ? undefined
+        : operator === 'in' || operator === 'not_in' ? (Array.isArray(sample) ? sample : [sample!])
+        : sample;
       const clause: PredicateClause = { path: name, operator, value };
       expect(validateClause(schema, clause)).toBeNull();
       const fragment = compilePredicateFragment(schema, clause, { rootAlias: 't' });
@@ -55,7 +62,7 @@ describe('ticket query schema: computed attributes (T032)', () => {
   });
 
   it('declares no raw SQL outside the computed resolvers', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, './ticketQuerySchema.ts'), 'utf8');
+    const source = fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/ticketQuery/ticketQuerySchema.ts'), 'utf8');
     const resolversStart = source.indexOf('const COMPUTED_RESOLVERS');
     const resolversEnd = source.indexOf('export type TicketComputedAttributeName');
     expect(resolversStart).toBeGreaterThan(0);

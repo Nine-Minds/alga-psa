@@ -396,6 +396,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'external_tax_imports', parent: 'invoices', column: 'invoice_id', deleteRule: 'CASCADE', name: 'external_tax_imports_invoice_id_foreign' },
   { child: 'external_tax_imports', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'external_tax_imports_tenant_foreign' },
   { child: 'external_tax_imports', parent: 'users', column: 'imported_by', deleteRule: 'SET NULL', name: 'external_tax_imports_imported_by_foreign' },
+  { child: 'file_upload_session_files', parent: 'file_upload_sessions', column: 'session_id', deleteRule: 'NO ACTION', name: 'file_upload_session_files_session_fk' },
   { child: 'ghost_usage_reviews', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'ghost_usage_reviews_tenant_foreign' },
   { child: 'ghost_usage_reviews', parent: 'tickets', column: 'ticket_id', deleteRule: 'CASCADE', name: 'ghost_usage_reviews_tenant_ticket_id_foreign' },
   { child: 'holidays', parent: 'business_hours_schedules', column: 'schedule_id', deleteRule: 'NO ACTION', name: 'holidays_tenant_schedule_id_foreign' },

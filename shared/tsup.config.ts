@@ -6,6 +6,8 @@ export default defineConfig({
     'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
     'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
     'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
+    'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
+    'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',

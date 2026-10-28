@@ -1,7 +1,7 @@
 'use client';
 
 import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { PackageOpen } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
@@ -12,9 +12,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
 import { useCustodyBadges } from '@alga-psa/assets/components/custody/CustodyBadge';
+import { CustodyPhotoField } from '@alga-psa/assets/components/custody/CustodyPhotoField';
+import { custodyPhotosWithinLimit } from '@alga-psa/assets/lib/custody/photoLimits';
 import { custodyOutcome, useCustodyLocations } from '@alga-psa/assets/components/custody/custodyClient';
 import {
   CustodyDetailFields,
@@ -26,10 +27,8 @@ import {
 import { DialogShell, HolderPicker, type DialogSubmitError } from '@alga-psa/assets/components/custody/CustodyDialogs';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
 import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { receiveEquipment, type ReceiveEquipmentActionData } from './receiveEquipmentActions';
 
-const MAX_PHOTOS = 20;
 
 type Mode = 'existing' | 'new';
 
@@ -69,7 +68,6 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   const [photos, setPhotos] = useState<File[]>([]);
   const [result, setResult] = useState<ReceiveEquipmentActionData | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const registryEntries = useAssetTypeRegistry(isOpen);
   const assetTypeOptions = useMemo(() => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }), [registryEntries, t]);
@@ -132,21 +130,12 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   if (!ticketId || !clientId || !canUpdate) return null;
 
   const canSubmit =
-    Boolean(locationId) && (mode === 'existing' ? Boolean(assetId) : newItem.name.trim().length > 0);
+    Boolean(locationId) && custodyPhotosWithinLimit(photos) && (mode === 'existing' ? Boolean(assetId) : newItem.name.trim().length > 0);
 
   const id = `receive-equipment-${ticketId}`;
   const submit = async (): Promise<DialogSubmitError | null> => {
-    // Photos first: the documents are client-hidden and removed server-side if the receive fails.
-    const documentIds: string[] = [];
-    for (const file of photos) {
-      const formData = new FormData();
-      formData.append('file', file);
-      // The server uses the authenticated user; `userId` is required by the type only.
-      const uploaded = await uploadDocument(formData, { userId: '', ticketId, isClientVisible: false });
-      if (isActionPermissionError(uploaded)) return uploaded.permissionError;
-      if (!uploaded.success) return uploaded.error;
-      documentIds.push(uploaded.document.document_id);
-    }
+    const photoForm = new FormData();
+    for (const file of photos) photoForm.append('photos', file);
 
     const outcome = custodyOutcome<ReceiveEquipmentActionData>(
       await receiveEquipment({
@@ -172,8 +161,7 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         follow_up_on: details.follow_up_on || null,
         condition_note: details.condition_note.trim() || null,
         accessories: cleanAccessories(details.accessories),
-        document_ids: documentIds,
-      })
+      }, photoForm)
     );
     if (!outcome.ok) {
       const message = outcome.messageKey
@@ -301,23 +289,7 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         />
         <CustodyDetailFields idPrefix={id} value={details} onChange={setDetails} />
 
-        <div>
-          <Label htmlFor={`${id}-photos`}>{t('custody.receiveEquipment.photos', { defaultValue: 'Photos (optional)' })}</Label>
-          <input
-            id={`${id}-photos`}
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="block w-full text-sm"
-            onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
-          />
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-400))]">
-            {t('custody.receiveEquipment.photosHint', {
-              defaultValue: 'Photos are attached to this ticket and are not visible to the client.',
-            })}
-          </p>
-        </div>
+        <CustodyPhotoField id={`${id}-photos`} photos={photos} onChange={setPhotos} />
       </DialogShell>
 
       <Dialog

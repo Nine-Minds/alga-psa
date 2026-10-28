@@ -46367,7 +46367,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. Set suppressContactNotifications=true to create the ticket silently — no customer-facing ticket-created email (which otherwise falls back to the client's address when the ticket has no contact) and no portal notifications. Add suppressInternalNotifications=true to also skip agent and watcher notifications; internal suppression requires customer suppression. Silent creations still create normal audit, workflow, and webhook records.",
     "tags": [
       "Work Management v1"
     ],
@@ -46507,6 +46507,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           },
           "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Suppress the customer-facing ticket-created email and portal notifications for this creation. Use it for machine-generated tickets that should not reach the client."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -46583,6 +46591,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs: GET /api/v1/boards to choose board_id, GET /api/v1/statuses?type=ticket&board_id=... to choose a status_id that belongs to that board, GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, and GET /api/v1/tags to reuse tag names. CRITICAL: status_id must belong to the same board as board_id — mismatched values will be rejected with a 400 error. Always send UUID fields exactly as documented — do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema."
+      },
+      {
+        "name": "Create an alert ticket without notifying the client",
+        "request": {
+          "body": {
+            "title": "Disk usage above 90% on SRV-01",
+            "board_id": "11111111-1111-1111-1111-111111111111",
+            "client_id": "22222222-2222-2222-2222-222222222222",
+            "status_id": "33333333-3333-3333-3333-333333333333",
+            "priority_id": "44444444-4444-4444-4444-444444444444",
+            "suppressContactNotifications": true
+          }
+        },
+        "notes": "Contact suppression skips the customer-facing ticket-created email — which, with no contact_name_id, would otherwise go to the client's own address — and the portal notification. The assignee and internal watchers are still notified; add suppressInternalNotifications=true to silence them too."
       }
     ]
   },
