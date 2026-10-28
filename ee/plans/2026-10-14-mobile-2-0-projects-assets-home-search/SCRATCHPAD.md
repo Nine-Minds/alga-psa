@@ -245,3 +245,16 @@ the same feature. Decisions, per file, as directed:
   with `NODE_ENV=test` (its dotenv gate), and seven `packages/clients` suites (CSV/reactivate module
   resolution, visibility-group DB tests, `ClientSoftwareView`) fail identically with this round's
   only change to that package stashed.
+
+### Post-merge gate fixes (2026-10-28)
+
+- **The audit migration needed a second re-stamp.** The 241-commit merge brought
+  `20261028120000_checklist_rule_predicates.cjs`, so `20261027120000_create_asset_audits.cjs` no
+  longer sorted after the newest migration on the base and `npm run lint:migrations` failed R6
+  again. Renamed to `20261029120000_create_asset_audits.cjs` (content untouched) and updated the
+  only reference, `MIGRATION` in `assetAuditTenantDeletionOrder.test.ts`. R6 compares against
+  `origin/main`'s newest, so every future merge of main can re-trigger it until this lands; the
+  stamp is one day past main's newest to leave headroom.
+- **`git diff --check` flagged the release notes.** The status/target lines used a two-space
+  markdown hard break, which is trailing whitespace to the gate; they are a two-item list now, same
+  rendering without the invisible characters.

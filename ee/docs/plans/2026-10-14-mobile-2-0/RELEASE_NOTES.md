@@ -1,7 +1,7 @@
 # AlgaPSA Mobile 2.0 release notes
 
-Status: Draft — finalize after device smoke tests  
-Target version: `2.0.0` (iOS build 39, Android versionCode 39)
+- Status: Draft — finalize after device smoke tests
+- Target version: `2.0.0` (iOS build 39, Android versionCode 39)
 
 ## Store copy
 
