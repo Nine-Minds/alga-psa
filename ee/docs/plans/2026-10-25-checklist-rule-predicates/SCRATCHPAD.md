@@ -115,8 +115,8 @@ were updated only where they create checklist apply rules.
 - `npm run build -w @alga-psa/shared`: passed.
 - Shared/tickets typechecks: passed on the final sources.
 - `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server`: passed on the final sources.
-- `NODE_OPTIONS=--max-old-space-size=12288 npm run build -w server`: passed, including 74 static pages;
-  a cached final-source repeat is in progress. The build reports dynamic-import and Edge-runtime
+- `NODE_OPTIONS=--max-old-space-size=12288 npm run build -w server`: passed, including 74 static pages.
+  The build reports dynamic-import and Edge-runtime
   warnings in untouched modules and skips its embedded typecheck; the separate server check is run.
 - Pseudo-locale generation, translation validation, bidi guard, and `git diff --check`: passed.
 - The tickets workspace's direct `npm run build` is not its supported build target: its unchanged
@@ -131,3 +131,14 @@ apply the new migration before starting its app. No app server or live browser w
 Citus execution was not exercised locally. Its function DDL propagation is a deployment review item;
 see the [Citus DDL reference](https://learn.microsoft.com/en-us/postgresql/citus/reference-ddl?view=citus-14).
 The unrelated pre-existing `package-lock.json` modification is excluded from this work. No push or PR.
+
+## Fresh checkout verification (2026-10-28)
+
+The 13-suite selection above passed again: 166 tests, including the migration matrix and automatic
+application acceptance case. The four Node conversion tests also passed. The test run used the
+disposable `checklist_predicate_draft_verify` database. A read-only inspection of the wired database
+found `board_id` and no `where` column, so it still needs the migration. Shared build and shared and
+tickets typechecks passed again. `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server`
+and `NEXT_PUBLIC_EDITION=enterprise NODE_OPTIONS=--max-old-space-size=12288 npm run build:enterprise -w server`
+also passed. The build emitted existing scheduling export, dynamic-import, and webpack cache warnings.
+The pre-existing lockfile modification remains outside this work.
