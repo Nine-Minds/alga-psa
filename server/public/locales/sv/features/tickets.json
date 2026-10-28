@@ -1728,7 +1728,9 @@
       "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
       "templateClientInvalid": "Den valda kunden hittades inte.",
       "ruleClientOutsideTemplateScope": "Den här mallen tillhör en kund, så dess regler kan inte rikta sig mot andra kunder.",
-      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund."
+      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
+      "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
+      "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
     }
   },
   "ticketSection": {

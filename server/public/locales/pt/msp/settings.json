@@ -1154,6 +1154,50 @@
         "client": "Cliente",
         "allClients": "Todos os clientes",
         "clear": "Limpar filtro"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Quadro",
+          "category_id": "Categoria",
+          "subcategory_id": "Subcategoria",
+          "priority_id": "Prioridade",
+          "client_id": "Cliente",
+          "client_tags": "Tags do cliente",
+          "contact_tags": "Tags do contato",
+          "ticket_origin": "Origem do chamado",
+          "title_folded": "Título",
+          "description_folded": "Descrição",
+          "from_service_request": "De solicitação de serviço",
+          "service_request_definition_id": "Solicitação de serviço"
+        },
+        "operators": {
+          "equals": "É igual a",
+          "not_equals": "É diferente de",
+          "in": "Contém qualquer um de",
+          "not_in": "Não contém nenhum de",
+          "contains": "Contém",
+          "starts_with": "Começa com",
+          "ends_with": "Termina com",
+          "is_empty": "Está vazio",
+          "is_not_empty": "Não está vazio"
+        },
+        "conditions": "Condições",
+        "match": "Corresponder a",
+        "and": "Todas as condições",
+        "or": "Qualquer condição",
+        "field": "Campo",
+        "operator": "Condição",
+        "value": "Valor",
+        "yes": "Sim",
+        "no": "Não",
+        "advanced": "Esta regra contém condições agrupadas ou avançadas e é somente leitura neste editor.",
+        "add": "Adicionar condição",
+        "save": "Salvar condições",
+        "enabled": "Ativada",
+        "matchesAll": "Corresponde a todos os chamados no escopo do modelo.",
+        "matchesNone": "Não corresponde a nenhum chamado.",
+        "tagsFailed": "Não foi possível carregar as opções de tags. As seleções salvas foram preservadas.",
+        "retry": "Tentar novamente"
       }
     },
     "externalSystems": {

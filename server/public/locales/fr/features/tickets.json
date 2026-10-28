@@ -1720,7 +1720,9 @@
       "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
       "templateClientInvalid": "Le client sélectionné est introuvable.",
       "ruleClientOutsideTemplateScope": "Ce modèle appartient à un client : ses règles ne peuvent pas cibler d'autres clients.",
-      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client."
+      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client.",
+      "predicateClientOutsideScope": "Le client {{client}} est hors du périmètre de ce modèle.",
+      "predicateInvalid": "Règle de liste de contrôle non valide : {{detail}}"
     }
   },
   "ticketSection": {

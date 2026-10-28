@@ -1720,7 +1720,9 @@
       "templateClientMismatch": "Este modelo de checklist está limitado a um cliente diferente do cliente do ticket.",
       "templateClientInvalid": "O cliente selecionado não foi encontrado.",
       "ruleClientOutsideTemplateScope": "Este modelo pertence a um cliente, por isso as suas regras não podem visar outros clientes.",
-      "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente."
+      "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente.",
+      "predicateClientOutsideScope": "O cliente {{client}} está fora do escopo deste modelo.",
+      "predicateInvalid": "Regra de checklist inválida: {{detail}}"
     }
   },
   "ticketSection": {
