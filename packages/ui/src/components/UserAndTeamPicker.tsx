@@ -543,7 +543,10 @@ const UserAndTeamPicker = ({
         className={`inline-flex items-center justify-between rounded-lg font-medium ${
           size === 'xs'
             ? 'p-1 h-7 text-xs min-w-0 gap-1'
-            : 'p-2 h-10 text-sm'
+            : size === 'sm'
+              // Matches CustomSelect's trigger so a row of mixed pickers reads as one control family.
+              ? 'p-2 h-9 text-sm !font-normal !border-border'
+              : 'p-2 h-10 text-sm'
         } ${
           buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[min(150px,100%)] max-w-full'
         }`}

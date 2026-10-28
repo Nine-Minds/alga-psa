@@ -2776,6 +2776,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            startDate={primaryAssignment?.start_date ? toISODate(toPlainDate(primaryAssignment.start_date)) : null}
             focusContractLineId={focusedContractLineId}
             editIntentLineId={lineFocusRequest?.edit ? lineFocusRequest.lineId : null}
             onEditIntentConsumed={() => setLineFocusRequest((current) => (current ? { ...current, edit: false } : current))}

@@ -84,6 +84,7 @@
     "button": "Filtres",
     "unassigned": "Non attribué",
     "category": "Filtrer par catégorie",
+    "removeFilterChip": "Supprimer le filtre : {{label}}",
     "assignee": "Destinataire",
     "allAssignees": "Tous les destinataires",
     "responseState": "État de réponse",
@@ -1412,10 +1413,10 @@
     "availableBadge": "Disponible : {{available}}",
     "availableByLocation": "Stock libre par emplacement",
     "freeOfOnHand": "{{free}} libres sur {{onHand}}",
-    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients et ne peuvent pas être utilisés ici.",
+    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients ou des projets et ne peuvent pas être utilisés ici.",
     "stockInsufficient": "Seulement {{onHand}} en stock, {{requested}} demandés.",
-    "reservedStockTitle": "Le stock est réservé pour une commande client",
-    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client compte et peut la laisser incomplète.",
+    "reservedStockTitle": "Le stock est réservé pour une commande client ou un projet",
+    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients ou des projets et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client ou un projet compte et peut le laisser incomplet.",
     "reservedStockConfirm": "Ajouter quand même"
   },
   "watchList": {
@@ -1689,7 +1690,11 @@
       "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie.",
       "ruleTooManyKeywords": "Utilisez au maximum {{max}} mots-clés par règle.",
       "ruleKeywordTooLong": "Chaque mot-clé doit comporter {{max}} caractères au plus.",
-      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide."
+      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide.",
+      "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
+      "templateClientInvalid": "Le client sélectionné est introuvable.",
+      "ruleClientOutsideTemplateScope": "Ce modèle appartient à un client : ses règles ne peuvent pas cibler d'autres clients.",
+      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client."
     }
   },
   "ticketSection": {
@@ -1815,7 +1820,8 @@
     "remoteFieldUpdated": "{{name}} a mis à jour {{field}}",
     "connection": {
       "reconnecting": "Mises à jour en direct hors ligne - reconnexion...",
-      "unavailable": "Mises à jour en direct indisponibles"
+      "unavailable": "Mises à jour en direct indisponibles",
+      "offlineShort": "Hors ligne"
     }
   },
   "delete": {
@@ -1997,7 +2003,10 @@
       "openScheduleEntry": "Ouvrir l’entrée de planning",
       "acrossEntries_few": "sur {{count}} entrées",
       "acrossEntries_many": "sur {{count}} entrées",
-      "changeLocation": "Changer d'emplacement"
+      "changeLocation": "Changer d'emplacement",
+      "addDescriptionPrompt": "Ajoutez une description — quel est le problème et de quoi le client a-t-il besoin ?",
+      "projectTasks": "Tâches de projet",
+      "timeAndBilling": "Temps et facturation"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",
@@ -2093,6 +2102,17 @@
       "collapseActivity": "Réduire l'activité plus ancienne",
       "replyingToComment": "Réponse à {{name}}",
       "createdFromTemplate": "{{actor}} a créé ce ticket à partir du modèle « {{name}} »"
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Détails"
+    },
+    "groups": {
+      "customer": "Client",
+      "work": "Travail",
+      "who": "Personnes",
+      "linked": "Éléments liés",
+      "empty": "Rien ici pour l'instant"
     }
   },
   "notifications": {
@@ -2524,7 +2544,9 @@
     "discard": "Supprimer le chronomètre",
     "pausedHint": "En pause. Reprenez pour continuer le suivi, ou arrêtez pour enregistrer le temps.",
     "workDescription": "Description du travail",
-    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?"
+    "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?",
+    "chipElsewhere": "Chronomètre sur {{label}}",
+    "title": "Chronomètre"
   },
   "templates": {
     "loading": "Chargement…",

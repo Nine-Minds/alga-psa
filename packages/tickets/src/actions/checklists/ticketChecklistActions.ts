@@ -62,6 +62,14 @@ async function requireTicket(trx: Knex.Transaction | Knex, tenant: string, ticke
   return ticket;
 }
 
+// LEVERAGE: friction checklist-transaction -- five checklist mutations each open their own withTransaction with the same requireTicket-then-write shape; the helper is the boundary durably, so a missing helper is the signal.
+async function runChecklistMutation<T>(
+  db: Knex,
+  work: (trx: Knex.Transaction) => Promise<T>
+): Promise<T> {
+  return withTransaction(db, work);
+}
+
 export const getTicketChecklistItems = withAuth(
   async (_user, { tenant }, ticketId: string): Promise<ITicketChecklistItem[]> => {
     const { knex: db } = await createTenantKnex();
@@ -104,7 +112,7 @@ export const addChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
         await requireTicket(trx, tenant, ticketId);
 
         const maxOrder = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
@@ -145,7 +153,7 @@ export const updateChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();
@@ -186,10 +194,21 @@ export const deleteChecklistItem = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      const deleted = await tenantScopedTable(db, 'ticket_checklist_items', tenant).where({ checklist_item_id: itemId }).del();
-      if (!deleted) {
-        throw new Error('Checklist item not found');
-      }
+      await runChecklistMutation(db, async (trx: Knex.Transaction) => {
+        const item = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+          .where({ checklist_item_id: itemId })
+          .forUpdate()
+          .first();
+        if (!item) {
+          throw new Error('Checklist item not found');
+        }
+        const deleted = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+          .where({ ticket_id: item.ticket_id, checklist_item_id: itemId })
+          .del();
+        if (!deleted) {
+          throw new Error('Checklist item not found');
+        }
+      });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);
       if (expected) {
@@ -208,7 +227,7 @@ export const reorderChecklistItems = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      await withTransaction(db, async (trx: Knex.Transaction) => {
+      await runChecklistMutation(db, async (trx: Knex.Transaction) => {
         await requireTicket(trx, tenant, ticketId);
         for (let i = 0; i < orderedItemIds.length; i++) {
           const updated = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
@@ -237,7 +256,7 @@ export const setChecklistItemCompleted = withAuth(
       }
 
       const { knex: db } = await createTenantKnex();
-      return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();

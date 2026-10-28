@@ -2374,6 +2374,7 @@ export default function TaskForm({
           {mode === 'edit' && task && (
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskCommentThread
+                key={task.task_id}
                 taskId={task.task_id}
                 projectId={phase.project_id}
                 onCommentCountChange={onCommentCountChange}

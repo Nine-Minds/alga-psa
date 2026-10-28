@@ -23,6 +23,11 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+// getTaskComments now gates on project_task:read through the rbac entry point.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 const publishEventMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 

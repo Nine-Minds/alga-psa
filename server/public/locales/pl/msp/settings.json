@@ -710,7 +710,8 @@
         "importNewName": "Importuj z inną nazwą:",
         "importWithResolutions": "Importuj z rozwiązaniami",
         "orderConflict": "Kolejność {{order}} jest już zajęta",
-        "importWithOrder": "Importuj z kolejnością {{order}}"
+        "importWithOrder": "Importuj z kolejnością {{order}}",
+        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
       },
       "importTable": {
         "active": "Aktywna"
@@ -779,7 +780,9 @@
           "deleteFailed": "Nie udało się usunąć tablicy",
           "importFailed": "Nie udało się zaimportować tablic",
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
-          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy",
+          "hasEmailSenderRoute": "Nie można usunąć tablicy: ma własną trasę nadawcy wiadomości wychodzących. Najpierw usuń nadawcę zgłoszeń w edytorze tablicy.",
+          "referencedByAutomations": "Nie można usunąć tablicy: nadal wskazują na nią inne ustawienia. Najpierw przekieruj je na inną tablicę lub usuń."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Nazwa wyświetlana",
         "save": "Zapisz nadawcę",
         "saved": "Zapisano nadawcę"
+      },
+      "deleteDependencies": {
+        "categories_one": "kategoria",
+        "categories_other": "kategorii",
+        "categories_few": "kategorie",
+        "categories_many": "kategorii",
+        "statuses_one": "status zgłoszenia",
+        "statuses_other": "statusów zgłoszeń",
+        "statuses_few": "statusy zgłoszeń",
+        "statuses_many": "statusów zgłoszeń",
+        "autoCloseRules_one": "reguła automatycznego zamknięcia",
+        "autoCloseRules_other": "reguł automatycznego zamknięcia",
+        "autoCloseRules_few": "reguły automatycznego zamknięcia",
+        "autoCloseRules_many": "reguł automatycznego zamknięcia",
+        "notificationRules_one": "reguła powiadomień",
+        "notificationRules_other": "reguł powiadomień",
+        "notificationRules_few": "reguły powiadomień",
+        "notificationRules_many": "reguł powiadomień",
+        "portalVisibility_one": "przypisanie widoczności w portalu klienta",
+        "portalVisibility_other": "przypisań widoczności w portalu klienta",
+        "portalVisibility_few": "przypisania widoczności w portalu klienta",
+        "portalVisibility_many": "przypisań widoczności w portalu klienta",
+        "emailSenderRoutes_one": "trasa nadawcy wychodzącego",
+        "emailSenderRoutes_other": "tras nadawcy wychodzącego",
+        "emailSenderRoutes_few": "trasy nadawcy wychodzącego",
+        "emailSenderRoutes_many": "tras nadawcy wychodzącego",
+        "ticketTemplates_one": "szablon zgłoszenia",
+        "ticketTemplates_other": "szablonów zgłoszeń",
+        "ticketTemplates_few": "szablony zgłoszeń",
+        "ticketTemplates_many": "szablonów zgłoszeń",
+        "recurringTickets_one": "harmonogram cyklicznych zgłoszeń",
+        "recurringTickets_other": "harmonogramów cyklicznych zgłoszeń",
+        "recurringTickets_few": "harmonogramy cyklicznych zgłoszeń",
+        "recurringTickets_many": "harmonogramów cyklicznych zgłoszeń",
+        "checklistRules_one": "reguła stosowania listy kontrolnej",
+        "checklistRules_other": "reguł stosowania listy kontrolnej",
+        "checklistRules_few": "reguły stosowania listy kontrolnej",
+        "checklistRules_many": "reguł stosowania listy kontrolnej",
+        "cannedResponses_one": "gotowa odpowiedź tablicy",
+        "cannedResponses_other": "gotowych odpowiedzi tablicy",
+        "cannedResponses_few": "gotowe odpowiedzi tablicy",
+        "cannedResponses_many": "gotowych odpowiedzi tablicy"
       }
     },
     "priorities": {
@@ -984,7 +1029,8 @@
         "description": "Opis",
         "items": "Elementy",
         "status": "Status",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "scope": "Dostępne dla"
       },
       "statusLabels": {
         "active": "Aktywny",
@@ -1002,7 +1048,9 @@
         "down": "W dół",
         "remove": "Usuń",
         "addItem": "Dodaj element",
-        "addRule": "Dodaj regułę"
+        "addRule": "Dodaj regułę",
+        "duplicateToClient": "Duplikuj dla klienta…",
+        "duplicate": "Duplikuj"
       },
       "fields": {
         "name": {
@@ -1032,8 +1080,10 @@
           "priority": "Priorytet",
           "any": "Dowolny",
           "appliesToAll": "Dotyczy wszystkich zgłoszeń",
+          "appliesToAllClientTickets": "Dotyczy wszystkich zgłoszeń klienta {{client}}",
           "clients": "Klienci",
           "clientsAny": "Dowolny klient",
+          "clientsFixedByTemplate": "Tylko {{client}} (ustalone przez klienta szablonu)",
           "clientsAddAnother": "Dodaj kolejnego klienta",
           "removeClient": "Usuń {{name}}",
           "origins": "Źródło zgłoszenia",
@@ -1057,7 +1107,13 @@
             "inbound_email": "Przychodząca wiadomość e-mail",
             "api": "API",
             "recurring": "Harmonogram cykliczny"
-          }
+          },
+          "clientScopedWarning": "Ten szablon jest ograniczony do klienta {{client}}: te reguły dotyczą tylko zgłoszeń klienta {{client}}."
+        },
+        "availableTo": {
+          "label": "Dostępne dla",
+          "clear": "Wszyscy klienci",
+          "help": "Pozostaw „Wszyscy klienci”, aby oferować szablon w każdym zgłoszeniu, lub wybierz klienta, aby ograniczyć go do jego zgłoszeń."
         }
       },
       "dialog": {
@@ -1065,13 +1121,17 @@
         "editTemplate": "Edytuj szablon listy kontrolnej",
         "createFirstHelp": "Najpierw utwórz szablon, a następnie dodaj elementy listy kontrolnej i reguły automatycznego stosowania.",
         "deleteTitle": "Usuń szablon listy kontrolnej",
-        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione."
+        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione.",
+        "duplicateTitle": "Duplikuj dla klienta",
+        "duplicateHelp": "Skopiuj „{{name}}” wraz z pozycjami do nowego szablonu ograniczonego do jednego klienta. Kopia jest niezależna: późniejsze zmiany jednego szablonu nie wpływają na drugi.",
+        "duplicateClientPlaceholder": "Wybierz klienta"
       },
       "messages": {
         "success": {
           "created": "Szablon listy kontrolnej został utworzony pomyślnie",
           "updated": "Szablon listy kontrolnej został zaktualizowany pomyślnie",
-          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie"
+          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie",
+          "duplicated": "Szablon listy kontrolnej zduplikowany dla klienta"
         },
         "error": {
           "fetchFailed": "Nie udało się pobrać szablonów list kontrolnych",
@@ -1081,8 +1141,18 @@
           "deleteFailed": "Nie udało się usunąć szablonu listy kontrolnej",
           "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
           "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
-          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania",
+          "duplicateFailed": "Nie udało się zduplikować szablonu listy kontrolnej"
         }
+      },
+      "scope": {
+        "allClients": "Wszyscy klienci",
+        "unknownClient": "Nieznany klient"
+      },
+      "filter": {
+        "client": "Klient",
+        "allClients": "Wszyscy klienci",
+        "clear": "Wyczyść filtr"
       }
     },
     "externalSystems": {
@@ -1423,7 +1493,9 @@
         "saveDomain": "Zapisz domenę",
         "updateDomain": "Aktualizuj domenę",
         "submitting": "Wysyłanie…",
-        "cancelEdit": "Anuluj edycję"
+        "cancelEdit": "Anuluj edycję",
+        "confirmUris": "Zarejestrowano — potwierdź",
+        "confirmingUris": "Potwierdzanie…"
       },
       "form": {
         "label": "Domena niestandardowa",
@@ -1461,7 +1533,8 @@
         "deploying": "Wdrażanie",
         "active": "Aktywna",
         "disabled": "Wyłączona",
-        "unknown": "Nieznany"
+        "unknown": "Nieznany",
+        "pending_redirect_uri": "Oczekiwanie na URI przekierowania"
       },
       "messages": {
         "requestSubmitted": "Wysłano żądanie domeny niestandardowej.",
@@ -1473,9 +1546,32 @@
         "registerFailed": "Nie udało się zarejestrować domeny niestandardowej.",
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
-        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
+        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej.",
+        "confirmUrisFailed": "Nie udało się potwierdzić identyfikatorów URI przekierowania.",
+        "urisConfirmed": "Identyfikatory URI przekierowania potwierdzone."
       },
-      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "surface": {
+        "label": "Obsługuje",
+        "current": "Obsługuje: {{value}}",
+        "updatingSurface": "Zapisanie zmieni aplikację obsługiwaną przez tę domenę i uruchomi ponownie konfigurację.",
+        "options": {
+          "client_portal": "Portal klienta",
+          "msp": "Aplikacja MSP",
+          "both": "Obie"
+        },
+        "descriptions": {
+          "client_portal": "Domena otwiera portal klienta. To ustawienie domyślne.",
+          "msp": "Domena otwiera aplikację MSP (dla techników). Najpierw trzeba zarejestrować identyfikatory URI przekierowania logowania jednokrotnego.",
+          "both": "Jedna domena obsługuje obie aplikacje. Ścieżki pod /msp otwierają aplikację MSP, a ścieżki pod /client-portal otwierają portal klienta."
+        }
+      },
+      "redirectUris": {
+        "title": "Trzeba zarejestrować identyfikatory URI przekierowania SSO",
+        "description": "Ta domena obsługuje aplikację MSP, więc logowanie jednokrotne zadziała dopiero po zarejestrowaniu poniższych identyfikatorów URI przekierowania u dostawcy SSO. Domena pozostaje oczekująca do czasu ich potwierdzenia.",
+        "listLabel": "Zarejestruj te identyfikatory URI przekierowania:",
+        "contactSupport": "Poproś administratora lub skontaktuj się z pomocą techniczną, aby zarejestrować i potwierdzić te identyfikatory URI przekierowania."
+      }
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -3686,7 +3782,12 @@
       "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
       "notApplianceHost": "Wybierz domenę inną niż główny host tego serwera. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
-      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji.",
+      "alreadyInUse": "Ta domena jest już używana. Wybierz inną domenę.",
+      "usedByOtherSurface": "Ta domena jest już używana przez inną z Twoich domen niestandardowych. Aby udostępniać portal klienta i aplikację MSP z jednej domeny, wybierz „Oba”.",
+      "invalidSurface": "Wybierz, co udostępnia domena niestandardowa: portal klienta, aplikację MSP lub oba.",
+      "redirectUrisHosted": "Identyfikatory URI przekierowań dla domen hostowanych rejestruje wsparcie platformy.",
+      "nothingToConfirm": "Brak oczekującego potwierdzenia identyfikatorów URI przekierowań SSO dla tej domeny."
     }
   },
   "common": {

@@ -317,7 +317,19 @@
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
     "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
     "recurringTickets": "Recurring tickets",
-    "software": "Software"
+    "software": "Software",
+    "checklistsTab": "Checklists",
+    "checklists": {
+      "name": "Name",
+      "items": "Items",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "description": "Checklist templates that are only offered on this client's tickets. Edit them in Settings > Ticketing > Checklist Templates.",
+      "empty": "No client-specific checklist templates.",
+      "loadFailed": "Failed to load checklist templates",
+      "retry": "Retry"
+    }
   },
   "clientCommandCenter": {
     "cards": {

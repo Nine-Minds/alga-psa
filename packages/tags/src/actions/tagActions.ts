@@ -3,10 +3,11 @@
 import TagDefinition, { ITagDefinition } from '../models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMapping';
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
+import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -337,22 +338,11 @@ export const createTag = withAuth(async (
   tag: Omit<ITag, 'tag_id' | 'tenant'>,
   options: CreateTagOptions = {}
 ): Promise<ITag | TagActionError> => {
-  // Validate tag text
-  if (!tag.tag_text || !tag.tag_text.trim()) {
-    return actionError('Tag text is required', 'common:errors.tags.textRequired');
+  const validation = validateTagText(tag.tag_text);
+  if (isTagTextValidationFailure(validation)) {
+    return actionError(validation.message, validation.i18nKey);
   }
-
-  const tagText = tag.tag_text.trim();
-
-  // Validate length
-  if (tagText.length > 50) {
-    return actionError('Tag text too long (max 50 characters)', 'common:errors.tags.textTooLong');
-  }
-
-  // Validate characters - allow letters, numbers, spaces, and common punctuation
-  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
-    return actionError('Tag text contains invalid characters', 'common:errors.tags.textInvalidCharacters');
-  }
+  const tagText = validation.text;
 
   const userId = currentUser.user_id;
 
@@ -881,14 +871,15 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
   for (const tag of pendingTags) {
     try {
-      const tagText = tag.tag_text?.trim();
-      if (!tagText) continue;
+      if (!tag.tag_text?.trim()) continue;
 
-      // Validate length
-      if (tagText.length > 50) {
-        console.warn(`Tag text "${tagText}" too long, skipping`);
+      // Same rules as createTag: an invalid tag is skipped, not fatal.
+      const validation = validateTagText(tag.tag_text);
+      if (isTagTextValidationFailure(validation)) {
+        console.warn(`Skipping tag "${tag.tag_text}": ${validation.message}`);
         continue;
       }
+      const tagText = validation.text;
 
       if (!userHasTagCreate) {
         const existingDefinition = await TagDefinition.findByTextAndType(
@@ -931,9 +922,12 @@ export const createTagsForEntityWithTransaction = withAuth(async (
         tagged_type: entityType
       }, userId);
 
+      // Events are deferred until the owning transaction commits. registerAfterCommit
+      // keeps them on this transactor's savepoint, so they are dropped if that
+      // savepoint (or the outer transaction) rolls back and emitted only if both commit.
       const occurredAt = new Date().toISOString();
       if (createdDefinition) {
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: 'TAG_DEFINITION_CREATED',
           payload: buildTagDefinitionCreatedPayload({
             tagId: definition.tag_id,
@@ -946,10 +940,10 @@ export const createTagsForEntityWithTransaction = withAuth(async (
             occurredAt,
             actor: { actorType: 'USER', actorUserId: userId },
           },
-        });
+        }), `TAG_DEFINITION_CREATED tag=${definition.tag_id}`);
       }
 
-      await publishWorkflowEvent({
+      registerAfterCommit(trx, () => publishWorkflowEvent({
         eventType: 'TAG_APPLIED',
         payload: buildTagAppliedPayload({
           tagId: definition.tag_id,
@@ -963,7 +957,7 @@ export const createTagsForEntityWithTransaction = withAuth(async (
           occurredAt,
           actor: { actorType: 'USER', actorUserId: userId },
         },
-      });
+      }), `TAG_APPLIED tag=${definition.tag_id} entity=${entityId}`);
 
       createdTags.push({
         tag_id: mapping.mapping_id,

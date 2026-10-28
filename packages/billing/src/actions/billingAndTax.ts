@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
-import { ISO8601String } from '@alga-psa/types';
+import { ISO8601String, type ILateHourlyTimeNotice } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
@@ -58,6 +58,7 @@ import {
     isClientCadenceLineExpectedInWindow,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
+import { findLateApprovedHourlyTime } from '../lib/billing/lateHourlyTime';
 import {
     detectRecurringApprovalBlockers,
     detectRecurringApprovalWarnings,
@@ -949,6 +950,10 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
             .where('time_entries.billable_duration', '>', 0)
             .where('time_entries.start_time', '>=', earliestStart)
             .where('time_entries.end_time', '<', latestEnd)
+            // Scope to the listed clients, as the usage read below does, instead of the whole tenant.
+            .where((scope) => scope
+                .whereIn('tickets.client_id', clientIds)
+                .orWhereIn('projects.client_id', clientIds))
             .select(
                 'time_entries.entry_id',
                 'time_entries.start_time',
@@ -2316,4 +2321,20 @@ export const getPaymentTermsList = withAuth(async (
     // Returning empty for now to avoid breaking UI if DB call fails
     return [];
   }
+});
+
+/**
+ * Approved hourly time dated inside a service period an issued invoice already
+ * closed: what will bill on the next invoice, and what is outside the lookback.
+ */
+export const getLateApprovedHourlyTime = withAuth(async (
+    user,
+    { tenant },
+    options: { clientId?: string } = {},
+): Promise<ILateHourlyTimeNotice[] | ActionPermissionError> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+    }
+    const { knex } = await createTenantKnex();
+    return findLateApprovedHourlyTime(knex, tenant, { clientId: options?.clientId });
 });

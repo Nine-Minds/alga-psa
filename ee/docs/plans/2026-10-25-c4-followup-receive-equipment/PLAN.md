@@ -127,3 +127,15 @@ attributed.
 - **Badge refusal is silent** — covered above (leave enabled, server is the gate, F5 makes it visible).
 - **Pseudo-locales** grow every locale file; the coverage test is what keeps them honest.
 - **Stacking.** The base moves under C4 (`266cc9e0`); re-verify each finding's file:line before editing.
+
+## Round: updated ticket screen
+
+**What moved on main.** The ticket screen was rebuilt (CM L3a `TicketDataSource` seam; large `TicketBentoLayout` rewrite = the Grid layout). Main (alga-2026-0002838) also independently added `entityAssetsCacheKey` / `matchEntityAssetsCacheKeys` and an SWR-backed `AssociatedAssets` using the same key `['entity-assets','ticket',ticketId]` that this card introduced as `ticketAssetsKey`.
+
+**How each feature was carried over.**
+- **F1 refresh.** Merged onto main's SWR block in `AssociatedAssets` (one consumer, no duplicate). `ticketAssetsKey` stays as an alias of `entityAssetsCacheKey`; `matchAnyEntityAssetsKeys` (custody card) kept. `ReceiveEquipmentDialog` keeps `matchAssetCacheKeys([assetId, ticketId])` + `['custody']`; main's extra `matchEntityAssetsCacheKeys` mutate was dropped as redundant. The ticket seam has no general "linked data changed" path that overlaps, so no bridge was added. Entry point: `MspTicketDetailsContainerClient.renderReceiveEquipment` -> `TicketDetails` -> `receiveEquipmentActions` (Grid: footer of the Assets tile, `TicketBentoLayout` ~l.904) / `renderReceiveEquipmentActions` (classic `TicketInfo`).
+- **F2.** All status surfaces use `assetStatus.ts` (`useAssetStatusLabel`); main's duplicated `assetStatuses` block in `msp/assets` was resolved to this card's single `assetStatuses` key set. No new bento surface shows asset status. xx/yy regenerated.
+- **F3.** The Grid assets column is `minmax(260px,1fr)` (wide), 300-360px (medium), full width (narrow), i.e. the same ~230px content width as the classic panel. The two-row layout wraps/truncates unconditionally, so no Grid change was needed. main's `readOnly` remove-guard and RemoteAccessButton were folded into the meta row.
+- **F4/F5.** Inside the dialog; unaffected, tests green.
+
+**Tests.** Added `TicketBentoLayout.receiveEquipment.test.tsx` (Grid tile mounts `associatedAssets` + Receive equipment in one container, gated on `assets` capability, stays mounted across re-render). Refresh itself is covered by `AssociatedAssets.test.tsx` (shared-key mutate) and `ReceiveEquipmentDialog.test.tsx` (mutate predicate). E2E selectors are layout-agnostic and unchanged.

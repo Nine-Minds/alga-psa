@@ -9,6 +9,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -512,18 +513,14 @@ export const importTickets = withAuth(async (
     for (const resolution of clientResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create client "${resolution.originalClientName}"`, async () => {
-          const [newClient] = await tenantScopedTable('clients')
-            .insert({
-              client_id: trx.raw('gen_random_uuid()'),
-              tenant,
-              client_name: resolution.originalClientName,
-              client_type: resolution.clientType || 'company',
-              is_inactive: false,
-              created_at: new Date(),
-              updated_at: new Date(),
-            })
-            .returning(['client_id']);
-          return newClient;
+          // Imported clients get the same prerequisites as hand-created ones:
+          // default billing profile, gated default contract, default tax
+          // settings and the tenant's configured currency.
+          return createClientWithDefaults(trx, tenant, {
+            client_name: resolution.originalClientName,
+            client_type: resolution.clientType || 'company',
+            is_inactive: false,
+          });
         });
         if (result) createdClientMap.set(resolution.originalClientName.toLowerCase().trim(), result.client_id);
       }

@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.16",
+  "version": "1.6.17",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./src/index.ts"
+    },
+    "./capability": {
+      "import": "./dist/lib/capability.js",
+      "types": "./src/lib/capability.ts"
+    },
+    "./capability/server": {
+      "import": "./dist/capability/server.js",
+      "types": "./src/capability/server.ts"
     },
     "./features": {
       "import": "./dist/lib/features.js",
@@ -94,6 +102,14 @@
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
     "react": "^19.2.4"
+  },
+  "peerDependencies": {
+    "next": "*"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

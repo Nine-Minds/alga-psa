@@ -710,7 +710,8 @@
         "skipItem": "Skip this item",
         "importNewName": "Import with different name:",
         "importWithOrder": "Import with order {{order}}",
-        "importWithResolutions": "Import with Resolutions"
+        "importWithResolutions": "Import with Resolutions",
+        "removesIntro": "Deleting this board will also remove:"
       },
       "importTable": {
         "active": "Active"
@@ -779,7 +780,9 @@
           "deleteFailed": "Failed to delete board",
           "importFailed": "Failed to import boards",
           "updateStatusFailed": "Failed to update board status",
-          "updateDefaultFailed": "Failed to update default board"
+          "updateDefaultFailed": "Failed to update default board",
+          "hasEmailSenderRoute": "Cannot delete board: it has a dedicated outbound email sender route. Clear the board's ticket sender in the board editor first.",
+          "referencedByAutomations": "Cannot delete board: other settings still target it. Point them at another board (or remove them) first."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "useDefault": "Use ticket default",
         "duplicateRoute": "That sender route already exists.",
         "saveFailed": "Could not save sender routing. Please try again."
+      },
+      "deleteDependencies": {
+        "categories_one": "category",
+        "categories_other": "categories",
+        "categories_few": "categories",
+        "categories_many": "categories",
+        "statuses_one": "ticket status",
+        "statuses_other": "ticket statuses",
+        "statuses_few": "ticket statuses",
+        "statuses_many": "ticket statuses",
+        "autoCloseRules_one": "auto-close rule",
+        "autoCloseRules_other": "auto-close rules",
+        "autoCloseRules_few": "auto-close rules",
+        "autoCloseRules_many": "auto-close rules",
+        "notificationRules_one": "notification rule",
+        "notificationRules_other": "notification rules",
+        "notificationRules_few": "notification rules",
+        "notificationRules_many": "notification rules",
+        "portalVisibility_one": "client portal visibility assignment",
+        "portalVisibility_other": "client portal visibility assignments",
+        "portalVisibility_few": "client portal visibility assignments",
+        "portalVisibility_many": "client portal visibility assignments",
+        "emailSenderRoutes_one": "outbound sender route",
+        "emailSenderRoutes_other": "outbound sender routes",
+        "emailSenderRoutes_few": "outbound sender routes",
+        "emailSenderRoutes_many": "outbound sender routes",
+        "ticketTemplates_one": "ticket template",
+        "ticketTemplates_other": "ticket templates",
+        "ticketTemplates_few": "ticket templates",
+        "ticketTemplates_many": "ticket templates",
+        "recurringTickets_one": "recurring ticket schedule",
+        "recurringTickets_other": "recurring ticket schedules",
+        "recurringTickets_few": "recurring ticket schedules",
+        "recurringTickets_many": "recurring ticket schedules",
+        "checklistRules_one": "checklist apply rule",
+        "checklistRules_other": "checklist apply rules",
+        "checklistRules_few": "checklist apply rules",
+        "checklistRules_many": "checklist apply rules",
+        "cannedResponses_one": "board canned response",
+        "cannedResponses_other": "board canned responses",
+        "cannedResponses_few": "board canned responses",
+        "cannedResponses_many": "board canned responses"
       }
     },
     "priorities": {
@@ -984,7 +1029,8 @@
         "description": "Description",
         "items": "Items",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "scope": "Available to"
       },
       "statusLabels": {
         "active": "Active",
@@ -1002,7 +1048,9 @@
         "down": "Down",
         "remove": "Remove",
         "addItem": "Add Item",
-        "addRule": "Add Rule"
+        "addRule": "Add Rule",
+        "duplicateToClient": "Duplicate to client…",
+        "duplicate": "Duplicate"
       },
       "fields": {
         "name": {
@@ -1032,8 +1080,10 @@
           "priority": "Priority",
           "any": "Any",
           "appliesToAll": "Applies to all tickets",
+          "appliesToAllClientTickets": "Applies to all {{client}} tickets",
           "clients": "Clients",
           "clientsAny": "Any client",
+          "clientsFixedByTemplate": "{{client}} only (set by the template's client)",
           "clientsAddAnother": "Add another client",
           "removeClient": "Remove {{name}}",
           "origins": "Ticket source",
@@ -1057,7 +1107,13 @@
             "inbound_email": "Inbound email",
             "api": "API",
             "recurring": "Recurring schedule"
-          }
+          },
+          "clientScopedWarning": "This template is scoped to {{client}}: these rules only apply to {{client}} tickets."
+        },
+        "availableTo": {
+          "label": "Available to",
+          "clear": "All clients",
+          "help": "Leave as All clients to offer this template on every ticket, or pick a client to restrict it to that client's tickets."
         }
       },
       "dialog": {
@@ -1065,13 +1121,17 @@
         "editTemplate": "Edit Checklist Template",
         "createFirstHelp": "Create the template first, then add checklist items and auto-apply rules.",
         "deleteTitle": "Delete Checklist Template",
-        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected."
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected.",
+        "duplicateTitle": "Duplicate to Client",
+        "duplicateHelp": "Copy \"{{name}}\" and its items into a new template scoped to one client. The copy is independent: later edits to either template do not affect the other.",
+        "duplicateClientPlaceholder": "Select a client"
       },
       "messages": {
         "success": {
           "created": "Checklist template created successfully",
           "updated": "Checklist template updated successfully",
-          "deleted": "Checklist template deleted successfully"
+          "deleted": "Checklist template deleted successfully",
+          "duplicated": "Checklist template duplicated to client"
         },
         "error": {
           "fetchFailed": "Failed to fetch checklist templates",
@@ -1081,8 +1141,18 @@
           "deleteFailed": "Failed to delete checklist template",
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
-          "ruleSaveFailed": "Failed to save auto-apply rule"
+          "ruleSaveFailed": "Failed to save auto-apply rule",
+          "duplicateFailed": "Failed to duplicate checklist template"
         }
+      },
+      "scope": {
+        "allClients": "All clients",
+        "unknownClient": "Unknown client"
+      },
+      "filter": {
+        "client": "Client",
+        "allClients": "All clients",
+        "clear": "Clear filter"
       }
     },
     "externalSystems": {
@@ -1423,7 +1493,9 @@
         "saveDomain": "Save Domain",
         "updateDomain": "Update Domain",
         "submitting": "Submitting…",
-        "cancelEdit": "Cancel Edit"
+        "cancelEdit": "Cancel Edit",
+        "confirmUris": "I've registered these — confirm",
+        "confirmingUris": "Confirming…"
       },
       "form": {
         "label": "Custom domain",
@@ -1461,7 +1533,8 @@
         "deploying": "Deploying",
         "active": "Active",
         "disabled": "Disabled",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "pending_redirect_uri": "Pending Redirect URIs"
       },
       "messages": {
         "requestSubmitted": "Custom domain request submitted.",
@@ -1473,9 +1546,32 @@
         "registerFailed": "Failed to register custom domain.",
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
-        "disableFailed": "Failed to disable custom domain."
+        "disableFailed": "Failed to disable custom domain.",
+        "confirmUrisFailed": "Failed to confirm redirect URIs.",
+        "urisConfirmed": "Redirect URIs confirmed."
       },
-      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified.",
+      "surface": {
+        "label": "Serves",
+        "current": "Serves: {{value}}",
+        "updatingSurface": "Saving will change which app this domain serves and restart provisioning.",
+        "options": {
+          "client_portal": "Client portal",
+          "msp": "MSP app",
+          "both": "Both"
+        },
+        "descriptions": {
+          "client_portal": "The domain opens your client portal. This is the default.",
+          "msp": "The domain opens the MSP (technician) app. Single sign-on redirect URIs must be registered first.",
+          "both": "One domain serves both apps. Paths under /msp open the MSP app and paths under /client-portal open the client portal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO redirect URIs need to be registered",
+        "description": "This domain serves the MSP app, so single sign-on will only work once the redirect URIs below are registered with your SSO provider. The domain stays pending until they are confirmed.",
+        "listLabel": "Register these redirect URIs:",
+        "contactSupport": "Ask your administrator or contact support to register and confirm these redirect URIs."
+      }
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
@@ -3686,7 +3782,12 @@
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
       "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
-      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration.",
+      "alreadyInUse": "This domain is already in use. Choose a different domain.",
+      "usedByOtherSurface": "This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose \"Both\".",
+      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both.",
+      "redirectUrisHosted": "Redirect URIs for hosted domains are registered by platform support.",
+      "nothingToConfirm": "No pending SSO redirect URI confirmation for this domain."
     }
   },
   "common": {

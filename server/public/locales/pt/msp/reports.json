@@ -318,7 +318,8 @@
       "yes": "Sim",
       "no": "Não",
       "expired": "Expirado",
-      "voided": "Cancelado"
+      "voided": "Cancelado",
+      "all": "Todos os status"
     },
     "profitability": {
       "formats": {

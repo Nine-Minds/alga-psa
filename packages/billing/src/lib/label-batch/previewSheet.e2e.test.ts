@@ -6,7 +6,7 @@
  * skips, without one.
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { recordUrl, type LabelViewModel, type TemplateAst } from '@alga-psa/types';
+import { LABEL_CLASS_ENTITY_TYPE, recordUrl, type LabelViewModel, type TemplateAst } from '@alga-psa/types';
 
 import { browserPoolService } from '../../services/browserPoolService';
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
@@ -23,7 +23,9 @@ import {
 import { renderLabelBatchHtml } from './renderLabelBatchHtml';
 
 const BASE = 'https://psa.example.com';
-const ENTITY_BY_CLASS = { 'ticket-work-tag': 'ticket', 'asset-identity': 'asset', 'stock-unit-identity': 'stock_unit' } as const;
+const ENTITY_BY_CLASS = LABEL_CLASS_ENTITY_TYPE;
+// Record types addressed through their project need one in their URL.
+const SAMPLE_PROJECT_ID = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
 
 interface Box {
   x: number;
@@ -70,7 +72,9 @@ const viewModelFor = (code: string): LabelViewModel => {
   const labelClass = LABEL_CLASS_BY_STANDARD_CODE[code];
   const entityType = ENTITY_BY_CLASS[labelClass];
   const sample = buildSampleLabelViewModel();
-  return { ...sample, labelClass, entityType, url: recordUrl(entityType, sample.recordId, BASE) } as LabelViewModel;
+  const options = entityType === 'staging_container' ? { projectId: SAMPLE_PROJECT_ID } : {};
+  const sequence = labelClass === 'staging-container' ? { n: 3, total: 5 } : null;
+  return { ...sample, labelClass, entityType, sequence, url: recordUrl(entityType, sample.recordId, BASE, options) } as LabelViewModel;
 };
 
 afterAll(async () => {

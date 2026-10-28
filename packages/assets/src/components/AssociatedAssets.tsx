@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import useSWR from 'swr';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
+import { entityAssetsCacheKey } from '../lib/assetCacheKeys';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -23,7 +24,6 @@ import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
-import { ticketAssetsKey } from '../lib/assetCacheKeys';
 import { useAssetStatusLabel } from '../lib/assetStatus';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { ContentCard } from '@alga-psa/ui/components';
@@ -46,6 +46,8 @@ interface AssociatedAssetsProps {
     defaultBoardId?: string;
     /** Server-started associated-assets promise; skips the mount fetch when provided. */
     initialAssets?: Promise<Asset[]>;
+    /** List associations without add/remove (for example on an ended co-managed workspace). */
+    readOnly?: boolean;
 }
 
 interface SelectedAsset {
@@ -54,12 +56,76 @@ interface SelectedAsset {
 }
 
 export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId,
-    initialAssets,
+    initialAssets, readOnly = false,
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
     const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
     useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    // Single source of truth for the linked-assets list. Other surfaces (e.g.
+    // Receive equipment) revalidate it via matchEntityAssetsCacheKeys.
+    const { data: linkedAssets, error: linkedAssetsError, mutate: revalidateLinkedAssets } = useSWR<Asset[]>(
+        entityAssetsCacheKey(entityType, entityId),
+        async () => unwrapAssetActionResult(await listEntityAssets(entityId, entityType)),
+        // initialAssets seeds the cache below, so skip the mount fetch then.
+        { revalidateOnMount: !initialAssets, revalidateOnFocus: false, shouldRetryOnError: false }
+    );
+
+    useEffect(() => {
+        if (!initialAssets) return;
+        let cancelled = false;
+        // initialAssets may be a React Flight thenable (RSC-streamed) whose
+        // .then() returns undefined; normalize to a real, chainable Promise.
+        Promise.resolve(initialAssets).then((assets) => {
+            if (cancelled) return;
+            void revalidateLinkedAssets(unwrapAssetActionResult(assets), { revalidate: false });
+        }).catch((error) => {
+            if (cancelled) return;
+            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
+                defaultValue: 'Failed to load associated assets'
+            }));
+            void revalidateLinkedAssets([], { revalidate: false });
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialAssets]);
+
+    useEffect(() => {
+        if (!linkedAssetsError) return;
+        handleError(linkedAssetsError, t('associatedAssets.errors.loadAssociatedAssets', {
+            defaultValue: 'Failed to load associated assets'
+        }));
+    }, [linkedAssetsError, t]);
+
+    const associatedAssets = useMemo<AssetAssociation[]>(
+        () => (linkedAssets ?? []).map((asset): AssetAssociation => ({
+            tenant: asset.tenant,
+            asset_id: asset.asset_id,
+            entity_id: entityId,
+            entity_type: entityType,
+            relationship_type: 'affected',
+            created_by: 'system',
+            created_at: new Date().toISOString(),
+            asset,
+        })),
+        [linkedAssets, entityId, entityType]
+    );
+    // Already-linked IDs are filtered out of the "available" list.
+    const associatedAssetIds = useMemo(
+        () => new Set((linkedAssets ?? []).map((a) => a.asset_id)),
+        [linkedAssets]
+    );
+    const isLoading = linkedAssets === undefined && !linkedAssetsError;
+    const loadAssociatedAssets = () => revalidateLinkedAssets();
+
+    // The type registry only informs CUSTOM asset-type icons; builtin types
+    // render local icons. Fetch it lazily, and only when a custom-typed asset
+    // is actually on screen — most tickets never pay this request.
+    const needsTypeRegistry = associatedAssets.some((association) => {
+        const type = association.asset?.asset_type;
+        return Boolean(type) && !BUILTIN_ICON_TYPES.has(type as string);
+    });
+    const assetTypeEntries = useAssetTypeRegistry(needsTypeRegistry);
 
     // Multi-select state for asset selection
     const [selectedAssets, setSelectedAssets] = useState<Map<string, SelectedAsset>>(new Map());
@@ -96,61 +162,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         t(`associatedAssets.relationshipTypes.${type}`, {
             defaultValue: type.charAt(0).toUpperCase() + type.slice(1)
         });
-
-    const shapeAssociations = useCallback((assets: Asset[]): AssetAssociation[] =>
-        assets.map((asset): AssetAssociation => ({
-            tenant: asset.tenant,
-            asset_id: asset.asset_id,
-            entity_id: entityId,
-            entity_type: entityType,
-            relationship_type: 'affected',
-            created_by: 'system',
-            created_at: new Date().toISOString(),
-            asset,
-        })), [entityId, entityType]);
-
-    // The server-started promise feeds the first read only; every later
-    // revalidation (a receive, a custody change, add/remove) hits the action.
-    const initialAssetsRef = useRef<{ entityId: string; promise: Promise<Asset[]> } | null>(
-        initialAssets ? { entityId, promise: initialAssets } : null
-    );
-    const { data: associatedAssets = [], isLoading: isFetching, mutate: mutateAssociations } = useSWR(
-        ticketAssetsKey(entityType, entityId),
-        async (): Promise<AssetAssociation[]> => {
-            const initial = initialAssetsRef.current;
-            initialAssetsRef.current = null;
-            // initialAssets may be a React Flight thenable (RSC-streamed) whose
-            // .then() returns undefined; normalize to a real, chainable Promise.
-            const assets = initial && initial.entityId === entityId
-                ? unwrapAssetActionResult(await Promise.resolve(initial.promise))
-                : unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
-            return shapeAssociations(assets);
-        },
-        {
-            revalidateOnFocus: false,
-            onError: (error) => {
-                handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                    defaultValue: 'Failed to load associated assets'
-                }));
-            },
-        }
-    );
-    const isLoading = isFetching;
-    // Track associated asset IDs to filter them from the available list
-    const associatedAssetIds = useMemo(
-        () => new Set(associatedAssets.map((a) => a.asset_id)),
-        [associatedAssets]
-    );
-    const loadAssociatedAssets = useCallback(() => mutateAssociations(), [mutateAssociations]);
-
-    // The type registry only informs CUSTOM asset-type icons; builtin types
-    // render local icons. Fetch it lazily, and only when a custom-typed asset
-    // is actually on screen — most tickets never pay this request.
-    const needsTypeRegistry = associatedAssets.some((association) => {
-        const type = association.asset?.asset_type;
-        return Boolean(type) && !BUILTIN_ICON_TYPES.has(type as string);
-    });
-    const assetTypeEntries = useAssetTypeRegistry(needsTypeRegistry);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
@@ -446,11 +457,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             <ContentCard
                 id={id}
                 collapsible
-                defaultExpanded={false}
+                defaultExpanded={associatedAssets.length > 0}
                 title={t('associatedAssets.title', { defaultValue: 'Assets' })}
                 headerIcon={<Monitor className="w-5 h-5" />}
                 count={associatedAssets.length}
-                addButton={{
+                addButton={readOnly ? undefined : {
                     id: 'add-asset-button',
                     label: t('associatedAssets.actions.addAsset', { defaultValue: 'Add Asset' }),
                     onClick: handleOpenDialog
@@ -504,7 +515,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                         )}
                                     </div>
                                     <div className="flex flex-shrink-0 items-center">
-                                        <Button
+                                        {!readOnly && <Button
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
                                             size="sm"
@@ -514,7 +525,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             className="text-gray-600 hover:text-gray-900"
                                         >
                                             <span aria-hidden="true">×</span>
-                                        </Button>
+                                        </Button>}
                                     </div>
                                 </div>
                                 {/* Meta row: status badge, custody chip and remote-access icon wrap together beneath the name so the

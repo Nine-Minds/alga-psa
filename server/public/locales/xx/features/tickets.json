@@ -92,6 +92,7 @@
     "button": "⟦Ƒīŀŧḗřş⟧",
     "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
     "category": "⟦Ƒīŀŧḗř ƀẏ ƈȧŧḗɠȯřẏ⟧",
+    "removeFilterChip": "⟦Řḗḿȯṽḗ ƒīŀŧḗř: {{label}}⟧",
     "assignee": "⟦Ȧşşīɠƞḗḗ⟧",
     "allAssignees": "⟦Ȧŀŀ Ȧşşīɠƞḗḗş⟧",
     "responseState": "⟦Řḗşƥȯƞşḗ Şŧȧŧḗ⟧",
@@ -1420,10 +1421,10 @@
     "availableBadge": "⟦Ȧṽȧīŀȧƀŀḗ: {{available}}⟧",
     "availableByLocation": "⟦Ƒřḗḗ şŧȯƈķ ƀẏ ŀȯƈȧŧīȯƞ⟧",
     "freeOfOnHand": "⟦{{free}} ƒřḗḗ ȯƒ {{onHand}}⟧",
-    "stockHeld": "⟦Ȯƞŀẏ {{free}} ȧṽȧīŀȧƀŀḗ. {{held}} ȯƞ ħȧƞḓ īş ȯƞ ħȧřḓ ħȯŀḓ ƒȯř şȧŀḗş ȯřḓḗřş ȧƞḓ ƈȧƞ'ŧ ƀḗ ŭşḗḓ ħḗřḗ.⟧",
+    "stockHeld": "⟦Ȯƞŀẏ {{free}} ȧṽȧīŀȧƀŀḗ. {{held}} ȯƞ ħȧƞḓ īş ȯƞ ħȧřḓ ħȯŀḓ ƒȯř şȧŀḗş ȯřḓḗřş ȯř ƥřȯĵḗƈŧş ȧƞḓ ƈȧƞ'ŧ ƀḗ ŭşḗḓ ħḗřḗ.⟧",
     "stockInsufficient": "⟦Ȯƞŀẏ {{onHand}} ȯƞ ħȧƞḓ, {{requested}} řḗʠŭḗşŧḗḓ.⟧",
-    "reservedStockTitle": "⟦Şŧȯƈķ īş řḗşḗřṽḗḓ ƒȯř ȧ şȧŀḗş ȯřḓḗř⟧",
-    "reservedStockMessage": "⟦Ȯƞŀẏ {{free}} ȯƒ ŧħīş ƥřȯḓŭƈŧ īş ƒřḗḗ. {{reserved}} ȯƞ ħȧƞḓ īş řḗşḗřṽḗḓ ƒȯř şȧŀḗş ȯřḓḗřş, ȧƞḓ ẏȯŭ ȧşķḗḓ ƒȯř {{requested}}. Ȧḓḓīƞɠ īŧ ȧƞẏẇȧẏ ŧȧķḗş şŧȯƈķ ȧ şȧŀḗş ȯřḓḗř īş ƈȯŭƞŧīƞɠ ȯƞ ȧƞḓ ḿȧẏ ŀḗȧṽḗ ŧħȧŧ ȯřḓḗř şħȯřŧ.⟧",
+    "reservedStockTitle": "⟦Şŧȯƈķ īş řḗşḗřṽḗḓ ƒȯř ȧ şȧŀḗş ȯřḓḗř ȯř ƥřȯĵḗƈŧ⟧",
+    "reservedStockMessage": "⟦Ȯƞŀẏ {{free}} ȯƒ ŧħīş ƥřȯḓŭƈŧ īş ƒřḗḗ. {{reserved}} ȯƞ ħȧƞḓ īş řḗşḗřṽḗḓ ƒȯř şȧŀḗş ȯřḓḗřş ȯř ƥřȯĵḗƈŧş, ȧƞḓ ẏȯŭ ȧşķḗḓ ƒȯř {{requested}}. Ȧḓḓīƞɠ īŧ ȧƞẏẇȧẏ ŧȧķḗş şŧȯƈķ ȧ şȧŀḗş ȯřḓḗř ȯř ƥřȯĵḗƈŧ īş ƈȯŭƞŧīƞɠ ȯƞ ȧƞḓ ḿȧẏ ŀḗȧṽḗ īŧ şħȯřŧ.⟧",
     "reservedStockConfirm": "⟦Ȧḓḓ ȧƞẏẇȧẏ⟧"
   },
   "watchList": {
@@ -1697,7 +1698,11 @@
       "ruleSubcategoryRequiresCategory": "⟦Şḗŀḗƈŧ ȧ ƈȧŧḗɠȯřẏ ƀḗƒȯřḗ ƈħȯȯşīƞɠ ȧ şŭƀƈȧŧḗɠȯřẏ.⟧",
       "ruleTooManyKeywords": "⟦Ŭşḗ ȧŧ ḿȯşŧ {{max}} ķḗẏẇȯřḓş ƥḗř řŭŀḗ.⟧",
       "ruleKeywordTooLong": "⟦Ķḗḗƥ ḗȧƈħ ķḗẏẇȯřḓ ŧȯ {{max}} ƈħȧřȧƈŧḗřş ȯř ƒḗẇḗř.⟧",
-      "ruleOriginInvalid": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ŧīƈķḗŧ şȯŭřƈḗş īş ƞȯŧ ṽȧŀīḓ.⟧"
+      "ruleOriginInvalid": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ŧīƈķḗŧ şȯŭřƈḗş īş ƞȯŧ ṽȧŀīḓ.⟧",
+      "templateClientMismatch": "⟦Ŧħīş ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗ īş ŀīḿīŧḗḓ ŧȯ ȧ ḓīƒƒḗřḗƞŧ ƈŀīḗƞŧ ŧħȧƞ ŧħīş ŧīƈķḗŧ'ş ƈŀīḗƞŧ.⟧",
+      "templateClientInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ẇȧş ƞȯŧ ƒȯŭƞḓ.⟧",
+      "ruleClientOutsideTemplateScope": "⟦Ŧħīş ŧḗḿƥŀȧŧḗ ƀḗŀȯƞɠş ŧȯ ȯƞḗ ƈŀīḗƞŧ, şȯ īŧş řŭŀḗş ƈȧƞƞȯŧ ŧȧřɠḗŧ ȯŧħḗř ƈŀīḗƞŧş.⟧",
+      "templateRulesTargetOtherClients": "⟦Şȯḿḗ ȯƒ ŧħīş ŧḗḿƥŀȧŧḗ'ş ȧŭŧȯ-ȧƥƥŀẏ řŭŀḗş ŧȧřɠḗŧ ȯŧħḗř ƈŀīḗƞŧş. Řḗḿȯṽḗ ŧħȯşḗ ƈŀīḗƞŧş ƒřȯḿ ŧħḗ řŭŀḗş ƀḗƒȯřḗ ȧşşīɠƞīƞɠ ŧħḗ ŧḗḿƥŀȧŧḗ ŧȯ ȯƞḗ ƈŀīḗƞŧ.⟧"
     }
   },
   "ticketSection": {
@@ -1823,7 +1828,8 @@
     "remoteFieldUpdated": "⟦{{name}} ŭƥḓȧŧḗḓ {{field}}⟧",
     "connection": {
       "reconnecting": "⟦Ŀīṽḗ ŭƥḓȧŧḗş ȯƒƒŀīƞḗ - řḗƈȯƞƞḗƈŧīƞɠ...⟧",
-      "unavailable": "⟦Ŀīṽḗ ŭƥḓȧŧḗş ŭƞȧṽȧīŀȧƀŀḗ⟧"
+      "unavailable": "⟦Ŀīṽḗ ŭƥḓȧŧḗş ŭƞȧṽȧīŀȧƀŀḗ⟧",
+      "offlineShort": "⟦Ȯƒƒŀīƞḗ⟧"
     }
   },
   "delete": {
@@ -2005,7 +2011,10 @@
       "openScheduleEntry": "⟦Ȯƥḗƞ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧",
       "acrossEntries_few": "⟦ȧƈřȯşş {{count}} ḗƞŧřīḗş⟧",
       "acrossEntries_many": "⟦ȧƈřȯşş {{count}} ḗƞŧřīḗş⟧",
-      "changeLocation": "⟦Ƈħȧƞɠḗ ŀȯƈȧŧīȯƞ⟧"
+      "changeLocation": "⟦Ƈħȧƞɠḗ ŀȯƈȧŧīȯƞ⟧",
+      "addDescriptionPrompt": "⟦Ȧḓḓ ȧ ḓḗşƈřīƥŧīȯƞ — ẇħȧŧ īş ŧħḗ ƥřȯƀŀḗḿ, ȧƞḓ ẇħȧŧ ḓȯḗş ŧħḗ ƈŭşŧȯḿḗř ƞḗḗḓ?⟧",
+      "projectTasks": "⟦Ƥřȯĵḗƈŧ ŧȧşķş⟧",
+      "timeAndBilling": "⟦Ŧīḿḗ & ƀīŀŀīƞɠ⟧"
     },
     "timeline": {
       "subtitle": "⟦Řḗƥŀīḗş, ŧīḿḗ, ȧƞḓ şẏşŧḗḿ ƈħȧƞɠḗş īƞ ȯƞḗ ƥŀȧƈḗ⟧",
@@ -2101,6 +2110,17 @@
       "collapseActivity": "⟦Ƈȯŀŀȧƥşḗ ȯŀḓḗř ȧƈŧīṽīŧẏ⟧",
       "replyingToComment": "⟦Řḗƥŀẏīƞɠ ŧȯ {{name}}⟧",
       "createdFromTemplate": "⟦{{actor}} ƈřḗȧŧḗḓ ŧħīş ŧīƈķḗŧ ƒřȯḿ ŧḗḿƥŀȧŧḗ \"{{name}}\"⟧"
+    },
+    "board": {
+      "conversation": "⟦Ƈȯƞṽḗřşȧŧīȯƞ⟧",
+      "details": "⟦Ḓḗŧȧīŀş⟧"
+    },
+    "groups": {
+      "customer": "⟦Ƈŭşŧȯḿḗř⟧",
+      "work": "⟦Ẇȯřķ⟧",
+      "who": "⟦Ƥḗȯƥŀḗ⟧",
+      "linked": "⟦Ŀīƞķḗḓ īŧḗḿş⟧",
+      "empty": "⟦Ƞȯŧħīƞɠ ħḗřḗ ẏḗŧ⟧"
     }
   },
   "externalLinks": {
@@ -2524,7 +2544,9 @@
     "discard": "⟦Ḓīşƈȧřḓ şŧȯƥẇȧŧƈħ⟧",
     "pausedHint": "⟦Ƥȧŭşḗḓ. Řḗşŭḿḗ ŧȯ ķḗḗƥ ŧřȧƈķīƞɠ, ȯř şŧȯƥ ŧȯ ŀȯɠ ŧħḗ ŧīḿḗ.⟧",
     "workDescription": "⟦Ẇȯřķ ḓḗşƈřīƥŧīȯƞ⟧",
-    "whatAreYouWorkingOn": "⟦Ẇħȧŧ ȧřḗ ẏȯŭ ẇȯřķīƞɠ ȯƞ?⟧"
+    "whatAreYouWorkingOn": "⟦Ẇħȧŧ ȧřḗ ẏȯŭ ẇȯřķīƞɠ ȯƞ?⟧",
+    "chipElsewhere": "⟦Ŧīḿḗř ȯƞ {{label}}⟧",
+    "title": "⟦Şŧȯƥẇȧŧƈħ⟧"
   },
   "templates": {
     "loading": "⟦Ŀȯȧḓīƞɠ…⟧",

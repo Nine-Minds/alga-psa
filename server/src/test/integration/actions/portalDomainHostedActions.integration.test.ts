@@ -86,6 +86,7 @@ describe('Portal domain hosted actions (temporal mode)', () => {
       tenantId: context.tenantId,
       portalDomainId: row.id,
       trigger: 'register',
+      surface: 'client_portal',
     });
   });
 
@@ -127,6 +128,7 @@ describe('Portal domain hosted actions (temporal mode)', () => {
       tenantId: context.tenantId,
       portalDomainId: row.id,
       trigger: 'refresh',
+      surface: 'client_portal',
     });
   });
 

@@ -27,9 +27,31 @@ export function matchAssetCacheKeys(
 
 const ENTITY_ASSETS_KEY = 'entity-assets';
 
-/** Cache key for the assets associated with a ticket or project (the Assets panel). */
-export const ticketAssetsKey = (entityType: string, entityId: string) =>
-  [ENTITY_ASSETS_KEY, entityType, entityId] as const;
+/**
+ * SWR key for the assets linked to a ticket/project (the Assets panel/tile).
+ * Receive equipment revalidates it through matchAssetCacheKeys([assetId, ticketId]).
+ */
+export function entityAssetsCacheKey(
+  entityType: 'ticket' | 'project',
+  entityId: string
+): readonly ['entity-assets', 'ticket' | 'project', string] {
+  return [ENTITY_ASSETS_KEY, entityType, entityId] as const;
+}
+
+/** Back-compat alias of entityAssetsCacheKey (this card's original name). */
+export const ticketAssetsKey = entityAssetsCacheKey;
+
+/** Key filter matching `entityAssetsCacheKey` for one entity. */
+export function matchEntityAssetsCacheKeys(
+  entityType: 'ticket' | 'project',
+  entityId: string
+): (key: unknown) => boolean {
+  return (key: unknown): boolean =>
+    Array.isArray(key) &&
+    key[0] === ENTITY_ASSETS_KEY &&
+    key[1] === entityType &&
+    key[2] === entityId;
+}
 
 /**
  * Every mounted entity Assets panel. For writes that know the asset but not

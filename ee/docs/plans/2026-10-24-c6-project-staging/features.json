@@ -1,0 +1,230 @@
+[
+  {
+    "id": "F001",
+    "description": "Gate: B1 (#3818) merged, C2 merged, rebased, C4 status checked, D9 branch recorded",
+    "implemented": true,
+    "designRef": "4.0"
+  },
+  {
+    "id": "F002",
+    "description": "Extract lib/allocation.ts (resolveAllocationLocation, counter claim/release, FIFO unit claim/release by claimant, reverseAllocationCounter); sales orders call it with identical behaviour",
+    "implemented": true,
+    "designRef": "4.1"
+  },
+  {
+    "id": "F003",
+    "description": "Migration: project_staging_lines (Citus-safe, composite FKs, kind/status CHECKs, indexes)",
+    "implemented": true,
+    "designRef": "4.2"
+  },
+  {
+    "id": "F004",
+    "description": "Migration: stock_units.allocated_staging_line_id with composite FK, index, and mutual-exclusion CHECK with allocated_so_line_id",
+    "implemented": true,
+    "designRef": "4.2"
+  },
+  {
+    "id": "F005",
+    "description": "Migration: staging_containers and staging_container_members (unique sequence per project, unique member per line per box)",
+    "implemented": true,
+    "designRef": "4.2"
+  },
+  {
+    "id": "F006",
+    "description": "Types: IProjectStagingLine, IStagingContainer, IStagingContainerMember",
+    "implemented": true,
+    "designRef": "4.2"
+  },
+  {
+    "id": "F007",
+    "description": "consume.ts: location_id option",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F008",
+    "description": "consume.ts: claimant option - non-serialized releases own counter under row lock then runs evaluateConsumption",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F009",
+    "description": "consume.ts: claimant option - serialized allocated unit with matching allocated_staging_line_id consumable; claim cleared in unitPatch",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F010",
+    "description": "consume.ts: generalise refusal messages to 'reserved for sales orders or projects'",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F011",
+    "description": "reconcile.ts computeAllocationsFromTruth: reserved lines add to reserved, staged lines add to held, at reserved_location_id (non-serialized, track_stock)",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F012",
+    "description": "fulfillmentActions loadCandidateUnits: allocated_staging_line_id counts as foreign hard hold (FIFO exclusion, explicit pick error, picker not selectable)",
+    "implemented": true,
+    "designRef": "4.3"
+  },
+  {
+    "id": "F013",
+    "description": "staging.ts: reserveStagingLines (all-or-nothing, single location, typed shortfall via StockConflictDetail, serialized one-line-per-unit, kit/non-product refusal, untracked plain lines)",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F014",
+    "description": "staging.ts: adjustReservation and swapUnit",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F015",
+    "description": "staging.ts: stageLines (reserved to held) and releaseLines",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F016",
+    "description": "staging.ts: installLines via addMaterial from_staging_line_id; per-line result list",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F017",
+    "description": "materials.ts: from_staging_line_id passthrough; deleteMaterial sets linked staging line to released",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F018",
+    "description": "staging.ts: undoInstall (reverse consumption, re-claim as staged, refuse if billed or stock not free)",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F019",
+    "description": "staging.ts: addClientLines (client_asset same-client check, client_item) with status-only transitions and no stock writes (D9 no-C4: plain links)",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F020",
+    "description": "staging.ts: listStaging including shortfall display data",
+    "implemented": true,
+    "designRef": "4.4"
+  },
+  {
+    "id": "F021",
+    "description": "stagingContainers.ts: create, rename, delete-empty, seal, reopen, numbering and identifier",
+    "implemented": true,
+    "designRef": "5"
+  },
+  {
+    "id": "F022",
+    "description": "stagingContainers.ts: pack/unpack with quantity-sum and single-box rules; packing stages the line; list with n of m",
+    "implemented": true,
+    "designRef": "5"
+  },
+  {
+    "id": "F023",
+    "description": "Extract createProjectReadAuthorizer into packages/projects/src/lib/projectReadAuthorizer.ts; use in both old sites; update contract test",
+    "implemented": true,
+    "designRef": "6"
+  },
+  {
+    "id": "F024",
+    "description": "projects stagingActions.ts wrappers with project:read / project:update plus record-level checks (inventory:read for unit picking)",
+    "implemented": true,
+    "designRef": "6"
+  },
+  {
+    "id": "F025",
+    "description": "recordLinks: staging_container entity and path (types and mobile copy byte-identical) incl. matchRecordPath",
+    "implemented": true,
+    "designRef": "7"
+  },
+  {
+    "id": "F026",
+    "description": "labels: staging-container class, LabelViewModel.sequence, designer binding, label-staging-container standard template",
+    "implemented": true,
+    "designRef": "7"
+  },
+  {
+    "id": "F027",
+    "description": "stagingLabelViewModelProvider (null for missing or forbidden) registered in /api/labels/pdf",
+    "implemented": true,
+    "designRef": "7"
+  },
+  {
+    "id": "F028",
+    "description": "printLabels: mixed items [{labelClass,id}] preserving order, cap and all-or-nothing",
+    "implemented": true,
+    "designRef": "7"
+  },
+  {
+    "id": "F029",
+    "description": "staging-manifest registered document type, standard template, bindings, sample data",
+    "implemented": true,
+    "designRef": "8"
+  },
+  {
+    "id": "F030",
+    "description": "renderRegisteredDocumentPdf billing service",
+    "implemented": true,
+    "designRef": "8"
+  },
+  {
+    "id": "F031",
+    "description": "stagingManifestViewModelProvider and GET /api/projects/staging/containers/[id]/manifest route plus middleware skip-list entry",
+    "implemented": true,
+    "designRef": "8"
+  },
+  {
+    "id": "F032",
+    "description": "UI: staging page route and Staging button in ProjectInfo header",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F033",
+    "description": "UI: lines table, reserve dialog with availability conflict display, add-client-item dialog",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F034",
+    "description": "UI: box panel, pack dialog, seal/reopen",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F035",
+    "description": "UI: bulk print (box label then unit and asset labels, unit labels dropped without inventory:read, >200 prompt)",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F036",
+    "description": "UI: 'From staging' marker in Materials drawer; Units view shows claimant (sales order or project)",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F037",
+    "description": "Project close/delete: refuse delete with active stock claims; warn with 'Release all reserved and staged'",
+    "implemented": true,
+    "designRef": "9"
+  },
+  {
+    "id": "F038",
+    "description": "Locales for every shipped server/public/locales/*/features/projects.json",
+    "implemented": true,
+    "designRef": "10"
+  }
+]

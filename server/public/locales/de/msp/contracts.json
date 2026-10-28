@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Wiederkehrende Menge",
       "allocationQuantityLabel": "Zuordnungsmenge",
       "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
-    },
-    "advanceSuggestion": {
-      "message": "Bei nachträglicher Abrechnung kann diese Position erst nach Ende ihres ersten Leistungszeitraums abgerechnet werden. Bei Abrechnung im Voraus nach dem Vertragsrhythmus wird sie stattdessen zum Startdatum abgerechnet.",
-      "action": "Im Voraus nach Vertragsrhythmus abrechnen"
     }
   },
   "wizardProducts": {
@@ -2770,7 +2766,8 @@
       "advance": "Im Voraus nach dem Vertragsrhythmus abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Vertragsstart."
     },
     "client": {
-      "arrears": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der aktuelle Abrechnungszeitraum des Kunden endet.",
+      "arrears": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der Abrechnungszeitraum des Kunden, der das Startdatum enthält, endet.",
+      "arrearsPartial": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der Abrechnungszeitraum des Kunden, der das Startdatum enthält, endet. Da das Startdatum mitten in diesem Zeitraum liegt, deckt sie {{periodStart}} – {{periodEnd}} ab.",
       "advance": "Im Voraus nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Beginn des Abrechnungszeitraums des Kunden, der den Vertragsstart enthält."
     }
   },
@@ -2988,5 +2985,9 @@
       "invalidBlock": "Vervollständigen Sie Blockgröße, Preis und Auslöser für jede Prepaid-Block-Position, bevor Sie abschließen.",
       "rateRequired": "Die Prepaid-Block-Leistung \"{{serviceName}}\" benötigt einen Stundensatz über null (Stunden über den Block hinaus werden zu diesem Satz abgerechnet)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Erste Rechnung: Die Rechnung vom {{invoiceDate}} deckt {{periodStart}} – {{periodEnd}} ab (nachträglich abgerechnet). Wählen Sie „Im Voraus“, um sie mit der Rechnung für den Zeitraum ab {{advanceInvoiceDate}} abzurechnen.",
+    "billInAdvance": "Im Voraus abrechnen"
   }
 }

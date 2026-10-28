@@ -9,7 +9,7 @@ import type { RecordEntityType } from './recordLinks';
  */
 
 /** Which standard label layout a record is printed with. */
-export const LABEL_CLASSES = ['ticket-work-tag', 'asset-identity', 'stock-unit-identity'] as const;
+export const LABEL_CLASSES = ['ticket-work-tag', 'asset-identity', 'stock-unit-identity', 'staging-container'] as const;
 export type LabelClass = (typeof LABEL_CLASSES)[number];
 
 export function isLabelClass(value: unknown): value is LabelClass {
@@ -42,6 +42,7 @@ export const LABEL_CLASS_ENTITY_TYPE: Record<LabelClass, RecordEntityType> = {
   'ticket-work-tag': 'ticket',
   'asset-identity': 'asset',
   'stock-unit-identity': 'stock_unit',
+  'staging-container': 'staging_container',
 };
 
 export interface LabelTenantClient {
@@ -82,10 +83,15 @@ export interface LabelViewModel {
   custodyLocation?: string | null;
   /** Ticket work tag only: who acts next ("Waiting on vendor, Oct 29"). Derived from party + follow-up date only. */
   nextAction?: string | null;
+  /**
+   * Position of a staging box among its project's boxes ("Box n of m"), computed when the label is
+   * rendered (a printed label is a snapshot). Null for every other label class.
+   */
+  sequence?: { n: number; total: number } | null;
   /** Filled by the renderer, not by providers. */
   tenantClient?: LabelTenantClient | null;
   /** Filled by the renderer from the (already visibility-filtered) fields above: "Asset {tag}", "S/N ...{suffix}". */
-  display?: { assetLine: string | null; serialLine: string | null } | null;
+  display?: { assetLine: string | null; serialLine: string | null; sequenceLine?: string | null } | null;
 }
 
 export interface LabelRequestContext {

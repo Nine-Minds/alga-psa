@@ -51,6 +51,7 @@ export * from './interaction.interfaces';
 export * from './invoice.interfaces';
 export * from './job';
 export * from './material.interfaces';
+export * from './staging.interfaces';
 export * from './microsoft365-diagnostics.interfaces';
 export * from './online-meeting.interfaces';
 export * from './payment.interfaces';

@@ -84,6 +84,7 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
+    "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
     "responseState": "Stan odpowiedzi",
@@ -1412,10 +1413,10 @@
     "availableBadge": "Dostępne: {{available}}",
     "availableByLocation": "Wolny zapas według lokalizacji",
     "freeOfOnHand": "{{free}} wolnych z {{onHand}}",
-    "stockHeld": "Dostępne tylko {{free}}. {{held}} sztuk na stanie jest twardo zablokowanych dla zamówień sprzedaży i nie można ich tu użyć.",
+    "stockHeld": "Dostępne tylko {{free}}. {{held}} sztuk na stanie jest twardo zablokowanych dla zamówień sprzedaży lub projektów i nie można ich tu użyć.",
     "stockInsufficient": "Na stanie tylko {{onHand}}, żądano {{requested}}.",
-    "reservedStockTitle": "Zapas jest zarezerwowany dla zamówienia sprzedaży",
-    "reservedStockMessage": "Tylko {{free}} sztuk tego produktu jest wolnych. {{reserved}} sztuk na stanie jest zarezerwowanych dla zamówień sprzedaży, a żądano {{requested}}. Dodanie ich mimo to zabiera zapas, na który liczy zamówienie sprzedaży, i może spowodować braki w tym zamówieniu.",
+    "reservedStockTitle": "Zapas jest zarezerwowany dla zamówienia sprzedaży lub projektu",
+    "reservedStockMessage": "Tylko {{free}} sztuk tego produktu jest wolnych. {{reserved}} sztuk na stanie jest zarezerwowanych dla zamówień sprzedaży lub projektów, a żądano {{requested}}. Dodanie ich mimo to zabiera zapas, na który liczy zamówienie sprzedaży lub projekt, i może spowodować braki.",
     "reservedStockConfirm": "Dodaj mimo to"
   },
   "watchList": {
@@ -1689,7 +1690,11 @@
       "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
       "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
       "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
-      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe.",
+      "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
+      "templateClientInvalid": "Nie znaleziono wybranego klienta.",
+      "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta."
     }
   },
   "ticketSection": {
@@ -1815,7 +1820,8 @@
     "remoteFieldUpdated": "{{name}} zaktualizował(a) {{field}}",
     "connection": {
       "reconnecting": "Aktualizacje na żywo offline - ponowne łączenie...",
-      "unavailable": "Aktualizacje na żywo niedostępne"
+      "unavailable": "Aktualizacje na żywo niedostępne",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1997,7 +2003,10 @@
         "cancelled": "Anulowana"
       },
       "scheduleTime": "Zaplanuj czas",
-      "openScheduleEntry": "Otwórz wpis harmonogramu"
+      "openScheduleEntry": "Otwórz wpis harmonogramu",
+      "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
+      "projectTasks": "Zadania projektu",
+      "timeAndBilling": "Czas i rozliczenia"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -2093,6 +2102,17 @@
       "collapseActivity": "Zwiń starszą aktywność",
       "replyingToComment": "Odpowiedź dla {{name}}",
       "createdFromTemplate": "{{actor}} utworzył(a) to zgłoszenie z szablonu „{{name}}”"
+    },
+    "board": {
+      "conversation": "Rozmowa",
+      "details": "Szczegóły"
+    },
+    "groups": {
+      "customer": "Klient",
+      "work": "Praca",
+      "who": "Osoby",
+      "linked": "Powiązane elementy",
+      "empty": "Jeszcze nic tu nie ma"
     }
   },
   "notifications": {
@@ -2524,7 +2544,9 @@
     "discard": "Odrzuć stoper",
     "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
     "workDescription": "Opis pracy",
-    "whatAreYouWorkingOn": "Nad czym pracujesz?"
+    "whatAreYouWorkingOn": "Nad czym pracujesz?",
+    "chipElsewhere": "Stoper na {{label}}",
+    "title": "Stoper"
   },
   "templates": {
     "loading": "Ładowanie…",
