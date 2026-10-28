@@ -3,6 +3,7 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
+    'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',

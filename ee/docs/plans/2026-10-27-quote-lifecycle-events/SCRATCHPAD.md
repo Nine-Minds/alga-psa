@@ -71,6 +71,16 @@ Drift re-checked against `44629a24f1` (the base named in the PRD is still curren
 - `packages/event-schemas/src/schemas/domain/` has no quote schema file; `shared/workflow/streams/domainEventBuilders/` has no quote builders. Both are correctly "to be created".
 - `server/src/lib/webhooks/eventRegistry.ts` — `WebhookEntity = 'ticket' | 'project' | 'client' | 'contact' | 'client_location'` (5 entities, no `quote`). §6.4 widening is still needed as written.
 - `server/migrations/20261016100000_seed_client_location_workflow_events.cjs` — present, still a valid seed model.
-- `quote_activities` is written through `QuoteActivity` (FK CASCADE does not reach it under Citus; `quote.ts:345` deletes explicitly), so the per-transition idempotency key in §6.1 holds.
+- `quote.ts` contains a comment describing `quote_activities` as Citus-local; that comment alone does not verify the current production distribution or transaction behavior.
 
 Decisions: §9.1–9.4 adopt the PRD's own recommendations (no generic status_changed, IDs-only optional items, no approval events in v1, opportunity hooks as follow-up). §9.5 decided in favour of `shared/lib/quotes/quoteLifecycleEvents.ts` on the strength of the ticket precedent, which also supplies the contract-test pattern for §6.2's ledger test.
+
+## Draft implementation verification (2026-10-28)
+
+- The adopted plan commit `64d31f3d47` is present. The existing `package-lock.json` modification predates this work.
+- The webhook registry still has no quote entity and no quote event schemas or builders exist.
+- The workflow worker DAL has its own expire-on-read writer and a direct combined contract/invoice conversion writer, in addition to its update method. Both require coverage in §6.2. The expiry job also uses raw `knex.transaction`, which does not flush `registerAfterCommit`; it must use a transaction owner that flushes hooks. The model accepts root Knex connections as well as transactions, so its callers need the same audit.
+- Both expire-on-read implementations and the expiry job currently update by quote ID without a status guard. Their activities can be recorded even after another writer changes the status.
+- The configured development database has no Citus extension. Production distribution of `quote_activities` and atomic activity writes remain unverified; do not rely on the earlier Citus-local assertion as proof.
+- A pure status classifier and behavioral tests have been added as an initial building block. It is not connected to any writer, publisher, workflow catalog, or webhook. All feature flags remain false until complete; the classifier test alone does not fulfill T001's full contract. No event delivery is implemented or verified.
+- Validation for this partial foundation: `cd server && npx vitest run ../shared/lib/quotes/quoteLifecycleEvents.test.ts` passed (2 tests); `npm run typecheck -w @alga-psa/shared` and `npm run build:shared` passed. Full application build/typecheck and delivery, commit/rollback, deduplication, tenant isolation, and write-site integration tests have not been run. The app server was not started.

@@ -4,7 +4,7 @@
 - Date: 2026-10-27
 - Author: Robert Isaacs (drafted with Claude)
 - Base: `origin/main` @ `44629a24f1`
-- Origin: hosted-customer feature request (2026-10-22). The PSA ticket is linked by the card's Link PSA Ticket step; customer specifics belong there, not here.
+- Origin: hosted-customer feature request (2026-10-22). Reference: PSA ticket `alga-2026-0002897`.
 
 ## 1. Problem
 
@@ -169,12 +169,6 @@ Line items are fetched with `GET /api/v1/quotes/{id}`.
 4. **Opportunity hooks: follow-up, not this card.** `onQuoteSent` / `onQuoteAccepted` also run on link flows that are not transitions, so moving them into the seam would change behaviour on paths this card does not test.
 5. **Emitter/mapper location — DECIDED: `shared/lib/quotes/quoteLifecycleEvents.ts`.** Mirrors the established ticket engine (`shared/lib/tickets/ticketLifecycleEvents.ts`), which already solves this exact problem: `registerAfterCommit` + `tenantDb` from `@alga-psa/db`, `WorkflowEventPublishContext` from `@alga-psa/event-bus/publishers`, and a write-site contract test (`ticketStatusWriteSites.contract.test.ts`) that fails when a new write site skips the publisher. `packages/billing` already depends on `@alga-psa/shared`, so `Quote.update` imports `queueQuoteLifecycleEvent` by subpath with no cycle; the workflow worker DAL imports the same module. Builders stay in `shared/workflow/streams/domainEventBuilders/quoteEventBuilders.ts` and are re-exported through `packages/workflow-streams/src/streams/index.ts` exactly as `opportunityEventBuilders` is today.
 
-
-1. Should a generic `quote.status_changed` be added? It conflicts with the `(eventId, webhookId)` dedupe when one internal event feeds two public names. Recommendation: no for v1.
-2. Should `selectedOptionalItemIds` be in the accepted payload, or should consumers always fetch? Recommendation: IDs only, in the payload.
-3. Should `pending_approval` and `approval_changes_requested` also emit? Recommendation: not in v1; the mapper table makes it one row each.
-4. Should the opportunity hooks move into the transition seam? Recommendation: a follow-up. They also run on link flows that are not transitions.
-5. Where should the emitter and mapper live so both `packages/billing` and the workflow worker can import them without a cycle?
 
 ## 10. Acceptance criteria
 

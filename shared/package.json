@@ -59,6 +59,7 @@
     "./extensions/domain.js": "./dist/extensions/domain.js",
     "./extensions/installs.js": "./dist/extensions/installs.js",
     "./extensions/types.js": "./dist/extensions/types.js",
+    "./lib/quotes/quoteLifecycleEvents": "./dist/lib/quotes/quoteLifecycleEvents.js",
     "./lib/quoteTerms": "./dist/lib/quoteTerms.js",
     "./lib/quoteTerms.js": "./dist/lib/quoteTerms.js",
     "./lib/ticketStatusClock": "./dist/lib/ticketStatusClock.js",
