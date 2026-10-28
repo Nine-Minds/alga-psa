@@ -623,16 +623,39 @@ async function selectEligibleBlocks(
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', workDate);
     })
-    // A block may outlive its assignment's original bounds, or be forfeited
-    // early on termination. Historical work remains eligible through the end
-    // date, but work after the assignment ended cannot spend its remainder.
+    // Renewing assignments keep purchased blocks through each block's own
+    // expiry, even without a renewal draft. A termination audit still caps
+    // that extension below, including historical work logged after termination.
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.client_contract_id').orWhereExists(function (this: Knex.QueryBuilder) {
         this.select(trx.raw('1')).from('client_contracts as cc')
           .where('cc.tenant', tenant).whereRaw('cc.tenant = hb.tenant')
           .whereRaw('cc.client_contract_id = hb.client_contract_id')
           .where(function (this: Knex.QueryBuilder) { this.whereNull('cc.start_date').orWhere('cc.start_date', '<=', workDate); })
-          .where(function (this: Knex.QueryBuilder) { this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', workDate); });
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', workDate)
+              .orWhere(function (this: Knex.QueryBuilder) {
+                this.where('cc.status', 'renewing')
+                  .whereExists(function (this: Knex.QueryBuilder) {
+                    this.select(trx.raw('1')).from('contracts as renewing_contract')
+                      .where('renewing_contract.tenant', tenant).whereRaw('renewing_contract.tenant = cc.tenant')
+                      .whereRaw('renewing_contract.contract_id = cc.contract_id')
+                      .where('renewing_contract.status', '!=', 'draft')
+                      .where(function (this: Knex.QueryBuilder) {
+                        this.where(function (this: Knex.QueryBuilder) {
+                          this.where('cc.is_active', true).where('renewing_contract.status', '!=', 'terminated');
+                        }).orWhereExists(function (this: Knex.QueryBuilder) {
+                          // Once terminated, retain the renewal interval for
+                          // work before the recorded effective end date.
+                          this.select(trx.raw('1')).from('hour_block_audit as renewal_end')
+                            .where('renewal_end.tenant', tenant).whereRaw('renewal_end.tenant = hb.tenant')
+                            .whereRaw('renewal_end.block_id = hb.block_id')
+                            .where('renewal_end.type', 'contract_end_expiration');
+                        });
+                      });
+                  });
+              });
+          });
       });
     })
     .whereNotExists(function (this: Knex.QueryBuilder) {
