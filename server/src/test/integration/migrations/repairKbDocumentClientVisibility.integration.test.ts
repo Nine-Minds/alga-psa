@@ -8,7 +8,7 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../../test-utils/testDataFactory';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../../migrations/20261027100000_repair_kb_document_client_visibility.cjs');
+const migration = require('../../../../migrations/20261028010000_repair_kb_document_client_visibility.cjs');
 
 let db: Knex;
 let tenantId: string;
