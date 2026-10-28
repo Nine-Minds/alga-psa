@@ -447,7 +447,6 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_submission_application_results', 'service_request_submission_applications',
   'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
-  'service_request_audience_client_groups', 'service_request_audience_clients',
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===

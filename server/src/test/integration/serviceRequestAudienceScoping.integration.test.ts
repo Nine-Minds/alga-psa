@@ -3,14 +3,16 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { getAudienceReach } from '../../lib/service-requests/audienceReach';
+import { loadRequesterRecord } from '../../lib/service-requests/definitionAudience';
 import { listVisibleServiceRequestCatalogItems } from '../../lib/service-requests/portalCatalog';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
 import {
   duplicateServiceRequestDefinition,
+  deleteServiceRequestDefinitionFromManagement,
   saveServiceRequestDefinitionAudience,
 } from '../../lib/service-requests/definitionManagement';
-import { loadDefinitionAudience } from '../../lib/service-requests/definitionAudience';
 import { getServiceRequestDefinitionEditorData } from '../../lib/service-requests/definitionEditor';
 import { validateServiceRequestDefinitionForPublish } from '../../lib/service-requests/definitionValidation';
 import { publishServiceRequestDefinition } from '../../lib/service-requests/definitionPublishing';
@@ -105,6 +107,8 @@ async function createFixture(): Promise<Fixture> {
       portal_visibility_group_id: group,
     });
   }
+  await t(tenant, 'users').where({ user_id: f.userA }).update({ user_type: 'client', contact_id: f.contactA1, is_inactive: false });
+  await t(tenant, 'users').where({ user_id: f.userB }).update({ user_type: 'client', contact_id: f.contactB1, is_inactive: false });
   return f;
 }
 
@@ -129,7 +133,6 @@ async function createPublishedDefinition(
     visibility_config: {},
     lifecycle_state: 'published',
     published_at: db.fn.now(),
-    audience_mode: options.audienceMode ?? 'all',
   });
   await t(tenant, 'service_request_definition_versions').insert({
     tenant,
@@ -159,7 +162,7 @@ async function scope(
     knex: db,
     tenant: f.tenant,
     definitionId,
-    audience: { mode, clientIds, groupIds },
+    audience: mode === 'all' ? { join: 'and', clauses: [] } : { join: 'or', clauses: [...clientIds.map((id) => ({ path: 'client.id', operator: 'in' as const, value: [id] })), ...(groupIds.length ? [{ path: 'contact.group.id', operator: 'in' as const, value: groupIds }] : [])] },
   });
 }
 
@@ -188,8 +191,9 @@ async function submissionCount(tenant: string) {
 
 async function cleanupTenant(tenant: string) {
   await t(tenant, 'service_request_submissions').del();
-  await t(tenant, 'service_request_audience_client_groups').del();
-  await t(tenant, 'service_request_audience_clients').del();
+  await t(tenant, 'tag_references').del();
+  await t(tenant, 'tag_mappings').del();
+  await t(tenant, 'tag_definitions').del();
   await t(tenant, 'service_request_definition_versions').del();
   await t(tenant, 'service_request_definitions').del();
   await t(tenant, 'contacts').del();
@@ -215,234 +219,131 @@ describe('service request audience scoping', () => {
     if (db) await db.destroy();
   });
 
-  it('existing definitions default to audience_mode all and stay visible to everyone', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    expect(await loadDefinitionAudience(db, f.tenant, id)).toEqual({ mode: 'all', clientIds: [], groupIds: [] });
-    for (const who of ['A1', 'A0', 'B1', 'Anon-A'] as const) {
-      expect(await catalogIds(f, who)).toContain(id);
-      expect(await detail(f, who, id)).not.toBeNull();
-    }
-  });
-
-  it('client scope: catalog, detail and submit work for client A and are denied for client B', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA]);
-
-    expect(await catalogIds(f, 'A0')).toContain(id);
-    expect(await catalogIds(f, 'Anon-A')).toContain(id);
-    expect(await catalogIds(f, 'B1')).not.toContain(id);
-    expect(await detail(f, 'A0', id)).not.toBeNull();
-    expect(await detail(f, 'B1', id)).toBeNull();
-
-    const submitted = await submitPortalServiceRequest({
-      knex: db,
-      tenant: f.tenant,
-      definitionId: id,
-      requesterUserId: f.userA,
-      clientId: f.clientA,
-      contactId: f.contactA0,
-      payload: { notes: 'hello' },
-    });
-    expect(submitted.submissionId).toBeTruthy();
-    expect(await submissionCount(f.tenant)).toBe(1);
-
-    await expect(
-      submitPortalServiceRequest({
-        knex: db,
-        tenant: f.tenant,
-        definitionId: id,
-        requesterUserId: f.userB,
-        clientId: f.clientB,
-        contactId: f.contactB1,
-        payload: { notes: 'sneaky' },
-      })
-    ).rejects.toThrow('Service request is not visible or not published');
-    expect(await submissionCount(f.tenant)).toBe(1);
-  });
-
-  it('group scope admits the member contact and rejects no-group and other-group contacts', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    // Group-only audience, saved through the action: no client row exists.
-    await scope(f, id, 'scoped', [], [f.groupA1]);
-    expect((await loadDefinitionAudience(db, f.tenant, id)).clientIds).toEqual([]);
-
+  it('defaults to everyone and selected-empty admits nobody', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant);
     expect(await catalogIds(f, 'A1')).toContain(id);
-    expect(await detail(f, 'A1', id)).not.toBeNull();
+    expect(await detail(f, 'B1', id)).not.toBeNull();
+    await scope(f, id, 'scoped', []);
+    expect(await catalogIds(f, 'A1')).not.toContain(id);
+    expect(await detail(f, 'B1', id)).toBeNull();
+    const validation = await validateServiceRequestDefinitionForPublish(db, f.tenant, id);
+    expect(validation.isValid).toBe(true);
+    expect(validation.warnings).toContain('Visibility: Nobody can access this service request');
+  });
+  it('client and group entries enforce catalog, detail and submission', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant);
+    await scope(f, id, 'scoped', [f.clientB], [f.groupA1]);
+    expect(await catalogIds(f, 'A1')).toContain(id);
     expect(await catalogIds(f, 'A2')).not.toContain(id);
-    expect(await catalogIds(f, 'A0')).not.toContain(id);
-    expect(await catalogIds(f, 'Anon-A')).not.toContain(id);
-    expect(await detail(f, 'A2', id)).toBeNull();
-    expect(await detail(f, 'A0', id)).toBeNull();
-    await expect(
-      submitPortalServiceRequest({
-        knex: db,
-        tenant: f.tenant,
-        definitionId: id,
-        requesterUserId: f.userA,
-        clientId: f.clientA,
-        contactId: f.contactA2,
-        payload: { notes: 'x' },
-      })
-    ).rejects.toThrow('not visible');
+    expect(await detail(f, 'B1', id)).not.toBeNull();
+    await expect(submitPortalServiceRequest({ knex: db, tenant: f.tenant, definitionId: id, requesterUserId: f.userA, clientId: f.clientA, contactId: f.contactA2, payload: { notes: 'hello' } })).rejects.toThrow('Service request is not visible or not published');
     expect(await submissionCount(f.tenant)).toBe(0);
-
-    // The group-A1 member can submit even though no client row exists.
-    const submitted = await submitPortalServiceRequest({
-      knex: db,
-      tenant: f.tenant,
-      definitionId: id,
-      requesterUserId: f.userA,
-      clientId: f.clientA,
-      contactId: f.contactA1,
-      payload: { notes: 'member' },
-    });
+    const submitted = await submitPortalServiceRequest({ knex: db, tenant: f.tenant, definitionId: id, requesterUserId: f.userA, clientId: f.clientA, contactId: f.contactA1, payload: { notes: 'allowed' } });
     expect(submitted.submissionId).toBeTruthy();
     expect(await submissionCount(f.tenant)).toBe(1);
   });
-
-  it("a group from another client grants nothing, even if mis-assigned to a contact or scope row", async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    // Force a group-B1 scope row directly (the save action would refuse it).
-    await t(f.tenant, 'service_request_definitions').where({ definition_id: id }).update({ audience_mode: 'scoped' });
-    await t(f.tenant, 'service_request_audience_client_groups').insert({
-      tenant: f.tenant,
-      definition_id: id,
-      group_id: f.groupB1,
-    });
-    // Client-A contact carrying client B's group id.
-    await t(f.tenant, 'contacts')
-      .where({ contact_name_id: f.contactA0 })
-      .update({ portal_visibility_group_id: f.groupB1 });
-
-    expect(await catalogIds(f, 'A0')).not.toContain(id);
-    expect(await detail(f, 'A0', id)).toBeNull();
-    // The legitimate member of B1 is admitted through the group itself.
-    expect(await catalogIds(f, 'B1')).toContain(id);
+  it('rejects cross-tenant references and a client with its own group', async () => {
+    const f = await createFixture(); const other = await createFixture(); const id = await createPublishedDefinition(f.tenant);
+    await expect(scope(f, id, 'scoped', [other.clientA])).rejects.toThrow();
+    await expect(scope(f, id, 'scoped', [f.clientA], [f.groupA1])).rejects.toThrow();
+    expect(await detail(other, 'A1', id)).toBeNull();
   });
-
-  it('the save action rejects a client together with its own group, and foreign-tenant ids', async () => {
-    const f = await createFixture();
-    const other = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-
-    await expect(scope(f, id, 'scoped', [f.clientA], [f.groupA1])).rejects.toThrow(/either all users or specific groups/);
-    await expect(scope(f, id, 'scoped', [other.clientA])).rejects.toThrow(/clients do not exist/);
-    await expect(scope(f, id, 'scoped', [], [other.groupA1])).rejects.toThrow(/groups do not exist/);
-    expect(await loadDefinitionAudience(db, f.tenant, id)).toEqual({ mode: 'all', clientIds: [], groupIds: [] });
-
-    // A client with all users plus a group of a *different* client is fine.
-    await scope(f, id, 'scoped', [f.clientA], [f.groupB1]);
-    expect(await catalogIds(f, 'A0')).toContain(id);
-    expect(await catalogIds(f, 'B1')).toContain(id);
+  it('admits individual contacts and denies others', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant);
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience: { join: 'or', clauses: [{path: 'contact.id', operator: 'in', value: [f.contactA1]}] } });
+    expect(await detail(f, 'A1', id)).not.toBeNull();
+    expect(await detail(f, 'A2', id)).toBeNull();
+  });  it('tag audiences, SQL reach and tag references agree', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant); const tag = uuidv4();
+    await t(f.tenant, 'tag_definitions').insert({ tenant: f.tenant, tag_id: tag, tag_text: 'Audience VIP', tagged_type: 'client' });
+    await t(f.tenant, 'tag_mappings').insert({ tenant: f.tenant, tag_id: tag, tagged_id: f.clientA, tagged_type: 'client' });
+    const audience = { join: 'or' as const, clauses: [{ path: 'client.tags', operator: 'in' as const, value: [tag] }] };
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience });
+    expect(await detail(f, 'A1', id)).not.toBeNull();
+    expect(await detail(f, 'B1', id)).toBeNull();
+    expect(await getAudienceReach(db, f.tenant, audience)).toEqual({ contacts: 1, clients: 1 });
+    expect(await t(f.tenant, 'tag_references').where({ tag_id: tag, referrer_id: id }).first()).toBeTruthy();
+    const copy = await duplicateServiceRequestDefinition({ knex: db, tenant: f.tenant, sourceDefinitionId: id });
+    expect(await t(f.tenant, 'tag_references').where({ tag_id: tag, referrer_id: copy.definition_id }).first()).toBeTruthy();
+    await deleteServiceRequestDefinitionFromManagement(db, f.tenant, copy.definition_id);
+    expect(await t(f.tenant, 'tag_references').where({ tag_id: tag, referrer_id: copy.definition_id }).first()).toBeUndefined();
+    await scope(f, id, 'all', []);
+    expect(await t(f.tenant, 'tag_references').where({ tag_id: tag, referrer_id: id }).first()).toBeUndefined();
   });
-
-  it('scoped with zero rows is invisible to everyone', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', []);
-    for (const who of ['A1', 'A0', 'B1', 'Anon-A'] as const) {
-      expect(await catalogIds(f, who)).not.toContain(id);
-      expect(await detail(f, who, id)).toBeNull();
+  it('retains an audience-only tag during orphan cleanup', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant); const tag = uuidv4();
+    await t(f.tenant, 'tag_definitions').insert({ tenant: f.tenant, tag_id: tag, tag_text: 'Future audience', tagged_type: 'contact' });
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience: { join: 'or', clauses: [{ path: 'contact.tags', operator: 'in', value: [tag] }] } });
+    const TagDefinition = (await import('../../../../packages/tags/src/models/tagDefinition')).default;
+    expect(await TagDefinition.deleteOrphaned(db, f.tenant, [tag])).toBe(0);
+    expect(await t(f.tenant, 'tag_definitions').where({ tag_id: tag }).first()).toBeTruthy();
+    await scope(f, id, 'all', []);
+    expect(await TagDefinition.deleteOrphaned(db, f.tenant, [tag])).toBe(1);
+  });
+  it('removes missing references from the working copy without widening a narrowed entry', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant); const tag = uuidv4();
+    await t(f.tenant, 'tag_definitions').insert({ tenant: f.tenant, tag_id: tag, tag_text: 'Removed', tagged_type: 'contact' });
+    const audience = { join: 'or' as const, clauses: [{ join: 'and' as const, clauses: [{path: 'client.id', operator: 'in' as const, value: [f.clientA]}, {path: 'contact.tags', operator: 'in' as const, value: [tag]}] }] };
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience });
+    await t(f.tenant, 'tag_definitions').where({ tag_id: tag }).del();
+    const editor = await getServiceRequestDefinitionEditorData(db, f.tenant, id);
+    expect(editor?.execution.audience).toEqual({ join: 'or', clauses: [] });
+    expect(editor?.execution.removedAudienceReferences).toContain('contact.tags');
+    const validation = await validateServiceRequestDefinitionForPublish(db, f.tenant, id);
+    expect(validation.isValid).toBe(false);
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience: editor!.execution.audience });
+    expect((await validateServiceRequestDefinitionForPublish(db, f.tenant, id)).isValid).toBe(true);
+    expect(await detail(f, 'A1', id)).toBeNull();
+  });
+  it('reach and access both reject a contact assigned to another client’s group', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant);
+    await t(f.tenant, 'contacts').where({ contact_name_id: f.contactB1 }).update({ portal_visibility_group_id: f.groupA1 });
+    const audience = { join: 'or' as const, clauses: [{ path: 'contact.group.id', operator: 'in' as const, value: [f.groupA1] }] };
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience });
+    expect(await detail(f, 'A1', id)).not.toBeNull();
+    expect(await detail(f, 'B1', id)).toBeNull();
+    expect(await getAudienceReach(db, f.tenant, audience)).toEqual({ contacts: 1, clients: 1 });
+  });
+  it('contact tags narrow clients while an OR entry admits another contact', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant); const tag = uuidv4();
+    await t(f.tenant, 'tag_definitions').insert({ tenant: f.tenant, tag_id: tag, tag_text: 'Approver', tagged_type: 'contact' });
+    await t(f.tenant, 'tag_mappings').insert({ tenant: f.tenant, tag_id: tag, tagged_id: f.contactA1, tagged_type: 'contact' });
+    const audience = { join: 'or' as const, clauses: [
+      { join: 'and' as const, clauses: [{ path: 'client.id', operator: 'in' as const, value: [f.clientA] }, { path: 'contact.tags', operator: 'in' as const, value: [tag] }] },
+      { path: 'contact.id', operator: 'in' as const, value: [f.contactB1] },
+    ] };
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience });
+    expect(await detail(f, 'A1', id)).not.toBeNull();
+    expect(await detail(f, 'A2', id)).toBeNull();
+    expect(await detail(f, 'B1', id)).not.toBeNull();
+    expect(await getAudienceReach(db, f.tenant, audience)).toEqual({ contacts: 2, clients: 2 });
+  });
+  it('rejects foreign contacts, groups, tags and unsupported paths', async () => {
+    const f = await createFixture(); const other = await createFixture(); const id = await createPublishedDefinition(f.tenant);
+    const clientTag = uuidv4(); const contactTag = uuidv4();
+    await t(other.tenant, 'tag_definitions').insert([
+      { tenant: other.tenant, tag_id: clientTag, tag_text: 'Foreign client tag', tagged_type: 'client' },
+      { tenant: other.tenant, tag_id: contactTag, tag_text: 'Foreign contact tag', tagged_type: 'contact' },
+    ]);
+    for (const [path, value] of [['contact.id', other.contactA1], ['contact.group.id', other.groupA1], ['client.tags', clientTag], ['contact.tags', contactTag], ['contact.secret', f.contactA1]]) {
+      await expect(saveServiceRequestDefinitionAudience({ knex: db, tenant: f.tenant, definitionId: id, audience: { join: 'or', clauses: [{ path, operator: 'in', value: [value] }] } })).rejects.toThrow();
     }
   });
-
-  it('deleting the last selected group fails closed instead of reopening the form', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [], [f.groupA1]);
-    await t(f.tenant, 'contacts').where({ portal_visibility_group_id: f.groupA1 }).update({ portal_visibility_group_id: null });
-    await t(f.tenant, 'client_portal_visibility_groups').where({ group_id: f.groupA1 }).del();
-    const audience = await loadDefinitionAudience(db, f.tenant, id);
-    expect(audience).toEqual({ mode: 'scoped', clientIds: [], groupIds: [] });
-    expect(await catalogIds(f, 'A1')).not.toContain(id);
-  });
-
-  it('switching back to all clears scope rows and re-admits everyone', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
+  it('copies the live audience when duplicating and does not snapshot it on publish', async () => {
+    const f = await createFixture(); const id = await createPublishedDefinition(f.tenant);
     await scope(f, id, 'scoped', [f.clientA]);
-    expect(await catalogIds(f, 'B1')).not.toContain(id);
-    await scope(f, id, 'all', [f.clientA]);
-    expect(await loadDefinitionAudience(db, f.tenant, id)).toEqual({ mode: 'all', clientIds: [], groupIds: [] });
-    expect(await catalogIds(f, 'B1')).toContain(id);
-  });
-
-  it('publish validation rejects an empty scoped audience and accepts a populated one', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', []);
-    const rejected = await validateServiceRequestDefinitionForPublish(db, f.tenant, id);
-    expect(rejected.isValid).toBe(false);
-    expect(rejected.errors.join(' ')).toMatch(/audience/i);
-
-    await scope(f, id, 'scoped', [f.clientA]);
-    const accepted = await validateServiceRequestDefinitionForPublish(db, f.tenant, id);
-    expect(accepted.errors.join(' ')).not.toMatch(/audience/i);
-  });
-
-  it('publishing does not copy or freeze the audience, and later edits apply immediately', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA]);
-    await publishServiceRequestDefinition({ knex: db, tenant: f.tenant, definitionId: id, publishedBy: null });
-
-    const versionColumns = await tenantDb(db, '__test_schema__')
-      .unscoped('service_request_definition_versions', 'columnInfo reads schema metadata')
-      .columnInfo();
-    expect(Object.keys(versionColumns)).not.toContain('audience_mode');
-
-    expect(await catalogIds(f, 'B1')).not.toContain(id);
-    await scope(f, id, 'scoped', [f.clientB]);
-    expect(await catalogIds(f, 'B1')).toContain(id);
-    expect(await catalogIds(f, 'A0')).not.toContain(id);
-  });
-
-  it('duplicating a form copies the audience mode and scope rows', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientB], [f.groupA1]);
-
     const copy = await duplicateServiceRequestDefinition({ knex: db, tenant: f.tenant, sourceDefinitionId: id });
-    const audience = await loadDefinitionAudience(db, f.tenant, copy.definition_id);
-    expect(audience.mode).toBe('scoped');
-    expect(audience.clientIds).toEqual([f.clientB]);
-    expect(audience.groupIds).toEqual([f.groupA1]);
-    // The source is untouched.
-    expect((await loadDefinitionAudience(db, f.tenant, id)).clientIds).toEqual([f.clientB]);
+    const copyRow = await t(f.tenant, 'service_request_definitions').where({ definition_id: copy.definition_id }).first('audience');
+    expect(copyRow.audience).toEqual({ join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [f.clientA] }] });
+    await publishServiceRequestDefinition({ knex: db, tenant: f.tenant, definitionId: id, publishedBy: f.userA });
+    await scope(f, id, 'scoped', [f.clientB]);
+    expect(await detail(f, 'A1', id)).toBeNull();
+    expect(await detail(f, 'B1', id)).not.toBeNull();
+  });
+  it('does not hydrate a foreign requester user', async () => {
+    const f = await createFixture(); const other = await createFixture();
+    const requester = await loadRequesterRecord(db, f.tenant, { requesterUserId: other.userA, clientId: f.clientA, contactId: f.contactA1 });
+    expect(requester.user).toBeNull();
   });
 
-  it('exposes execution.audience in the editor data', async () => {
-    const f = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientB], [f.groupA2]);
-    const data = await getServiceRequestDefinitionEditorData(db, f.tenant, id);
-    expect(data?.execution.audience).toEqual({
-      mode: 'scoped',
-      clientIds: [f.clientB],
-      groupIds: [f.groupA2],
-      groupClientIds: { [f.groupA2]: f.clientA },
-    });
-  });
-
-  it('tenant isolation: another tenant cannot see or be granted a scoped form', async () => {
-    const f = await createFixture();
-    const other = await createFixture();
-    const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA]);
-
-    // Other tenant's requester (even with a matching-looking client id) sees nothing of this tenant's form.
-    const otherCatalog = await listVisibleServiceRequestCatalogItems(db, ctx(other, 'A0'));
-    expect(otherCatalog.map((i) => i.definitionId)).not.toContain(id);
-    expect(await getVisiblePublishedServiceRequestDefinitionDetail(db, ctx(other, 'A0'), id)).toBeNull();
-
-    // Querying this tenant with the other tenant's client id is denied.
-    const crossTenantContext = { tenant: f.tenant, requesterUserId: f.userA, clientId: other.clientA, contactId: null };
-    expect((await listVisibleServiceRequestCatalogItems(db, crossTenantContext)).map((i) => i.definitionId)).not.toContain(id);
-    // Loading the audience from the wrong tenant fails closed.
-    expect(await loadDefinitionAudience(db, other.tenant, id)).toEqual({ mode: 'scoped', clientIds: [], groupIds: [] });
-  });
 });

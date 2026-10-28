@@ -217,7 +217,7 @@ describe('service request portal detail', () => {
       visibility_provider: 'all-authenticated-client-users',
       visibility_config: {},
       lifecycle_state: 'published',
-      audience_mode: 'scoped',
+      audience: JSON.stringify({ join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [clientA] }] }),
     });
     await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
@@ -233,11 +233,7 @@ describe('service request portal detail', () => {
       visibility_provider: 'all-authenticated-client-users',
       visibility_config: {},
     });
-    await tenantTable(tenant, 'service_request_audience_clients').insert({
-      tenant,
-      definition_id: definitionId,
-      client_id: clientA,
-    });
+
 
     const get = (clientId: string) =>
       getVisiblePublishedServiceRequestDefinitionDetail(

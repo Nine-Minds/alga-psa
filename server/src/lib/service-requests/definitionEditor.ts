@@ -1,9 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import {
-  loadDefinitionAudience,
-  type ServiceRequestDefinitionAudience,
-} from './definitionAudience';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { cleanAudienceReferences } from './definitionAudience';
 import {
   listServiceRequestExecutionProviders,
   listServiceRequestFormBehaviorProviders,
@@ -39,10 +37,8 @@ export interface ServiceRequestDefinitionEditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
-    audience: ServiceRequestDefinitionAudience & {
-      /** group_id -> owning client_id, so the editor can hang each saved group on its client. */
-      groupClientIds: Record<string, string>;
-    };
+    audience: PredicateGroup;
+    removedAudienceReferences: string[];
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -85,6 +81,7 @@ interface ServiceRequestDefinitionEditorRow {
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience: PredicateGroup;
   updated_at: Date;
 }
 
@@ -127,7 +124,7 @@ export async function getServiceRequestDefinitionEditorData(
     return null;
   }
 
-  const [availableCategories, categoryRow, serviceRow, latestPublishedVersion, audience] = await Promise.all([
+  const [availableCategories, categoryRow, serviceRow, latestPublishedVersion] = await Promise.all([
     db.table('service_categories')
       .orderBy('category_name', 'asc')
       .select('category_id', 'category_name') as Promise<ServiceRequestCategoryRow[]>,
@@ -148,18 +145,9 @@ export async function getServiceRequestDefinitionEditorData(
       .orderBy('version_number', 'desc')
       .select('version_number', 'published_at', 'published_by')
       .first<ServiceRequestPublishedVersionRow>(),
-    loadDefinitionAudience(knex, tenant, definitionId),
   ]);
 
-  const groupClientIds: Record<string, string> = {};
-  if (audience.groupIds.length > 0) {
-    const groupRows = (await db.table('client_portal_visibility_groups')
-      .whereIn('group_id', audience.groupIds)
-      .select('group_id', 'client_id')) as Array<{ group_id: string; client_id: string }>;
-    for (const row of groupRows) {
-      groupClientIds[row.group_id] = row.client_id;
-    }
-  }
+  const cleanedAudience = await cleanAudienceReferences(knex, tenant, definition.audience);
 
   const workflowProviderKeys = new Set(['workflow-only', 'ticket-plus-workflow']);
   const availableExecutionProviderKeys = new Set(
@@ -200,7 +188,8 @@ export async function getServiceRequestDefinitionEditorData(
       formBehaviorConfig: definition.form_behavior_config,
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
-      audience: { ...audience, groupClientIds },
+      audience: cleanedAudience.audience,
+      removedAudienceReferences: cleanedAudience.removed,
       availableExecutionProviders,
       availableFormBehaviorProviders,
       availableVisibilityProviders,

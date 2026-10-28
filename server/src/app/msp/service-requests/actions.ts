@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions/ticketCategoryActions';
@@ -28,7 +28,6 @@ import {
   publishServiceRequestDefinitionWithValidation,
   saveServiceRequestDefinitionDraft,
   saveServiceRequestDefinitionAudience,
-  type ServiceRequestAudienceMode,
   searchServiceCatalogForLinking,
   setLinkedServiceForServiceRequestDefinitionDraft,
   updateBasicFormFieldInDefinitionDraft,
@@ -59,6 +58,8 @@ import {
   type ServiceRequestAnswerMappingEditorData,
   type ServiceRequestAnswerMappingRuleInput,
 } from '../../../lib/service-requests';
+import { getAudienceReach } from '../../../lib/service-requests/audienceReach';
+import type { PredicateGroup } from '@alga-psa/predicates';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 type AuthUser = Parameters<Parameters<typeof withAuth>[0]>[0];
@@ -511,7 +512,7 @@ export const updateServiceRequestAudienceAction = withAuth(async (
   user,
   { tenant },
   definitionId: string,
-  audience: { mode: ServiceRequestAudienceMode; clientIds: string[]; groupIds: string[] }
+  audience: PredicateGroup
 ): Promise<ServiceRequestDefinitionActionResult> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
@@ -521,11 +522,7 @@ export const updateServiceRequestAudienceAction = withAuth(async (
       tenant,
       definitionId,
       updatedBy: getActorId(user),
-      audience: {
-        mode: audience.mode,
-        clientIds: audience.clientIds ?? [],
-        groupIds: audience.groupIds ?? [],
-      },
+      audience,
     });
   } catch (error) {
     return mapServiceRequestDefinitionError(error);
@@ -533,6 +530,23 @@ export const updateServiceRequestAudienceAction = withAuth(async (
   // Audience is a live access policy; make the portal catalog/detail re-render with it.
   revalidatePath('/client-portal/request-services');
   return serviceRequestSuccess(undefined);
+});
+
+export const getServiceRequestAudienceOptionsAction = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+  const db = tenantDb(knex, tenant);
+  const [groups, tags] = await Promise.all([
+    db.table('client_portal_visibility_groups').select('group_id', 'client_id', 'name'),
+    db.table('tag_definitions').whereIn('tagged_type', ['client', 'contact']).select('tag_id', 'tagged_type', 'tag_text', 'background_color', 'text_color'),
+  ]);
+  return { groups: groups as Array<{group_id: string; client_id: string; name: string}>, tags: tags as Array<{tag_id: string; tagged_type: 'client' | 'contact'; tag_text: string; background_color: string | null; text_color: string | null}> };
+});
+
+export const getServiceRequestAudienceReachAction = withAuth(async (user, { tenant }, audience: PredicateGroup) => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+  return getAudienceReach(knex, tenant, audience);
 });
 
 export const validateServiceRequestDefinitionForPublishAction = withAuth(async (

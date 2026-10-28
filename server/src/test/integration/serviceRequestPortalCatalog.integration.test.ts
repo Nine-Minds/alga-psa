@@ -298,7 +298,7 @@ describe('service request portal catalog', () => {
         visibility_provider: 'all-authenticated-client-users',
         visibility_config: {},
         lifecycle_state: 'published',
-        audience_mode: mode,
+        audience: JSON.stringify(mode === 'all' ? { join: 'and', clauses: [] } : { join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [clientA] }] }),
         published_at: db.fn.now(),
       });
       await db('service_request_definition_versions').insert({
@@ -316,11 +316,7 @@ describe('service request portal catalog', () => {
         visibility_config: {},
       });
     }
-    await db('service_request_audience_clients').insert({
-      tenant,
-      definition_id: scopedId,
-      client_id: clientA,
-    });
+
 
     const list = async (clientId: string) =>
       (

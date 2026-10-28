@@ -416,8 +416,6 @@ const TENANT_TABLE_METADATA = {
   service_items: { scope: 'tenant' },
   service_prices: { scope: 'tenant' },
   service_rate_tiers: { scope: 'tenant' },
-  service_request_audience_client_groups: { scope: 'tenant' },
-  service_request_audience_clients: { scope: 'tenant' },
   service_request_answer_mapping_versions: { scope: 'tenant' },
   service_request_answer_mappings: { scope: 'tenant' },
   service_request_definitions: { scope: 'tenant' },

@@ -2,14 +2,11 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
-import {
-  isDefinitionVisibleToRequester,
-  loadContactVisibilityGroupId,
-  loadDefinitionAudiences,
-} from './definitionAudience';
+import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 
 interface PortalCatalogDefinitionRow {
   definition_id: string;
+  audience: unknown;
 }
 
 interface PortalCatalogDefinitionVersionRow {
@@ -60,7 +57,7 @@ export async function listVisibleServiceRequestCatalogItems(
         .select(knex.raw('1'))
         .whereRaw('version.definition_id = definition.definition_id')
     )
-    .select('definition.definition_id')) as PortalCatalogDefinitionRow[];
+    .select('definition.definition_id', 'definition.audience')) as PortalCatalogDefinitionRow[];
 
   if (definitionRows.length === 0) {
     return [];
@@ -95,18 +92,7 @@ export async function listVisibleServiceRequestCatalogItems(
     }
   }
 
-  // Audience scoping: batch-load once, resolve the requester's group once.
-  const [audiencesByDefinitionId, contactGroupId] = await Promise.all([
-    loadDefinitionAudiences(
-      knex,
-      context.tenant,
-      definitionRows.map((row) => row.definition_id)
-    ),
-    loadContactVisibilityGroupId(knex, context.tenant, {
-      clientId: context.clientId,
-      contactId: context.contactId ?? null,
-    }),
-  ]);
+  const requester = await loadRequesterRecord(knex, context.tenant, context);
 
   const visible: ServiceRequestPortalCatalogItem[] = [];
 
@@ -147,11 +133,7 @@ export async function listVisibleServiceRequestCatalogItems(
       row.visibility_config ?? {}
     );
 
-    const audience = audiencesByDefinitionId.get(definitionRow.definition_id);
-    if (
-      !audience ||
-      !isDefinitionVisibleToRequester({ audience, contactGroupId, context }, canAccess)
-    ) {
+    if (!canAccess || !isAudienceSatisfied(definitionRow.audience, requester)) {
       continue;
     }
 

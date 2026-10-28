@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +14,10 @@ import {
 } from '../../lib/service-requests/providers/registry';
 import { getServiceRequestEnterpriseProviderRegistrations } from '../../../../ee/server/src/lib/service-requests/providers';
 
-describe('service request advanced visibility provider', () => {
+const require = createRequire(import.meta.url);
+const migration = require('../../../migrations/20261028101041_convert_service_request_advanced_visibility.cjs');
+
+describe('service request advanced visibility migration', () => {
   let db: Knex;
   const tenantsToCleanup = new Set<string>();
   let tenantColumns: Record<string, unknown>;
@@ -71,7 +75,7 @@ describe('service request advanced visibility provider', () => {
     }
   });
 
-  it('T039: advanced visibility blocks unauthorized clients from catalog listing and direct submit', async () => {
+  it('uses the published rather than draft configuration for catalog and submit', async () => {
     const tenant = uuidv4();
     tenantsToCleanup.add(tenant);
 
@@ -95,6 +99,7 @@ describe('service request advanced visibility provider', () => {
       tenant,
       user_id: requesterUserId,
       username: `requester-${tenant.slice(0, 8)}`,
+      user_type: 'client',
       hashed_password: 'not-used',
       ...(hasColumn(userColumns, 'role') ? { role: 'admin' } : {}),
       ...(hasColumn(userColumns, 'email') ? { email: `requester-${tenant.slice(0, 8)}@example.com` } : {}),
@@ -136,9 +141,9 @@ describe('service request advanced visibility provider', () => {
       execution_config: { workflowId: 'wf-restricted' },
       form_behavior_provider: 'basic',
       form_behavior_config: {},
-      visibility_provider: 'advanced-visibility',
+      visibility_provider: 'all-authenticated-client-users',
       visibility_config: {
-        allowedClientIds: [allowedClientId],
+        allowedClientIds: [deniedClientId],
       },
       lifecycle_state: 'published',
       published_at: db.fn.now(),
@@ -160,9 +165,13 @@ describe('service request advanced visibility provider', () => {
       visibility_provider: 'advanced-visibility',
       visibility_config: {
         allowedClientIds: [allowedClientId],
+        allowedRequesterUserIds: [requesterUserId],
       },
     });
 
+    await migration.up(db);
+    const converted = await tenantTable(tenant, 'service_request_definitions').where({ definition_id: definitionId }).first('audience');
+    await saveServiceRequestDefinitionAudience({ knex: db, tenant, definitionId, audience: converted.audience });
     const allowedCatalog = await listVisibleServiceRequestCatalogItems(db, {
       tenant,
       requesterUserId,
@@ -170,6 +179,10 @@ describe('service request advanced visibility provider', () => {
       contactId: null,
     });
     expect(allowedCatalog.map((item) => item.definitionId)).toContain(definitionId);
+
+    expect(await getVisiblePublishedServiceRequestDefinitionDetail(db, {
+      tenant, requesterUserId: uuidv4(), clientId: allowedClientId, contactId: null,
+    }, definitionId)).toBeNull();
 
     const deniedCatalog = await listVisibleServiceRequestCatalogItems(db, {
       tenant,
@@ -215,6 +228,7 @@ describe('service request advanced visibility provider', () => {
       tenant,
       user_id: requesterUserId,
       username: `requester-${tenant.slice(0, 8)}`,
+      user_type: 'client',
       hashed_password: 'not-used',
       ...(hasColumn(userColumns, 'email') ? { email: `requester-${tenant.slice(0, 8)}@example.com` } : {}),
     });
@@ -265,8 +279,10 @@ describe('service request advanced visibility provider', () => {
       knex: db,
       tenant,
       definitionId,
-      audience: { mode: 'scoped', clientIds: [clientA, clientC], groupIds: [] },
+      audience: { join: 'or', clauses: [clientA, clientC].map((id) => ({ path: 'client.id', operator: 'in', value: [id] })) },
     });
+
+    await migration.up(db);
 
     const visibleTo = async (clientId: string) => ({
       catalog: (

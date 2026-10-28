@@ -1,192 +1,61 @@
-/**
- * @vitest-environment jsdom
- */
+/** @vitest-environment jsdom */
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import en from '../../../../../../public/locales/en/msp/service-requests.json';
-
-(globalThis as unknown as { React?: typeof React }).React = React;
-
-const updateMock = vi.fn();
-const searchMock = vi.fn();
-const groupsMock = vi.fn();
-
-const lookup = (key: string): string | undefined =>
-  key.split('.').reduce<any>((node, part) => (node == null ? node : node[part]), en as any);
-
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (key: string, options: Record<string, unknown> = {}) => {
-      const template = lookup(key) ?? (options.defaultValue as string) ?? key;
-      return String(template).replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name) => String(options[name] ?? ''));
-    },
-  }),
-}));
-
+const client = '11111111-1111-4111-8111-111111111111';
+const group = '22222222-2222-4222-8222-222222222222';
+const tag = '33333333-3333-4333-8333-333333333333';
+const contact = '44444444-4444-4444-8444-444444444444';
+const save = vi.fn();
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }) }));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-
 vi.mock('../../../../../app/msp/service-requests/actions', () => ({
-  updateServiceRequestAudienceAction: (...args: unknown[]) => updateMock(...args),
+  updateServiceRequestAudienceAction: (...args: unknown[]) => save(...args),
+  getServiceRequestAudienceOptionsAction: async () => ({ groups: [{ group_id: group, client_id: client, name: 'Finance' }], tags: [{ tag_id: tag, tagged_type: 'contact', tag_text: 'VIP' }] }),
+  getServiceRequestAudienceReachAction: async () => ({ contacts: 1, clients: 1 }),
 }));
-
-vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
-  searchClientsForPicker: (...args: unknown[]) => searchMock(...args),
-}));
-
-vi.mock('@alga-psa/client-portal/actions/client-portal-actions/visibilityGroupActions', () => ({
-  getClientPortalVisibilityGroups: (...args: unknown[]) => groupsMock(...args),
-}));
-
-vi.mock('@alga-psa/ui/components/ClientAvatar', () => ({ default: () => null }));
-
-vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ onSelect }: { onSelect: (id: string | null) => void }) => (
-    <div>
-      <button type="button" onClick={() => onSelect('client-a')}>pick-a</button>
-      <button type="button" onClick={() => onSelect('client-b')}>pick-b</button>
-    </div>
-  ),
-}));
-
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: async () => ({ clients: [{ client_id: client, client_name: 'Acme', displayTags: [] }] }) }));
+vi.mock('@alga-psa/client-portal/actions/client-portal-actions/visibilityGroupActions', () => ({ getClientPortalVisibilityGroups: async () => [{ group_id: group, name: 'Finance' }] }));
+vi.mock('@alga-psa/clients/actions', () => ({ getAllContacts: async () => [{ contact_name_id: contact, full_name: 'Jules' }] }));
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: ({ onSelect }: { onSelect: (id: string) => void }) => <button onClick={() => onSelect(client)}>Pick Acme</button> }));
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: ({ onValueChange }: { onValueChange: (id: string) => void }) => <button onClick={() => onValueChange(contact)}>Pick Jules</button> }));
+vi.mock('@alga-psa/ui/components/tags/TagFilter', () => ({ TagFilter: ({ id, onToggleTag }: { id: string; onToggleTag: (name: string) => void }) => <button onClick={() => onToggleTag('VIP')}>{id}</button> }));
+vi.mock('@alga-psa/ui/components/EntityChip', () => ({ EntityChip: ({ name }: { name: string }) => <span>{name}</span>, EntityTagBadges: () => null }));
 import { ServiceRequestAudienceEditor } from '../../../../../app/msp/service-requests/ServiceRequestAudienceEditor';
 
-const clients = [
-  { client_id: 'client-a', client_name: 'Acme', logoUrl: null },
-  { client_id: 'client-b', client_name: 'Globex', logoUrl: null },
-];
-
-describe('ServiceRequestAudienceEditor', () => {
-  beforeEach(() => {
-    updateMock.mockReset().mockResolvedValue({ success: true });
-    searchMock.mockReset().mockImplementation(async ({ ids }: { ids?: string[] }) => ({
-      clients: clients.filter((c) => !ids || ids.includes(c.client_id)),
-    }));
-    groupsMock.mockReset().mockImplementation(async (_user: unknown, clientId: string) =>
-      clientId === 'client-a'
-        ? [{ group_id: 'group-a1', name: 'Finance' }, { group_id: 'group-a2', name: 'Ops' }]
-        : []
-    );
+describe('audience editor', () => {
+  beforeEach(() => save.mockReset().mockResolvedValue({ success: true }));
+  afterEach(cleanup);
+  it('saves a group-only predicate through the client picker', async () => {
+    render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={{ join: 'and', clauses: [] }} />);
+    fireEvent.click(screen.getByLabelText('Selected clients and client users'));
+    fireEvent.click(screen.getByText('Pick Acme'));
+    fireEvent.click(await screen.findByLabelText(/Finance/));
+    fireEvent.click(screen.getByText('Save audience'));
+    await waitFor(() => expect(save).toHaveBeenCalledWith('definition', { join: 'or', clauses: [{ path: 'contact.group.id', operator: 'in', value: [group] }] }));
+  });
+  it('preserves converted policies until explicitly replaced', async () => {
+    const converted = { join: 'and' as const, clauses: [{ path: 'user.id', operator: 'in' as const, value: [client] }] };
+    render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={converted} />);
+    expect(screen.getByText('This migrated audience is preserved as a read-only policy.')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save audience'));
+    await waitFor(() => expect(save).toHaveBeenCalledWith('definition', converted));
+    fireEvent.click(screen.getByText('Replace with a new audience'));
+    expect(screen.getByText('Pick Acme')).toBeInTheDocument();
+  });  it('persists a contact entry narrowed by a contact tag', async () => {
+    render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={{ join: 'or', clauses: [] }} />);
+    fireEvent.click(screen.getByText('Pick Jules'));
+    await screen.findByText('Jules');
+    fireEvent.click(screen.getByText('audience-narrow-0'));
+    fireEvent.click(screen.getByText('Save audience'));
+    await waitFor(() => expect(save).toHaveBeenCalledWith('definition', { join: 'or', clauses: [{ join: 'and', clauses: [{path: 'contact.id', operator: 'in', value: [contact]}, {path: 'contact.tags', operator: 'in', value: [tag]}] }] }));
+  });
+  it('shows a validation failure returned by the save action', async () => {
+    save.mockResolvedValue({ success: false, message: 'Selected group no longer exists' });
+    render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={{ join: 'or', clauses: [] }} />);
+    fireEvent.click(screen.getByText('Save audience'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Selected group no longer exists');
   });
 
-  afterEach(() => cleanup());
-
-  const everyone = { mode: 'all' as const, clientIds: [], groupIds: [] };
-
-  it('defaults to Everyone and hides the client picker', () => {
-    render(<ServiceRequestAudienceEditor definitionId="def-1" initialAudience={everyone} />);
-    expect(screen.queryByText('pick-a')).not.toBeInTheDocument();
-    expect(screen.getByLabelText(en.editor.execution.visibility.audience.everyone)).toBeChecked();
-  });
-
-  it('saves everyone with empty selections', async () => {
-    render(<ServiceRequestAudienceEditor definitionId="def-1" initialAudience={everyone} />);
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'all', clientIds: [], groupIds: [] })
-    );
-  });
-
-  it('adds clients as all-users, switches one to only-groups and sends no client id for it', async () => {
-    const onChange = vi.fn();
-    render(<ServiceRequestAudienceEditor definitionId="def-1" initialAudience={everyone} onChange={onChange} />);
-
-    fireEvent.click(screen.getByLabelText(en.editor.execution.visibility.audience.scoped));
-    expect(screen.getByText(en.editor.execution.visibility.audience.emptyWarning)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('pick-a'));
-    fireEvent.click(screen.getByText('pick-b'));
-
-    // New clients default to all users.
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenLastCalledWith('def-1', {
-        mode: 'scoped',
-        clientIds: ['client-a', 'client-b'],
-        groupIds: [],
-      })
-    );
-
-    // Client A has groups: switch it to only-groups and tick Finance.
-    const onlyGroups = await screen.findByLabelText(en.editor.execution.visibility.audience.onlyGroups);
-    fireEvent.click(onlyGroups);
-    fireEvent.click(await screen.findByLabelText('Finance', { exact: false }));
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenLastCalledWith('def-1', {
-        mode: 'scoped',
-        clientIds: ['client-b'],
-        groupIds: ['group-a1'],
-      })
-    );
-    expect(onChange).toHaveBeenLastCalledWith({ mode: 'scoped', clientIds: ['client-b'], groupIds: ['group-a1'] });
-
-    // Client B has no groups: only all-users is offered.
-    expect(screen.getAllByLabelText(en.editor.execution.visibility.audience.onlyGroups)).toHaveLength(1);
-
-    // Removing a client removes its groups too.
-    fireEvent.click(document.getElementById('service-request-audience-remove-client-client-a')!);
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenLastCalledWith('def-1', {
-        mode: 'scoped',
-        clientIds: ['client-b'],
-        groupIds: [],
-      })
-    );
-  });
-
-  it('reconstructs a group-only client row from saved groups and keeps it out of clientIds', async () => {
-    render(
-      <ServiceRequestAudienceEditor
-        definitionId="def-1"
-        initialAudience={{
-          mode: 'scoped',
-          clientIds: [],
-          groupIds: ['group-a2'],
-          groupClientIds: { 'group-a2': 'client-a' },
-        }}
-      />
-    );
-    expect(await screen.findByLabelText('Ops', { exact: false })).toBeChecked();
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'scoped', clientIds: [], groupIds: ['group-a2'] })
-    );
-  });
-
-  it('switching a group-only client back to all users drops its groups', async () => {
-    render(
-      <ServiceRequestAudienceEditor
-        definitionId="def-1"
-        initialAudience={{
-          mode: 'scoped',
-          clientIds: [],
-          groupIds: ['group-a2'],
-          groupClientIds: { 'group-a2': 'client-a' },
-        }}
-      />
-    );
-    await screen.findByLabelText('Ops', { exact: false });
-    fireEvent.click(screen.getByLabelText('All users of Acme'));
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'scoped', clientIds: ['client-a'], groupIds: [] })
-    );
-  });
-
-  it('does not add the same client twice', async () => {
-    render(
-      <ServiceRequestAudienceEditor
-        definitionId="def-1"
-        initialAudience={{ mode: 'scoped', clientIds: ['client-a'], groupIds: [] }}
-      />
-    );
-    fireEvent.click(screen.getByText('pick-a'));
-    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'scoped', clientIds: ['client-a'], groupIds: [] })
-    );
-  });
 });
