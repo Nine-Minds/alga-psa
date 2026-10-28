@@ -201,3 +201,35 @@ Check data after each transition rather than relying on a status label or toast.
 
 The focused integration suites and isolated worker preflight support the review.
 Acceptance still requires the recorded chapters and their database receipts.
+
+## Customer permission bootstrap
+
+The co-managed onboarding seeds use the shared permission catalog and role
+compiler. Native helpdesk permissions are declared for `co_managed`; the MSP
+Admin receives the product's MSP-scoped permissions and other default roles
+receive the grants declared for them. Commercial permissions are excluded. This
+extends the approved plan's catalog ownership beyond the two `co_management`
+entries to the native entries needed by customer helpdesk surfaces. It does not
+change PSA or AlgaDesk grants, or backfill existing tenants.
+
+The disposable CE+EE provisioning suite runs with
+`cd ee/temporal-workflows && npx vitest run --config vitest.co-managed.config.ts`.
+Its activities run synchronously and its invitation delivery and action auth
+facades are mocked. The signup test also checks the real RBAC reader against the
+seeded customer Admin after acceptance. This is not worker, HTTP, or browser
+evidence; complete the live chapters above before rollout.
+
+An already provisioned customer does not acquire these grants automatically.
+For a repair, first audit that one customer's roles and permissions and review
+any intentional grant removals. Apply only approved missing catalog identities
+and default-role grants to that tenant in a transaction, preserving existing
+permissions and custom roles; repeat the audit to verify idempotency. Do not run
+the unscoped onboarding seed or a fleet-wide reconciliation. The retained
+customer used in the previous smoke remains unchanged.
+
+Knowledge-base actions share `document` permissions with general document
+actions. Those permissions are not included here: the product denies document
+routes, while some document actions have no equivalent product check. This
+leaves knowledge-base authorization unresolved until that boundary is addressed
+and tested. The live ticket/API journey and commercial action denials remain to
+be verified as well.

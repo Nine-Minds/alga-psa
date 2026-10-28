@@ -152,6 +152,16 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const review = await getCoManagedAcceptanceState(db, actor);
       if (review.state !== 'pending_acceptance') throw new Error('No acceptance proposal');
       await acceptCoManagedRelationship(db, actor, { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint });
+      // Exercise the actual RBAC reader against the role assigned by signup.
+      // The harness mocks the action facade's permission helper, so do not use it here.
+      const { hasPermission } = await import('../../../../../../packages/auth/src/lib/rbac');
+      const signedUpAdmin = await customer.table('users').where('user_id', result.userId).first();
+      expect(await hasPermission(signedUpAdmin, 'ticket', 'read', db)).toBe(true);
+      expect(await hasPermission(signedUpAdmin, 'billing', 'read', db)).toBe(false);
+      expect(await hasPermission({ ...signedUpAdmin, tenant: operation.tenant }, 'ticket', 'read', db)).toBe(false);
+      const grants = await customer.table('role_permissions').orderBy(['role_id', 'permission_id']);
+      await bootstrapCoManagedCustomer(input(operation));
+      expect(await customer.table('role_permissions').orderBy(['role_id', 'permission_id'])).toEqual(grants);
       actorState.user = { tenant: actor.tenant, user_id: actor.userId, user_type: 'internal', username: invitation.email };
       appliance.check.mockClear();
       const invite = (email: string) => runWithTenant(actor.tenant, () => sendUserInvitation({ email, firstName: 'Next', lastName: 'User', roleId: invitation.role_id }));
