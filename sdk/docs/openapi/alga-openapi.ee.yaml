@@ -2279,7 +2279,7 @@ components:
           description: Optional maintenance instructions.
         maintenance_type:
           type: string
-          enum: &a1
+          enum:
             - preventive
             - corrective
             - inspection
@@ -2288,7 +2288,7 @@ components:
           description: Maintenance type stored by the UI and database.
         frequency:
           type: string
-          enum: &a2
+          enum:
             - daily
             - weekly
             - monthly
@@ -2442,11 +2442,22 @@ components:
           description: Optional maintenance instructions.
         maintenance_type:
           type: string
-          enum: *a1
+          enum:
+            - preventive
+            - corrective
+            - inspection
+            - calibration
+            - replacement
           description: Maintenance type stored by the UI and database.
         frequency:
           type: string
-          enum: *a2
+          enum:
+            - daily
+            - weekly
+            - monthly
+            - quarterly
+            - yearly
+            - custom
           description: Recurrence frequency. Does not change the explicit next_maintenance
             timestamp.
         frequency_interval:

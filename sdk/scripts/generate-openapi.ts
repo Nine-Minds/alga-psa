@@ -107,7 +107,14 @@ function writeDocument(outputDir: string, baseName: string, formats: CliOptions[
 
   if (formats.includes('yaml')) {
     const yamlPath = path.join(outputDir, `${baseName}.yaml`);
-    fs.writeFileSync(yamlPath, `${YAML.stringify(document)}\n`, 'utf-8');
+    // aliasDuplicateObjects: by default `yaml` emits an anchor/alias (&a1/*a1) whenever
+    // two nodes are the same JS object. Identical-content schema fragments share identity
+    // only incidentally -- e.g. `createX.partial()` reuses the parent's ZodEnum, so its
+    // `enum` array is the same reference -- which made the output depend on the object
+    // graph rather than the document, drifting the committed .yaml against an unchanged
+    // source. Off, YAML is a pure function of content and matches the JSON artifacts,
+    // which have no aliasing concept. Safe: the document is acyclic ($ref is a string).
+    fs.writeFileSync(yamlPath, `${YAML.stringify(document, { aliasDuplicateObjects: false })}\n`, 'utf-8');
     writtenFiles.push(yamlPath);
   }
 
