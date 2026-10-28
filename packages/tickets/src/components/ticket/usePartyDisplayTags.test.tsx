@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import React from 'react';
+import { TicketDataSourceProvider } from './TicketDataSourceContext';
+import { createTicketIdGuardDataSource } from '../../lib/testing/ticketIdGuardDataSource';
 
 const fetchTags = vi.fn();
 vi.mock('../../actions/optimizedTicketActions', () => ({
@@ -17,11 +20,43 @@ const setup = (onError = vi.fn()) =>
   renderHook(
     ({ contactId }: { contactId: string }) =>
       usePartyDisplayTags({ ticketId: 't1', contactId, clientId: 'c1', initial: OLD, onError }),
-    { initialProps: { contactId: 'a' } },
+    {
+      initialProps: { contactId: 'a' },
+      wrapper: ({ children }) => <TicketDataSourceProvider dataSource={hookDataSource}>{children}</TicketDataSourceProvider>,
+    },
   );
+
+const hookDataSource = createTicketIdGuardDataSource({
+  overrides: { tags: { getTicketPartyDisplayTags: fetchTags } },
+});
 
 describe('usePartyDisplayTags', () => {
   beforeEach(() => fetchTags.mockReset());
+
+  it('loads a changed party through the injected data source without calling native actions', async () => {
+    const loadTags = vi.fn().mockResolvedValue(NEW);
+    const onError = vi.fn();
+    const dataSource = createTicketIdGuardDataSource({
+      overrides: { tags: { getTicketPartyDisplayTags: loadTags } },
+    });
+    const { result, rerender } = renderHook(
+      ({ contactId }: { contactId: string }) => usePartyDisplayTags({
+        ticketId: 'foreign-ticket', contactId, clientId: 'foreign-client', initial: OLD, onError,
+      }),
+      {
+        initialProps: { contactId: 'original-contact' },
+        wrapper: ({ children }) => <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider>,
+      },
+    );
+
+    expect(result.current).toEqual(OLD);
+    expect(loadTags).not.toHaveBeenCalled();
+    rerender({ contactId: 'new-contact' });
+    await waitFor(() => expect(result.current).toEqual(NEW));
+    expect(loadTags).toHaveBeenCalledWith('foreign-ticket', 'new-contact', 'foreign-client');
+    expect(fetchTags).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
 
   it('clears the old badge and reports the error when the refetch fails, then a retry populates', async () => {
     const onError = vi.fn();

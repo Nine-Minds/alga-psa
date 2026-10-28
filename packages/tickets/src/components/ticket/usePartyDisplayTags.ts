@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getTicketPartyDisplayTags } from '../../actions/optimizedTicketActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
 
 interface Options {
@@ -21,6 +21,7 @@ const isPartyTags = (value: unknown): value is PartyDisplayTags =>
  * so a failed load is retried by `retry()` or by the next party change; it is never marked done.
  */
 export function usePartyDisplayTags({ ticketId, contactId, clientId, initial, onError }: Options) {
+  const { getTicketPartyDisplayTags } = useTicketDataSource().tags;
   const [displayTags, setDisplayTags] = useState<PartyDisplayTags>(initial);
   const [retryNonce, setRetryNonce] = useState(0);
   const loadedPartyRef = useRef<string | null>(`${contactId ?? ''}|${clientId ?? ''}`);
@@ -52,7 +53,7 @@ export function usePartyDisplayTags({ ticketId, contactId, clientId, initial, on
       },
     );
     return () => { cancelled = true; };
-  }, [ticketId, contactId, clientId, retryNonce, retry]);
+  }, [ticketId, contactId, clientId, retryNonce, retry, getTicketPartyDisplayTags]);
 
   return displayTags;
 }

@@ -27,8 +27,6 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import EntityChip from '@alga-psa/ui/components/EntityChip';
 import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
-import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getUserContactId } from '@alga-psa/user-composition/actions';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';

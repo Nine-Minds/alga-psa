@@ -54,17 +54,10 @@ import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { usePartyDisplayTags } from './usePartyDisplayTags';
-import { addTicketCommentWithCache, updateTicketWithCache } from "../../actions/optimizedTicketActions";
-import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
-import {
-    checkTicketClosure,
-    getTicketAutoCloseState,
-    type ITicketAutoCloseState,
-} from "../../actions/close-rules/closeRuleActions";
-import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { ITicketAutoCloseState } from "../../actions/close-rules/closeRuleActions";
+import type { ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
 import { BundleStatusPropagationDialog } from "../BundleStatusPropagationDialog";
