@@ -1,0 +1,607 @@
+[
+  {
+    "id": "F001",
+    "commitGroup": "schema",
+    "prdRefs": [
+      "FR-A1"
+    ],
+    "implemented": false,
+    "description": "Migration creates contact_locations (tenant, contact_name_id, location_id, is_primary, created_at, created_by) with PK (tenant, contact_name_id, location_id), composite FK to contacts ON DELETE CASCADE, composite FK to client_locations ON DELETE RESTRICT, partial unique (tenant, contact_name_id) WHERE is_primary, index (tenant, location_id)"
+  },
+  {
+    "id": "F002",
+    "commitGroup": "schema",
+    "prdRefs": [
+      "FR-A1"
+    ],
+    "implemented": false,
+    "description": "Migration distributes contact_locations by tenant co-located with contacts on Citus and skips FKs only where distribution is incompatible, mirroring 20260518120000_add_location_id_to_assets.cjs"
+  },
+  {
+    "id": "F003",
+    "commitGroup": "schema",
+    "prdRefs": [
+      "FR-A2"
+    ],
+    "implemented": false,
+    "description": "Migration adds contacts.work_arrangement text null with CHECK IN ('on_site','hybrid','remote')"
+  },
+  {
+    "id": "F004",
+    "commitGroup": "schema",
+    "prdRefs": [
+      "FR-A3"
+    ],
+    "implemented": false,
+    "description": "contact_locations registered in packages/db tenantTableManifest (ordered deletion) and in ee/temporal-workflows tenant-deletion order before contacts and client_locations; golden test updated"
+  },
+  {
+    "id": "F005",
+    "commitGroup": "schema",
+    "prdRefs": [
+      "FR-A4"
+    ],
+    "implemented": false,
+    "description": "packages/types: IContactLocation interface; IContact gains work_arrangement and locations[]; ContactWorkArrangement union type"
+  },
+  {
+    "id": "F006",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B1"
+    ],
+    "implemented": false,
+    "description": "packages/clients/src/models/contactLocation.ts replaceContactLocations(trx, tenant, contactId, links) replaces the set in one transaction with tenant-scoped queries"
+  },
+  {
+    "id": "F007",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B1"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations rejects a location that does not exist or belongs to another client with ContactLocationClientMismatch, and rejects more than one is_primary"
+  },
+  {
+    "id": "F008",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B1"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations marks a single link primary when none is flagged"
+  },
+  {
+    "id": "F009",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B2"
+    ],
+    "implemented": false,
+    "description": "addContact accepts work_arrangement and locations[] and writes links in the same transaction as the contact"
+  },
+  {
+    "id": "F010",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B2"
+    ],
+    "implemented": false,
+    "description": "updateContact accepts work_arrangement and locations[]; omitted locations leaves links unchanged, empty array removes all"
+  },
+  {
+    "id": "F011",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B3"
+    ],
+    "implemented": false,
+    "description": "updateContact with a new client_id deletes all contact_locations rows for the contact in the same transaction and returns removedLocationCount"
+  },
+  {
+    "id": "F012",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B3"
+    ],
+    "implemented": false,
+    "description": "getContactLocationCount(contactId) server action for the client-change confirmation"
+  },
+  {
+    "id": "F013",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B4"
+    ],
+    "implemented": false,
+    "description": "packages/clients/src/lib/contactLocations.ts attachContactLocations(db, tenant, rows, idOf) does one batched read and attaches locations[] (with address fields, is_primary, is_active) and primaryLocation to each row"
+  },
+  {
+    "id": "F014",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B4"
+    ],
+    "implemented": false,
+    "description": "getContactByContactNameId, getContactsByClient, getAllContacts and the contact bento loader return work_arrangement, locations[] and primaryLocation via attachContactLocations"
+  },
+  {
+    "id": "F015",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B5"
+    ],
+    "implemented": false,
+    "description": "shared/models/contactLocation.ts resolveContactLocationId(trx, tenant, contactId): remote → null; primary link; else only link; else client default active location; else null"
+  },
+  {
+    "id": "F016",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B6"
+    ],
+    "implemented": false,
+    "description": "clientLocation.deleteLocation counts contact_locations and adds 'N contact(s)' to the dependency error; deactivation keeps links"
+  },
+  {
+    "id": "F017",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B7"
+    ],
+    "implemented": false,
+    "description": "Client merge: contacts and client_locations re-parent wholesale via CLIENT_OWNED_MOVE_TABLES so contact_locations rows need no change; the engine asserts link count before equals after and that every link's contact and location share a client after the merge"
+  },
+  {
+    "id": "F018",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX contact page"
+    ],
+    "implemented": false,
+    "description": "ContactLocationsEditor component (id contact-locations-editor): work-arrangement select, multi-select of the client's active locations (linked inactive ones listed and marked), primary radio; disabled with hint until a client is chosen"
+  },
+  {
+    "id": "F019",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX contact page",
+      "FR-B3"
+    ],
+    "implemented": false,
+    "description": "Contact edit form and bento edit drawer use ContactLocationsEditor; changing the client clears the selection and, when the contact has links, shows a confirmation naming the removal count before save"
+  },
+  {
+    "id": "F020",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX quick add contact"
+    ],
+    "implemented": false,
+    "description": "QuickAddContact includes ContactLocationsEditor collapsed under Locations, enabled once a client is chosen"
+  },
+  {
+    "id": "F021",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX contact page"
+    ],
+    "implemented": false,
+    "description": "Contact bento Locations tile (id contact-bento-locations): work-arrangement badge, one row per location with name, address line, Primary and Inactive markers; empty state with Add action; 'Remote' when remote with no links"
+  },
+  {
+    "id": "F022",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX contact lists"
+    ],
+    "implemented": false,
+    "description": "Contacts.tsx and ClientContactsList.tsx add a sortable Location column: primary name, '+N' for extra links, 'Remote' when remote and unlinked"
+  },
+  {
+    "id": "F023",
+    "commitGroup": "contact-ui",
+    "prdRefs": [
+      "UX contact lists"
+    ],
+    "implemented": false,
+    "description": "Client contacts tab Location filter with the client's locations plus Remote and No location options"
+  },
+  {
+    "id": "F024",
+    "commitGroup": "location-ui",
+    "prdRefs": [
+      "UX client locations"
+    ],
+    "implemented": false,
+    "description": "ClientLocations cards show a contact count chip (id client-location-contact-count-<id>) expanding to contact names linking to each contact; count loaded in one batched action per client"
+  },
+  {
+    "id": "F025",
+    "commitGroup": "location-ui",
+    "prdRefs": [
+      "FR-B6"
+    ],
+    "implemented": false,
+    "description": "ClientLocations delete surfaces the contact dependency error text unchanged (no silent failure, no cascade)"
+  },
+  {
+    "id": "F026",
+    "commitGroup": "pickers",
+    "prdRefs": [
+      "FR-D1"
+    ],
+    "implemented": false,
+    "description": "ContactPicker row type gains primaryLocation and work_arrangement; option rows and the selected row render the location name as secondary text after EntityTagBadges"
+  },
+  {
+    "id": "F027",
+    "commitGroup": "pickers",
+    "prdRefs": [
+      "FR-D1"
+    ],
+    "implemented": false,
+    "description": "Every action feeding ContactPicker (getContactsByClient, getAllContacts, picker search) attaches primaryLocation in the same batched pass as displayTags"
+  },
+  {
+    "id": "F028",
+    "commitGroup": "pickers",
+    "prdRefs": [
+      "UX pickers"
+    ],
+    "implemented": false,
+    "description": "Ticket contact tile (TicketBentoLayout, TicketProperties) shows the requester's primary location under the tag chips"
+  },
+  {
+    "id": "F029",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C1"
+    ],
+    "implemented": false,
+    "description": "TicketModel.createTicket resolves location_id via resolveContactLocationId when location_id is undefined and contact_name_id is set; null is kept as explicit none; same-client check runs on the resolved value"
+  },
+  {
+    "id": "F030",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C2"
+    ],
+    "implemented": false,
+    "description": "getContactEffectiveLocation(contactId) server action returning the resolved location and the contact's links for the ticket forms"
+  },
+  {
+    "id": "F031",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C2"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket tracks locationSource (user | contact | none); contact select fills an empty or contact-filled location with the resolved one and never replaces a user-chosen one; clearing the contact clears a contact-filled location"
+  },
+  {
+    "id": "F032",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C2"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket location select groups 'Contact's locations' (primary first, marked) before 'Other locations'; submits null for explicit None and omits the field when untouched"
+  },
+  {
+    "id": "F033",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C3"
+    ],
+    "implemented": false,
+    "description": "TicketDetails.handleContactChange sets the resolved location when the ticket has none and records a contact-derived location change in ticket history"
+  },
+  {
+    "id": "F034",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C3"
+    ],
+    "implemented": false,
+    "description": "Ticket contact tile shows a one-click 'Use contact's location' hint when the ticket location is not among the contact's locations; existing locations are never overwritten without the click"
+  },
+  {
+    "id": "F035",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C4"
+    ],
+    "implemented": false,
+    "description": "Inbound email passes location precedence: contact explicit location (primary or only link; remote skips) → inbound defaults location when clients match → undefined"
+  },
+  {
+    "id": "F036",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C5"
+    ],
+    "implemented": false,
+    "description": "Portal createClientTicket passes location_id undefined so the model fills it from the portal user's contact"
+  },
+  {
+    "id": "F037",
+    "commitGroup": "ticket-autofill",
+    "prdRefs": [
+      "FR-C6"
+    ],
+    "implemented": false,
+    "description": "RecurringClientOverridesDialog pre-fills the location from the chosen contact when empty; generation leaves an unset override to the model rule"
+  },
+  {
+    "id": "F038",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D3"
+    ],
+    "implemented": false,
+    "description": "Ticket query schema adds location_id uuid column attribute (equals, in, not_in, is_empty, is_not_empty) and contact.locations set attribute over contact_locations (in, not_in, is_empty, is_not_empty)"
+  },
+  {
+    "id": "F039",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D3"
+    ],
+    "implemented": false,
+    "description": "Conformance rows for location_id and contact.locations added to packages/predicates/spec/conformance.json and SEMANTICS.md; evaluator, SQL compiler and JSONata backends pass"
+  },
+  {
+    "id": "F040",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D4"
+    ],
+    "implemented": false,
+    "description": "WhereTagFilterDescriptor generalised to WhereFilterDescriptor with an options source ({tags} | {locations: 'ticket' | 'contact'}); toolbar control, active chips and clear derive from the table; two new rows Location and Requester location"
+  },
+  {
+    "id": "F041",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D4"
+    ],
+    "implemented": false,
+    "description": "Location filter options: the filtered client's locations, or all tenant locations grouped by client when no client filter is set"
+  },
+  {
+    "id": "F042",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D4"
+    ],
+    "implemented": false,
+    "description": "ticketPredicateFields exposes both location paths for checklist predicates with a location control"
+  },
+  {
+    "id": "F043",
+    "commitGroup": "ticket-filters",
+    "prdRefs": [
+      "FR-D6"
+    ],
+    "implemented": false,
+    "description": "Ticket list definition gets a Location column (off by default, available in the column picker) when none exists"
+  },
+  {
+    "id": "F044",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E1"
+    ],
+    "implemented": false,
+    "description": "REST v1 contactResponseSchema gains work_arrangement and locations[] with address fields; ContactService.getById/list attach them"
+  },
+  {
+    "id": "F045",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E1"
+    ],
+    "implemented": false,
+    "description": "REST v1 createContactSchema and updateContactSchema accept work_arrangement and locations[{location_id, is_primary?}]; cross-client location returns 400 with code contact_location_client_mismatch"
+  },
+  {
+    "id": "F046",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E2"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/contacts and /api/v1/clients/{id}/contacts accept location_id and work_arrangement filters"
+  },
+  {
+    "id": "F047",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E3"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/clients/{id}/locations rows include contact_count"
+  },
+  {
+    "id": "F048",
+    "commitGroup": "search-mcp",
+    "prdRefs": [
+      "FR-E4",
+      "FR-I3"
+    ],
+    "implemented": false,
+    "description": "Route docs in server/src/lib/api/openapi/routes/clientsContacts.ts describe locations, work_arrangement, the location_id and work_arrangement filters and contact_count on every contact and location operation; npm run generate:artifacts regenerates the OpenAPI spec and the MCP registry; spec synced to the developer portal"
+  },
+  {
+    "id": "F049",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E5"
+    ],
+    "implemented": false,
+    "description": "CSV export and template add work_arrangement, locations ('A; B') and primary_location columns"
+  },
+  {
+    "id": "F050",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E5"
+    ],
+    "implemented": false,
+    "description": "CSV import maps the three columns; MappableField union extended; a location name not found under the contact's client fails that row with a message naming it"
+  },
+  {
+    "id": "F051",
+    "commitGroup": "portal",
+    "prdRefs": [
+      "FR-F1"
+    ],
+    "implemented": false,
+    "description": "Client portal ClientUserDetails shows a read-only Locations line (names, primary marked, remote badge); account action joins the links"
+  },
+  {
+    "id": "F052",
+    "commitGroup": "portal",
+    "prdRefs": [
+      "Security"
+    ],
+    "implemented": false,
+    "description": "Portal contact write paths reject locations and work_arrangement"
+  },
+  {
+    "id": "F053",
+    "commitGroup": "mobile",
+    "prdRefs": [
+      "FR-G1"
+    ],
+    "implemented": false,
+    "description": "ee/mobile api/contacts.ts: ContactDetail and ContactListItem gain work_arrangement and locations[]; ContactWriteInput gains both"
+  },
+  {
+    "id": "F054",
+    "commitGroup": "mobile",
+    "prdRefs": [
+      "FR-G2"
+    ],
+    "implemented": false,
+    "description": "ContactDetailScreen Locations section: rows with name, Primary marker, address; press opens buildMapsUrl(mapsQueryFromLines(address)) falling back to the location name; Remote badge beside the name"
+  },
+  {
+    "id": "F055",
+    "commitGroup": "mobile",
+    "prdRefs": [
+      "FR-G3"
+    ],
+    "implemented": false,
+    "description": "ContactFormModal work-arrangement select and location multi-select with primary toggle loaded from /api/v1/clients/{id}/locations, enabled once a client is set; contactForm validation enforces at most one primary"
+  },
+  {
+    "id": "F056",
+    "commitGroup": "mobile",
+    "prdRefs": [
+      "FR-G4"
+    ],
+    "implemented": false,
+    "description": "ContactsListScreen rows and ticket-detail ContactPickerModal show the primary location name as a secondary line"
+  },
+  {
+    "id": "F057",
+    "commitGroup": "i18n",
+    "prdRefs": [
+      "FR-H1"
+    ],
+    "implemented": false,
+    "description": "All new MSP, portal and mobile strings use t() with keys added to every shipped locale; glossary gates pass"
+  },
+  {
+    "id": "F058",
+    "commitGroup": "contact-model",
+    "prdRefs": [
+      "FR-B7"
+    ],
+    "implemented": false,
+    "description": "Merge preview (clientMergePlan.ts) and merge report include the number of contact location links moving to the target"
+  },
+  {
+    "id": "F059",
+    "commitGroup": "api-csv",
+    "prdRefs": [
+      "FR-E6"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/contacts/export and GET /api/v1/contacts/search rows carry work_arrangement, locations[] and primary location like the list response"
+  },
+  {
+    "id": "F060",
+    "commitGroup": "search-mcp",
+    "prdRefs": [
+      "FR-I1"
+    ],
+    "implemented": false,
+    "description": "Contact search indexer loads links per batch like phone numbers; primary location name joins the subtitle after the client name, all linked location names and cities join the body, remote adds 'Remote' to the body"
+  },
+  {
+    "id": "F061",
+    "commitGroup": "search-mcp",
+    "prdRefs": [
+      "FR-I2"
+    ],
+    "implemented": false,
+    "description": "Saving contact links reindexes the contact; renaming or deactivating a location reindexes every linked contact"
+  },
+  {
+    "id": "F062",
+    "commitGroup": "search-mcp",
+    "prdRefs": [
+      "FR-I3"
+    ],
+    "implemented": false,
+    "description": "MCP registry entries for contact and location operations mention the new parameters in their summaries so search_api_registry ranks them for location queries; call_api_endpoint passes location_id and work_arrangement filters through"
+  },
+  {
+    "id": "F063",
+    "commitGroup": "merge-ui",
+    "prdRefs": [
+      "FR-B8"
+    ],
+    "implemented": false,
+    "description": "Merge preview contacts carry locations[] (id, name, isPrimary) and workArrangement; preview carries locationsAfterMerge (source locations flagged fromSource plus target locations) and suggestedTargetLocationId per link when a target location name matches case- and whitespace-insensitively"
+  },
+  {
+    "id": "F064",
+    "commitGroup": "merge-ui",
+    "prdRefs": [
+      "UX merge dialog"
+    ],
+    "implemented": false,
+    "description": "MergeClientsDialog Contacts step adds a Locations column (id merge-contact-locations-<contactId>): multi-select of locationsAfterMerge with primary marker, pre-filled from current links, source locations labelled 'moving from <source>', Remote badge for remote contacts"
+  },
+  {
+    "id": "F065",
+    "commitGroup": "merge-ui",
+    "prdRefs": [
+      "UX merge dialog"
+    ],
+    "implemented": false,
+    "description": "Contacts step shows a 'Target also has <name>' hint with a one-click Use it that re-points that link to the target location; nothing is re-pointed without the click"
+  },
+  {
+    "id": "F066",
+    "commitGroup": "merge-ui",
+    "prdRefs": [
+      "FR-B9"
+    ],
+    "implemented": false,
+    "description": "Merge input contactLocationAssignments; engine applies replaceContactLocations per listed contact after the client-owned tables move; unlisted contacts keep their links"
+  },
+  {
+    "id": "F067",
+    "commitGroup": "merge-ui",
+    "prdRefs": [
+      "FR-B9"
+    ],
+    "implemented": false,
+    "description": "Engine and dry run reject a chosen location that is neither a moved source location nor a target location with a clear error; report counts contact location links and re-pointed links; confirm step shows both"
+  }
+]

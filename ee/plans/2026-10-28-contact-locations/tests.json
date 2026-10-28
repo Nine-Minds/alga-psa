@@ -1,0 +1,899 @@
+[
+  {
+    "id": "T001",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "Migration: contact_locations exists with the expected columns, PK, partial unique primary index and (tenant, location_id) index"
+  },
+  {
+    "id": "T002",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "Deleting a contact cascades its contact_locations rows; deleting a client_locations row with links fails at the DB with a FK error"
+  },
+  {
+    "id": "T003",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "A second is_primary row for the same contact violates the partial unique index"
+  },
+  {
+    "id": "T004",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Citus smoke: contact_locations is distributed by tenant and co-located with contacts; migration runs clean on the Citus lane"
+  },
+  {
+    "id": "T005",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "work_arrangement accepts on_site, hybrid, remote and null; any other value violates the check"
+  },
+  {
+    "id": "T006",
+    "commitGroup": "schema",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "tenantTableManifest golden test includes contact_locations; tenant-deletion order test places it before contacts and client_locations"
+  },
+  {
+    "id": "T007",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F006",
+      "F008"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations with two links and one primary persists both with the primary flagged; with one unflagged link it becomes primary"
+  },
+  {
+    "id": "T008",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations with an empty array removes all links; replacing a set drops links not in the new set"
+  },
+  {
+    "id": "T009",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations rejects a location of another client with ContactLocationClientMismatch and writes nothing"
+  },
+  {
+    "id": "T010",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "replaceContactLocations rejects two primaries and a non-existent location id"
+  },
+  {
+    "id": "T011",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "Tenant isolation: links written under tenant A are invisible to reads under tenant B, and a location id from tenant B is rejected as not found"
+  },
+  {
+    "id": "T012",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "addContact with locations and work_arrangement creates the contact and links in one transaction; a mismatch rolls back the contact too"
+  },
+  {
+    "id": "T013",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": false,
+    "description": "updateContact without locations leaves links unchanged; with [] removes them; with a new set replaces them"
+  },
+  {
+    "id": "T014",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "updateContact changing client_id removes every link and returns removedLocationCount equal to the prior count"
+  },
+  {
+    "id": "T015",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "updateContact changing client_id and passing locations of the new client in the same call writes only the new links"
+  },
+  {
+    "id": "T016",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": false,
+    "description": "getContactLocationCount returns the link count and 0 for a contact with none"
+  },
+  {
+    "id": "T017",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F013",
+      "F014"
+    ],
+    "implemented": false,
+    "description": "attachContactLocations runs one query for a page of contacts and attaches locations[] and primaryLocation; contacts with no links get [] and null"
+  },
+  {
+    "id": "T018",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": false,
+    "description": "getContactByContactNameId returns locations with address fields, is_primary and is_active for an inactive linked location"
+  },
+  {
+    "id": "T019",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "resolveContactLocationId returns the primary link when several exist"
+  },
+  {
+    "id": "T020",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "resolveContactLocationId returns the only link when one exists without a primary flag"
+  },
+  {
+    "id": "T021",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "resolveContactLocationId returns the client's default active location when the contact has no links and is not remote"
+  },
+  {
+    "id": "T022",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "resolveContactLocationId returns null for a remote contact even when the client has a default location, and null when the client has no active default"
+  },
+  {
+    "id": "T023",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "deleteLocation with two linked contacts throws 'Cannot delete location: it has associated 2 contact(s)' and the location remains"
+  },
+  {
+    "id": "T024",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "deleteLocation message lists contacts together with tickets and tax rates when all apply"
+  },
+  {
+    "id": "T025",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Deactivating a linked location keeps the link and the contact read marks it is_active false"
+  },
+  {
+    "id": "T026",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F017"
+    ],
+    "implemented": false,
+    "description": "Client merge: a contact linked to a source location keeps its link after both move; link count before equals after; no link references a location of a different client than its contact; a demoted source default keeps its links"
+  },
+  {
+    "id": "T027",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false,
+    "description": "ContactLocationsEditor renders disabled with a hint when no client is chosen and lists the client's active locations once chosen"
+  },
+  {
+    "id": "T028",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false,
+    "description": "ContactLocationsEditor keeps an inactive already-linked location listed and marked; the primary radio only offers selected locations"
+  },
+  {
+    "id": "T029",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": false,
+    "description": "Edit drawer: changing the client of a contact with 2 links shows a confirmation naming 2 links; cancel keeps the old client; confirm saves and the tile shows no locations"
+  },
+  {
+    "id": "T030",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": false,
+    "description": "Edit drawer: changing the client of a contact with no links shows no confirmation"
+  },
+  {
+    "id": "T031",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F020"
+    ],
+    "implemented": false,
+    "description": "QuickAddContact with a client chosen lets the user pick two locations and a primary; the created contact has both links"
+  },
+  {
+    "id": "T032",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F021"
+    ],
+    "implemented": false,
+    "description": "Contact bento Locations tile shows work-arrangement badge, rows with Primary and Inactive markers, and the empty state with Add"
+  },
+  {
+    "id": "T033",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F021"
+    ],
+    "implemented": false,
+    "description": "Contact bento Locations tile shows 'Remote' for a remote contact with no links"
+  },
+  {
+    "id": "T034",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "Contacts table Location column shows 'Warehouse +1' for two links with Warehouse primary, 'Remote' for an unlinked remote contact, and empty otherwise; sorting by the column orders by primary name"
+  },
+  {
+    "id": "T035",
+    "commitGroup": "contact-ui",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "Client contacts tab Location filter narrows to contacts linked to the chosen location; Remote and No location options behave as described"
+  },
+  {
+    "id": "T036",
+    "commitGroup": "location-ui",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": false,
+    "description": "ClientLocations card shows the contact count chip and expands to the contact names, each linking to the contact page"
+  },
+  {
+    "id": "T037",
+    "commitGroup": "location-ui",
+    "featureIds": [
+      "F025"
+    ],
+    "implemented": false,
+    "description": "Deleting a linked location from the card shows the dependency error text and the card remains"
+  },
+  {
+    "id": "T038",
+    "commitGroup": "pickers",
+    "featureIds": [
+      "F026",
+      "F027"
+    ],
+    "implemented": false,
+    "description": "pickers.displayTags-style test: ContactPicker option shows tag badges then the primary location name; the selected row shows the same; a contact with no location shows none"
+  },
+  {
+    "id": "T039",
+    "commitGroup": "pickers",
+    "featureIds": [
+      "F027"
+    ],
+    "implemented": false,
+    "description": "Picker actions attach primaryLocation in one batched query per page (query count assertion)"
+  },
+  {
+    "id": "T040",
+    "commitGroup": "pickers",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "Ticket contact tile renders the requester's primary location under the tag chips and nothing when unlinked"
+  },
+  {
+    "id": "T041",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "TicketModel.createTicket with contact and undefined location_id stores the contact's primary location"
+  },
+  {
+    "id": "T042",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "TicketModel.createTicket with location_id null keeps null; with an explicit location keeps it; with no contact leaves location untouched"
+  },
+  {
+    "id": "T043",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "TicketModel.createTicket for a remote contact stores no location; for an unlinked contact at a single-location client stores the client default"
+  },
+  {
+    "id": "T044",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "TicketModel.createTicket rejects a resolved location whose client differs from the ticket's client (contact at another client) with the existing mismatch error"
+  },
+  {
+    "id": "T045",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F030"
+    ],
+    "implemented": false,
+    "description": "getContactEffectiveLocation returns resolved location id and the contact's links; permission denied for a user without ticket create"
+  },
+  {
+    "id": "T046",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket: selecting a contact with a primary location fills the Location select and marks the source as contact"
+  },
+  {
+    "id": "T047",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket: a location chosen by hand is not replaced when a contact is picked afterwards"
+  },
+  {
+    "id": "T048",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket: switching contacts replaces a contact-filled location with the new contact's; clearing the contact clears it; changing the client clears both"
+  },
+  {
+    "id": "T049",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F032"
+    ],
+    "implemented": false,
+    "description": "QuickAddTicket: the Location select groups the contact's locations first with the primary marked; explicit None submits null and an untouched field omits location_id"
+  },
+  {
+    "id": "T050",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "TicketDetails: changing the contact on a ticket with no location sets the contact's primary location and writes a history entry"
+  },
+  {
+    "id": "T051",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F034"
+    ],
+    "implemented": false,
+    "description": "TicketDetails: changing the contact on a ticket whose location is not among the contact's shows the Use contact's location hint and leaves the location; clicking applies it; no hint when the ticket location is one of the contact's"
+  },
+  {
+    "id": "T052",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "Inbound email: matched contact with a primary location wins over inbound defaults location"
+  },
+  {
+    "id": "T053",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "Inbound email: unlinked contact uses the defaults location when clients match, undefined when they differ so the model falls back to the client default; remote contact skips to defaults"
+  },
+  {
+    "id": "T054",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F036"
+    ],
+    "implemented": false,
+    "description": "Portal createClientTicket by a user whose contact has a primary location stores it; an unlinked contact at a multi-location client gets the client default; a remote contact gets none"
+  },
+  {
+    "id": "T055",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F037"
+    ],
+    "implemented": false,
+    "description": "RecurringClientOverridesDialog pre-fills the location from the contact when empty and keeps a user-set one"
+  },
+  {
+    "id": "T056",
+    "commitGroup": "ticket-autofill",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "REST v1 POST /tickets with contact and no location_id stores the contact's primary location; with location_id null stores none"
+  },
+  {
+    "id": "T057",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F038"
+    ],
+    "implemented": false,
+    "description": "ticketQuerySchema resolves location_id and contact.locations with the declared operators and rejects others"
+  },
+  {
+    "id": "T058",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Conformance rows for location_id (equals, in, not_in, is_empty, is_not_empty) and contact.locations (in, not_in, is_empty, is_not_empty) pass on evaluator, SQL compiler and JSONata backends"
+  },
+  {
+    "id": "T059",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F038",
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Filter matrix: 'contact.locations in [Warehouse]' returns exactly the tickets whose requester is linked to Warehouse, including a bundle master through a child in bundled view; a client-portal user sees only their visible subset"
+  },
+  {
+    "id": "T060",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F038",
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Filter matrix: 'location_id in [Warehouse]' returns the tickets at Warehouse; 'is_empty' returns tickets with no location; 'not_in' includes tickets with no location per SEMANTICS.md"
+  },
+  {
+    "id": "T061",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "Descriptor table test: both location descriptors produce a toolbar control, active-filter chips per selected location and individual clear, with no bespoke wiring in TicketingDashboard"
+  },
+  {
+    "id": "T062",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "Existing tag descriptors and legacy saved-view migration behave exactly as before after the generalisation"
+  },
+  {
+    "id": "T063",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F041"
+    ],
+    "implemented": false,
+    "description": "Location filter options list the filtered client's locations, or all tenant locations grouped by client without a client filter"
+  },
+  {
+    "id": "T064",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "URL round trip: where=v1:location_id:in:<id> and contact.locations:in:<id> load into the toolbar and survive save as a view"
+  },
+  {
+    "id": "T065",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Checklist predicate editor offers Location and Requester location with the location control and in/not_in operators"
+  },
+  {
+    "id": "T066",
+    "commitGroup": "ticket-filters",
+    "featureIds": [
+      "F043"
+    ],
+    "implemented": false,
+    "description": "Ticket list column picker offers Location, off by default; enabling it shows the location name per row"
+  },
+  {
+    "id": "T067",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F044"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/contacts/{id} returns work_arrangement and locations[] with address fields and is_primary; unlinked contact returns []"
+  },
+  {
+    "id": "T068",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "POST /api/v1/contacts with locations creates links; PUT with [] removes them; PUT without the field leaves them"
+  },
+  {
+    "id": "T069",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "POST /api/v1/contacts with a location of another client returns 400 contact_location_client_mismatch; two primaries return 400"
+  },
+  {
+    "id": "T070",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "PUT /api/v1/contacts/{id} changing client_id removes links and the response shows locations []"
+  },
+  {
+    "id": "T071",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F046"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/contacts?location_id= returns contacts linked to that location in any role; ?work_arrangement=remote returns remote contacts; same on the client-scoped route"
+  },
+  {
+    "id": "T072",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F047"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/clients/{id}/locations rows carry contact_count matching the links"
+  },
+  {
+    "id": "T073",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F048"
+    ],
+    "implemented": false,
+    "description": "OpenAPI spec includes the new contact fields and filters; sync script runs clean"
+  },
+  {
+    "id": "T074",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": false,
+    "description": "CSV export writes work_arrangement, locations 'Warehouse; Head office' and primary_location 'Warehouse'; template includes the headers"
+  },
+  {
+    "id": "T075",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "CSV import creates links by location name within the contact's client and sets the primary; unknown name fails that row with a message naming it and other rows import"
+  },
+  {
+    "id": "T076",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "CSV import with locations but no client on the row fails the row with a clear message"
+  },
+  {
+    "id": "T077",
+    "commitGroup": "portal",
+    "featureIds": [
+      "F051"
+    ],
+    "implemented": false,
+    "description": "Portal user detail shows the user's locations read-only with primary marked and a Remote badge when remote"
+  },
+  {
+    "id": "T078",
+    "commitGroup": "portal",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "Portal contact write actions reject locations and work_arrangement with a validation error"
+  },
+  {
+    "id": "T079",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F053"
+    ],
+    "implemented": false,
+    "description": "api/contacts.test: getContact parses locations[] and work_arrangement; createContact and updateContact send them when provided"
+  },
+  {
+    "id": "T080",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "ContactDetailScreen renders the Locations section with Primary marker and address; pressing a row calls Linking.openURL with buildMapsUrl of the address lines"
+  },
+  {
+    "id": "T081",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "ContactDetailScreen: a location without address lines opens the maps app with the location name; a remote contact shows the Remote badge; no section when unlinked and not remote"
+  },
+  {
+    "id": "T082",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F055"
+    ],
+    "implemented": false,
+    "description": "ContactFormModal loads the client's locations once a client is set, lets the user pick two and mark one primary, and submits locations with the primary flag"
+  },
+  {
+    "id": "T083",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F055"
+    ],
+    "implemented": false,
+    "description": "contactForm.test: two primaries is a validation error; changing the client clears the selection and the diff payload sends locations []"
+  },
+  {
+    "id": "T084",
+    "commitGroup": "mobile",
+    "featureIds": [
+      "F056"
+    ],
+    "implemented": false,
+    "description": "ContactsListScreen row and ContactPickerModal row show the primary location name and nothing when unlinked"
+  },
+  {
+    "id": "T085",
+    "commitGroup": "i18n",
+    "featureIds": [
+      "F057"
+    ],
+    "implemented": false,
+    "description": "i18n key scanner finds no untranslated new strings; glossary register checks pass for every shipped locale"
+  },
+  {
+    "id": "T086",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "Merge preview for a source with 3 contact location links reports 3 moving links; report after merge matches"
+  },
+  {
+    "id": "T087",
+    "commitGroup": "contact-model",
+    "featureIds": [
+      "F017"
+    ],
+    "implemented": false,
+    "description": "Merge engine assertion fails the merge (transaction rolled back) when a link would end up crossing clients, instead of finishing silently"
+  },
+  {
+    "id": "T088",
+    "commitGroup": "api-csv",
+    "featureIds": [
+      "F059"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/contacts/search and /api/v1/contacts/export rows include work_arrangement, locations[] and the primary location"
+  },
+  {
+    "id": "T089",
+    "commitGroup": "search-mcp",
+    "featureIds": [
+      "F060"
+    ],
+    "implemented": false,
+    "description": "Contact indexer: a contact linked to Warehouse (primary) and Head office indexes subtitle '… | Acme | Warehouse' and a body containing both names and cities; a remote contact's body contains 'Remote'"
+  },
+  {
+    "id": "T090",
+    "commitGroup": "search-mcp",
+    "featureIds": [
+      "F060"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/search?query=warehouse&types=contact returns the linked contacts; a user without contact:read gets none"
+  },
+  {
+    "id": "T091",
+    "commitGroup": "search-mcp",
+    "featureIds": [
+      "F061"
+    ],
+    "implemented": false,
+    "description": "Renaming Warehouse to Depot reindexes linked contacts so searching 'depot' finds them and 'warehouse' no longer does; deactivating a location reindexes the same set"
+  },
+  {
+    "id": "T092",
+    "commitGroup": "search-mcp",
+    "featureIds": [
+      "F048",
+      "F062"
+    ],
+    "implemented": false,
+    "description": "Generated OpenAPI and MCP registry include locations, work_arrangement, the contact filters and contact_count; the generated files are committed and the CI drift check passes"
+  },
+  {
+    "id": "T093",
+    "commitGroup": "search-mcp",
+    "featureIds": [
+      "F062"
+    ],
+    "implemented": false,
+    "description": "MCP e2e: search_api_registry for 'contacts at a location' ranks the contacts list entry; call_api_endpoint with location_id returns only linked contacts; search_business_data 'warehouse' returns the contact hit"
+  },
+  {
+    "id": "T094",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F063"
+    ],
+    "implemented": false,
+    "description": "Merge preview: a contact linked to source Warehouse (primary) and Head office shows both with the primary; locationsAfterMerge lists source rows with fromSource true and target rows false; suggestedTargetLocationId set for 'Head office' when the target has ' head office '"
+  },
+  {
+    "id": "T095",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F064"
+    ],
+    "implemented": false,
+    "description": "Contacts step renders the Locations column pre-filled with current links and primary, source options labelled as moving, and a Remote badge for a remote contact"
+  },
+  {
+    "id": "T096",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F065"
+    ],
+    "implemented": false,
+    "description": "Contacts step: the hint appears only for links with a suggestion; clicking Use it swaps that link to the target location and keeps the primary flag; without the click the submitted assignment is unchanged"
+  },
+  {
+    "id": "T097",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F066"
+    ],
+    "implemented": false,
+    "description": "Engine: a contact with an assignment switching Head office (source) to Head office (target) ends linked to the target row with the primary flag; a contact with no assignment keeps its links on the moved source rows"
+  },
+  {
+    "id": "T098",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F066"
+    ],
+    "implemented": false,
+    "description": "Engine: an assignment with an empty locations array clears the contact's links; an assignment with two primaries fails the merge"
+  },
+  {
+    "id": "T099",
+    "commitGroup": "merge-ui",
+    "featureIds": [
+      "F067"
+    ],
+    "implemented": false,
+    "description": "Engine and dry run: a location id of a third client fails with an error naming the contact and location, and the transaction rolls back; report counts links and re-pointed links; confirm step shows 'N contact location links, M re-pointed'"
+  }
+]
