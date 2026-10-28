@@ -92,6 +92,7 @@ interface BentoTimelineTileProps {
   initialOrder?: 'asc' | 'desc';
   // Composer plumbing — same pipeline TicketConversation uses.
   editorKey: number;
+  defaultReplyInternal?: boolean;
   isSubmitting?: boolean;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
   onAddNewComment: (
@@ -407,6 +408,7 @@ export function BentoTimelineTile({
   refreshKey = 0,
   initialOrder = 'asc',
   editorKey,
+  defaultReplyInternal = false,
   isSubmitting,
   onNewCommentContentChange,
   onAddNewComment,
@@ -468,7 +470,7 @@ export function BentoTimelineTile({
   const searchEmailRecipients = useCommentEmailRecipientSuggestions(clientId);
   // Visibility and resolution are independent, same as the legacy composer: an
   // internal note can also be the resolution.
-  const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>('client');
+  const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>(defaultReplyInternal ? 'internal' : 'client');
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
@@ -521,9 +523,10 @@ export function BentoTimelineTile({
   }, []);
 
   const openComposer = useCallback((placement: 'top' | 'bottom') => {
+    if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
     setComposerPlacement(placement);
     setShowComposer(true);
-  }, []);
+  }, [showComposer, defaultReplyInternal]);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
