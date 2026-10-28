@@ -187,6 +187,31 @@ describeDb('ticket chip tag hydration (DB)', () => {
     }
   });
 
+  it('by-id loads preserve list rows and metadata, request order, deduplication and filters', async () => {
+    const listed: any = await optimized.getTicketsForList(base, 1, 50);
+    expect(listed.tickets).toHaveLength(4);
+    const reloaded: any = await optimized.loadTicketListItemsByIds(base, [ids.CH, ids.A, ids.CH, uuidv4()]);
+    expect(reloaded.tickets).toEqual([ids.CH, ids.A].map(id =>
+      listed.tickets.find((row: any) => row.ticket_id === id)
+    ));
+    expect(reloaded.metadata).toEqual(listed.metadata);
+    expect(reloaded.metadata.ticketTags[ids.CH]).toEqual([
+      expect.objectContaining({ tag_text: 'urgent', tagged_id: ids.CH, tagged_type: 'ticket' }),
+    ]);
+    const filtered: any = await optimized.loadTicketListItemsByIds(
+      { ...base, contactId: ids.k2 }, [ids.A, ids.B, ids.CH]
+    );
+    expect(filtered.tickets).toEqual([listed.tickets.find((row: any) => row.ticket_id === ids.B)]);
+
+    authMocks.hasPermission.mockResolvedValue(false);
+    try {
+      expect(await optimized.loadTicketListItemsByIds(base, [ids.A]))
+        .toMatchObject({ permissionError: expect.any(String) });
+    } finally {
+      authMocks.hasPermission.mockResolvedValue(true);
+    }
+  });
+
   it('projected tags follow rule order on list rows, reloaded rows and ticket details', async () => {
     await db('tag_display_rules').insert({
       tenant: ids.tenant, tagged_type: 'client', audience: 'internal', tag_id: defs.clientGold, position: 1,
@@ -253,6 +278,14 @@ describeDb('ticket chip tag hydration (DB)', () => {
 
   it('T019: rows served to a client-portal user never carry the internal chip tags', async () => {
     const portalUser = uuidv4();
+    const groupId = uuidv4();
+    const { board_id } = await db('tickets').where({ tenant: ids.tenant, ticket_id: ids.A }).first('board_id');
+    await db('client_portal_visibility_groups').insert({
+      tenant: ids.tenant, group_id: groupId, client_id: ids.c1, name: 'Own tickets', ticket_scope: 'contact',
+    });
+    await db('client_portal_visibility_group_boards').insert({ tenant: ids.tenant, group_id: groupId, board_id });
+    await db('contacts').where({ tenant: ids.tenant, contact_name_id: ids.k1 })
+      .update({ portal_visibility_group_id: groupId });
     await db('users').insert({
       tenant: ids.tenant, user_id: portalUser, username: `portal-${portalUser.slice(0, 8)}`, hashed_password: 'not-used',
       email: `portal-${portalUser.slice(0, 8)}@example.com`, first_name: 'Portal', last_name: 'User', user_type: 'client', is_inactive: false, contact_id: ids.k1,
@@ -261,10 +294,14 @@ describeDb('ticket chip tag hydration (DB)', () => {
     try {
       const rows = await rowsById();
       expect(rows.has(ids.A)).toBe(true);
+      expect(rows.has(ids.B)).toBe(false);
       for (const row of rows.values()) {
         expect(row.contact_tags).toEqual([]);
         expect(row.client_tags).toEqual([]);
       }
+      const reloaded: any = await optimized.loadTicketListItemsByIds(base, [ids.A, ids.B]);
+      expect(reloaded.tickets).toEqual([ids.A, ids.B]
+        .filter(id => rows.has(id)).map(id => rows.get(id)));
       const detail = await optimized.getConsolidatedTicketData(ids.A);
       expect(detail.displayTags).toEqual({ contact: [], client: [] });
       expect(detail.contacts.every((c: any) => c.displayTags.length === 0)).toBe(true);
@@ -277,6 +314,10 @@ describeDb('ticket chip tag hydration (DB)', () => {
       expect(clientDetail.displayTags.contact).toEqual([]);
     } finally {
       await db('tag_display_rules').where({ tenant: ids.tenant, audience: 'client' }).del();
+      await db('contacts').where({ tenant: ids.tenant, contact_name_id: ids.k1 })
+        .update({ portal_visibility_group_id: null });
+      await db('client_portal_visibility_group_boards').where({ tenant: ids.tenant, group_id: groupId }).del();
+      await db('client_portal_visibility_groups').where({ tenant: ids.tenant, group_id: groupId }).del();
       authMocks.user = { user_id: ids.actor, user_type: 'internal', tenant: ids.tenant };
     }
   });

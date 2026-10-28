@@ -303,22 +303,4 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(bundleSection).not.toContain("'t.tenant': tenant");
   });
-  it('routes list rows loaded by id through the same scoped base query, authorization SQL, and enrichment as the list', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
-    const start = source.indexOf('export const loadTicketListItemsByIds = withAuth(');
-    const end = source.indexOf('export const getTicketBoardIds = withAuth(', start);
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    const section = source.slice(start, end);
-
-    expect(section).toContain("hasPermission(user, 'ticket', 'read', trx)");
-    expect(section).toContain('buildTicketListBaseQuery(trx, tenant, user, validatedFilters)');
-    expect(section).toContain('applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext)');
-    expect(section).toContain('filterAuthorizedTickets(trx, authorizationContext, candidates)');
-    expect(section).toContain("whereIn('t.ticket_id', requestedIds)");
-    expect(section).toContain('enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), displayAudienceForUser(user))');
-
-    // The paginated list ends in the same enrichment, so both paths render identical rows.
-    expect(source).toContain('const enriched = await enrichTicketListItems(trx, tenant, ticketListItems, displayAudienceForUser(user));');
-  });
 });
