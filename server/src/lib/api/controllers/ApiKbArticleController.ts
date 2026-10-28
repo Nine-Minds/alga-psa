@@ -3,7 +3,7 @@
  * Handles knowledge base article API endpoints
  */
 
-import { canReadKnowledgeBase } from '@alga-psa/documents/lib/documentPermissions';
+import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { KbArticleService } from '../services/KbArticleService';

@@ -3,7 +3,7 @@
 import { IUser } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
-import { canReadPublishedKnowledgeBase } from '@alga-psa/documents/lib/documentPermissions';
+import { canReadPublishedKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction, tenantDb } from '@alga-psa/db';
 import type {

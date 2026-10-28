@@ -110,6 +110,10 @@
       "import": "./src/lib/permissionCapabilities.ts",
       "types": "./src/lib/permissionCapabilities.ts"
     },
+    "./lib/knowledgeBasePermissions": {
+      "import": "./src/lib/knowledgeBasePermissions.ts",
+      "types": "./src/lib/knowledgeBasePermissions.ts"
+    },
     "./lib/preCheckDeletion": {
       "import": "./src/lib/preCheckDeletion.ts",
       "types": "./src/lib/preCheckDeletion.ts"

@@ -1,7 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
-import { canReadKnowledgeBase } from '../lib/documentPermissions';
+import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
