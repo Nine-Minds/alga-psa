@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "1 asset",
       "Offline",
       "{{from}} → {{to}}",
       "RMA {{id}}",
