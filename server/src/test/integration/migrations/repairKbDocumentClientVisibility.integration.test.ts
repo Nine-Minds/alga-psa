@@ -83,4 +83,45 @@ describe('repair_kb_document_client_visibility migration', () => {
 
     await expect(migration.down(db)).resolves.toBeUndefined();
   });
+
+  it('repairs a tenant whose drift spans more than one batch', async () => {
+    const batchTenant = await createTenant(db, 'KB Repair Batch Tenant');
+    const batchUser = await createUser(db, batchTenant, { username: 'kb-repair-batch' });
+    const count = migration.BATCH_SIZE * 2 + 1;
+    const docs = Array.from({ length: count }, (_, i) => ({
+      tenant: batchTenant, document_id: uuidv4(), document_name: `batch-${i}`, user_id: batchUser, created_by: batchUser,
+      order_number: 0, folder_path: '/Knowledge Base', entered_at: db.fn.now(), updated_at: db.fn.now(), is_client_visible: true,
+    }));
+    const articles = docs.map((d, i) => ({
+      tenant: batchTenant, article_id: uuidv4(), document_id: d.document_id, slug: `batch-${i}-${d.document_id.slice(0, 6)}`,
+      article_type: 'how_to', audience: 'internal', status: 'published', created_by: batchUser, updated_by: batchUser,
+    }));
+    for (let i = 0; i < count; i += 500) {
+      await table('documents', batchTenant).insert(docs.slice(i, i + 500));
+      await table('kb_articles', batchTenant).insert(articles.slice(i, i + 500));
+    }
+    const keep = await seed(batchTenant, batchUser, 'batch-keep', 'published', 'client', true);
+
+    const updatedCounts: number[] = [];
+    const recordUpdate = (response: { command?: string; rowCount?: number }) => {
+      if (response?.command === 'UPDATE' && typeof response.rowCount === 'number') {
+        updatedCounts.push(response.rowCount);
+      }
+    };
+    db.on('query-response', recordUpdate);
+    try {
+      await migration.up(db);
+    } finally {
+      db.removeListener('query-response', recordUpdate);
+    }
+    expect(updatedCounts.length).toBeGreaterThanOrEqual(3);
+    expect(updatedCounts.every((count) => count <= migration.BATCH_SIZE)).toBe(true);
+
+    const stillVisible = await table('documents', batchTenant)
+      .whereIn('document_id', docs.map((d) => d.document_id))
+      .andWhere({ is_client_visible: true })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(stillVisible[0].count)).toBe(0);
+    expect(await flag(keep, batchTenant)).toBe(true);
+  }, 120_000);
 });
