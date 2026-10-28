@@ -24,7 +24,26 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithTenant } from '@alga-psa/db';
 import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { localizeActionError } from './localizeActionError';
+
+/**
+ * A co-managed lifecycle refusal (write admission) is an expected outcome, not a
+ * fault. Next.js strips thrown messages at the serialization boundary, so it is
+ * RETURNED as an action error, from inside runWithTenant so localizeActionError
+ * can translate its messageKey. Anything else is rethrown untouched.
+ */
+async function runLocalized<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await localizeActionError(await run());
+  } catch (error) {
+    if (isCoManagedLifecycleError(error)) {
+      return (await localizeActionError(actionError(error.message, coManagedRefusalMessageKey(error)))) as unknown as T;
+    }
+    throw error;
+  }
+}
 
 /**
  * Context provided to authenticated actions
@@ -104,9 +123,7 @@ export function withAuth<TArgs extends unknown[], TResult>(
     // This ensures createTenantKnex() works without explicit tenant argument.
     // localizeActionError runs inside it because resolving the caller's locale
     // reads tenant_settings; it is a no-op unless the payload carries a messageKey.
-    return runWithTenant(user.tenant, async () =>
-      localizeActionError(await action(user, ctx, ...args)),
-    );
+    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
   };
 }
 
@@ -141,9 +158,7 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
       tenant: user.tenant,
     };
 
-    return runWithTenant(user.tenant, async () =>
-      localizeActionError(await action(user, ctx, ...args)),
-    );
+    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
   };
 }
 

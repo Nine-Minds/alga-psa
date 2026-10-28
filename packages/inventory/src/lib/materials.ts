@@ -451,6 +451,7 @@ export async function updateProjectMaterialBilling(
       );
     }
 
+    // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
     const [updated] = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId, is_billed: false })
       .update({

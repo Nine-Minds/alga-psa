@@ -526,6 +526,7 @@ function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
             resolveRules: async (input) => {
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                // write-admission: exempt — authorization-rule read, never a write
                 } catch {
                     return [];
                 }

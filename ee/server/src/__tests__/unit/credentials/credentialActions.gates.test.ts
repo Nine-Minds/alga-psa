@@ -646,3 +646,22 @@ describe('credentials actions — entity association CRUD is gated and delegates
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'credential', 'update');
   });
 });
+
+describe('credentials actions — co-managed write admission (CM L0c, A4)', () => {
+  async function realRefusal(state: 'read_only' | 'pending_acceptance') {
+    const { createCoManagedWriteAdmissionResolver } = await import('@alga-psa/licensing/co-managed-write-admission');
+    const decision = await createCoManagedWriteAdmissionResolver(async () => ({ state, canWrite: false, graceEndsAt: null }))({} as any, 'tenant-1');
+    return decision.denial as Error;
+  }
+
+  it.each([
+    ['read_only', 'CO_MANAGED_READ_ONLY'],
+    ['pending_acceptance', 'CO_MANAGED_NOT_ACTIVE'],
+  ] as const)('updateCredential returns the refusal code for %s without logging a fault', async (state, code) => {
+    nativeUpdateMock.mockRejectedValue(await realRefusal(state));
+    const { updateCredential } = await importActions();
+
+    await expect(updateCredential('credential-1', { name: 'renamed' })).resolves.toEqual({ ok: false, code });
+    expect(loggerErrorMock).not.toHaveBeenCalled();
+  });
+});

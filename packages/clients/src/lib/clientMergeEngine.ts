@@ -941,6 +941,7 @@ export async function executeClientMerge(
 
   // Other clients recorded as children of the source now hang off the target,
   // so the soft hierarchy does not point at a tombstone.
+  // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
   await trx.raw(
     `UPDATE clients
         SET properties = jsonb_set(

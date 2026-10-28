@@ -25,6 +25,7 @@ import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepos
 import { getHuduCompanyMappingRows } from '../../integrations/hudu/companyMapping';
 import { nativeCredentialSource } from '../../credentials/nativeSource';
 import { huduCredentialSource, isHuduCredentialId } from '../../credentials/huduSource';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import {
   addCredentialToEntity as serviceAddCredentialToEntity,
   removeCredentialFromEntity as serviceRemoveCredentialFromEntity,
@@ -276,6 +277,8 @@ export type CredentialSaveCode =
   | 'NOT_FOUND'
   | 'CONFIGURATION'
   | 'VAULT_NOT_CONFIGURED'
+  | 'CO_MANAGED_NOT_ACTIVE'
+  | 'CO_MANAGED_READ_ONLY'
   | 'UNKNOWN';
 type CredentialSaveLogDetails = { tenant: string; userId: string; clientId?: string; credentialId?: string; source?: string };
 export type CredentialSaveResult =
@@ -283,6 +286,8 @@ export type CredentialSaveResult =
   | { ok: false; code: CredentialSaveCode };
 
 function credentialSaveFailure(operation: 'create' | 'update', error: unknown, details: CredentialSaveLogDetails): Extract<CredentialSaveResult, { ok: false }> {
+  // A co-managed write-admission refusal is an expected outcome, not a fault: answer before logger.error.
+  if (isCoManagedLifecycleError(error)) return { ok: false, code: error.code };
   const rawCode = (error as { code?: string } | null)?.code;
   const rawMessage = error instanceof Error ? error.message : '';
   let code: CredentialSaveCode = 'UNKNOWN';
@@ -477,6 +482,7 @@ async function attachRefAssociations(
   );
   if (unique.length === 0) return;
   await knex.transaction(async (trx) => {
+    // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
     await trx('credential_associations')
       .insert(
         unique.map((a) => ({

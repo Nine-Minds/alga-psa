@@ -890,6 +890,7 @@ export const importTickets = withAuth(async (
       for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
+        // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
         `
           UPDATE tickets AS target
           SET entered_at = v.entered_at
@@ -909,6 +910,7 @@ export const importTickets = withAuth(async (
       for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
+        // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
         `
           UPDATE tickets AS target
           SET closed_at = v.closed_at,

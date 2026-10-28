@@ -34,5 +34,14 @@ export async function register() {
     } catch (error) {
       console.error('Failed to register server locale resolver:', error);
     }
+
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      console.error('Failed to install co-managed write admission:', error);
+    }
   }
 }

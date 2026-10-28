@@ -57,6 +57,7 @@ import {
 import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -120,6 +121,11 @@ function toClientTicketActionError(error: unknown): ClientTicketActionError | nu
     return error.kind === 'permission'
       ? permissionError(error.message, error.messageKey, error.messageParams)
       : actionError(error.message, error.messageKey, error.messageParams);
+  }
+
+  // Write admission refused a co-managed workspace's write: an expected outcome, not a server fault.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message, coManagedRefusalMessageKey(error));
   }
 
   return null;

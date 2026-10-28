@@ -633,6 +633,7 @@ export const deployReplacement = withAuth(
 
       // Relink the existing asset to the replacement unit (carry live serial + MAC).
       if (rma.asset_id) {
+        // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
         await trx('assets')
           .where({ tenant, asset_id: rma.asset_id })
           .update({

@@ -6,6 +6,8 @@ import {
   type TenantTableScope,
 } from './tenantTableMetadata';
 import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantScopedQuery';
+import { isOperationalWriteTable } from './operationalWriteTables';
+import { admitTenantWrite, isTenantWriteGuarded } from './writeAdmission';
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
@@ -84,6 +86,54 @@ export interface TenantDb {
   ): Knex.QueryBuilder<Row, Row[]>;
 }
 
+/** The builder methods that turn a tenant-scoped builder into a write. */
+const WRITE_TERMINALS = ['insert', 'update', 'del', 'delete', 'truncate', 'increment', 'decrement'] as const;
+const WRITE_GUARDED = Symbol.for('alga.tenantDb.writeGuarded');
+
+/**
+ * Attach write admission to the write terminals of one builder.
+ *
+ * Reads are untouched: only the terminals above arm the guard, and an armed
+ * builder is a thenable whose `then` first awaits admission. Knex routes `catch`,
+ * `finally` and `asCallback` through `then`, so one patch covers every way a
+ * builder is awaited. `clone()` is re-guarded because knex clones drop own properties.
+ *
+ * Returns the builder unchanged (no wrapper, no cost) when the table is not an
+ * operational one or the tenant is known not to be co-managed.
+ */
+function guardWrites<B extends Knex.QueryBuilder>(
+  builder: B,
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string
+): B {
+  if (!isOperationalWriteTable(tableName) || !isTenantWriteGuarded(tenant)) return builder;
+  const target = builder as any;
+
+  for (const terminal of WRITE_TERMINALS) {
+    const original = target[terminal];
+    if (typeof original !== 'function') continue;
+    target[terminal] = function guardedTerminal(this: any, ...args: unknown[]) {
+      const result = original.apply(this, args);
+      if (!result || result[WRITE_GUARDED]) return result;
+      const originalThen = result.then;
+      result[WRITE_GUARDED] = true;
+      result.then = function guardedThen(onFulfilled?: any, onRejected?: any) {
+        return admitTenantWrite(conn, tenant, { table: tableName, operation: `${terminal}:${tableName}` })
+          .then(() => originalThen.call(result))
+          .then(onFulfilled, onRejected);
+      };
+      return result;
+    };
+  }
+
+  const originalClone = target.clone;
+  target.clone = function guardedClone(this: any, ...args: unknown[]) {
+    return guardWrites(originalClone.apply(this, args), conn, tenant, tableName);
+  };
+  return builder;
+}
+
 function assertTenant(tenant: string | null | undefined): asserts tenant is string {
   if (!tenant || !tenant.trim()) {
     throw new Error('tenantDb requires a tenant id');
@@ -151,6 +201,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       alias: parsed.rootAlias,
       tenant,
       tenantColumn: tenantColumn(scope),
+      decorateBuilder: (builder) => guardWrites(builder, conn, tenant, parsed.tableName),
     });
   }
 
@@ -198,7 +249,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
         `${parsed.rootAlias}.${scope.childColumn}`,
       ]);
 
-    return conn<Row, Row[]>(tableExpression).whereExists(parentQuery);
+    return guardWrites(conn<Row, Row[]>(tableExpression).whereExists(parentQuery), conn, tenant, parsed.tableName);
   }
 
   async function insertParentScoped<Row extends object = DynamicTenantRow>(
@@ -225,6 +276,10 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
     const rows = normalizeRows(values);
     if (rows.length === 0) {
       return [];
+    }
+
+    if (isOperationalWriteTable(parsed.tableName) && isTenantWriteGuarded(tenant)) {
+      await admitTenantWrite(conn, tenant, { table: parsed.tableName, operation: `insert:${parsed.tableName}` });
     }
 
     const parentIds = Array.from(new Set(rows.map((row) => (row as Record<string, unknown>)[scope.childColumn])));
