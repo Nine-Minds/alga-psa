@@ -1,4 +1,4 @@
-import unicode from './unicodeLower.v1.json';
+import unicode from './unicodeLower.v1.json' with { type: 'json' };
 
 // The migration owns an immutable snapshot of these data. Never use the host's Unicode version
 // for persisted v1 literals: Node upgrades must not change their database matching semantics.
