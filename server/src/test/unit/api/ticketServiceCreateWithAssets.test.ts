@@ -4,9 +4,9 @@ import type { CreateTicketInput } from '@shared/models/ticketModel';
 /**
  * alga-2026-0002785 (customer ask via ticket 2592): POST /api/v1/tickets takes
  * `asset_ids` and links the devices in the SAME transaction as the insert, so a
- * refused link never leaves an orphaned ticket. Exactly one device also inherits
- * its billing profile, the way the from-asset dialog does; several devices are
- * ambiguous, so `billing_profile_id` is left to the normal client default.
+ * refused link never leaves an orphaned ticket. The first named device also
+ * inherits its billing profile, the way the from-asset dialog and the web
+ * create do.
  */
 const h = vi.hoisted(() => {
   const tenant = '22222222-2222-4222-8222-222222222222';
@@ -158,13 +158,15 @@ describe('TicketService.create links the named assets', () => {
     expect(forwarded.billing_profile_id).toBe('bp-from-the-asset');
   });
 
-  it('leaves the billing profile to the client default with several assets', async () => {
-    await newService().create(baseRequest([ASSET_A, ASSET_B]), context);
+  it('inherits from the first asset when several are named', async () => {
+    await newService().create(baseRequest([ASSET_B, ASSET_A]), context);
 
-    // Nothing to inherit unambiguously, so the resolver is never consulted.
-    expect(resolveBillingProfile).not.toHaveBeenCalled();
+    // The picked order is the caller's order, so the first device wins — the
+    // rule the web create shipped (680e3a8a00) and the one mobile posts into.
+    expect(resolveBillingProfile).toHaveBeenCalledTimes(1);
+    expect(resolveBillingProfile).toHaveBeenCalledWith(h.fakeTrx, h.tenant, ASSET_B, h.clientId);
     const forwarded = createSpy.mock.calls[0][0] as CreateTicketInput;
-    expect(forwarded.billing_profile_id).toBeUndefined();
+    expect(forwarded.billing_profile_id).toBe('bp-from-the-asset');
   });
 
   it('does not consult the resolver when no asset is named', async () => {

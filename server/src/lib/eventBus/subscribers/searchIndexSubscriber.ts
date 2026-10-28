@@ -134,6 +134,9 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
     const doc = await commentIndexer.loadOne(knex, tenant, row.comment_id);
     if (doc) {
       await upsertSearchDoc(knex, doc);
+    } else {
+      // Deleted/unpublished comments must not linger in the index.
+      await deleteSearchDoc(knex, tenant, 'ticket_comment', row.comment_id);
     }
   }
 
@@ -160,6 +163,9 @@ async function reindexProjectTaskComments(knex: Knex, tenant: string, taskId: st
     const doc = await commentIndexer.loadOne(knex, tenant, row.task_comment_id);
     if (doc) {
       await upsertSearchDoc(knex, doc);
+    } else {
+      // Deleted/unpublished comments must not linger in the index.
+      await deleteSearchDoc(knex, tenant, 'project_task_comment', row.task_comment_id);
     }
   }
 

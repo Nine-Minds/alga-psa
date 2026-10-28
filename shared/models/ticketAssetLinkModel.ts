@@ -22,14 +22,15 @@ export function dedupeTicketAssetIds(assetIds: readonly (string | null | undefin
 }
 
 /**
- * The asset whose billing profile the new ticket inherits, or null when there
- * is nothing unambiguous to inherit.
+ * The asset whose billing profile the new ticket inherits, or null when no
+ * asset was picked.
  *
- * Exactly one asset behaves like the from-asset dialog: the ticket takes that
- * asset's profile (or its location's default). With several assets there is no
- * single right answer, so billing_profile_id is left to the normal client
- * default rather than picking one device's profile arbitrarily.
+ * The first picked asset lends its profile (or its location's default), exactly
+ * as the from-asset dialog does — including when several devices are named: the
+ * picker lists them in the order they were chosen, so the first is the device
+ * the ticket was raised about. Ticket 2785 shipped this rule on the web create
+ * first; REST and mobile read it from here so the three agree.
  */
 export function assetIdForBillingProfileInheritance(assetIds: readonly string[]): string | null {
-  return assetIds.length === 1 ? assetIds[0] : null;
+  return assetIds[0] ?? null;
 }

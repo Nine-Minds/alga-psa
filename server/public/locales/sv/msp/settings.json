@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tangentbordsgenvägar",
     "opportunities": "Affärsmöjligheter",
     "mcpServer": "MCP-server",
-    "settingsFallback": "Inställningar"
+    "settingsFallback": "Inställningar",
+    "tags": "Taggar"
   },
   "unsavedChanges": {
     "title": "Osparade ändringar",
@@ -1153,6 +1154,50 @@
         "client": "Kund",
         "allClients": "Alla kunder",
         "clear": "Rensa filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tavla",
+          "category_id": "Kategori",
+          "subcategory_id": "Underkategori",
+          "priority_id": "Prioritet",
+          "client_id": "Kund",
+          "client_tags": "Kundtaggar",
+          "contact_tags": "Kontakttaggar",
+          "ticket_origin": "Ärendekälla",
+          "title_folded": "Rubrik",
+          "description_folded": "Beskrivning",
+          "from_service_request": "Från tjänstebegäran",
+          "service_request_definition_id": "Tjänstebegäran"
+        },
+        "operators": {
+          "equals": "Är lika med",
+          "not_equals": "Är inte lika med",
+          "in": "Innehåller något av",
+          "not_in": "Innehåller inget av",
+          "contains": "Innehåller",
+          "starts_with": "Börjar med",
+          "ends_with": "Slutar med",
+          "is_empty": "Är tomt",
+          "is_not_empty": "Är inte tomt"
+        },
+        "conditions": "Villkor",
+        "match": "Matchning",
+        "and": "Alla villkor",
+        "or": "Något villkor",
+        "field": "Fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "yes": "Ja",
+        "no": "Nej",
+        "advanced": "Den här regeln innehåller grupperade eller avancerade villkor och är skrivskyddad i den här redigeraren.",
+        "add": "Lägg till villkor",
+        "save": "Spara villkor",
+        "enabled": "Aktiverad",
+        "matchesAll": "Matchar alla ärenden inom mallens omfattning.",
+        "matchesNone": "Matchar inga ärenden.",
+        "tagsFailed": "Det gick inte att läsa in taggalternativen. Sparade val bevaras.",
+        "retry": "Försök igen"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "Inga standardstatusar tillgängliga för import",
       "importSelected": "Importera markerade ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Visa på chips",
+    "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
+    "loading": "Laddar…",
+    "description": "Välj vilka taggar som visas som märken bredvid kontakter och kunder, och i vilken ordning. En lista utan taggar visar inga märken för den målgruppen.",
+    "contacts": "Kontakter",
+    "clients": "Kunder",
+    "audienceInternal": "Interna användare",
+    "audienceClient": "Kundportal",
+    "clientNote": "Börjar tom. Taggar i den här listan syns för kundens egna användare i kundportalen.",
+    "noneSelected": "Inga taggar visas.",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "remove": "Ta bort",
+    "addTag": "Lägg till en tagg…"
   }
 }

@@ -28,6 +28,7 @@ import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publ
 import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
@@ -1238,90 +1239,90 @@ export class AssetService extends BaseService<any> {
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    await this.assertAssetExists(knex, context.tenant, assetId);
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
+    this.assertCustomRecurrence(data.frequency, data.schedule_config);
+    return knex.transaction(async (trx) => {
+      await this.assertAssetExists(trx, context.tenant, assetId);
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .insert({
+          ...data,
+          description: data.description ?? null,
+          asset_id: assetId,
+          tenant: context.tenant,
+          created_by: context.userId,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
 
-    const scheduleData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    // Calculate next maintenance date
-    (scheduleData as any).next_maintenance = this.calculateNextMaintenanceDate(
-      data.start_date || new Date().toISOString(), 
-      data.frequency, 
-      data.frequency_interval
-    );
-
-    const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
-      .insert(scheduleData)
-      .returning('*');
-
-    if (schedule.is_active !== false) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences').insert({
-        tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
-        due_date: schedule.next_maintenance, status: 'open'
+      await scopedTable(trx, context.tenant, 'asset_maintenance_notifications').insert({
+        tenant: context.tenant,
+        schedule_id: schedule.schedule_id,
+        asset_id: assetId,
+        notification_type: 'upcoming',
+        notification_date: schedule.next_maintenance,
+        notification_data: {
+          schedule_name: schedule.schedule_name,
+          maintenance_type: schedule.maintenance_type
+        }
       });
-    }
 
-    return schedule;
+      if (schedule.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({
+          tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
+          due_date: schedule.next_maintenance, status: 'open'
+        });
+      }
+      return schedule;
+    });
   }
 
   async updateMaintenanceSchedule(scheduleId: string, data: UpdateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
+    return knex.transaction(async (trx) => {
+      const existing = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .forUpdate()
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Maintenance schedule not found');
+      }
+      this.assertCustomRecurrence(data.frequency ?? existing.frequency, data.schedule_config ?? existing.schedule_config);
 
-    if (!existing) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .update({ ...data, updated_at: new Date() })
+        .returning('*');
 
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
-
-    const updateData = {
-      ...data,
-      updated_at: new Date()
-    };
-
-    // Recalculate next maintenance if frequency changed
-    if (data.frequency || data.frequency_interval || data.start_date) {
-      const startDate = data.start_date || existing.start_date;
-      const frequency = data.frequency || existing.frequency;
-      const interval = data.frequency_interval || existing.frequency_interval;
-      (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
-    }
-
-    const updated = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .update(updateData);
-
-    if (!updated) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
-
-    if ((updateData as any).next_maintenance) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences')
-        .where({ schedule_id: scheduleId, status: 'open' })
-        .update({ due_date: (updateData as any).next_maintenance, updated_at: new Date() });
-    }
-
-    if (!schedule) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    return schedule;
+      if (data.next_maintenance) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ due_date: data.next_maintenance, updated_at: new Date() });
+      }
+      if (data.next_maintenance || data.schedule_name || data.maintenance_type) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_notifications')
+          .where({ schedule_id: scheduleId, is_sent: false })
+          .update({
+            notification_date: schedule.next_maintenance,
+            notification_data: trx.raw(
+              "notification_data || ?::jsonb",
+              [JSON.stringify({ schedule_name: schedule.schedule_name, maintenance_type: schedule.maintenance_type })]
+            )
+          });
+      }
+      if (data.is_active === false && existing.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ status: 'cancelled', closed_at: new Date(), closed_by: context.userId, updated_at: new Date() });
+      } else if (data.is_active === true && !existing.is_active && !schedule.archived_at) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .insert({
+            tenant: context.tenant, schedule_id: scheduleId, asset_id: schedule.asset_id,
+            due_date: schedule.next_maintenance, status: 'open'
+          })
+          .onConflict().ignore();
+      }
+      return schedule;
+    });
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
@@ -1361,7 +1362,6 @@ export class AssetService extends BaseService<any> {
         .forUpdate()
         .first();
       if (!schedule || schedule.archived_at) throw new ConflictError('Maintenance schedule is inactive');
-      if (schedule.frequency === 'custom') throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
       const occurrenceQuery = scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
         .where({ schedule_id: data.schedule_id, asset_id: assetId });
       if (data.occurrence_id) {
@@ -1381,7 +1381,7 @@ export class AssetService extends BaseService<any> {
         performed_by: performedBy, created_at: new Date()
       };
       const [maintenance] = await scopedTable(trx, context.tenant, 'asset_maintenance_history').insert(row).returning('*');
-      const nextMaintenance = this.calculateNextMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+      const nextMaintenance = this.calculateNextMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
       await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: maintenance.history_id, closed_at: new Date(), closed_by: performedBy, updated_at: new Date() });
       await scopedTable(trx, context.tenant, 'asset_maintenance_schedules').where({ schedule_id: data.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextMaintenance, updated_at: new Date() });
       await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({ tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId, due_date: nextMaintenance, status: 'open' });
@@ -1532,24 +1532,21 @@ export class AssetService extends BaseService<any> {
     return tableMap[assetType] || null;
   }
 
-  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number): Date {
-    const start = new Date(startDate);
-    const intervalValue = interval || 1;
-    
-    switch (frequency) {
-      case 'daily':
-        return new Date(start.getTime() + (intervalValue * 24 * 60 * 60 * 1000));
-      case 'weekly':
-        return new Date(start.getTime() + (intervalValue * 7 * 24 * 60 * 60 * 1000));
-      case 'monthly': case 'quarterly': case 'yearly': {
-        const months = frequency === 'monthly' ? intervalValue : frequency === 'quarterly' ? intervalValue * 3 : intervalValue * 12;
-        const originalDay = start.getUTCDate(); const result = new Date(start);
-        result.setUTCDate(1); result.setUTCMonth(result.getUTCMonth() + months);
-        const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
-        result.setUTCDate(Math.min(originalDay, lastDay)); return result;
-      }
-      case 'custom': throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
-      default: throw new ValidationError(`Unsupported maintenance frequency: ${frequency}`);
+  // Shared with the UI actions so both paths advance schedules identically.
+  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number, scheduleConfig?: unknown): Date {
+    try {
+      return advanceMaintenanceDate(startDate, frequency, interval || 1, scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
+    }
+  }
+
+  private assertCustomRecurrence(frequency: string | undefined, scheduleConfig: unknown): void {
+    if (frequency !== 'custom') return;
+    try {
+      parseCustomRecurrence(scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
     }
   }
 
@@ -1563,7 +1560,8 @@ export class AssetService extends BaseService<any> {
       const nextMaintenance = this.calculateNextMaintenanceDate(
         performedAt,
         schedule.frequency,
-        schedule.frequency_interval
+        schedule.frequency_interval,
+        schedule.schedule_config
       );
 
       await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')

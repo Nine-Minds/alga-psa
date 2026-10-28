@@ -159,7 +159,7 @@ Working memory for the 2.0 mobile release. Short bullets; update earlier notes w
 - **`docs/openapi/route-inventory.*` is deliberately main's, not regenerated.** It is the input `generate:artifacts` reads to emit placeholder paths for routes with no canonical registration, so regenerating it adds ~50 placeholder paths to every spec. `routeRegistryFilesystemInventory.contract.test.ts` does not gate freshness (main's own inventory is stale for labels/notifications/custody), so the inventory and the specs now agree with each other, which is what `scripts/ci/artifact-drift.mjs` actually checks.
 - **The audit migration had to be re-stamped.** Main added `scripts/ci/migration-lint.mjs`, whose R6 requires a new migration to sort after the newest on the base branch; `20261016120000_create_asset_audits.cjs` predated main's `20261027090100`. Renamed to `20261027120000` and updated the two places that name the file (the tenant-deletion comment and `assetAuditTenantDeletionOrder.test.ts`).
 - **Conflict decisions.** `tenantTableMetadata.ts` and the `tenantDb.cjs` snapshot keep both lists (audits + main's `asset_custody`/`asset_custody_events`). `ScanView` keeps main's record-link routing and swaps main's inline `lastScanRef` debounce for this branch's shared `useScanDebounce`, so there is one debounce, not two; its `project` case now routes to this branch's ProjectDetail instead of bouncing to the browser. `linking.ts` drops the hand-rolled hosted-URL regexes entirely for main's shared `matchRecordPath` (`ee/mobile/src/urls/recordLinks.ts`), with a `project` case added — one matcher, as asked, and `normalizeHostedTicketUrl` is gone in favour of main's `normalizeHostedRecordUrl`.
-- **Asset selection at ticket create (alga-2026-0002785, RightPath via ticket 2592)** is one rule in three places, so it lives in one module: `shared/models/ticketAssetLinkModel.ts` holds `dedupeTicketAssetIds` and `assetIdForBillingProfileInheritance` (exactly one asset inherits, several do not). The REST service validates the ids, resolves the profile and inserts the links inside `createTicket`'s existing `withTransaction`, before and after the model call respectively — the validation is before the insert, so an unknown asset means no ticket was ever written rather than a rolled-back one.
+- **Asset selection at ticket create (alga-2026-0002785, RightPath via ticket 2592)** is one rule in three places, so it lives in one module: `shared/models/ticketAssetLinkModel.ts` holds `dedupeTicketAssetIds` and `assetIdForBillingProfileInheritance` (the first named asset inherits; see the 10/28 merge note, which replaced the original "only one asset inherits" rule with main's). The REST service validates the ids, resolves the profile and inserts the links inside `createTicket`'s existing `withTransaction`, before and after the model call respectively — the validation is before the insert, so an unknown asset means no ticket was ever written rather than a rolled-back one.
 - **The web picker is a seam, not an import.** `packages/tickets` must not depend on `packages/assets` (the dependency runs tickets → inventory → assets, and `MspRecurringTickets` already solves exactly this for the recurring editor). So `useTicketAssetPicker` joins the other cross-feature contexts in `@alga-psa/ui/context`, `MspTicketAssetPickerProvider` supplies `ClientAssetMultiSelect`, and `WorkspaceProviders` mounts it. Where no provider exists (AlgaDesk, the client portal) the dialog shows no device field and the old single-asset banner still names the asset it was opened with, so those surfaces behave exactly as before.
 - **The mobile create-from-asset modal is deleted, not kept in parallel.** `features/assets/CreateTicketModal.tsx` was a second, thinner create form (no contact, location, assignee or description). Asset detail, the link-picker's "can't find it?" escape hatch and the audit summary's missing rows now all navigate to `CreateTicket` with `{ clientId, clientName, assets: [{ asset_id, name }] }`. The name travels in the route param so no extra request is needed to label the chip. `EntityPickerModal` gained an optional `selectedIds` mode (ticks, stays open on tap, header reads Done) rather than growing a second picker component.
 - `POST /tickets/from-asset` also infers the contact from the asset when the caller names none (FR-E8). The unified path does not, so a device whose assignee is unambiguous no longer pre-fills the contact on mobile — the phone's form has a contact picker the modal never had, which is the trade. Worth revisiting if anyone complains.
@@ -179,3 +179,69 @@ Working memory for the 2.0 mobile release. Short bullets; update earlier notes w
 - **One call site covers both layouts.** `TicketDetails.handleBatchSaveChanges` is what TicketInfo's Save Changes *and* BentoHero's `onBatchSelectChange` both funnel into, so passing `pickCloseRulePendingFields(changes)` there fixes the classic and bento screens at once. The three single-field close paths (`confirmStatusChange`, `closeTicketForResolution`, `handleResolveAndClose`) write status alone and have no pending batch, so they stay as they were.
 - **Not a mobile bug.** The phone saves the category in its own `PUT`, so by the time it closes the ticket the row is already classified; the REST merge in `TicketService.update` covers a combined request anyway.
 - Tests: `checkTicketClosure.pendingFields.test.ts` drives the real action over a fake knex (merged values reach the evaluator, untouched fields fall back, a cleared field still fails, foreign keys are ignored, a non-closing status short-circuits) plus the pure helper and a source assertion pinning the TicketDetails wiring. `packages/tickets` suite for close-rules and the TicketDetails close tests stay green; the package typechecks.
+
+### Second merge of main: both branches built the web picker (2026-10-28)
+
+Main shipped its own multi-asset Quick Add picker on 10/27 (f74ad80cc9, 8a60b4177d) after
+this branch's 10/27 merge point, so 241 commits arrived carrying a parallel implementation of
+the same feature. Decisions, per file, as directed:
+
+- **`packages/tickets/src/components/QuickAddTicket.tsx` — TOOK MAIN.** Main's `renderAssetPicker`
+  prop (threaded from five MSP surfaces through `renderQuickAddAssetPicker.tsx`, with a contract
+  test pinning the wiring) replaces this branch's context seam. Both rendered the identical
+  `ClientAssetMultiSelect`; main's also carries attachments and watchers. Deleted this branch's
+  side entirely: `packages/ui/src/context/TicketAssetPickerContext.tsx` and its barrel export,
+  `MspTicketAssetPickerProvider`, the `WorkspaceProviders` mount, the `selectedAssetIds` state and
+  the `quickAdd.assetsLabel` / `quickAdd.assetsNeedClient` strings in all 11 locales (main has its
+  own `quickAdd.assets.*`).
+- **Wire format: main's.** This branch appended one `asset_ids` entry per device; main sends a
+  single JSON array that `parseTicketCreateExtras` validates (and throws on anything else), so the
+  branch's repeated-key convention would have made every create throw. The opened-from asset stays
+  in `asset_id` + banner on main, so `ticket-inline-add-prefill.test.tsx` went back to main's T010
+  assertions (`asset_id` present on PSA, absent on AlgaDesk).
+- **`QuickAddTicket.assetSelection.test.tsx` — rewritten against main's props.** Kept the four cases
+  main had no component-level cover for (no picker until a client is chosen, the no-seam note,
+  multi-select submitted as one JSON `asset_ids` array, cleared on client change) and dropped the
+  opened-from-asset case, which main covers.
+- **`packages/tickets/src/actions/ticketActions.ts` — TOOK MAIN** (`parseTicketCreateExtras`,
+  `linkedAssetIds`, `linkAssetsToNewTicket`, the `asset:update` permission check and the
+  internal-user block — a real gap on this branch, now closed).
+- **Billing profile: main's first-asset rule, adopted everywhere.** Main inherits from
+  `linkedAssetIds[0]` whatever the count; this branch inherited only for exactly one asset. Main's
+  is shipped, so `assetIdForBillingProfileInheritance` now returns the first asset and both
+  `addTicket` and `TicketService.createTicket` read it — REST, web and mobile agree, and the T130
+  contract plus the REST unit test assert the shared helper rather than either inline copy.
+  `dedupeTicketAssetIds` survives: main's inline `new Set([...])` dedupe is behaviour-identical on
+  uuid input (trimming and blank-dropping are no-ops there), so `addTicket` uses the shared helper.
+- **`server/src/lib/api/schemas/ticket.ts`, `openapi/routes/workManagementV1.ts` — KEPT BOTH:**
+  main's notification-suppression flags next to this branch's `asset_ids` (and the nullable
+  `category_id` / `subcategory_id` on update).
+- **`assetBillingProfileTicketFlow.contract.test.ts` — main's T130 cases, plus a new one** asserting
+  the REST create reads the same first-asset rule from the shared model.
+- **`tenant-deletion-activities.ts` — KEPT BOTH.** Main turned the literal into a golden projection
+  of the new `packages/db` manifest, so `asset_audit_items` / `asset_audits` had to be declared in
+  four places, not one: the activity literal, `TENANT_TABLE_MANIFEST` (after `asset_groups`), the
+  generated FK snapshot (`tenantTableForeignKeys.ts`, both tables FK only to `tenants`) and the
+  golden count (554 -> 556). `asset_audits` carries `client_id`, and the manifest's `clientKeyed`
+  flag obliges the client-merge plan to classify it, so it joins `CLIENT_OWNED_MOVE_TABLES` as
+  'site audit' — a past audit of a client's site follows that client, keyed by `audit_id` so no
+  move can collide. Its items are keyed by audit, not client, so they need no entry.
+- **`ee/mobile/**` — RETAINED whole**, including the device picker posting `asset_ids` to
+  `POST /api/v1/tickets` through the retained `TicketService.createTicket` path. Main touched no
+  mobile file since the merge base.
+- **Generated artifacts** (6 specs, both registries, route inventory): took main's copies, then ran
+  `npm run generate:artifacts` and committed the output. The 12 drift-allowlist exceptions stay:
+  re-running the gate with `--base origin/main` prints all 12 as ALLOWED and nothing else, so they
+  are still load-bearing (request-type widening and the `search` filter leaving
+  `x-unapplied-validated-filters`), each with its reason in place.
+- **Close-rule pre-check fix retained** as its own change (`closeRuleConstants`,
+  `checkTicketClosure`, `TicketDetails`).
+- Gates after the merge: `packages/tickets` 266 files / 1718 tests; mobile 211 files / 1520 tests
+  plus lint and typecheck; `packages/db` 27 files / 184 tests (`NODE_ENV=test`); msp-composition
+  tickets 6/26; the server audit, capability, ticket-category, billing-profile, lifecycle-list,
+  hardcoded-currency and removed-automation contracts; `tickets` / `ui` / `clients` typecheck;
+  unfiltered `tsc -p server/tsconfig.json` with a 14 GB heap exits 0.
+- Pre-existing failures, unrelated and proven so: `packages/db/src/lib/knexfile.test.ts` passes only
+  with `NODE_ENV=test` (its dotenv gate), and seven `packages/clients` suites (CSV/reactivate module
+  resolution, visibility-group DB tests, `ClientSoftwareView`) fail identically with this round's
+  only change to that package stashed.

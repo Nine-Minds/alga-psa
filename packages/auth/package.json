@@ -90,6 +90,14 @@
       "import": "./src/lib/sso/linkStateCookie.ts",
       "types": "./src/lib/sso/linkStateCookie.ts"
     },
+    "./lib/signInUserResolution": {
+      "import": "./src/lib/signInUserResolution.ts",
+      "types": "./src/lib/signInUserResolution.ts"
+    },
+    "./lib/tenantDiscovery": {
+      "import": "./src/lib/tenantDiscovery/index.ts",
+      "types": "./src/lib/tenantDiscovery/index.ts"
+    },
     "./lib/security/captcha": {
       "import": "./src/lib/security/captcha.ts",
       "types": "./src/lib/security/captcha.ts"
@@ -126,6 +134,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",

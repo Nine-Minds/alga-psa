@@ -892,7 +892,7 @@
   },
   {
     "id": "F100",
-    "description": "Exactly one named asset makes the ticket inherit that asset's billing profile the way POST /tickets/from-asset does; several assets leave billing_profile_id to the normal client default. The rule lives once in shared/models/ticketAssetLinkModel.ts and is used by the REST service and the web addTicket action",
+    "description": "The first named asset makes the ticket inherit that asset's billing profile the way POST /tickets/from-asset and the web create do, whether one device or several are named. The rule lives once in shared/models/ticketAssetLinkModel.ts and is read by the REST service and the web addTicket action",
     "implemented": true,
     "commitGroup": "ticket-assets",
     "prdRefs": [
@@ -901,7 +901,7 @@
   },
   {
     "id": "F101",
-    "description": "addTicket (the server action behind QuickAddTicket) reads repeated asset_ids form entries, still accepts the legacy single asset_id, de-duplicates, and links them all in its own transaction",
+    "description": "addTicket (the server action behind QuickAddTicket) reads asset_ids as one JSON array (parseTicketCreateExtras, which also carries watchers), still accepts the legacy single asset_id and places it first, de-duplicates, requires asset:update, and links them all in its own transaction",
     "implemented": true,
     "commitGroup": "ticket-assets",
     "prdRefs": [
@@ -910,7 +910,7 @@
   },
   {
     "id": "F102",
-    "description": "QuickAddTicket renders a real client-scoped multi-asset picker below the client/location fields instead of the single pre-set asset banner: disabled until a client is chosen, cleared on client change, pre-filled when opened from an asset. The control is ClientAssetMultiSelect, provided through a TicketAssetPicker seam so the tickets package still does not import the assets package",
+    "description": "QuickAddTicket renders a real client-scoped multi-asset picker in its Assets section: disabled until a client is chosen, cleared on client change, with the opened-from asset still named by its banner and linked through asset_id. The control is ClientAssetMultiSelect, injected as the renderAssetPicker prop so the tickets package still does not import the assets package",
     "implemented": true,
     "commitGroup": "ticket-assets",
     "prdRefs": [

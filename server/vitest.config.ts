@@ -227,7 +227,9 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/context/$1') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/admin(?:\.js)?$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/tenantTableManifest$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantTableManifest.ts') },
+      { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../packages/db/src/models/index.ts') },
@@ -242,6 +244,7 @@ export default defineConfig({
       // only resolves once packages/db has a built dist — not guaranteed in
       // every CI lane (e.g. workspace-unit never builds it).
       { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
+      { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
       // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 
@@ -295,6 +298,9 @@ export default defineConfig({
       { find: /^@alga-psa\/marketing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/marketing/src/$1') },
       { find: /^@alga-psa\/inventory$/, replacement: path.resolve(__dirname, '../packages/inventory/src/index.ts') },
       { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../packages/inventory/src/$1') },
+      { find: /^@alga-psa\/predicates$/, replacement: path.resolve(__dirname, '../packages/predicates/src/index.ts') },
+      { find: /^@alga-psa\/predicates\/sql$/, replacement: path.resolve(__dirname, '../packages/predicates/src/sql/index.ts') },
+      { find: /^@alga-psa\/predicates\/(.*)$/, replacement: path.resolve(__dirname, '../packages/predicates/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/formatting/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },

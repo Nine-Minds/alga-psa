@@ -881,6 +881,7 @@
       "add": "Lägg till",
       "remove": "Ta bort",
       "empty": "Inga mappningar ännu.",
+      "nameRequired": "Ange ett namn för den här mappningen.",
       "expressionLabel": "Uttryck"
     },
     "schemaForm": {

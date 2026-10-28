@@ -55,12 +55,30 @@ describe('asset billing profile reaches tickets from assets', () => {
     expect(text).toContain(
       "import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';"
     );
-    // The source asset is now the one picked device (alga-2026-0002785): with
-    // several devices there is nothing unambiguous to inherit.
+    // With several assets the profile resolves from the first linked one, and
+    // the single `asset_id` ("opened from an asset") is always placed first.
     expect(text).toMatch(
-      /if \(billingProfileSourceAssetId && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(/
+      /const linkedAssetIds = dedupeTicketAssetIds\(\[\s*\n\s*typeof asset_id === 'string' \? asset_id : '',\s*\n\s*\.\.\.extras\.assetIds,\s*\n\s*\]\);/
     );
+    // One rule, read from the shared model so REST and mobile cannot drift
+    // (alga-2026-0002785).
+    expect(text).toContain('const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);');
+    expect(text).toMatch(
+      /if \(billingProfileSourceAssetId && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(\s*\n\s*trx,\s*\n\s*tenant,\s*\n\s*billingProfileSourceAssetId,/
+    );
+  });
+
+  it('T130: the REST create reads the same first-asset rule', () => {
+    // POST /api/v1/tickets takes asset_ids (the mobile device picker), so the
+    // phone, the web dialog and the API must inherit from the same device.
+    expect(source('shared/models/ticketAssetLinkModel.ts')).toMatch(
+      /export function assetIdForBillingProfileInheritance\(assetIds: readonly string\[\]\): string \| null \{\s*\n\s*return assetIds\[0\] \?\? null;/
+    );
+
+    const text = source('server/src/lib/api/services/TicketService.ts');
+    expect(text).toContain("} from '@alga-psa/shared/models/ticketAssetLinkModel';");
     expect(text).toContain('const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);');
+    expect(text).toMatch(/resolveAssetBillingProfileIdForClient\(trx, context\.tenant, billingProfileSourceAssetId, data\.client_id\)/);
   });
 
   it('T130: the portal prefers the asset profile over the contact heuristic', () => {

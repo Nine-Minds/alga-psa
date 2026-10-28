@@ -1155,6 +1155,7 @@ const Documents = ({
   const handleDocumentClick = async (document: IDocument) => {
     // For in-app documents (no file_id), open in drawer/editor
     if (!document.file_id) {
+      setShowPreviewModal(false);
       setSelectedDocument(document);
       setDocumentName(document.document_name);
       setIsCreatingNew(false);
@@ -1169,6 +1170,7 @@ const Documents = ({
     if (document.mime_type?.startsWith('image/') ||
         document.mime_type?.startsWith('video/') ||
         document.mime_type === 'application/pdf') {
+      setIsDrawerOpen(false);
       setPreviewDocument(document);
       setShowPreviewModal(true);
       return;
@@ -1201,11 +1203,12 @@ const Documents = ({
   useEffect(() => {
     if (documentToOpen) void handleDocumentClickRef.current(documentToOpen);
   }, [documentToOpen]);
-  const wasDrawerOpen = useRef(false);
+  const wasViewerOpen = useRef(false);
+  const isViewerOpen = isDrawerOpen || showPreviewModal;
   useEffect(() => {
-    if (wasDrawerOpen.current && !isDrawerOpen) onDocumentClosed?.();
-    wasDrawerOpen.current = isDrawerOpen;
-  }, [isDrawerOpen, onDocumentClosed]);
+    if (wasViewerOpen.current && !isViewerOpen) onDocumentClosed?.();
+    wasViewerOpen.current = isViewerOpen;
+  }, [isViewerOpen, onDocumentClosed]);
   useEffect(() => {
     if (!inFolderMode) return;
     const docId = searchParams?.get('doc') ?? null;
@@ -1594,9 +1597,51 @@ const Documents = ({
     </div>
   );
 
+  const previewModal = (
+    showPreviewModal && previewDocument && previewDocument.file_id && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
+        <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+          <button
+            id={`${id}-preview-close`}
+            aria-label="Close preview"
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            onClick={() => setShowPreviewModal(false)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          {previewDocument.mime_type?.startsWith('image/') && (
+            <img
+              src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
+              alt={previewDocument.document_name}
+              className="max-w-full max-h-[90vh] object-contain mx-auto"
+            />
+          )}
+          {previewDocument.mime_type?.startsWith('video/') && (
+            <video
+              src={`/api/documents/view/${previewDocument.document_id}`}
+              controls
+              className="max-w-full max-h-[90vh] mx-auto"
+            />
+          )}
+          {previewDocument.mime_type === 'application/pdf' && (
+            <iframe
+              src={`/api/documents/view/${previewDocument.document_id}`}
+              className="w-full h-[90vh] bg-white"
+              title={previewDocument.document_name}
+            />
+          )}
+          <div className="mt-2 text-center text-white">
+            <p className="text-lg font-medium">{previewDocument.document_name}</p>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   if (drawerOnly) {
     return (
       <>
+        {previewModal}
         <Drawer
           id={`${id}-document-drawer`}
           isOpen={isDrawerOpen}
@@ -1888,43 +1933,7 @@ const Documents = ({
             getFoldersFn={getFoldersFn}
           />
 
-          {/* Preview Modal for Images/Videos/PDFs */}
-          {showPreviewModal && previewDocument && previewDocument.file_id && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
-              <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
-                <button
-                  className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-                  onClick={() => setShowPreviewModal(false)}
-                >
-                  <X className="w-8 h-8" />
-                </button>
-                {previewDocument.mime_type?.startsWith('image/') && (
-                  <img
-                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
-                    alt={previewDocument.document_name}
-                    className="max-w-full max-h-[90vh] object-contain mx-auto"
-                  />
-                )}
-                {previewDocument.mime_type?.startsWith('video/') && (
-                  <video
-                    src={`/api/documents/view/${previewDocument.document_id}`}
-                    controls
-                    className="max-w-full max-h-[90vh] mx-auto"
-                  />
-                )}
-                {previewDocument.mime_type === 'application/pdf' && (
-                  <iframe
-                    src={`/api/documents/view/${previewDocument.document_id}`}
-                    className="w-full h-[90vh] bg-white"
-                    title={previewDocument.document_name}
-                  />
-                )}
-                <div className="mt-2 text-center text-white">
-                  <p className="text-lg font-medium">{previewDocument.document_name}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {previewModal}
         </div>
 
         {/* Document Drawer (keep existing drawer functionality) */}
@@ -2091,43 +2100,7 @@ const Documents = ({
           />
         ) : null}
 
-        {/* Preview Modal for Images/Videos/PDFs */}
-        {showPreviewModal && previewDocument && previewDocument.file_id && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
-            <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-                onClick={() => setShowPreviewModal(false)}
-              >
-                <X className="w-8 h-8" />
-              </button>
-              {previewDocument.mime_type?.startsWith('image/') && (
-                <img
-                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
-                  alt={previewDocument.document_name}
-                  className="max-w-full max-h-[90vh] object-contain mx-auto"
-                />
-              )}
-              {previewDocument.mime_type?.startsWith('video/') && (
-                <video
-                  src={`/api/documents/view/${previewDocument.document_id}`}
-                  controls
-                  className="max-w-full max-h-[90vh] mx-auto"
-                />
-              )}
-              {previewDocument.mime_type === 'application/pdf' && (
-                <iframe
-                  src={`/api/documents/view/${previewDocument.document_id}`}
-                  className="w-full h-[90vh] bg-white"
-                  title={previewDocument.document_name}
-                />
-              )}
-              <div className="mt-2 text-center text-white">
-                <p className="text-lg font-medium">{previewDocument.document_name}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {previewModal}
 
         <div className="document-drawer">
           <Drawer

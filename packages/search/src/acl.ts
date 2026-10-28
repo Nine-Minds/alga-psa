@@ -265,6 +265,8 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   )
     .select('ticket_id', 'is_internal')
     .where('comment_id', row.id)
+    .whereNull('deleted_at')
+    .where('publish_state', 'published')
     .first();
   if (!comment) return false;
   if (comment.is_internal && !user.isInternal) return false;
@@ -309,6 +311,7 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
   const query = db.table<{ project_id: string }>('project_task_comments as ptc')
     .select('pp.project_id')
     .where('ptc.task_comment_id', row.id)
+    .whereNull('ptc.deleted_at')
     .first();
   db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
   db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');

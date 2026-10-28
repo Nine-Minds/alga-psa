@@ -1,4 +1,22 @@
+import {
+  quoteSentEventPayloadSchema,
+  quoteViewedEventPayloadSchema,
+  quoteApprovedEventPayloadSchema,
+  quoteAcceptedEventPayloadSchema,
+  quoteRejectedEventPayloadSchema,
+  quoteExpiredEventPayloadSchema,
+  quoteConvertedEventPayloadSchema,
+  quoteConversionRevertedEventPayloadSchema,
+  quoteSupersededEventPayloadSchema,
+  quoteCancelledEventPayloadSchema,
+} from './domain/quoteEventSchemas';
 import { z } from 'zod';
+import {
+  EXTENSION_EVENT_TYPES,
+  EXTENSION_PAYLOAD_SCHEMAS,
+  assertEventExtensionsCompose,
+  type ExtensionEventType,
+} from './extensions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -198,7 +216,7 @@ import {
 } from './domain/inventoryEventSchemas';
 
 // Define event types
-export const EVENT_TYPES = [
+const CORE_EVENT_TYPES = [
   // Tickets (existing + legacy)
   'TICKET_CREATED',
   'TICKET_UPDATED',
@@ -371,6 +389,16 @@ export const EVENT_TYPES = [
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
   'CLIENT_DELETED',
+  'QUOTE_SENT',
+  'QUOTE_VIEWED',
+  'QUOTE_APPROVED',
+  'QUOTE_ACCEPTED',
+  'QUOTE_REJECTED',
+  'QUOTE_EXPIRED',
+  'QUOTE_CONVERTED',
+  'QUOTE_CONVERSION_REVERTED',
+  'QUOTE_SUPERSEDED',
+  'QUOTE_CANCELLED',
   'CLIENT_LOCATION_CREATED',
   'CLIENT_LOCATION_UPDATED',
   'CLIENT_LOCATION_DEACTIVATED',
@@ -545,6 +573,20 @@ export const EVENT_TYPES = [
   'CUSTOM_EVENT',
   'UNKNOWN',
 ] as const satisfies readonly [string, ...string[]];
+
+// An extension may add event types, never redeclare one: a collision with a core
+// name fails here at compile time and in assertEventExtensionsCompose at load.
+type AssertNoCoreCollision<T extends never> = T;
+export type EventExtensionCoreCollisions = AssertNoCoreCollision<
+  Extract<ExtensionEventType, (typeof CORE_EVENT_TYPES)[number]>
+>;
+assertEventExtensionsCompose(CORE_EVENT_TYPES);
+
+// Core plus extension event types; the extension list is empty natively.
+export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const satisfies readonly [
+  string,
+  ...string[],
+];
 
 export const EventTypeEnum = z.enum(EVENT_TYPES);
 
@@ -1241,7 +1283,8 @@ const InboundEmailReceivedPayloadSchema = z.union([
 ]);
 
 // Map event types to their payload schemas
-export const EventPayloadSchemas = {
+/** Core payload schemas; `EventPayloadSchemas` hands out these same objects. */
+export const CorePayloadSchemas = {
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
@@ -1409,6 +1452,16 @@ export const EventPayloadSchemas = {
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
   CLIENT_DELETED: clientDeletedEventPayloadSchema,
+  QUOTE_SENT: quoteSentEventPayloadSchema,
+  QUOTE_VIEWED: quoteViewedEventPayloadSchema,
+  QUOTE_APPROVED: quoteApprovedEventPayloadSchema,
+  QUOTE_ACCEPTED: quoteAcceptedEventPayloadSchema,
+  QUOTE_REJECTED: quoteRejectedEventPayloadSchema,
+  QUOTE_EXPIRED: quoteExpiredEventPayloadSchema,
+  QUOTE_CONVERTED: quoteConvertedEventPayloadSchema,
+  QUOTE_CONVERSION_REVERTED: quoteConversionRevertedEventPayloadSchema,
+  QUOTE_SUPERSEDED: quoteSupersededEventPayloadSchema,
+  QUOTE_CANCELLED: quoteCancelledEventPayloadSchema,
   CLIENT_LOCATION_CREATED: clientLocationCreatedEventPayloadSchema,
   CLIENT_LOCATION_UPDATED: clientLocationUpdatedEventPayloadSchema,
   CLIENT_LOCATION_DEACTIVATED: clientLocationDeactivatedEventPayloadSchema,
@@ -1583,6 +1636,8 @@ export const EventPayloadSchemas = {
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
+
+export const EventPayloadSchemas = { ...CorePayloadSchemas, ...EXTENSION_PAYLOAD_SCHEMAS } as const;
 
 const missingPayloadSchemas = EVENT_TYPES.filter((t) => !(t in EventPayloadSchemas));
 if (missingPayloadSchemas.length > 0) {

@@ -39,6 +39,7 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/predicates": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "zod": "^3.22.4"

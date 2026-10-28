@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Raccourcis clavier",
     "opportunities": "Opportunités",
     "mcpServer": "Serveur MCP",
-    "settingsFallback": "Paramètres"
+    "settingsFallback": "Paramètres",
+    "tags": "Étiquettes"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -1153,6 +1154,50 @@
         "client": "Client",
         "allClients": "Tous les clients",
         "clear": "Effacer le filtre"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tableau",
+          "category_id": "Catégorie",
+          "subcategory_id": "Sous-catégorie",
+          "priority_id": "Priorité",
+          "client_id": "Client",
+          "client_tags": "Étiquettes du client",
+          "contact_tags": "Étiquettes du contact",
+          "ticket_origin": "Source du ticket",
+          "title_folded": "Titre",
+          "description_folded": "Description",
+          "from_service_request": "Issu d’une demande de service",
+          "service_request_definition_id": "Demande de service"
+        },
+        "operators": {
+          "equals": "Est égal à",
+          "not_equals": "Est différent de",
+          "in": "Contient au moins une valeur parmi",
+          "not_in": "Ne contient aucune valeur parmi",
+          "contains": "Contient",
+          "starts_with": "Commence par",
+          "ends_with": "Se termine par",
+          "is_empty": "Est vide",
+          "is_not_empty": "N’est pas vide"
+        },
+        "conditions": "Conditions",
+        "match": "Correspondance",
+        "and": "Toutes les conditions",
+        "or": "Au moins une condition",
+        "field": "Champ",
+        "operator": "Condition",
+        "value": "Valeur",
+        "yes": "Oui",
+        "no": "Non",
+        "advanced": "Cette règle contient des conditions groupées ou avancées et est en lecture seule dans cet éditeur.",
+        "add": "Ajouter une condition",
+        "save": "Enregistrer les conditions",
+        "enabled": "Activée",
+        "matchesAll": "Correspond à tous les tickets dans le périmètre du modèle.",
+        "matchesNone": "Ne correspond à aucun ticket.",
+        "tagsFailed": "Impossible de charger les choix d’étiquettes. Les sélections enregistrées sont conservées.",
+        "retry": "Réessayer"
       }
     },
     "externalSystems": {
@@ -3972,5 +4017,21 @@
       "empty": "Aucun statut standard disponible à importer",
       "importSelected": "Importer la sélection ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Afficher sur les puces",
+    "subtitle": "Étiquettes affichées à côté des contacts et des clients dans les listes de tickets, les en-têtes de ticket et les sélecteurs.",
+    "loading": "Chargement…",
+    "description": "Choisissez les étiquettes affichées sous forme de badges à côté des contacts et des clients, et leur ordre. Une liste sans étiquette n'affiche aucun badge pour ce public.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Utilisateurs internes",
+    "audienceClient": "Portail client",
+    "clientNote": "Vide au départ. Les étiquettes listées ici sont visibles par les utilisateurs du client dans le portail client.",
+    "noneSelected": "Aucune étiquette affichée.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "remove": "Retirer",
+    "addTag": "Ajouter une étiquette…"
   }
 }

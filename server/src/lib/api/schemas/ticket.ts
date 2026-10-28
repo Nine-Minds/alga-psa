@@ -113,8 +113,10 @@ export const inlineTicketExternalLinksSchema = z.array(createTicketExternalLinkS
 export type CreateExternalLinkData = z.infer<typeof createExternalLinkSchema>;
 export type UpdateExternalLinkData = z.infer<typeof updateExternalLinkSchema>;
 
-// Create ticket schema
-export const createTicketSchema = z.object({
+// Create ticket schema. The object stays addressable as `createTicketFieldsSchema`
+// because the cross-field suppression refinement below turns `createTicketSchema`
+// into an effect, and `.omit()`/`.partial()` only exist on the plain object.
+export const createTicketFieldsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   url: z.string().url().optional(),
   board_id: uuidSchema,
@@ -134,11 +136,18 @@ export const createTicketSchema = z.object({
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
   // Devices the ticket is raised against. Linked in the ticket's own
-  // transaction, so a rejected asset leaves no orphan ticket. Exactly one
-  // asset also inherits its billing profile (the from-asset rule); several
-  // leave billing_profile_id to the client default.
+  // transaction, so a rejected asset leaves no orphan ticket. The first asset
+  // also lends its billing profile (the from-asset rule, which the web create
+  // applies the same way).
   asset_ids: z.array(uuidSchema).max(50).optional(),
+  // Create silently: no customer-facing ticket-created email (which otherwise
+  // falls back to the client email when the ticket has no contact) and no
+  // portal/in-app notifications. Audit, workflows and webhooks are unaffected.
+  ...ticketNotificationSuppressionSchema,
 });
+
+export const createTicketSchema = createTicketFieldsSchema
+  .superRefine(validateTicketNotificationSuppression);
 
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
 // `external_links` is create-only: it is written through the dedicated
@@ -147,7 +156,7 @@ export const createTicketSchema = z.object({
 // references are create-only in this API surface and are omitted for the same
 // reason, preserving the existing accepted update request set.
 export const updateTicketSchema = createUpdateSchema(
-  createTicketSchema.omit({
+  createTicketFieldsSchema.omit({
     external_links: true,
     severity_id: true,
     urgency_id: true,
@@ -603,8 +612,9 @@ export const createTicketFromAssetSchema = z.object({
   contact_name_id: uuidSchema.optional(),
   // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
   billing_profile_id: uuidSchema.nullable().optional(),
-  category_id: uuidSchema.optional()
-});
+  category_id: uuidSchema.optional(),
+  ...ticketNotificationSuppressionSchema,
+}).superRefine(validateTicketNotificationSuppression);
 
 // Link an asset to a ticket (POST /api/v1/tickets/{id}/assets).
 export const linkTicketAssetSchema = z.object({

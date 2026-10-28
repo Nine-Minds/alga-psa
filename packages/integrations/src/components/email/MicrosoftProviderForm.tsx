@@ -73,6 +73,20 @@ function openMicrosoftOAuthPopup(): Window | null {
   }
 }
 
+/**
+ * Split the comma-separated folder input into Graph folder filters. `\` and `/`
+ * pass through untouched: the Graph adapter resolves nested folders written in
+ * either notation (`Inbox\Support` as Outlook rules write it, or
+ * `Inbox/Support`).
+ */
+export function normalizeMicrosoftFolderFilters(value: string | undefined, fallback: string[]): string[] {
+  const filters = (value || '')
+    .split(',')
+    .map((folder) => folder.trim())
+    .filter((folder) => folder.length > 0);
+  return filters.length > 0 ? filters : fallback;
+}
+
 function closePopupQuietly(popup: Window | null): void {
   try {
     popup?.close();
@@ -289,7 +303,7 @@ export function MicrosoftProviderForm({
           client_secret: '',
           tenant_id: '',
           auto_process_emails: data.autoProcessEmails,
-          folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+          folder_filters: normalizeMicrosoftFolderFilters(data.folderFilters, ['Inbox']),
           max_emails_per_sync: data.maxEmailsPerSync
         }
 
@@ -380,7 +394,7 @@ export function MicrosoftProviderForm({
             client_secret: '',
             tenant_id: '',
             auto_process_emails: formData.autoProcessEmails,
-            folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
+            folder_filters: normalizeMicrosoftFolderFilters(formData.folderFilters, ['INBOX']),
             max_emails_per_sync: formData.maxEmailsPerSync
           }
         };
@@ -812,7 +826,7 @@ export function MicrosoftProviderForm({
                 placeholder={t('forms.microsoft.advanced.folderFiltersPlaceholder', { defaultValue: 'Inbox, Support, Custom Folder' })}
               />
               <p className="text-xs text-muted-foreground">
-                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox)' })}
+                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox). Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.' })}
               </p>
             </div>
 

@@ -20,6 +20,8 @@ const CATALOG_KEYS = TICKET_COLUMNS.map((column) => column.key);
 const USER_A = '11111111-2222-4333-8444-555555555555';
 const USER_B = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
 const USER_GONE = '99999999-8888-4777-8666-555555555555';
+const CONTACT_A = '44444444-5555-4666-8777-888888888888';
+const CONTACT_GONE = '55555555-6666-4777-8888-999999999999';
 
 describe('resolveTicketViewSettings', () => {
   it('prefers the board layer over the tenant layer over the catalog', () => {
@@ -292,6 +294,33 @@ describe('validateCapturedFilters (validate-on-read)', () => {
     // otherwise silently erase a perfectly good saved filter.
     const validated = validateCapturedFilters({ clientId: 'client-1' }, {});
     expect(validated.clientId).toBe('client-1');
+  });
+
+  it('survives a saved view round trip for the contact filter', () => {
+    // capture (deny-list) → stored document → sanitize → validate-on-read. The
+    // contact filter has to make it all the way through, or saving a view of
+    // one person's tickets would quietly forget the person.
+    const captured = captureTicketViewSettings({
+      filters: { clientId: 'client-1', contactId: CONTACT_A },
+    });
+    expect(captured.filters?.contactId).toBe(CONTACT_A);
+
+    const stored = sanitizeStoredTicketView(JSON.parse(JSON.stringify(captured)))!;
+    expect(stored.filters?.contactId).toBe(CONTACT_A);
+
+    // No contact universe on the SSR path, so "cannot validate" passes through.
+    expect(validateCapturedFilters(stored.filters, {}).contactId).toBe(CONTACT_A);
+  });
+
+  it('drops a contact that is no longer in the supplied universe', () => {
+    const validated = validateCapturedFilters(
+      { contactId: CONTACT_GONE },
+      { contactIds: [CONTACT_A] },
+    );
+    expect(validated).not.toHaveProperty('contactId');
+
+    const kept = validateCapturedFilters({ contactId: CONTACT_A }, { contactIds: [CONTACT_A] });
+    expect(kept.contactId).toBe(CONTACT_A);
   });
 
   it('leaves non-id filters untouched', () => {

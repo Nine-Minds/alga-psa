@@ -1287,7 +1287,7 @@
   },
   {
     "id": "T143",
-    "description": "TicketService.create with asset_ids writes one asset_associations row per device on the ticket's own transaction handle, inherits the billing profile for exactly one asset, leaves it to the client default for several, consults the resolver for none, rejects an asset from outside the tenant before TicketModel is called, and de-duplicates repeats/blanks",
+    "description": "TicketService.create with asset_ids writes one asset_associations row per device on the ticket's own transaction handle, inherits the billing profile from the first named device (one asset or several), consults the resolver for none, rejects an asset from outside the tenant before TicketModel is called, and de-duplicates repeats/blanks",
     "implemented": true,
     "commitGroup": "ticket-assets",
     "featureIds": [
@@ -1297,7 +1297,7 @@
   },
   {
     "id": "T144",
-    "description": "QuickAddTicket offers no device picker until a client is chosen, scopes it to that client, submits one asset_ids entry per picked device (and no legacy asset_id), clears the selection on a client change, and pre-fills from the asset the dialog was opened with (banner replaced, not duplicated)",
+    "description": "QuickAddTicket offers no device picker until a client is chosen, says so when no picker is supplied at all, scopes it to the chosen client, submits the picked devices as one JSON asset_ids array, and clears the selection on a client change; the asset the dialog was opened with still travels as asset_id with its banner",
     "implemented": true,
     "commitGroup": "ticket-assets",
     "featureIds": [

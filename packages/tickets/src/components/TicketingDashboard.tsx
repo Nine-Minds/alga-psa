@@ -1,5 +1,6 @@
 'use client'
 
+import { encodeTicketWhere } from '../lib/ticketWhereUrl';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -37,7 +38,10 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
+import { WhereTagFilter } from './WhereTagFilter';
+import { WHERE_TAG_FILTERS, getWhereTagSelection, setWhereTagSelection, whereTagFilterChips } from '../lib/ticketWhereFilters';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -113,7 +117,13 @@ import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPick
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import { getClientById, getContactByContactNameId } from '../actions/clientLookupActions';
+import {
+  getAllActiveContacts,
+  getClientById,
+  getContactByContactNameId,
+  getContactsByClient,
+} from '../actions/clientLookupActions';
+import { contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -164,6 +174,9 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
   initialTags?: ITag[];
+  /** Contact / client tag definitions for the Requester tags / Client tags filters. */
+  contactTagDefinitions?: ITag[];
+  clientTagDefinitions?: ITag[];
   initialUsers?: IUser[];
   totalCount: number;
   currentPage: number;
@@ -218,6 +231,7 @@ interface TicketingDashboardProps {
 }
 
 
+const EMPTY_TAG_DEFINITIONS: ITag[] = [];
 const EMPTY_STRING_ARRAY: string[] = [];
 // Density lives in the view-settings layer now (board -> tenant -> default), so
 // the step and default are read from there rather than re-declared here.
@@ -332,6 +346,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialAgentAvatarUrls = {},
   initialTeamAvatarUrls = {},
   initialTicketTags = {},
+  contactTagDefinitions = EMPTY_TAG_DEFINITIONS,
+  clientTagDefinitions = EMPTY_TAG_DEFINITIONS,
   initialTeams = [],
   canUpdateTickets = true,
   onNavigateAway,
@@ -422,6 +438,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     ? selectedBoards[0]
     : null;
   const selectedClient = filterValues.clientId ?? null;
+  const selectedContact = filterValues.contactId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
   const selectedCategories = useMemo(() => {
@@ -516,27 +533,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
+  const selectedWhere = filterValues.where;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
+  // `where` tag filters (Requester tags / Client tags) come from the descriptor table.
+  const whereTagDefinitions = useMemo(
+    () => ({ 'contact.tags': contactTagDefinitions, 'client.tags': clientTagDefinitions }),
+    [contactTagDefinitions, clientTagDefinitions],
+  );
+  const hasWhereTagFilters = WHERE_TAG_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
+  const whereTagFilterCount = WHERE_TAG_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
     return selectedBoards.length > 0 ||
       excludedBoards.length > 0 ||
       selectedClient !== null ||
+      selectedContact !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
       excludedCategories.length > 0 ||
       searchQuery !== '' ||
       selectedTags.length > 0 ||
+      hasWhereTagFilters ||
       selectedAssignees.length > 0 ||
       selectedTeams.length > 0 ||
       includeUnassigned ||
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
 
   // Count of active filter groups (excludes the always-visible search box) — drives
   // the "Filters" button badge in the candidate #1 collapsed toolbar.
@@ -544,6 +571,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     let n = 0;
     if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
     if (selectedClient !== null) n++;
+    if (selectedContact !== null) n++;
     if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
     if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
     if (selectedResponseState !== 'all') n++;
@@ -552,11 +580,40 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (allowSlaStatusFilter && selectedSlaStatus !== 'all') n++;
     if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
     if (selectedTags.length > 0) n++;
+    n += whereTagFilterCount;
     return n;
-  }, [selectedBoards, excludedBoards, selectedClient, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
 
   // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
   const [showFilters, setShowFilters] = useState(false);
+
+  // Options for the contact filter, cross-linked to the client filter: a
+  // selected client narrows them to that client's contacts (including inactive
+  // ones, since old tickets point at them), and with no client every active
+  // contact in the tenant is selectable.
+  const [contactOptions, setContactOptions] = useState<IContact[]>([]);
+  // Fetched lazily — a tenant-wide contact list is large and the filter row is
+  // collapsed by default, so nothing is loaded until the row is opened or a
+  // deep link arrives with a contact already applied.
+  const needsContactOptions = showFilters || selectedContact !== null;
+  useEffect(() => {
+    if (!needsContactOptions) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // 'all' rather than 'active': a ticket can name a contact who has since
+        // been deactivated, and that ticket still has to be findable.
+        const contacts = selectedClient
+          ? await getContactsByClient(selectedClient, 'all')
+          : await getAllActiveContacts();
+        if (!cancelled) setContactOptions(contacts);
+      } catch {
+        // A stale option list would offer contacts the client filter forbids.
+        if (!cancelled) setContactOptions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [needsContactOptions, selectedClient]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -824,6 +881,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       params.set('excludeBoardIds', f.excludeBoardIds.join(','));
     }
     if (f.clientId) params.set('clientId', f.clientId);
+    if (f.contactId) params.set('contactId', f.contactId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
     if (f.categoryIds && f.categoryIds.length > 0) {
@@ -864,6 +922,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.tags && f.tags.length > 0) {
       params.set('tags', f.tags.join(','));
     }
+    const whereParam = encodeTicketWhere(f.where);
+    if (whereParam) params.set('where', whereParam);
     if (sortBy && sortBy !== 'entered_at') {
       params.set('sortBy', sortBy);
     }
@@ -1008,11 +1068,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           handleError(getErrorMessage(children), t('errors.loadBundledTickets', 'Failed to load bundled tickets'));
           return;
         }
-        if (children.length > 0) {
+        ticketTagsRef.current = { ...ticketTagsRef.current, ...children.metadata.ticketTags };
+        setTagsVersion((v) => v + 1);
+        setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...children.metadata.agentAvatarUrls }));
+        setTeamAvatarUrls((prev) => ({ ...prev, ...children.metadata.teamAvatarUrls }));
+        if (children.tickets.length > 0) {
           setTickets(prev => {
             const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
             const next = [...prev];
-            for (const child of children) {
+            for (const child of children.tickets) {
               if (child.ticket_id && !existing.has(child.ticket_id)) {
                 next.push(child);
                 existing.add(child.ticket_id);
@@ -1182,6 +1246,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
     excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
     clientId: selectedClient ?? undefined,
+    contactId: selectedContact ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
     showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
@@ -1197,12 +1262,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     sortBy,
     sortDirection,
     bundleView,
+    where: selectedWhere,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedClient, selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
-    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
   ]);
 
   // Smart search runs over the chips alone; the typed text is the Jev query.
@@ -2070,8 +2136,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange]);
 
+  // Client and contact move together: a contact that does not belong to the
+  // newly selected client is cleared in the *same* update, so one click is one
+  // debounced fetch and no intermediate state applies both at once.
   const handleClientSelect = useCallback((clientId: string | null) => {
-    onFilterChange({ clientId: clientId || undefined });
+    onFilterChange(contactFilterUpdateForClientChange({
+      nextClientId: clientId,
+      currentContactId: selectedContact,
+      contactClientId: contactOptions.find((c) => c.contact_name_id === selectedContact)?.client_id,
+    }));
+  }, [onFilterChange, selectedContact, contactOptions]);
+
+  const handleContactSelect = useCallback((contactId: string) => {
+    onFilterChange({ contactId: contactId || undefined });
   }, [onFilterChange]);
 
   const handleClientFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
@@ -2094,6 +2171,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardIds: undefined,
       excludeBoardIds: undefined,
       clientId: undefined,
+      contactId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
@@ -2103,6 +2181,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: 'active',
       showOpenOnly: true,
       tags: undefined,
+      where: undefined,
       assignedToIds: undefined,
       assignedTeamIds: undefined,
       includeUnassigned: false,
@@ -2115,9 +2194,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange, exitSmartSearch]);
 
-  // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
-  // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
-  // descriptor list { key, isActive, label, clear } per filter would collapse all three.
+  // LEVERAGE: pattern filter-descriptor-table — the legacy dimensions below still duplicate
+  // "is-active / label / clear" three ways (toolbar controls, activeFilterCount, activeFilterChips).
+  // The `where` tag filters already come from WHERE_TAG_FILTERS (lib/ticketWhereFilters.ts); moving
+  // the legacy dimensions onto the same descriptor shape would collapse all three.
   // Active-filter chips (candidate #1): one removable chip per applied filter,
   // shown above the table so what's filtering is always visible. Labels reuse the
   // already-localized field/value strings; removal clears just that dimension.
@@ -2148,6 +2228,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedClient) {
       const name = clients.find((c) => c.client_id === selectedClient)?.client_name ?? t('fields.client', 'Client');
       chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
+    }
+
+    if (selectedContact) {
+      const contactLabel = t('fields.contact', 'Contact');
+      const name = contactOptions.find((c) => c.contact_name_id === selectedContact)?.full_name ?? contactLabel;
+      chips.push({
+        key: `contact:${selectedContact}`,
+        label: `${contactLabel}: ${name}`,
+        onRemove: () => handleContactSelect(''),
+      });
     }
 
     selectedAssignees.forEach((userId) => {
@@ -2239,11 +2329,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
+    whereTagFilterChips(
+      selectedWhere,
+      (descriptor, tagId) => whereTagDefinitions[descriptor.path].find((d) => d.tag_id === tagId)?.tag_text,
+      (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
+    ).forEach((chip) => {
+      chips.push({
+        key: chip.key,
+        label: chip.label,
+        onRemove: () => onFilterChange({ where: chip.clear() }),
+      });
+    });
+
     return chips.map((chip) => ({
       ...chip,
       removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
     }));
-  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
@@ -2434,6 +2536,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClientTypeFilterChange={handleClientTypeFilterChange}
                   fitContent={true}
                 />
+                <ContactPicker
+                  id="contact-picker"
+                  data-automation-id={`${id}-contact-picker`}
+                  contacts={contactOptions}
+                  value={selectedContact ?? ''}
+                  onValueChange={handleContactSelect}
+                  // Belt to the braces of the scoped fetch: even a mid-flight
+                  // option list cannot offer another client's contact.
+                  clientId={selectedClient ?? undefined}
+                  placeholder={t('dashboard.filters.allContacts', 'All Contacts')}
+                  buttonWidth="fit"
+                  className="text-sm min-w-[180px]"
+                />
                 <MultiUserAndTeamPicker
                     id={`${id}-assignee-filter`}
                     users={initialUsers}
@@ -2593,6 +2708,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
+                {WHERE_TAG_FILTERS.map((descriptor) => (
+                  <WhereTagFilter
+                    key={descriptor.path}
+                    id={`${id}-where-${descriptor.taggedType}-tags`}
+                    label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                    definitions={whereTagDefinitions[descriptor.path]}
+                    selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                    onChange={(selection) =>
+                      onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                    }
+                  />
+                ))}
                 </div>
               </div>
               </ListFilterPanel>

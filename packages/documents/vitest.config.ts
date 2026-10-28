@@ -119,6 +119,7 @@ export default defineConfig({
           include: [
             'src/components/DocumentUpload.test.tsx',
             'src/components/Documents.uploadBatch.test.tsx',
+            'src/components/Documents.drawer.test.tsx',
           ],
           setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
           sequence: { concurrent: false, shuffle: false },

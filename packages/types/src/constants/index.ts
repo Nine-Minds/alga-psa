@@ -11,5 +11,6 @@ export * from './productRoutes';
 export * from './uiSlots';
 export * from './billingJobNames';
 export * from './maintenanceFanoutSchedules';
+export * from './jobScheduleExtensions';
 export * from './ceMaintenanceSchedules';
 export * from './accountingDiscountMapping';

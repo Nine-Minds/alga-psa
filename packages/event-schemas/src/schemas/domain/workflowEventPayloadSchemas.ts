@@ -1,3 +1,15 @@
+import {
+  quoteSentEventPayloadSchema,
+  quoteViewedEventPayloadSchema,
+  quoteApprovedEventPayloadSchema,
+  quoteAcceptedEventPayloadSchema,
+  quoteRejectedEventPayloadSchema,
+  quoteExpiredEventPayloadSchema,
+  quoteConvertedEventPayloadSchema,
+  quoteConversionRevertedEventPayloadSchema,
+  quoteSupersededEventPayloadSchema,
+  quoteCancelledEventPayloadSchema,
+} from './quoteEventSchemas';
 import { ZodTypeAny } from 'zod';
 import {
   emailProviderConnectedEventPayloadSchema,
@@ -329,6 +341,16 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ClientOwnerAssigned.v1': clientOwnerAssignedEventPayloadSchema,
   'payload.ClientMerged.v1': clientMergedEventPayloadSchema,
   'payload.ClientArchived.v1': clientArchivedEventPayloadSchema,
+  'payload.QuoteSent.v1': quoteSentEventPayloadSchema,
+  'payload.QuoteViewed.v1': quoteViewedEventPayloadSchema,
+  'payload.QuoteApproved.v1': quoteApprovedEventPayloadSchema,
+  'payload.QuoteAccepted.v1': quoteAcceptedEventPayloadSchema,
+  'payload.QuoteRejected.v1': quoteRejectedEventPayloadSchema,
+  'payload.QuoteExpired.v1': quoteExpiredEventPayloadSchema,
+  'payload.QuoteConverted.v1': quoteConvertedEventPayloadSchema,
+  'payload.QuoteConversionReverted.v1': quoteConversionRevertedEventPayloadSchema,
+  'payload.QuoteSuperseded.v1': quoteSupersededEventPayloadSchema,
+  'payload.QuoteCancelled.v1': quoteCancelledEventPayloadSchema,
   'payload.ClientLocationCreated.v1': clientLocationCreatedEventPayloadSchema,
   'payload.ClientLocationUpdated.v1': clientLocationUpdatedEventPayloadSchema,
   'payload.ClientLocationDeactivated.v1': clientLocationDeactivatedEventPayloadSchema,

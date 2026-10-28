@@ -9,8 +9,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
-import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import EntityChip from '@alga-psa/ui/components/EntityChip';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ContentCardVariantProvider, ContentCardFooter } from '@alga-psa/ui/components';
@@ -28,6 +27,7 @@ import type {
   ITeam,
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import type { PartyDisplayTags } from '../../../lib/partyDisplayTags';
 import type { ITicketExternalLinkView } from '../../../actions/externalLinks/externalLinkActions';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { TicketCredentialsSection } from './../TicketCredentialsSection';
@@ -83,6 +83,7 @@ export interface TicketBentoLayoutProps {
   /** Persists the hero description when no batch handler is wired. */
   onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
+  defaultReplyInternal?: boolean;
   hideSlaStatus?: boolean;
   /** App-layer slot content (`slots.appSection`), rendered as its own tile. */
   appSection?: React.ReactNode;
@@ -188,6 +189,8 @@ export interface TicketBentoLayoutProps {
   createdByUser?: IUser | null;
   contactInfo?: IContact | null;
   client?: IClient | null;
+  /** Requester and client chip tags for the viewer (display rules). */
+  displayTags?: PartyDisplayTags;
   onContactClick: () => void;
   onClientClick: () => void;
   /** Clients list, used to scope the quick-add-contact modal. */
@@ -660,21 +663,17 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         ) : props.contactInfo || props.client ? (
           <div className="space-y-1.5 text-sm">
             {props.contactInfo ? (
-              <div className="flex items-center gap-2 min-w-0">
-                <ContactAvatar
-                  contactId={props.contactInfo.contact_name_id || ''}
-                  contactName={props.contactInfo.full_name || ''}
-                  avatarUrl={props.contactInfo.avatarUrl ?? null}
-                  size="sm"
-                />
-                <button
-                  id={`${id}-contact-open`}
-                  type="button"
-                  className="font-medium text-[rgb(var(--color-primary-600))] hover:underline text-left truncate"
+              <div className="flex items-center gap-2 min-w-0 font-medium">
+                <EntityChip
+                  kind="contact"
+                  id={props.contactInfo.contact_name_id || ''}
+                  name={props.contactInfo.full_name || ''}
+                  imageUrl={props.contactInfo.avatarUrl ?? null}
+                  tags={props.displayTags?.contact}
+                  maxBadges={3}
+                  buttonId={`${id}-contact-open`}
                   onClick={props.onContactClick}
-                >
-                  {props.contactInfo.full_name}
-                </button>
+                />
               </div>
             ) : canEditContact ? (
               <button
@@ -703,21 +702,19 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             {props.client ? (
               <div className="pt-1 border-t border-[rgb(var(--color-border-100))]">
                 <div className="flex items-center gap-2">
-                  <ClientAvatar
-                    clientId={props.client.client_id}
-                    clientName={props.client.client_name}
-                    logoUrl={props.client.logoUrl ?? null}
-                    size="sm"
-                  />
                   <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
-                  <button
-                    id={`${id}-client-open`}
-                    type="button"
-                    className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-                    onClick={props.onClientClick}
-                  >
-                    {props.client.client_name}
-                  </button>
+                  <span className="min-w-0 font-medium">
+                    <EntityChip
+                      kind="client"
+                      id={props.client.client_id}
+                      name={props.client.client_name}
+                      imageUrl={props.client.logoUrl ?? null}
+                      tags={props.displayTags?.client}
+                      maxBadges={3}
+                      buttonId={`${id}-client-open`}
+                      onClick={props.onClientClick}
+                    />
+                  </span>
                   {canChangeClient ? (
                     <button
                       id={`${id}-client-edit`}
@@ -1130,6 +1127,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             refreshKey={props.timelineRefreshKey}
             initialOrder={props.timelineInitialOrder}
             editorKey={props.editorKey}
+            defaultReplyInternal={props.defaultReplyInternal}
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}

@@ -56,6 +56,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/quote-terms-formatting-source-mapping.contract.test.ts',
+      'ee/temporal-workflows/src/__tests__/db-subpath-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
@@ -71,6 +72,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
+    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;

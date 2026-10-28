@@ -5,7 +5,6 @@ export * from './UnsavedChangesContext';
 export * from './ClientDrawerContext';
 export * from './ContactDrawerContext';
 export * from './QuickAddClientContext';
-export * from './TicketAssetPickerContext';
 export * from './ClientTagsContext';
 export * from './ActivityCrossFeatureContext';
 

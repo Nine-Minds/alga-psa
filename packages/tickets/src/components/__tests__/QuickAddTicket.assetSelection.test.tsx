@@ -159,34 +159,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-// The composition layer's seam, standing in for ClientAssetMultiSelect: it
-// only ever receives one client's id, and the ids it is handed back are what
-// the dialog submits.
 vi.mock('@alga-psa/ui/context', () => ({
-  useTicketAssetPicker: () => ({
-    renderAssetPicker: ({ id, clientId, value, onChange, label, disabled }: {
-      id: string;
-      clientId: string;
-      value: string[];
-      onChange: (assetIds: string[]) => void;
-      label: string;
-      disabled?: boolean;
-    }) => (
-      <div data-testid="asset-picker" data-client={clientId} data-label={label} data-disabled={String(Boolean(disabled))}>
-        <div data-testid="asset-picker-value">{value.join(',')}</div>
-        {ASSET_FIXTURES.map((asset) => (
-          <button
-            key={asset.asset_id}
-            type="button"
-            id={`${id}-add-${asset.asset_id}`}
-            onClick={() => onChange([...value, asset.asset_id])}
-          >
-            {`Pick ${asset.name}`}
-          </button>
-        ))}
-      </div>
-    ),
-  }),
   useQuickAddClient: () => ({
     renderQuickAddClient: () => null,
     renderQuickAddContact: () => null,
@@ -395,10 +368,40 @@ vi.mock('../../lib/ticketRichTextImages', () => ({
 
 /**
  * alga-2026-0002785 (customer ask via ticket 2592): the ticket-create dialog
- * picks any number of the selected client's devices, instead of only rendering
- * a banner for one asset handed in from the asset page.
+ * picks any number of the selected client's devices. The picker itself lives in
+ * the assets package and arrives as `renderAssetPicker`, so these cases drive
+ * that prop — what the dialog hands it, when it is offered at all, and what
+ * reaches `addTicket`. Opened-from-an-asset (`asset_id` + banner) is covered by
+ * the dialog's own asset-banner cases.
  */
 describe('QuickAddTicket asset selection', () => {
+  function renderAssetPicker({ id, clientId, value, onChange, label, disabled }: {
+    id: string;
+    clientId: string;
+    value: string[];
+    onChange: (assetIds: string[]) => void;
+    label: string;
+    disabled?: boolean;
+  }) {
+    // Stands in for ClientAssetMultiSelect: it only ever receives one client's
+    // id, and the ids it hands back are what the dialog submits.
+    return (
+      <div data-testid="asset-picker" data-client={clientId} data-label={label} data-disabled={String(Boolean(disabled))}>
+        <div data-testid="asset-picker-value">{value.join(',')}</div>
+        {ASSET_FIXTURES.map((asset) => (
+          <button
+            key={asset.asset_id}
+            type="button"
+            id={`${id}-add-${asset.asset_id}`}
+            onClick={() => onChange([...value, asset.asset_id])}
+          >
+            {`Pick ${asset.name}`}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     getTicketFormDataMock.mockResolvedValue({
@@ -419,7 +422,13 @@ describe('QuickAddTicket asset selection', () => {
 
   async function openDialog(props: Record<string, unknown> = {}) {
     render(
-      <QuickAddTicket open={true} onOpenChange={vi.fn()} onTicketAdded={vi.fn()} {...props} />
+      <QuickAddTicket
+        open={true}
+        onOpenChange={vi.fn()}
+        onTicketAdded={vi.fn()}
+        renderAssetPicker={renderAssetPicker}
+        {...props}
+      />
     );
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     await screen.findByTestId('ticket-quick-add');
@@ -429,17 +438,26 @@ describe('QuickAddTicket asset selection', () => {
     await openDialog();
 
     expect(screen.queryByTestId('asset-picker')).not.toBeInTheDocument();
-    expect(screen.getByTestId('ticket-quick-add-assets-disabled')).toBeInTheDocument();
+    expect(screen.getByText('Select a client to link assets.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Choose Acme'));
 
     const picker = await screen.findByTestId('asset-picker');
     expect(picker).toHaveAttribute('data-client', 'client-1');
-    expect(picker).toHaveAttribute('data-label', 'Assets');
-    expect(screen.queryByTestId('ticket-quick-add-assets-disabled')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select a client to link assets.')).not.toBeInTheDocument();
   });
 
-  it('submits every picked device as its own asset_ids entry', async () => {
+  it('says so instead when no picker is supplied', async () => {
+    // AlgaDesk and the client portal mount the dialog without the seam.
+    await openDialog({ renderAssetPicker: undefined });
+
+    expect(screen.queryByTestId('asset-picker')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Assets can be linked from the ticket after it is created.')
+    ).toBeInTheDocument();
+  });
+
+  it('submits the picked devices as one asset_ids array', async () => {
     await openDialog();
 
     fireEvent.click(screen.getByText('Choose Acme'));
@@ -459,8 +477,8 @@ describe('QuickAddTicket asset selection', () => {
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
 
     const formData = addTicketMock.mock.calls[0][0] as FormData;
-    expect(formData.getAll('asset_ids')).toEqual(['asset-1', 'asset-2']);
-    // The single-asset form is gone from this surface: the server reads asset_ids.
+    // One JSON field, not repeated keys: parseTicketCreateExtras rejects anything else.
+    expect(JSON.parse(formData.get('asset_ids') as string)).toEqual(['asset-1', 'asset-2']);
     expect(formData.get('asset_id')).toBeNull();
   });
 
@@ -477,19 +495,5 @@ describe('QuickAddTicket asset selection', () => {
     // A device of the previous client must not stay picked.
     await waitFor(() => expect(screen.getByTestId('asset-picker')).toHaveAttribute('data-client', 'client-2'));
     expect(screen.getByTestId('asset-picker-value')).toHaveTextContent('');
-  });
-
-  it('pre-fills the picker when the dialog is opened from an asset', async () => {
-    await openDialog({
-      assetId: 'asset-1',
-      assetName: 'Reception PC',
-      prefilledClient: { id: 'client-1', name: 'Acme' },
-    });
-
-    const picker = await screen.findByTestId('asset-picker');
-    expect(picker).toHaveAttribute('data-client', 'client-1');
-    expect(screen.getByTestId('asset-picker-value')).toHaveTextContent('asset-1');
-    // The read-only banner is replaced by the picker, not shown beside it.
-    expect(screen.queryByTestId('quick-add-ticket-asset-pill')).not.toBeInTheDocument();
   });
 });

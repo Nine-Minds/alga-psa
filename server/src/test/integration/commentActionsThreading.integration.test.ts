@@ -49,6 +49,11 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', () => ({
 
 import { hasPermission } from '@alga-psa/auth';
 import { createComment, deleteComment, updateComment } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
+import {
+  registerCommentEventContributor,
+  resetCommentEventContributors,
+  type CommentEventEnvelope,
+} from '@alga-psa/db/commentEventRegistry';
 
 const blockNote = (text: string) => JSON.stringify([
   {
@@ -577,10 +582,28 @@ describe('ticket comment threading actions', () => {
       // A comment nobody authored (inbound email) may be corrected by someone who updates tickets.
       await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: null });
       userRef.user = other;
+      publishEventMock.mockClear();
+      const retained: CommentEventEnvelope[] = [];
+      registerCommentEventContributor({ name: 'test-capture', retain: async (_trx, envelope) => {
+        retained.push(envelope);
+        return false;
+      } });
       const fixed = await updateComment(commentId, { note: blockNote('Fixed inbound text') });
       expect((fixed as { actionError?: string } | undefined)?.actionError).toBeUndefined();
       expect((await scopedDb().table('comments').where({ comment_id: commentId }).first()).note).toContain('Fixed inbound text');
+
+      // Editing does not change authorship: the corrector is the actor, not the new author.
+      const repairEvent = publishEventMock.mock.calls
+        .map(([event]) => event)
+        .find((event) => event?.eventType === 'TICKET_COMMENT_UPDATED');
+      expect(repairEvent.payload.userId).toBe(other.user_id);
+      expect(repairEvent.payload.oldComment.author).toBe('Unknown User');
+      expect(repairEvent.payload.newComment.author).toBe('Unknown User');
+      expect(retained).toEqual([{ source: 'ticket', event: expect.objectContaining({
+        eventType: 'TICKET_COMMENT_UPDATED', commentId, ticketId: ticket.ticket_id, userId: other.user_id,
+      }) }]);
     } finally {
+      resetCommentEventContributors();
       userRef.user = author;
       await scopedDb().table('comments').where({ comment_id: commentId }).delete();
       await scopedDb().table('users').where({ user_id: other.user_id }).update({ is_inactive: true });

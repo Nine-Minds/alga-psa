@@ -16,7 +16,6 @@ import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers
 // MspClientTagsProvider is now mounted at the shell (DefaultLayout / AlgaDeskMspShell),
 // which is always an ancestor of this component — so it no longer needs to be re-mounted here.
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
-import { MspTicketAssetPickerProvider } from '@alga-psa/msp-composition/tickets/MspTicketAssetPickerProvider';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows/MspActivityCrossFeatureProvider';
@@ -46,7 +45,6 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
             <MspClientDrawerProvider>
               <MspClientCrossFeatureProvider>
                 <MspAssetCrossFeatureProvider>
-                 <MspTicketAssetPickerProvider>
                   <MspDocumentsCrossFeatureProvider>
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
@@ -57,7 +55,6 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>
                   </MspDocumentsCrossFeatureProvider>
-                 </MspTicketAssetPickerProvider>
                 </MspAssetCrossFeatureProvider>
               </MspClientCrossFeatureProvider>
             </MspClientDrawerProvider>

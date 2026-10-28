@@ -1831,7 +1831,7 @@ export function registerCrmActions(): void {
         const updatedQuote = await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
           status: 'pending_approval' as any,
           updated_by: tx.actorUserId,
-        });
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const comment = input.comment?.trim() || input.reason?.trim() || null;
         if (comment) {
@@ -1922,7 +1922,7 @@ export function registerCrmActions(): void {
 
         try {
           if (input.target === 'contract') {
-            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1945,7 +1945,7 @@ export function registerCrmActions(): void {
           }
 
           if (input.target === 'invoice') {
-            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1967,7 +1967,7 @@ export function registerCrmActions(): void {
             };
           }
 
-          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
           await writeRunAudit(ctx, tx, {
             operation: 'workflow_action:crm.convert_quote',
             changedData: {
@@ -2815,14 +2815,9 @@ export function registerCrmActions(): void {
         }
 
         const sentAt = new Date().toISOString();
-        await tenantScopedTable(tx, 'quotes')
-          .where({ quote_id: input.quote_id })
-          .update({
-            status: 'sent',
-            sent_at: sentAt,
-            updated_by: tx.actorUserId,
-            updated_at: sentAt,
-          });
+        await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
+          status: 'sent', sent_at: sentAt, updated_by: tx.actorUserId,
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const updatedQuote = await tenantScopedTable(tx, 'quotes').where({ quote_id: input.quote_id }).first();
         if (!updatedQuote) {

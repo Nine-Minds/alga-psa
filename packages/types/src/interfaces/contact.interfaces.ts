@@ -1,5 +1,5 @@
 import type { TenantEntity } from '.';
-import type { ITaggable } from './tag.interfaces';
+import type { IDisplayTag, ITaggable } from './tag.interfaces';
 
 export const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
 
@@ -56,6 +56,8 @@ export interface ContactPhoneNumberInput {
 }
 
 export interface IContact extends TenantEntity, ITaggable {
+  /** Chip tags for the viewer (display rules); set by picker/list loaders, not stored. */
+  displayTags?: IDisplayTag[];
   contact_name_id: string;
   contact_kind?: 'person' | 'shared_mailbox';
   full_name: string;
