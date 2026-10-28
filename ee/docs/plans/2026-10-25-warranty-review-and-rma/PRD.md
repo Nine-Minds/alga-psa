@@ -384,3 +384,25 @@ closes as returned. Print the RMA tag before shipping and the return slip for th
 ## Follow-up: vendor conversation link
 
 Shipped without the vendor-conversation link because the ticket-conversations branch is not merged. Today the vendor case number lives on the RMA (`rma_reference`) and can be mirrored to the ticket's external links with one click (a `generic` reference link). Once ticket conversations land, link the vendor email thread to the ticket and the RMA, then remove the generic mirror (`LEVERAGE: friction rma-vendor-case-link`).
+
+## Follow-up: advance-replacement dead-unit shipping
+
+Shipped on the assumption, never stated outright until a review caught it, that the vendor's return
+logistics for the dead unit in the advance-replacement track **bypass Alga's custody entirely** (a prepaid
+label, the client deals with the vendor directly). That assumption is baked into "Integration with C4"
+above ("If the vendor ships straight to the client, the technician returns the episode with C4's
+`returnCustodyToClient` instead") but was never checked against how this actually works for Dell or other
+vendors.
+
+If it turns out the MSP sometimes *does* handle that physical leg — the dead unit was received into Alga's
+custody for evaluation before approval, the vendor pre-ships a replacement, and now the dead unit has to go
+back out with its own tracking — today's state machine has no transition for it. From `replaced` / `repaired`
+the only exits are `returnDeviceToClient` (closes the custody episode as *returned to the client*, which is
+the wrong fact when the device is actually going to the vendor) and the generic `close`. Confirm this with
+the actual Dell (and other vendor) workflow before building it.
+
+If the answer is yes, the fix is additive, not a redesign: a `shipDeadUnitToVendor` transition from
+`replaced` / `repaired`, built the same way `shipToVendorCore` is (an outbound carrier/tracking custody
+`shipped` event, same schema shape minus `return_by`), landing in `dead_unit_owed` — already a valid
+`rma_cases.status` value inherited from the stock-unit track, so no migration is needed, only the
+transition, schema, action and UI. `close` would need `dead_unit_owed` added to its `from` set.

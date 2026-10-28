@@ -134,6 +134,7 @@
 
 - **Vendor conversation link.** The ticket-conversations branch is not merged, so the RMA ships without a link from the vendor email thread to the case. When it merges: link the thread to the ticket and mirror `rma_reference`, and retire the `generic` external-link mirror.
 - Overlap with C3: the RMA detail is still the `?rmaId=` dialog C3 added; C5 extends it (`RmaWarrantyPanel`) and does not add an `[id]` route.
+- **Advance-replacement dead-unit shipping.** A review caught that `replaced`/`repaired` only exit via `returnDeviceToClient` (wrong custody fact if what's physically moving is the dead unit, not the client's device) or the generic `close` — there is no "ship the dead unit to the vendor with tracking" transition. Shipped as-is on the unstated assumption that the vendor's return logistics bypass Alga's custody entirely (confirmed in the PRD's "Integration with C4" section, not actually verified against a real vendor workflow). See PRD "Follow-up: advance-replacement dead-unit shipping" for the fix shape if the assumption turns out wrong — it reuses `shipToVendorCore`'s pattern landing in the already-valid `dead_unit_owed` status, no migration needed.
 
 ## Test status at hand-off (revised after review)
 All 34 tests are now written. T001-T027, T029, T030 and T033 were run and pass; T028/T031/T032/T034 are the Playwright spec (`server/src/test/e2e/warranty-rma.playwright.test.ts`), written but NOT run (no app server) and unverified.
