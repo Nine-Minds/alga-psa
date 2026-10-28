@@ -43,7 +43,7 @@ import {
   addTicketFixedFeeService, deleteTicketFixedFeeService,
   listTicketFixedFeeServices, updateTicketFixedFeeService,
 } from '@alga-psa/tickets/actions/ticketFixedFeeActions';
-import { updateTicketMaterial } from '@alga-psa/tickets/actions/materialCatalogActions';
+import { getTicketCatalogCategories, searchServiceCatalogForPicker, updateTicketMaterial } from '@alga-psa/tickets/actions/materialCatalogActions';
 
 const ticketId = '123e4567-e89b-42d3-a456-426614174000';
 const serviceId = '223e4567-e89b-42d3-a456-426614174000';
@@ -57,7 +57,9 @@ function query(row: Record<string, unknown> | undefined, rows: Record<string, un
     forUpdate: vi.fn(() => builder),
     forShare: vi.fn(() => builder),
     first: vi.fn(async () => row),
-    select: vi.fn(async () => rows),
+    select: vi.fn(() => builder),
+    then: (resolve: (value: Record<string, unknown>[]) => unknown, reject: (error: unknown) => unknown) =>
+      Promise.resolve(rows).then(resolve, reject),
     insert: vi.fn(() => builder),
     returning: vi.fn(async () => [{ entry_id: entryId }]),
     update: vi.fn(async () => 1),
@@ -98,6 +100,25 @@ beforeEach(() => {
 });
 
 describe('ticket fixed-fee actions', () => {
+  it('requires ticket read permission for catalog categories', async () => {
+    mocks.permission.mockResolvedValue(false);
+    await expect(getTicketCatalogCategories()).rejects.toThrow('ticket read required');
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it('loads category options through the tenant facade', async () => {
+    const categories = query(undefined, [{ category_id: serviceId, category_name: 'Software' }]);
+    tables.service_categories = categories;
+    expect(await getTicketCatalogCategories()).toEqual([{ category_id: serviceId, category_name: 'Software' }]);
+    expect(mocks.facade).toHaveBeenCalledWith({}, 'tenant-a');
+    expect(categories.select).toHaveBeenCalledWith('category_id', 'category_name');
+    expect(categories.orderBy).toHaveBeenCalledWith('display_order', 'asc');
+  });
+
+  it('rejects invalid catalog category IDs before querying', async () => {
+    await expect(searchServiceCatalogForPicker({ category_id: 'invalid' })).rejects.toThrow();
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
   const input = { ticket_id: ticketId, service_id: serviceId, quantity: 2, currency_code: 'USD', description: ' Setup ' };
 
   it('requires ticket update permission before accessing data', async () => {

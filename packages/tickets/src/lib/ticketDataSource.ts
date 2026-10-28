@@ -114,6 +114,7 @@ import type {
   deleteTicketMaterial,
   updateTicketMaterial,
   searchServiceCatalogForPicker,
+  getTicketCatalogCategories,
   getServicePrices,
   listAvailableStockUnitsForMaterial,
 } from '../actions/materialCatalogActions';
@@ -494,6 +495,8 @@ export interface TicketMaterialMethods {
   deleteTicketMaterial: typeof deleteTicketMaterial;
   updateTicketMaterial?: typeof updateTicketMaterial;
   searchServiceCatalogForPicker: typeof searchServiceCatalogForPicker;
+  /** Alternate sources opt in with their own catalog category loader. */
+  getTicketCatalogCategories?: typeof getTicketCatalogCategories;
   getServicePrices: typeof getServicePrices;
   listAvailableStockUnitsForMaterial: typeof listAvailableStockUnitsForMaterial;
   getProductAvailability: typeof getProductAvailability;
@@ -618,6 +621,9 @@ export function composeTicketDataSource(
   }
   if (overrides.kind && overrides.kind !== base.kind && !overrides.materials?.updateTicketMaterial) {
     merged.materials = { ...(merged.materials as TicketMaterialMethods), updateTicketMaterial: undefined };
+  }
+  if (overrides.kind && overrides.kind !== base.kind && !overrides.materials?.getTicketCatalogCategories) {
+    merged.materials = { ...(merged.materials as TicketMaterialMethods), getTicketCatalogCategories: undefined };
   }
   // A read-only screen offers no pure-write action, whatever the base allowed.
   if ((merged.screen as TicketScreenBehavior | undefined)?.readOnly) {

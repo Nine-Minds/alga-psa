@@ -2826,5 +2826,12 @@
       "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
       "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
+  },
+  "catalogFilter": {
+    "category": "Categoría",
+    "allCategories": "Todas las categorías",
+    "loading": "Cargando categorías...",
+    "loadError": "No se pudieron cargar las categorías. Inténtelo de nuevo.",
+    "retry": "Reintentar"
   }
 }

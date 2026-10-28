@@ -75,6 +75,7 @@ function ticketMaterialActionErrorFrom(error: unknown): TicketMaterialActionErro
 }
 
 export interface CatalogPickerSearchOptions {
+  category_id?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -97,11 +98,23 @@ export const searchServiceCatalogForPicker = withAuth(async (
   { tenant },
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
+  if (options.category_id !== undefined) z.string().uuid().parse(options.category_id);
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const { items, totalCount } = await queryCatalogPickerItems(trx, tenant, options);
     return { items: items as CatalogPickerItem[], totalCount };
   });
+});
+
+export const getTicketCatalogCategories = withAuth(async (user, { tenant }): Promise<Array<{ category_id: string; category_name: string }>> => {
+  if (!await hasPermission(user, 'ticket', 'read')) {
+    throw new Error('Permission denied: ticket read required to load catalog categories');
+  }
+  const { knex } = await createTenantKnex();
+  return tenantDb(knex, tenant).table('service_categories')
+    .select('category_id', 'category_name')
+    .orderBy('display_order', 'asc')
+    .orderBy('category_name', 'asc');
 });
 
 export const getServicePrices = withAuth(async (

@@ -886,7 +886,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} />
     ) } : null,
     timerTile ? { key: 'time', zone: 'end', group: 'work', rank: 22, node: timerTile } : null,
-    capabilities.fixedFeeServices && !props.hideMaterials && ticket.client_id ? { key: 'fixed-fee-services', zone: 'end', group: 'work', rank: 23, node: (
+    capabilities.fixedFeeServices && !props.hideMaterials && ticket.client_id ? { key: 'fixed-fee-services', zone: 'start', group: 'linked', rank: 43, node: (
       <TicketFixedFeeServicesCard id={`${id}-fixed-fee-services`} ticketId={ticketId} />
     ) } : null,
     capabilities.checklist ? { key: 'checklist', zone: 'end', group: 'work', rank: 24, node: (

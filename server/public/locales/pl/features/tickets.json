@@ -2826,5 +2826,12 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "catalogFilter": {
+    "category": "Kategoria",
+    "allCategories": "Wszystkie kategorie",
+    "loading": "Ładowanie kategorii...",
+    "loadError": "Nie można wczytać kategorii. Spróbuj ponownie.",
+    "retry": "Spróbuj ponownie"
   }
 }

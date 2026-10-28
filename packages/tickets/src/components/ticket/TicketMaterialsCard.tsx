@@ -28,6 +28,7 @@ import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSource
 import type { ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 import TicketChargeEditDialog from './TicketChargeEditDialog';
 import TicketChargeTable from './TicketChargeTable';
+import TicketCatalogCategoryFilter from './TicketCatalogCategoryFilter';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -73,6 +74,7 @@ export default function TicketMaterialsCard({
     deleteTicketMaterial,
     updateTicketMaterial,
     searchServiceCatalogForPicker,
+    getTicketCatalogCategories,
     getServicePrices,
     listAvailableStockUnitsForMaterial,
     getProductAvailability,
@@ -90,6 +92,8 @@ export default function TicketMaterialsCard({
   // Add form state
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
+  const [categoryId, setCategoryId] = useState('');
+  useEffect(() => { setCategoryId(''); }, [ticketId]);
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [selectedCatalogCost, setSelectedCatalogCost] = useState<{ cost: number; currency: string } | null>(null);
@@ -163,6 +167,7 @@ export default function TicketMaterialsCard({
         limit,
         item_kinds: ['product'],
         is_active: true,
+        ...(categoryId ? { category_id: categoryId } : {}),
       });
 
       const options: SelectOption[] = result.items.map((item) => {
@@ -179,7 +184,7 @@ export default function TicketMaterialsCard({
 
       return { options, total: result.totalCount };
     },
-    [t]
+    [t, categoryId, searchServiceCatalogForPicker]
   );
 
   // Load product prices when product is selected
@@ -389,6 +394,9 @@ export default function TicketMaterialsCard({
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
               <AsyncSearchableSelect
                 id={`${id}-product-select`}
+                headerContent={getTicketCatalogCategories && <TicketCatalogCategoryFilter
+                  id={`${id}-category-filter`} value={categoryId} onChange={setCategoryId}
+                  loadCategories={getTicketCatalogCategories} />}
                 value={selectedProductId}
                 selectedLabel={selectedProductLabel}
                 onChange={(value, option) => {

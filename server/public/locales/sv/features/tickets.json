@@ -2826,5 +2826,12 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "catalogFilter": {
+    "category": "Kategori",
+    "allCategories": "Alla kategorier",
+    "loading": "Laddar kategorier...",
+    "loadError": "Det gick inte att ladda kategorier. Försök igen.",
+    "retry": "Försök igen"
   }
 }

@@ -2826,5 +2826,12 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "catalogFilter": {
+    "category": "Categorie",
+    "allCategories": "Alle categorieën",
+    "loading": "Categorieën laden...",
+    "loadError": "Categorieën konden niet worden geladen. Probeer het opnieuw.",
+    "retry": "Opnieuw proberen"
   }
 }

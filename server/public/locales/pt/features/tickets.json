@@ -2826,5 +2826,12 @@
       "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
       "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
+  },
+  "catalogFilter": {
+    "category": "Categoria",
+    "allCategories": "Todas as categorias",
+    "loading": "A carregar categorias...",
+    "loadError": "Não foi possível carregar as categorias. Tente novamente.",
+    "retry": "Tentar novamente"
   }
 }

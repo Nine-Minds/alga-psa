@@ -2826,5 +2826,12 @@
       "notAvailable": "Dieser Textbaustein ist für dieses Ticket nicht verfügbar.",
       "notATeamMember": "Sie können Team-Textbausteine nur für Teams verwalten, denen Sie angehören."
     }
+  },
+  "catalogFilter": {
+    "category": "Kategorie",
+    "allCategories": "Alle Kategorien",
+    "loading": "Kategorien werden geladen...",
+    "loadError": "Kategorien konnten nicht geladen werden. Bitte erneut versuchen.",
+    "retry": "Erneut versuchen"
   }
 }

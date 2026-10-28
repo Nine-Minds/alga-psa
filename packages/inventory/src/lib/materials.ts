@@ -554,6 +554,7 @@ export async function deleteMaterial(
 // ---- Shared picker queries (single implementation behind the tickets/projects wrappers) ----
 
 export interface CatalogPickerSearchOptions {
+  category_id?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -599,6 +600,9 @@ export async function queryCatalogPickerItems(
   }
   if (options.billing_methods?.length) {
     base.andWhere((qb) => qb.whereIn('sc.billing_method', options.billing_methods!));
+  }
+  if (options.category_id) {
+    base.andWhere('sc.category_id', options.category_id);
   }
   if (searchTerm) {
     base.andWhere((qb) => {

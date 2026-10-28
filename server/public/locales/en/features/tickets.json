@@ -2826,5 +2826,12 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "catalogFilter": {
+    "category": "Category",
+    "allCategories": "All categories",
+    "loading": "Loading categories...",
+    "loadError": "Unable to load categories. Please try again.",
+    "retry": "Retry"
   }
 }

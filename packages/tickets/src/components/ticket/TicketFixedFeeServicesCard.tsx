@@ -16,6 +16,7 @@ import { getErrorMessage, handleError, isActionMessageError, isActionPermissionE
 import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import TicketChargeEditDialog from './TicketChargeEditDialog';
 import TicketChargeTable from './TicketChargeTable';
+import TicketCatalogCategoryFilter from './TicketCatalogCategoryFilter';
 
 const isActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
@@ -33,6 +34,7 @@ export default function TicketFixedFeeServicesCard({
   const [saving, setSaving] = useState(false);
   const [serviceId, setServiceId] = useState('');
   const [serviceLabel, setServiceLabel] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [prices, setPrices] = useState<IServicePrice[]>([]);
   const [currency, setCurrency] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -69,6 +71,7 @@ export default function TicketFixedFeeServicesCard({
     setDeleteEntry(null);
     setServiceId('');
     setServiceLabel('');
+    setCategoryId('');
     setPrices([]);
     setCurrency('');
     setQuantity('1');
@@ -83,12 +86,13 @@ export default function TicketFixedFeeServicesCard({
   const loadOptions = useCallback(async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
     const result = await materials.searchServiceCatalogForPicker({
       search, page, limit, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true,
+      ...(categoryId ? { category_id: categoryId } : {}),
     });
     return {
       options: result.items.map((service) => ({ value: service.service_id, label: service.service_name })),
       total: result.totalCount,
     };
-  }, [materials]);
+  }, [materials, categoryId]);
 
   const selectService = async (value: string, label?: string) => {
     const request = ++priceRequest.current;
@@ -177,7 +181,10 @@ export default function TicketFixedFeeServicesCard({
             <AsyncSearchableSelect id={`${id}-service-select`} value={serviceId} selectedLabel={serviceLabel || undefined}
               triggerId={`${id}-service-select-trigger`}
               onChange={(value, option) => void selectService(value, option?.label)}
-              loadOptions={loadOptions} placeholder={t('fixedFeeServices.selectService')} dropdownMode="overlay" disabled={saving} />
+              loadOptions={loadOptions} placeholder={t('fixedFeeServices.selectService')} dropdownMode="overlay" disabled={saving}
+              headerContent={materials.getTicketCatalogCategories && <TicketCatalogCategoryFilter
+                id={`${id}-category-filter`} value={categoryId} onChange={setCategoryId}
+                loadCategories={materials.getTicketCatalogCategories} />} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${id}-currency-select`}>{t('fixedFeeServices.currency')}</Label>

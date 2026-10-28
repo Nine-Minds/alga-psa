@@ -41,9 +41,9 @@ vi.mock('@alga-psa/ui/components', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/bento/BentoBoard', () => ({
-  BentoBoard: ({ tiles, main }: { tiles: Array<{ key: string; node: React.ReactNode }>; main?: React.ReactNode }) => (
+  BentoBoard: ({ tiles, main }: { tiles: Array<{ key: string; node: React.ReactNode; zone: string; group: string; rank: number }>; main?: React.ReactNode }) => (
     <div>
-      {tiles.map((tile) => <div key={tile.key}>{tile.node}</div>)}
+      {tiles.map((tile) => <div key={tile.key} data-zone={tile.zone} data-group={tile.group} data-rank={tile.rank}>{tile.node}</div>)}
       {main}
     </div>
   ),
@@ -189,6 +189,18 @@ function renderWith(ds: typeof nativeTicketDataSource, overrides: Partial<Ticket
 }
 
 describe('T002 bento layout capability gating', () => {
+  it('places Services immediately before Materials in the same rail', () => {
+    render(<TicketBentoLayout {...baseProps()} />);
+    const services = screen.getByTestId('s-fixed-fees').parentElement;
+    const materials = screen.getByTestId('s-materials').parentElement;
+    expect(services?.parentElement).toBe(materials?.parentElement);
+    expect(services?.getAttribute('data-zone')).toBe('start');
+    expect(services?.getAttribute('data-group')).toBe('linked');
+    expect(materials?.getAttribute('data-zone')).toBe('start');
+    expect(materials?.getAttribute('data-group')).toBe('linked');
+    expect(Number(services?.getAttribute('data-rank'))).toBe(Number(materials?.getAttribute('data-rank')) - 1);
+  });
+
   it('renders every gated section under the native default', () => {
     render(<TicketBentoLayout {...baseProps()} />);
     for (const [, testId] of SECTIONS) expect(screen.getByTestId(testId)).toBeTruthy();

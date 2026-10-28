@@ -44,7 +44,7 @@ describe('native ticket data source contract', () => {
         methods += 1;
       }
     }
-    expect(methods).toBe(98);
+    expect(methods).toBe(99);
   });
 
   it('forwards arguments and results unchanged, resolving the action at call time', async () => {
@@ -78,5 +78,15 @@ describe('native ticket data source contract', () => {
     const composed = composeTicketDataSource(nativeTicketDataSource, { kind: 'alternate' });
     expect(composed.capabilities.fixedFeeServices).toBe(false);
     expect(composed.materials.updateTicketMaterial).toBeUndefined();
+    expect(composed.materials.getTicketCatalogCategories).toBeUndefined();
+  });
+
+  it('uses the explicit category loader supplied by an alternate source', async () => {
+    const getTicketCatalogCategories = vi.fn().mockResolvedValue([{ category_id: 'remote-category', category_name: 'Software' }]);
+    const composed = composeTicketDataSource(nativeTicketDataSource, {
+      kind: 'alternate', materials: { getTicketCatalogCategories },
+    });
+    expect(await composed.materials.getTicketCatalogCategories?.()).toEqual([{ category_id: 'remote-category', category_name: 'Software' }]);
+    expect(getTicketCatalogCategories).toHaveBeenCalledOnce();
   });
 });

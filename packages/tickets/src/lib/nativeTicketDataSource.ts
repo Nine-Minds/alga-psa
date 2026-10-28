@@ -149,6 +149,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     deleteTicketMaterial: lazy(() => import('../actions/materialCatalogActions'), 'deleteTicketMaterial'),
     updateTicketMaterial: lazy(() => import('../actions/materialCatalogActions'), 'updateTicketMaterial'),
     searchServiceCatalogForPicker: lazy(() => import('../actions/materialCatalogActions'), 'searchServiceCatalogForPicker'),
+    getTicketCatalogCategories: lazy(() => import('../actions/materialCatalogActions'), 'getTicketCatalogCategories'),
     getServicePrices: lazy(() => import('../actions/materialCatalogActions'), 'getServicePrices'),
     listAvailableStockUnitsForMaterial: lazy(() => import('../actions/materialCatalogActions'), 'listAvailableStockUnitsForMaterial'),
     getProductAvailability: lazy(() => import('@alga-psa/inventory/actions/availabilityActions'), 'getProductAvailability'),

@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
     deleteTicketFixedFeeService: vi.fn(),
   },
   materials: {
+    getTicketCatalogCategories: vi.fn(),
     searchServiceCatalogForPicker: vi.fn(), getServicePrices: vi.fn(),
     listTicketMaterials: vi.fn(), addTicketMaterial: vi.fn(), deleteTicketMaterial: vi.fn(),
     updateTicketMaterial: vi.fn(), listAvailableStockUnitsForMaterial: vi.fn(), getProductAvailability: vi.fn(),
@@ -97,6 +98,10 @@ beforeEach(() => {
   });
   state.materials.getServicePrices.mockResolvedValue([{ currency_code: 'USD', rate: 2500 }]);
   state.materials.listTicketMaterials.mockResolvedValue([]);
+  state.materials.getTicketCatalogCategories.mockResolvedValue([
+    { category_id: 'category-1', category_name: 'Software' },
+    { category_id: 'category-2', category_name: 'Support' },
+  ]);
   state.materials.updateTicketMaterial.mockResolvedValue(undefined);
   // cmdk scrolls the active option into view; jsdom does not implement it.
   Element.prototype.scrollIntoView = vi.fn();
@@ -104,6 +109,34 @@ beforeEach(() => {
 });
 
 describe('ticket fixed-fee service card', () => {
+  it('filters Services inside the dropdown, combining category and text and clearing to all categories', async () => {
+    render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
+    expect(state.materials.getTicketCatalogCategories).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
+    const filter = await screen.findByLabelText('catalogFilter.category');
+    await waitFor(() => expect(filter).not.toBeDisabled());
+    fireEvent.change(filter, { target: { value: 'category-1' } });
+    fireEvent.change(screen.getByPlaceholderText('form.searchPlaceholder'), { target: { value: 'license' } });
+    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
+      search: 'license', page: 1, limit: 10, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true, category_id: 'category-1',
+    }));
+    fireEvent.change(filter, { target: { value: 'all' } });
+    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
+      search: 'license', page: 1, limit: 10, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true,
+    }));
+  });
+
+  it('surfaces category failures and allows retry', async () => {
+    state.materials.getTicketCatalogCategories.mockRejectedValueOnce(new Error('Unavailable'));
+    render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('catalogFilter.loadError');
+    fireEvent.click(screen.getByRole('button', { name: 'catalogFilter.retry' }));
+    await waitFor(() => expect(screen.getByLabelText('catalogFilter.category')).not.toBeDisabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('uses the same columns, badges, inline actions and per-currency totals as materials', async () => {
     state.fixedFees.listTicketFixedFeeServices.mockResolvedValue([
       { entry_id: 'fee-1', service_name: 'Software', quantity: 2, rate: 2500, currency_code: 'USD', is_billed: false },
@@ -210,6 +243,17 @@ describe('shared fixed-fee/material edit dialog', () => {
 });
 
 describe('ticket material editing controls', () => {
+  it('filters Materials by catalog category while preserving the product restriction', async () => {
+    render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'materials.addMaterial' }));
+    fireEvent.click(screen.getByRole('combobox'));
+    const filter = await screen.findByLabelText('catalogFilter.category');
+    await waitFor(() => expect(filter).not.toBeDisabled());
+    fireEvent.change(filter, { target: { value: 'category-2' } });
+    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
+      search: '', page: 1, limit: 10, item_kinds: ['product'], is_active: true, category_id: 'category-2',
+    }));
+  });
   it('keeps material row actions aligned in one shared action group', async () => {
     state.materials.listTicketMaterials.mockResolvedValue([
       { ticket_material_id: 'material-1', service_name: 'Long product name', sku: 'SKU-1', quantity: 2, rate: 2500, currency_code: 'USD', is_billed: false },
