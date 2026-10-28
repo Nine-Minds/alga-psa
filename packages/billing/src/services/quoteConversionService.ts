@@ -624,7 +624,7 @@ async function convertQuoteToDraftContractRecords(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -892,7 +892,7 @@ async function convertQuoteToDraftSalesOrderRecords(
     throw new Error('Quote templates cannot be converted to sales orders');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to sales orders');
   }
 
@@ -1043,7 +1043,7 @@ async function convertQuoteToDraftInvoiceRecords(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1307,7 +1307,7 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1348,7 +1348,7 @@ export async function convertQuoteToDraftContract(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
@@ -1368,7 +1368,7 @@ export async function convertQuoteToDraftInvoice(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
@@ -1388,7 +1388,7 @@ export async function convertQuoteToDraftContractAndInvoice(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
@@ -1408,7 +1408,7 @@ export async function convertQuoteToDraftSalesOrder(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
       details: { salesOrderId: result.salesOrder.so_id },
     });
     return { ...result, quote: { ...result.quote, ...quote } };

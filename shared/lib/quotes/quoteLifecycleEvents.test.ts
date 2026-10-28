@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => {}) }));
-import { QUOTE_ALLOWED_STATUS_TRANSITIONS } from '../../../packages/billing/src/schemas/quoteSchemas';
+import { QUOTE_ALLOWED_STATUS_TRANSITIONS } from './quoteStatusTransitions';
 import { quoteLifecycleEventFor } from './quoteLifecycleEvents';
 
 describe('quote lifecycle transition classification', () => {

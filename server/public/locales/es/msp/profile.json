@@ -448,10 +448,10 @@
         "download": "Descargar como .txt"
       },
       "quotePayload": {
-        "entity": "Presupuesto",
+        "entity": "Cotización",
         "fields": {
           "client_id": "ID de cliente",
-          "quote_number": "Número de presupuesto",
+          "quote_number": "Número de cotización",
           "version": "Versión",
           "contact_id": "ID de contacto",
           "opportunity_id": "ID de oportunidad",
@@ -480,7 +480,7 @@
           "invoice_id": "ID de factura",
           "sales_order_id": "ID de pedido",
           "released_invoice_id": "ID de factura desvinculada",
-          "superseded_by_quote_id": "ID del presupuesto sustituto",
+          "superseded_by_quote_id": "ID de la cotización sustituta",
           "next_version": "Versión siguiente"
         }
       },

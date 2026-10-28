@@ -68,9 +68,12 @@ describe('quote status writer inventory', () => {
     const writers = new Set<string>();
     for (const base of ['packages', 'shared', 'server/src', 'ee/server/src']) {
       for (const file of files(path.join(root, base))) {
+        const content = readFileSync(file, 'utf8');
+        // Only parse candidates; the AST below still decides whether they write quote status.
+        if (!content.includes('quotes') || !content.includes('update')) continue;
         const source = ts.createSourceFile(
           file,
-          readFileSync(file, 'utf8'),
+          content,
           ts.ScriptTarget.Latest,
           true
         );

@@ -129,7 +129,7 @@ Today's status writers on `origin/main`:
 
 All of this goes through the registry; no new subscriber code paths.
 
-**Replay suppression:** quote event IDs are UUIDv5 values derived from tenant and activity-scoped idempotency keys. The common delivery processor leases a `(tenant, webhook_id, event_id)` receipt before HTTP, without holding a transaction during the request. Failed attempts release the lease; successful receipts persist independently of Redis TTLs and queue removal. Migration `20261028020000_create_webhook_event_receipts.cjs` creates this tenant-scoped ledger and colocates it with distributed webhooks when Citus is available. Network delivery remains at least once: consumers must handle a response lost after processing.
+**Replay suppression:** quote event IDs are UUIDv5 values derived from tenant and activity-scoped idempotency keys. The common delivery processor leases a `(tenant, webhook_id, event_id)` receipt before HTTP, without holding a transaction during the request. Failed attempts release the lease; successful receipts persist independently of Redis TTLs and queue removal. Migration `20261027190000_create_webhook_event_receipts.cjs` creates this tenant-scoped ledger and colocates it with distributed webhooks when Citus is available. Network delivery remains at least once: consumers must handle a response lost after processing.
 
 - `eventRegistry.ts`:
   - add `'quote'` to `WebhookEntity`

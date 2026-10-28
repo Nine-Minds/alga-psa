@@ -1,6 +1,7 @@
 const { canCreateDistributedTable, isDistributed } = require('./utils/citusDistribution.cjs');
 
 exports.up = async function (knex) {
+  if (await knex.schema.hasTable('webhook_event_receipts')) return;
   await knex.schema.createTable('webhook_event_receipts', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('webhook_id').notNullable();
@@ -14,4 +15,4 @@ exports.up = async function (knex) {
     await knex.raw("SELECT create_distributed_table('webhook_event_receipts', 'tenant', colocate_with => 'webhooks')");
   }
 };
-exports.down = async function (knex) { await knex.schema.dropTable('webhook_event_receipts'); };
+exports.down = async function (knex) { await knex.schema.dropTableIfExists('webhook_event_receipts'); };

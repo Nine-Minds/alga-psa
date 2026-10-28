@@ -500,81 +500,158 @@ describe('quote lifecycle operational paths', () => {
     expect(events[2].id).not.toBe(events[0].id);
   });
 
-  it('worker combined conversion publishes once with both destinations and rolls back atomically', async () => {
-    const { convertQuoteToDraftContractAndInvoice } =
-      await import('../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal');
-    const serviceId = randomUUID();
-    const serviceType = await db('service_types').first();
-    const typeId = randomUUID();
-    await db('service_types').insert({ ...serviceType, id: typeId, tenant });
-    await db('service_catalog').insert({
-      tenant,
-      service_id: serviceId,
-      custom_service_type_id: typeId,
-      service_name: 'Lifecycle recurring service',
-      billing_method: 'fixed',
-      default_rate: 1000,
-      unit_of_measure: 'each',
-    });
-    const id = await seedQuote('accepted', {
-      accepted_at: new Date().toISOString(),
-    });
-    await db('quote_items').insert([
-      {
+  it.each([
+    ['worker', 'combined'],
+    ['worker', 'incremental'],
+    ['server', 'combined'],
+    ['server', 'incremental'],
+  ] as const)(
+    '%s %s conversion rolls back atomically and retries preserve records and events',
+    async (runtime, mode) => {
+      const conversions =
+        runtime === 'worker'
+          ? await import('../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal')
+          : await import('../../../../packages/billing/src/services/quoteConversionService');
+      const serviceId = randomUUID();
+      const serviceType = await db('service_types').where({ tenant }).first();
+      const typeId = serviceType?.id ?? randomUUID();
+      if (!serviceType) {
+        const template = await db('service_types').first();
+        await db('service_types').insert({ ...template, id: typeId, tenant });
+      }
+      await db('service_catalog').insert({
         tenant,
-        quote_id: id,
         service_id: serviceId,
-        description: 'Recurring',
-        quantity: 1,
-        unit_price: 1000,
-        total_price: 1000,
-        net_amount: 1000,
-        is_recurring: true,
-        billing_frequency: 'monthly',
+        custom_service_type_id: typeId,
+        service_name: 'Lifecycle recurring service',
         billing_method: 'fixed',
-        is_taxable: false,
-      },
-      {
+        default_rate: 1000,
+        unit_of_measure: 'each',
+      });
+      const id = await seedQuote('accepted', {
+        accepted_at: new Date().toISOString(),
+      });
+      await db('quote_items').insert([
+        {
+          tenant,
+          quote_id: id,
+          service_id: serviceId,
+          description: 'Recurring',
+          quantity: 1,
+          unit_price: 1000,
+          total_price: 1000,
+          net_amount: 1000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          billing_method: 'fixed',
+          is_taxable: false,
+        },
+        {
+          tenant,
+          quote_id: id,
+          service_id: null,
+          description: 'Setup',
+          quantity: 1,
+          unit_price: 500,
+          total_price: 500,
+          net_amount: 500,
+          is_recurring: false,
+          billing_frequency: null,
+          billing_method: 'fixed',
+          is_taxable: false,
+        },
+      ]);
+      const convert = async (conn: Knex | Knex.Transaction) => {
+        if (mode === 'combined') {
+          return conversions.convertQuoteToDraftContractAndInvoice(
+            conn,
+            tenant,
+            id,
+            userId
+          );
+        }
+        const contractResult = await conversions.convertQuoteToDraftContract(
+          conn,
+          tenant,
+          id,
+          userId
+        );
+        const invoiceResult = await conversions.convertQuoteToDraftInvoice(
+          conn,
+          tenant,
+          id,
+          userId
+        );
+        return {
+          ...contractResult,
+          invoice: invoiceResult.invoice,
+          quote: invoiceResult.quote,
+        };
+      };
+      await expect(
+        withTransaction(db, async (trx) => {
+          await convert(trx);
+          throw new Error('rollback');
+        })
+      ).rejects.toThrow('rollback');
+      expect(state.events).toHaveLength(0);
+      expect(
+        (await db('quotes').where({ tenant, quote_id: id }).first()).status
+      ).toBe('accepted');
+      const result = await withTransaction(db, convert);
+      expect(state.events).toHaveLength(1);
+      expect(state.events[0]).toMatchObject({
+        eventType: 'QUOTE_CONVERTED',
+        payload: {
+          contractId: result.contract.contract_id,
+          ...(mode === 'combined'
+            ? { invoiceId: result.invoice.invoice_id }
+            : {}),
+          conversionTargets:
+            mode === 'combined' ? ['contract', 'invoice'] : ['contract'],
+        },
+      });
+      const beforeRetry = await db('quotes')
+        .where({ tenant, quote_id: id })
+        .first();
+      const activityCount = await db('quote_activities')
+        .where({ tenant, quote_id: id })
+        .count('* as count')
+        .first();
+      const contractRetry = await conversions.convertQuoteToDraftContract(
+        db,
         tenant,
-        quote_id: id,
-        service_id: null,
-        description: 'Setup',
-        quantity: 1,
-        unit_price: 500,
-        total_price: 500,
-        net_amount: 500,
-        is_recurring: false,
-        billing_frequency: null,
-        billing_method: 'fixed',
-        is_taxable: false,
-      },
-    ]);
-    await expect(
-      withTransaction(db, async (trx) => {
-        await convertQuoteToDraftContractAndInvoice(trx, tenant, id, userId);
-        throw new Error('rollback');
-      })
-    ).rejects.toThrow('rollback');
-    expect(state.events).toHaveLength(0);
-    expect(
-      (await db('quotes').where({ tenant, quote_id: id }).first()).status
-    ).toBe('accepted');
-    const result = await convertQuoteToDraftContractAndInvoice(
-      db,
-      tenant,
-      id,
-      userId
-    );
-    expect(state.events).toHaveLength(1);
-    expect(state.events[0]).toMatchObject({
-      eventType: 'QUOTE_CONVERTED',
-      payload: {
-        contractId: result.contract.contract_id,
-        invoiceId: result.invoice.invoice_id,
-        conversionTargets: ['contract', 'invoice'],
-      },
-    });
-  });
+        id,
+        userId
+      );
+      const invoiceRetry = await conversions.convertQuoteToDraftInvoice(
+        db,
+        tenant,
+        id,
+        userId
+      );
+      expect(contractRetry.contract.contract_id).toBe(
+        result.contract.contract_id
+      );
+      expect(invoiceRetry.invoice.invoice_id).toBe(result.invoice.invoice_id);
+      const afterRetry = await db('quotes')
+        .where({ tenant, quote_id: id })
+        .first();
+      expect(afterRetry).toMatchObject({
+        status: 'converted',
+        converted_contract_id: result.contract.contract_id,
+        converted_invoice_id: result.invoice.invoice_id,
+        converted_at: beforeRetry.converted_at,
+      });
+      expect(
+        await db('quote_activities')
+          .where({ tenant, quote_id: id })
+          .count('* as count')
+          .first()
+      ).toEqual(activityCount);
+      expect(state.events).toHaveLength(1);
+    }
+  );
 
   it('rejects incomplete conversion payloads before commit and emits for legacy unassigned quotes', async () => {
     const id = await seedQuote('accepted');

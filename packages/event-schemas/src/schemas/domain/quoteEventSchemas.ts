@@ -21,7 +21,7 @@ export const quoteRejectedEventPayloadSchema = quoteEventBase.extend({ rejectedA
 
 export const quoteExpiredEventPayloadSchema = quoteEventBase.extend({ expiredAt: z.string().datetime() });
 
-export const quoteConvertedEventPayloadSchema = quoteEventBase.extend({ convertedAt: z.string().datetime(), conversionTargets: z.array(z.enum(['contract', 'invoice', 'sales_order'])).min(1), contractId: uuidSchema('Contract ID').optional(), invoiceId: uuidSchema('Invoice ID').optional(), salesOrderId: uuidSchema('Sales order ID').optional() });
+export const quoteConvertedEventPayloadSchema = quoteEventBase.extend({ convertedAt: z.string().datetime(), conversionTargets: z.array(z.enum(['contract', 'invoice', 'sales_order'])).min(1), contractId: entityIdSchema('Contract ID', 'contract').optional(), invoiceId: uuidSchema('Invoice ID').optional(), salesOrderId: uuidSchema('Sales order ID').optional() });
 
 export const quoteConversionRevertedEventPayloadSchema = quoteEventBase.extend({ conversionRevertedAt: z.string().datetime(), releasedInvoiceId: uuidSchema('Released invoice ID') });
 

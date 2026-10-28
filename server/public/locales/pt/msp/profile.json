@@ -453,7 +453,7 @@
           "client_id": "ID do cliente",
           "quote_number": "Número do orçamento",
           "version": "Versão",
-          "contact_id": "ID do contacto",
+          "contact_id": "ID do contato",
           "opportunity_id": "ID da oportunidade",
           "previous_status": "Estado anterior",
           "new_status": "Novo estado",

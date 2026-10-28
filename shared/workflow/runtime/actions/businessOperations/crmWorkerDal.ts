@@ -14,7 +14,8 @@ import type {
   QuoteStatus,
   TaggedEntityType,
 } from '@alga-psa/types';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import {
   allocatedOneTimeAmountFor,
@@ -1234,7 +1235,7 @@ async function convertQuoteToDraftContractRecords(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -1484,7 +1485,7 @@ async function convertQuoteToDraftInvoiceRecords(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1653,7 +1654,7 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1810,7 +1811,7 @@ export async function convertQuoteToDraftContract(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
@@ -1832,7 +1833,7 @@ export async function convertQuoteToDraftInvoice(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
@@ -1854,7 +1855,7 @@ export async function convertQuoteToDraftContractAndInvoice(
       reason: 'Quote converted to draft destination records',
       activity: { activity_type: 'converted', metadata: {} },
       actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
-      patch: { converted_at: new Date().toISOString(), updated_by: performedBy ?? null },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
     });
     return { ...result, quote: { ...result.quote, ...quote } };
   });
