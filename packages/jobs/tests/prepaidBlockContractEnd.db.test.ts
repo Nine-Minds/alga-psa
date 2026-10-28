@@ -237,6 +237,38 @@ describe.runIf(enabled)('Prepaid Block contract-end forfeiture', () => {
     }
   });
 
+  it('sees an early-termination audit committed while allocation waits for the block lock', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60), is_active: false });
+    const blockId = await insertBlock(w, { remaining: 180 });
+    const date = today();
+    const entryId = uuidv4();
+    await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+      work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+      start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+      work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+    const holder = await db.transaction();
+    try {
+      await holder('hour_blocks').where({ tenant, block_id: blockId }).forUpdate().first();
+      await holder('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+      await holder('hour_block_audit').insert({ tenant, block_id: blockId, type: 'contract_end_expiration',
+        metadata: { assignment_status: 'terminated', effective_end_date: shiftDays(-1) } });
+      const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+      let finished = false;
+      const allocation = db.transaction((trx) => allocateTimeEntry(trx, tenant, w.clientId, {
+        entry_id: entryId, service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: `${date}T09:00:00Z`,
+      })).finally(() => { finished = true; });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(finished).toBe(false);
+      await holder.commit();
+      expect(await allocation).toEqual([]);
+      expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(180);
+    } finally {
+      if (!holder.isCompleted()) await holder.rollback();
+    }
+  });
+
   it('rechecks uninvoiced allocations on expiry without changing invoiced allocations', async () => {
     const w = await setup();
     await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60) });
