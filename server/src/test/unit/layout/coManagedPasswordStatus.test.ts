@@ -10,8 +10,9 @@ vi.mock('@enterprise/lib/co-managed/workflowClient', () => ({}));
 import { getCoManagedPasswordStatus } from '@/lib/actions/coManagedAcceptanceActions';
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.user.user_type = 'internal';
+  mocks.gate.mockResolvedValue(undefined);
   mocks.knex.mockResolvedValue({ knex: 'db' });
 });
 
