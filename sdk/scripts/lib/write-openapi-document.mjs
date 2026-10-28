@@ -2,12 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
 
-/**
- * @param {string} outputDir
- * @param {string} baseName
- * @param {Array<'json' | 'yaml'>} formats
- * @param {unknown} document
- */
 export function writeDocument(outputDir, baseName, formats, document) {
   fs.mkdirSync(outputDir, { recursive: true });
   const writtenFiles = [];
@@ -20,7 +14,7 @@ export function writeDocument(outputDir, baseName, formats, document) {
 
   if (formats.includes('yaml')) {
     const yamlPath = path.join(outputDir, `${baseName}.yaml`);
-    // Artifact bytes must depend on schema values, not shared object identities.
+    // OpenAPI is a JSON tree: sharing schema objects must not affect artifact bytes.
     fs.writeFileSync(yamlPath, `${YAML.stringify(document, { aliasDuplicateObjects: false })}\n`, 'utf-8');
     writtenFiles.push(yamlPath);
   }
