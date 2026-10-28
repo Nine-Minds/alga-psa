@@ -91,6 +91,47 @@ afterAll(async () => {
 });
 
 describe('external mapping tombstone partial index (DB-backed)', () => {
+  it('keeps writes available while an existing reader delays the index rebuild', async () => {
+    await migration.up(db);
+    const reader = await db.transaction();
+    const connection = await db.client.acquireConnection();
+    let rebuilding: Promise<unknown> | undefined;
+    try {
+      await reader(MAPPINGS).select('id').limit(1);
+      const { rows: [{ pid }] } = await db.raw('SELECT pg_backend_pid() AS pid').connection(connection);
+      // Pin both migration statements to one session so we can observe its
+      // lock wait without timing assumptions about when DROP INDEX starts.
+      rebuilding = migration.up({
+        raw: (sql: string, bindings?: readonly unknown[]) => db.raw(sql, bindings as any).connection(connection),
+      } as Knex);
+      const deadline = Date.now() + 5000;
+      let waiting = false;
+      while (Date.now() < deadline) {
+        const { rows } = await db.raw(
+          'SELECT 1 FROM pg_locks WHERE pid = ? AND NOT granted', [pid]
+        );
+        if (rows.length) {
+          waiting = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(waiting).toBe(true);
+      await db.transaction(async (writer) => {
+        await writer.raw("SET LOCAL lock_timeout = '500ms'");
+        // Even an empty UPDATE takes the same table lock as an app write.
+        await writer(MAPPINGS).where({ tenant: randomUUID() }).update({ sync_status: 'manual_link' });
+      });
+    } finally {
+      await reader.rollback();
+      try {
+        await rebuilding;
+      } finally {
+        await db.client.releaseConnection(connection);
+      }
+    }
+  }, 15_000);
+
   it('up: an unlinked row no longer reserves its target, live rows still do', async () => {
     await migration.up(db);
     expect(await indexDef(EXTERNAL_INDEX)).toMatch(/deleted_at IS NULL/i);
