@@ -5,7 +5,7 @@
     "prdRefs": [
       "FR-A1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration creates contact_locations (tenant, contact_name_id, location_id, is_primary, created_at, created_by) with PK (tenant, contact_name_id, location_id), composite FK to contacts ON DELETE CASCADE, composite FK to client_locations ON DELETE RESTRICT, partial unique (tenant, contact_name_id) WHERE is_primary, index (tenant, location_id)"
   },
   {
@@ -14,7 +14,7 @@
     "prdRefs": [
       "FR-A1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration distributes contact_locations by tenant co-located with contacts on Citus and skips FKs only where distribution is incompatible, mirroring 20260518120000_add_location_id_to_assets.cjs"
   },
   {
@@ -23,7 +23,7 @@
     "prdRefs": [
       "FR-A2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration adds contacts.work_arrangement text null with CHECK IN ('on_site','hybrid','remote')"
   },
   {
@@ -32,7 +32,7 @@
     "prdRefs": [
       "FR-A3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "contact_locations registered in packages/db tenantTableManifest (ordered deletion) and in ee/temporal-workflows tenant-deletion order before contacts and client_locations; golden test updated"
   },
   {
@@ -41,7 +41,7 @@
     "prdRefs": [
       "FR-A4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "packages/types: IContactLocation interface; IContact gains work_arrangement and locations[]; ContactWorkArrangement union type"
   },
   {
@@ -132,7 +132,7 @@
       "FR-B5"
     ],
     "implemented": false,
-    "description": "shared/models/contactLocation.ts resolveContactLocationId(trx, tenant, contactId): remote → null; primary link; else only link; else client default active location; else null"
+    "description": "shared/models/contactLocation.ts resolveContactLocationId(trx, tenant, contactId): remote \u2192 null; primary link; else only link; else client default active location; else null"
   },
   {
     "id": "F016",
@@ -313,7 +313,7 @@
       "FR-C4"
     ],
     "implemented": false,
-    "description": "Inbound email passes location precedence: contact explicit location (primary or only link; remote skips) → inbound defaults location when clients match → undefined"
+    "description": "Inbound email passes location precedence: contact explicit location (primary or only link; remote skips) \u2192 inbound defaults location when clients match \u2192 undefined"
   },
   {
     "id": "F036",

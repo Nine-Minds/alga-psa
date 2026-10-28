@@ -730,6 +730,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'ticket_entity_links', deletion: 'ordered' },
   { table: 'ticket_bundle_status_propagations', deletion: 'ordered' },
   { table: 'tickets', deletion: 'ordered', export: { rank: 4 }, clientKeyed: true },
+  { table: 'contact_locations', deletion: 'ordered' },
   { table: 'client_locations', deletion: 'ordered', clientKeyed: true },
   { table: 'categories', deletion: 'ordered' },
   { table: 'boards', deletion: 'ordered' },

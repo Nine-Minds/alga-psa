@@ -5,7 +5,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration: contact_locations exists with the expected columns, PK, partial unique primary index and (tenant, location_id) index"
   },
   {
@@ -14,7 +14,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Deleting a contact cascades its contact_locations rows; deleting a client_locations row with links fails at the DB with a FK error"
   },
   {
@@ -23,7 +23,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A second is_primary row for the same contact violates the partial unique index"
   },
   {
@@ -32,7 +32,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Citus smoke: contact_locations is distributed by tenant and co-located with contacts; migration runs clean on the Citus lane"
   },
   {
@@ -41,7 +41,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "work_arrangement accepts on_site, hybrid, remote and null; any other value violates the check"
   },
   {
@@ -50,7 +50,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "tenantTableManifest golden test includes contact_locations; tenant-deletion order test places it before contacts and client_locations"
   },
   {
@@ -803,7 +803,7 @@
       "F060"
     ],
     "implemented": false,
-    "description": "Contact indexer: a contact linked to Warehouse (primary) and Head office indexes subtitle '… | Acme | Warehouse' and a body containing both names and cities; a remote contact's body contains 'Remote'"
+    "description": "Contact indexer: a contact linked to Warehouse (primary) and Head office indexes subtitle '\u2026 | Acme | Warehouse' and a body containing both names and cities; a remote contact's body contains 'Remote'"
   },
   {
     "id": "T090",

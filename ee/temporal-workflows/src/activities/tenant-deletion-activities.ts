@@ -504,6 +504,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_entity_links',
   'ticket_bundle_status_propagations',
   'tickets',
+  'contact_locations',
   'client_locations',
   'categories',
   'boards',
