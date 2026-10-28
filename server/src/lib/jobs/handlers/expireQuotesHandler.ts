@@ -1,3 +1,5 @@
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
+import type { IQuote, IQuoteActivity } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
@@ -117,7 +119,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
 
       const db = tenantDb(trx, tenantId);
       const expirableQuotesQuery = db.table('quotes as q')
-        .select({ quote_id: 'q.quote_id', quote_number: 'q.quote_number', title: 'q.title', valid_until: 'q.valid_until', created_by: 'q.created_by', creator_email: 'u.email' })
+        .select('q.*').select({ quote_id: 'q.quote_id', quote_number: 'q.quote_number', title: 'q.title', valid_until: 'q.valid_until', created_by: 'q.created_by', creator_email: 'u.email' })
         .where('q.is_template', false)
         .where('q.status', 'sent')
         .whereNotNull('q.valid_until')
@@ -126,16 +128,16 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       const expirableQuotes = await expirableQuotesQuery;
 
       for (const quote of expirableQuotes) {
-        const changed = await db.table('quotes')
-          .where({ quote_id: quote.quote_id, status: 'sent' })
+        const [changed] = await db.table('quotes')
+          .where({ quote_id: quote.quote_id, status: 'sent' }).where('valid_until', '<', todayStartIso)
           .update({
             status: 'expired',
             expired_at: trx.fn.now(),
             updated_at: trx.fn.now(),
-          });
+          }).returning('*');
         if (!changed) continue;
 
-        await db.table('quote_activities').insert({
+        const [activity] = await db.table('quote_activities').insert({
           tenant: tenantId,
           quote_id: quote.quote_id,
           activity_type: 'expired',
@@ -145,7 +147,9 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
             previous_status: 'sent',
             triggered_by: 'scheduler',
           },
-        });
+        }).returning('*');
+
+        await recordQuoteLifecycleTransition(trx, tenantId, quote as IQuote, changed as IQuote, activity as IQuoteActivity, { actor: { actorType: 'SYSTEM' } });
 
         notifications.push({
           quoteId: quote.quote_id,

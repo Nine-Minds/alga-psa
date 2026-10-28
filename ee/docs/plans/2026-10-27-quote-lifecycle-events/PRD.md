@@ -1,6 +1,6 @@
 # Quote lifecycle events: outbound webhooks and the workflow event catalog
 
-- Status: Draft for design session
+- Status: Implemented draft; pending human review
 - Date: 2026-10-27
 - Author: Robert Isaacs (drafted with Claude)
 - Base: `origin/main` @ `44629a24f1`
@@ -71,8 +71,8 @@ Internal (catalog) names are on the left; public webhook names are on the right.
 
 **Common payload (camelCase on the bus):**
 
-- `quoteId`, `quoteNumber`, `version`
-- `clientId`, `contactId?`, `opportunityId?`
+- `quoteId`, `quoteNumber` (nullable for legacy records), `version`
+- `clientId` (nullable for legacy unassigned quotes), `contactId?`, `opportunityId?`
 - `previousStatus`, `newStatus`, `currencyCode`, `totalAmount` (minor units, as stored)
 - actor: `{ actorType: 'USER' | 'CONTACT' | 'SYSTEM', actorUserId? , actorContactId? }`, carried in the publish `ctx` as the client-location events do, and mirrored into the payload as `performedByType` / `performedById`
 - the event's timestamp (`acceptedAt`, `sentAt`, …)
@@ -96,7 +96,7 @@ Today's status writers on `origin/main`:
    - `quoteActions.ts`: submit, approve, request changes, `markQuoteAccepted`, `sendQuote`, generic `updateQuote` (incl. cancel)
    - `QuoteService.ts` (REST): same set
    - `client-billing.ts`: client-portal accept and reject
-2. `crmWorkerDal.update` (`shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts:885`). It is a copy of `Quote.update` for the workflow worker, used by the `crm.*` quote actions (send, submit for approval, convert). The worker DAL also has independent expire-on-read and combined contract/invoice conversion writes; both must emit via the same seam.
+2. `crmWorkerDal.update` (`shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts:885`). It is a copy of `Quote.update` for the workflow worker, used by the `crm.*` quote actions (submit for approval, convert). The separate `crm.send_quote` handler previously wrote status directly in `crm.ts`; it now delegates to this model. The worker DAL also has independent expire-on-read and combined contract/invoice conversion writes; both must emit via the same seam.
 3. Direct writes outside the model:
    - expire-on-read (`models/quote.ts:52`)
    - supersede on revision (`models/quote.ts:~456`)
@@ -117,6 +117,10 @@ Today's status writers on `origin/main`:
 - **Expiry race:** both expire-on-read implementations and the job must use a conditional update (`where status = 'sent'`) and emit only when a row actually changed. The idempotency key backs this up.
 - **Ledger test:** `quoteStatusWritePaths.contract.test.ts`, modelled on `packages/clients/src/lib/clientLocationWritePaths.contract.test.ts`. Every file that writes `quotes.status` either emits (or delegates to the seam) or is listed as intentionally silent with a reason.
 
+**Conversion drift:** single-target conversion on the base only linked destination records; only combined conversion set `converted`. The public conversion functions now own a transaction and quote lock, compose destination-record creators, and complete one transition through the shared seam. Combined conversion captures both targets in one event. Single invoice conversion now becomes `converted`, as required by T005; deleting that draft can then retract the conversion. Opportunity-win conversion already uses an after-commit-aware transaction owner.
+
+**Payload capture:** financial recalculation precedes capture. The shared emitter validates the completed payload inside the transaction before registering its after-commit hook. Portal mutations lock the quote before validating its status or writing selections, so competing acceptance cannot alter the first event's selected options. The canonical status table is in the lightweight `shared/lib/quotes/quoteStatusTransitions.ts`; frontend schemas import this pure module without database dependencies.
+
 ### 6.3 One system-only transition
 
 `converted → accepted` is not in `QUOTE_ALLOWED_STATUS_TRANSITIONS` (`converted: []`). Today it is performed by a direct write in `releaseQuoteConversionForDeletedInvoice`. Keep it out of the user-facing table: the seam accepts it only with `system: true` and a reason, and it emits `QUOTE_CONVERSION_REVERTED`.
@@ -124,6 +128,8 @@ Today's status writers on `origin/main`:
 ### 6.4 Outbound webhooks
 
 All of this goes through the registry; no new subscriber code paths.
+
+**Replay suppression:** quote event IDs are UUIDv5 values derived from tenant and activity-scoped idempotency keys. The common delivery processor leases a `(tenant, webhook_id, event_id)` receipt before HTTP, without holding a transaction during the request. Failed attempts release the lease; successful receipts persist independently of Redis TTLs and queue removal. Migration `20261028020000_create_webhook_event_receipts.cjs` creates this tenant-scoped ledger and colocates it with distributed webhooks when Citus is available. Network delivery remains at least once: consumers must handle a response lost after processing.
 
 - `eventRegistry.ts`:
   - add `'quote'` to `WebhookEntity`

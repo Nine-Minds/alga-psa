@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { BaseDomainEventPayloadSchema, currencySchema, entityIdSchema, uuidSchema } from './commonEventPayloadSchemas';
 
 const quoteEventBase = BaseDomainEventPayloadSchema.extend({
-  quoteId: uuidSchema('Quote ID'), quoteNumber: z.string().min(1), version: z.number().int().positive(),
-  clientId: entityIdSchema('Client ID', 'client'), contactId: entityIdSchema('Contact ID', 'contact').optional(),
+  quoteId: uuidSchema('Quote ID'), quoteNumber: z.string().nullable(), version: z.number().int().positive(),
+  clientId: entityIdSchema('Client ID', 'client').nullable(), contactId: entityIdSchema('Contact ID', 'contact').optional(),
   opportunityId: uuidSchema('Opportunity ID').optional(), previousStatus: z.string().min(1), newStatus: z.string().min(1),
   currencyCode: currencySchema, totalAmount: z.number().int(),
   performedByType: z.enum(['USER', 'CONTACT', 'SYSTEM']), performedById: uuidSchema('Performer ID').optional(),

@@ -614,6 +614,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   vendor_products: { scope: 'tenant' },
   vendors: { scope: 'tenant' },
   webhook_deliveries: { scope: 'tenant' },
+  webhook_event_receipts: { scope: 'tenant' },
   webhooks: { scope: 'tenant' },
   workstation_assets: { scope: 'tenant' },
   tenant_workflow_schedule: { scope: 'tenant' },

@@ -103,3 +103,26 @@ Decisions: §9.1–9.4 adopt the PRD's own recommendations (no generic status_ch
 - Registered real builder probes for all ten quote events in the workflow emitter contract harness. They remain explicitly marked `no-product-emitter` until write paths are connected. The full emitter-contract suite passes, and `node scripts/check-workflow-event-emit-sites.mjs` passes.
 - The quote queue now supplies a deterministic UUIDv5 event ID derived from the tenant and event-specific idempotency key. Unit tests check stability across repeated publication, tenant separation, and distinct activity IDs. This does not establish durable delivery deduplication: event-bus processed sets have a TTL, and webhook jobs are removed on claim. A durable delivery or publication ledger and end-to-end tests remain necessary.
 - No quote write site has been wired to the queue. Portal acceptance and first view, all automatic and worker transitions, reversal/reconversion, actual signed delivery, translated locale labels, and the webhook guide remain incomplete. The registry still advertises non-emitting events; do not ship this draft.
+
+
+## Takeover implementation (2026-10-28)
+
+- Completed all production writers: billing model updates and revisions, both expiry readers, scheduled expiry, portal first view/accept/reject, invoice deletion, billing/worker conversion wrappers, and the worker send handler in `crm.ts`. AST inventory discovered that last direct writer beyond the earlier DAL audit; it now delegates to `Quote.update`.
+- Shared status transitions are pure in `quoteStatusTransitions.ts`; the persisted event engine remains at the decided `quoteLifecycleEvents.ts` path. Root updates/revisions/conversions own `withTransaction`; UI raw transaction owners were migrated, and Opportunity win/API owners were verified to already flush after-commit hooks.
+- Single-target conversion previously left status accepted. Public wrappers now compose record creation and finish exactly one conversion, including both targets for combined conversion. Real invoice deletion/reconversion and worker combined-conversion rollback were tested.
+- Portal mutation locks precede selection writes and status validation. Competing acceptance cannot overwrite the selections captured by the winning event. Payloads are captured after financial recalculation and validated before commit. Legacy nullable quote numbers/client references are represented as null.
+- Deterministic tenant/activity event IDs now reach the bus. The shared delivery processor uses durable tenant/webhook/event receipts with five-minute leases (HTTP timeout is ten seconds), releasing failures and retaining success. It does not hold a database transaction during HTTP. This suppresses successful-event replay beyond Redis retention; network consumers still need idempotency when a receiver processes a request but its response is lost.
+- All locale field labels were translated; xx/yy use the existing pseudoString generator on the quote subtree only. A rendered component test checks selection changes, and locale data coverage checks every registered field. The webhook guide documents the ten events, sources, optional-item IDs, conversion targets, and retractions.
+- Database validation uses isolated `test_quote_lifecycle_2897` on localhost:5472, plus a local HTTP sink. The app server stays stopped. The bus fan-out and queue are in-process stand-ins; schema validation, real quote writes/transactions, delivery receipts, outbound HTTP and HMAC signing are exercised. Transport/backoff tests exercise the real Redis queue interface with its in-memory Redis fixture separately.
+- The configured PostgreSQL has no Citus extension. Citus distribution/runtime behavior remains unverified; migration SQL follows the repository's distribution utility and parameterized timestamp patterns. No production database was queried.
+- Existing package-lock.json edits were preserved and will be excluded from the implementation commit. Nothing is pushed or published.
+
+
+### Verification results
+
+- Final combined run: 13 suites, 537 tests passed, including 19 operational PostgreSQL/HTTP cases, 433 emitter contracts, UI rendering/locales, writer inventory, portal behavior, registry/subscriber contracts, and transport/rate-limit/retry behavior.
+- Existing entity webhook sink regression suite: 14 tests passed. Full workflow CRM database suite: 13 tests passed, including actual `crm.send_quote` publication and no-op suppression.
+- Workflow emit-site guard passed with all quote builders registered as covered. Community application build, shared build, workflow-worker build/runtime import checks, and shared/billing typechecks passed. Final server typecheck passed with a 16 GiB Node heap. Both community build commands and the final worker build exited successfully.
+- No browser smoke was run because the application server was intentionally stopped. The UI was rendered in jsdom, and the signed endpoint was a test-owned HTTP sink that was closed after the suite.
+
+- Final totals: 564 passing tests across 15 suites. All 32 feature items and 16 planned test items are implemented; the only environment limitation is the unexercised Citus runtime.

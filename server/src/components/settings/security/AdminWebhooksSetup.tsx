@@ -2808,7 +2808,7 @@ function OutboundWebhooksSetup() {
  * from delivery. The parent component decides on save whether the resulting
  * selection collapses to "full payload" (sentinel `null`) or an explicit map.
  */
-function PayloadFieldSelector(props: {
+export function PayloadFieldSelector(props: {
   selectedEventTypes: string[];
   selection: Record<string, string[]>;
   onChange: (next: Record<string, string[]>) => void;
@@ -2869,6 +2869,7 @@ function PayloadFieldSelector(props: {
               </div>
               <div className="flex gap-3 text-xs">
                 <button
+                  id={`webhook-fields-${entity}-select-all`}
                   type="button"
                   className="text-primary-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [...all])}
@@ -2877,6 +2878,7 @@ function PayloadFieldSelector(props: {
                   {t('security.webhooks.form.payloadFieldsSelectAll', { defaultValue: 'Select all' })}
                 </button>
                 <button
+                  id={`webhook-fields-${entity}-clear`}
                   type="button"
                   className="text-gray-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [])}
