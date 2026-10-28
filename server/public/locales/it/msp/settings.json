@@ -710,7 +710,8 @@
         "importNewName": "Importa con un nome diverso:",
         "importWithResolutions": "Importa con risoluzioni",
         "orderConflict": "L'ordine {{order}} è già in uso",
-        "importWithOrder": "Importa con ordine {{order}}"
+        "importWithOrder": "Importa con ordine {{order}}",
+        "removesIntro": "L’eliminazione di questa bacheca rimuoverà anche:"
       },
       "importTable": {
         "active": "Attivo"
@@ -779,7 +780,9 @@
           "deleteFailed": "Impossibile eliminare la bacheca",
           "importFailed": "Impossibile importare le bacheche",
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
-          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
+          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita",
+          "hasEmailSenderRoute": "Impossibile eliminare la bacheca: ha una regola mittente in uscita dedicata. Rimuovi prima il mittente dei ticket nell’editor della bacheca.",
+          "referencedByAutomations": "Impossibile eliminare la bacheca: altre impostazioni la utilizzano ancora. Spostale su un’altra bacheca o rimuovile prima."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Nome visualizzato",
         "save": "Salva mittente",
         "saved": "Mittente salvato"
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorie",
+        "categories_few": "categorie",
+        "categories_many": "categorie",
+        "statuses_one": "stato ticket",
+        "statuses_other": "stati ticket",
+        "statuses_few": "stati ticket",
+        "statuses_many": "stati ticket",
+        "autoCloseRules_one": "regola di chiusura automatica",
+        "autoCloseRules_other": "regole di chiusura automatica",
+        "autoCloseRules_few": "regole di chiusura automatica",
+        "autoCloseRules_many": "regole di chiusura automatica",
+        "notificationRules_one": "regola di notifica",
+        "notificationRules_other": "regole di notifica",
+        "notificationRules_few": "regole di notifica",
+        "notificationRules_many": "regole di notifica",
+        "portalVisibility_one": "assegnazione di visibilità del portale clienti",
+        "portalVisibility_other": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_few": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_many": "assegnazioni di visibilità del portale clienti",
+        "emailSenderRoutes_one": "regola mittente in uscita",
+        "emailSenderRoutes_other": "regole mittente in uscita",
+        "emailSenderRoutes_few": "regole mittente in uscita",
+        "emailSenderRoutes_many": "regole mittente in uscita",
+        "ticketTemplates_one": "modello di ticket",
+        "ticketTemplates_other": "modelli di ticket",
+        "ticketTemplates_few": "modelli di ticket",
+        "ticketTemplates_many": "modelli di ticket",
+        "recurringTickets_one": "pianificazione di ticket ricorrenti",
+        "recurringTickets_other": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_few": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_many": "pianificazioni di ticket ricorrenti",
+        "checklistRules_one": "regola di applicazione della lista di controllo",
+        "checklistRules_other": "regole di applicazione della lista di controllo",
+        "checklistRules_few": "regole di applicazione della lista di controllo",
+        "checklistRules_many": "regole di applicazione della lista di controllo",
+        "cannedResponses_one": "risposta predefinita della bacheca",
+        "cannedResponses_other": "risposte predefinite della bacheca",
+        "cannedResponses_few": "risposte predefinite della bacheca",
+        "cannedResponses_many": "risposte predefinite della bacheca"
       }
     },
     "priorities": {

@@ -6604,6 +6604,322 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_assets_id_custody",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Get asset custody",
+    "summary": "Get asset custody",
+    "description": "Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Receive an asset into custody",
+    "summary": "Receive an asset into custody",
+    "description": "Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Ticket the equipment was received for; its client must match the asset."
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Active stock location the item is shelved at."
+        },
+        "bin": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Free-text bin or shelf label."
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        },
+        "next_action_party": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        },
+        "next_action_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "follow_up_on": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Date only, YYYY-MM-DD."
+        },
+        "condition_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "location_id",
+        "bin",
+        "purpose"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody_events",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody/events",
+    "displayName": "Record a custody step",
+    "summary": "Record a custody step",
+    "description": "Appends a moved, handed_off, shipped, received or returned step to the asset’s open episode. Invalid transitions answer 409.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "moved",
+            "handed_off",
+            "shipped",
+            "received",
+            "returned"
+          ]
+        }
+      },
+      "required": [
+        "event_type"
+      ],
+      "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "get-_api_v1_assetcustody",
+    "method": "get",
+    "path": "/api/v1/asset-custody",
+    "displayName": "List equipment in custody",
+    "summary": "List equipment in custody",
+    "description": "The custody queue. Rows and tab counts exclude assets the caller cannot read.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tab",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "holder_user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "purpose",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        }
+      },
+      {
+        "name": "next_action_party",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        }
+      },
+      {
+        "name": "mine",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
     "id": "get-_api_v1_assetgroups",
     "method": "get",
     "path": "/api/v1/asset-groups",

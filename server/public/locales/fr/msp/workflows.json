@@ -881,6 +881,7 @@
       "add": "Ajouter",
       "remove": "Supprimer",
       "empty": "Aucun mappage pour l’instant.",
+      "nameRequired": "Saisissez un nom pour ce mappage.",
       "expressionLabel": "Expression"
     },
     "schemaForm": {

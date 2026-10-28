@@ -881,6 +881,7 @@
       "add": "Dodaj",
       "remove": "Usuń",
       "empty": "Brak mapowań.",
+      "nameRequired": "Wpisz nazwę tego mapowania.",
       "expressionLabel": "Wyrażenie"
     },
     "schemaForm": {

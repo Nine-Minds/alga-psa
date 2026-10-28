@@ -13,6 +13,8 @@ import { Client, Connection } from '@temporalio/client';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
+// Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
+import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -53,7 +55,7 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Outbound sender routes reference sender addresses and boards; addresses
   // also reference email providers. Delete the route rows first, then senders,
   // before any of those parent tables.
@@ -742,7 +744,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_settings', 'tax_rates', 'tax_regions',
 ];
 
-const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+// The manifest (packages/db tenantTableManifest) owns membership and order; the array above is its
+// golden projection, asserted element-for-element by tenantTableManifest.golden.test.ts.
+const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';
@@ -1892,6 +1896,10 @@ export async function deleteTenantData(
     );
 
     // Step 2: Delete from each table in order
+    // The loop runs the manifest order. The local binding keeps the established loop
+    // shape that source-text contract tests assert; the exported literal above is the
+    // golden copy `tenantTableManifest.golden.test.ts` compares against.
+    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder();
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
         const tableBoundary = await resolveTenantDeletionTableBoundary(
