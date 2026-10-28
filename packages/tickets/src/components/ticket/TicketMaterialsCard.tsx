@@ -594,7 +594,7 @@ export default function TicketMaterialsCard({
                           <Button
                             id={`${id}-delete-${index}-button`}
                             data-material-id={material.ticket_material_id}
-                            aria-label={t('actions.remove', 'Remove')}
+                            aria-label={t('common:actions.remove', 'Remove')}
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteMaterial(material.ticket_material_id)}

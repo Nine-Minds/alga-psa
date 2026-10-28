@@ -261,7 +261,7 @@ describe('ticket material editing controls', () => {
     render(<TicketMaterialsCard ticketId="ticket-1" clientId="client-1" />);
     const row = await screen.findByRole('row', { name: /Long product name \(SKU-1\)/ });
     const edit = within(row).getByRole('button', { name: 'chargeEdit.edit' });
-    const remove = within(row).getByRole('button', { name: 'actions.remove' });
+    const remove = within(row).getByRole('button', { name: 'common:actions.remove' });
     expect(edit.parentElement).toBe(remove.parentElement);
     expect(edit.parentElement).toHaveClass('flex', 'items-center', 'gap-1');
     expect(edit).toHaveClass('h-8', 'w-8', 'p-0');
