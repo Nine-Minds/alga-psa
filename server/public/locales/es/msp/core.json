@@ -107,7 +107,9 @@
     "ticketsRecurring": "Tickets recurrentes",
     "ticketsTemplates": "Plantillas de tickets",
     "assetsCustody": "Equipos en custodia",
-    "ticketsCannedResponses": "Respuestas predefinidas"
+    "ticketsCannedResponses": "Respuestas predefinidas",
+    "profile": "Perfil",
+    "signOut": "Cerrar sesión"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",
@@ -846,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Las funciones de chat solo están disponibles en Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Cargando espacio de trabajo…",
+    "navigation": "Espacio de trabajo del cliente",
+    "passwordError": "No se pudo comprobar el estado de la contraseña. Vuelva a cargar esta página."
   }
 }
