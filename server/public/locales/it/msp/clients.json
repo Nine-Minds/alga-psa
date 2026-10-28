@@ -2038,11 +2038,11 @@
     "remoteBadge": "Remota",
     "noLocationsAfterMerge": "Nessuna sede",
     "unnamedLocation": "Sede",
-    "movingFrom": "arriva da {{client}}",
+    "movingFrom": "in arrivo da {{client}}",
     "primaryLocation": "Principale",
     "targetAlsoHas": "{{client}} ha anche «{{location}}»",
     "useIt": "Usa questa",
-    "contactLocationSummary": "{{count}} collegamenti di sede dei contatti, {{repointed}} ricollegati"
+    "contactLocationSummary": "{{count}} collegamenti contatto-sede, {{repointed}} reindirizzati"
   },
   "billingProfileContacts": {
     "title": "Contatti del profilo",
