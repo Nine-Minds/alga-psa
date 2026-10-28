@@ -67,6 +67,7 @@
     "@alga-psa/notifications": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",

@@ -8,7 +8,8 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, listInvoiceAuditHistory, type InvoiceHistoryEntry } from '@alga-psa/db';
+import { formatLocationAddress } from '@alga-psa/core';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
@@ -44,6 +45,7 @@ import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditAc
 import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
+  finalizeInvoiceWithKnex,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '@alga-psa/billing/lib/invoiceDeletionErrors';
 import { TaxService } from '@alga-psa/billing/services/taxService';
@@ -51,6 +53,7 @@ import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { notifyInvoiceTerminalStatus } from '@alga-psa/billing/services';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { resolveInvoiceBillingTerms } from '@alga-psa/billing/lib/billing/invoiceDueDate';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
@@ -96,6 +99,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { repointHeaderFollowingCharges } from '@alga-psa/billing/lib/billing/repointHeaderFollowingCharges';
 import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
@@ -322,41 +326,126 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
-  private getPaymentTermDays(paymentTerms?: string | null): number {
-    switch (paymentTerms) {
-      case 'net_15':
-        return 15;
-      case 'due_on_receipt':
-        return 0;
-      case 'net_30':
-      default:
-        return 30;
+  /**
+   * A billing profile may only be attached to an invoice of the client that
+   * owns it, and only while the profile is active.
+   */
+  private async assertBillingProfileBelongsToClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string,
+  ): Promise<void> {
+    const profile = await tenantDb(trx, tenant).table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id', 'is_active');
+    if (!profile || profile.client_id !== clientId || profile.is_active === false) {
+      throw new ValidationError('The selected billing profile is not available for this client', {
+        code: 'BILLING_PROFILE_NOT_FOUND',
+        billingProfileId,
+      });
     }
   }
 
-  private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await tenantDb(trx, tenant).table('clients')
-      .where({ client_id: clientId })
-      .select('payment_terms')
-      .first();
+  /**
+   * Recurring-period summary per invoice, read in its own standalone statement.
+   *
+   * HARD RULE: no statement on the REST invoice read path may reference
+   * recurring_service_periods together with `invoices` (or any other
+   * distributed table). rsp is not distributed, so any such statement makes the
+   * Citus coordinator open a connection back to itself, which is refused when
+   * connection slots are exhausted. The summary is therefore merged in JS.
+   *
+   * Invoices without rsp rows get null for all six recurring_* fields.
+   */
+  private async mergeRecurringSummary<T extends { invoice_id?: string }>(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    rows: T[]
+  ): Promise<T[]> {
+    const ids = Array.from(new Set(rows.map((row) => row.invoice_id).filter((id): id is string => !!id)));
+    const summaries = new Map<string, any>();
 
-    const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
-    return plainInvoiceDate
-      .add({ days: this.getPaymentTermDays(client?.payment_terms) })
-      .toString();
+    if (ids.length > 0) {
+      const summaryRows = await tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
+        .whereNotNull('rsp.invoice_id')
+        .whereIn('rsp.invoice_id', ids)
+        .select('rsp.tenant')
+        .select('rsp.invoice_id')
+        .min('rsp.service_period_start as recurring_service_period_start')
+        .max('rsp.service_period_end as recurring_service_period_end')
+        .min('rsp.invoice_window_start as recurring_invoice_window_start')
+        .max('rsp.invoice_window_end as recurring_invoice_window_end')
+        .max('rsp.cadence_owner as recurring_cadence_owner')
+        .groupBy('rsp.tenant', 'rsp.invoice_id');
+      for (const row of summaryRows as any[]) {
+        summaries.set(row.invoice_id, row);
+      }
+    }
+
+    return rows.map((row) => {
+      const summary = row.invoice_id ? summaries.get(row.invoice_id) : undefined;
+      const owner = summary?.recurring_cadence_owner;
+      return {
+        ...row,
+        recurring_service_period_start: summary?.recurring_service_period_start ?? null,
+        recurring_service_period_end: summary?.recurring_service_period_end ?? null,
+        recurring_invoice_window_start: summary?.recurring_invoice_window_start ?? null,
+        recurring_invoice_window_end: summary?.recurring_invoice_window_end ?? null,
+        recurring_execution_window_kind:
+          owner === 'contract' ? 'contract_cadence_window' : owner === 'client' ? 'client_cadence_window' : null,
+        recurring_cadence_source:
+          owner === 'contract' ? 'contract_anniversary' : owner === 'client' ? 'client_schedule' : null,
+      };
+    });
   }
 
-  private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
+  /**
+   * Resolves the execution_window_kind / cadence_source filters to invoice ids
+   * with a standalone rsp query (same semantics as before: filter on the
+   * aggregated max(cadence_owner) per invoice). Returns null when no recognised
+   * cadence filter is present (no-op), otherwise the matching invoice ids
+   * (possibly empty).
+   */
+  private async resolveCadenceFilterInvoiceIds(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    filters?: InvoiceFilter
+  ): Promise<string[] | null> {
+    if (!filters) return null;
+    const f = filters as Record<string, unknown>;
+    const owners: string[] = [];
+
+    if (f.execution_window_kind === 'contract_cadence_window') owners.push('contract');
+    else if (f.execution_window_kind === 'client_cadence_window') owners.push('client');
+    if (f.cadence_source === 'contract_anniversary') owners.push('contract');
+    else if (f.cadence_source === 'client_schedule') owners.push('client');
+
+    if (owners.length === 0) return null;
+    // Both filters set to different owners can never match (previously two ANDed predicates).
+    if (new Set(owners).size > 1) return [];
+
+    const rows = await tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
-      .min('rsp.service_period_start as recurring_service_period_start')
-      .max('rsp.service_period_end as recurring_service_period_end')
-      .min('rsp.invoice_window_start as recurring_invoice_window_start')
-      .max('rsp.invoice_window_end as recurring_invoice_window_end')
-      .max('rsp.cadence_owner as recurring_cadence_owner')
-      .groupBy('rsp.invoice_id')
-      .as('recurring_invoice_summary');
+      .groupBy('rsp.tenant', 'rsp.invoice_id')
+      .havingRaw('max(rsp.cadence_owner) = ?', [owners[0]]);
+    return (rows as any[]).map((row) => row.invoice_id);
+  }
+
+  /**
+   * Net recorded payments per invoice, in cents. Same definition as
+   * recordExternalPayment's sumPayments: every invoice_payments row counts
+   * (reversals are stored as negative rows), no status filter. Grouped by
+   * tenant so the join in buildBaseQuery is co-located on the distribution key.
+   */
+  private buildInvoicePaymentsSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    return tenantDb(trx, context.tenant).table('invoice_payments as ip')
+      .select('ip.tenant')
+      .select('ip.invoice_id')
+      .sum({ total_paid: 'ip.amount' })
+      .groupBy('ip.tenant', 'ip.invoice_id')
+      .as('invoice_payments_summary');
   }
 
   // ============================================================================
@@ -377,43 +466,21 @@ export class InvoiceService extends BaseService<IInvoice> {
     
     return withTransaction(knex, async (trx) => {
       const db = tenantDb(trx, context.tenant);
+      const cadenceInvoiceIds = await this.resolveCadenceFilterInvoiceIds(trx, context, filters);
+      if (cadenceInvoiceIds !== null && cadenceInvoiceIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+
       let query = this.buildBaseQuery(trx, context);
 
       // Apply filters
       if (filters) {
-        query = this.applyInvoiceFilters(query, filters);
+        query = this.applyInvoiceFilters(query, filters, cadenceInvoiceIds);
       }
 
       // Add joins based on include options
       if ((options as any).include_client) {
-        // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = db.table('client_locations as cl')
-          .select(
-            'cl.client_id',
-            'cl.tenant',
-            trx.raw(`CONCAT_WS(', ',
-              NULLIF(cl.address_line1, 'N/A'),
-              cl.address_line2,
-              NULLIF(cl.city, 'N/A'),
-              cl.state_province,
-              cl.postal_code,
-              NULLIF(cl.country_name, 'Unknown')
-            ) as formatted_address`)
-          )
-          .where(function() {
-            this.where('cl.is_billing_address', true)
-                .orWhere('cl.is_default', true);
-          })
-          .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
-          .limit(1)
-          .as('billing_loc');
-
-        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
-          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
-          .select(
-            'clients.client_name',
-            trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
-          );
+        query = this.joinClientBillingAddress(trx, context, query);
       }
 
       if ((options as any).include_billing_cycle) {
@@ -451,25 +518,33 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count using the same recurring summary join so execution-window filters stay consistent.
+      // Count uses the same base query and the same resolved cadence ids as the data query.
       const countQuery = this.buildBaseQuery(trx, context)
         .clearSelect()
         .clearOrder();
 
       if (filters) {
-        this.applyInvoiceFilters(countQuery, filters);
+        this.applyInvoiceFilters(countQuery, filters, cadenceInvoiceIds);
       }
 
-      const [data, [{ count }]] = await Promise.all([
+      const [pageRows, [{ count }]] = await Promise.all([
         query,
         countQuery.countDistinct('invoices.invoice_id as count')
       ]);
 
+      // Recurring fields come from a separate tenant query (never joined with invoices).
+      const data = await this.mergeRecurringSummary(trx, context, pageRows as any[]);
+
       // Add HATEOAS links
-      const dataWithLinks = data.map((invoice: any) => ({
-        ...invoice,
-        _links: this.generateInvoiceLinks(invoice)
-      }));
+      const dataWithLinks = data.map((row: any) => {
+        const invoice = (options as any).include_client
+          ? this.withFormattedBillingAddress(row)
+          : row;
+        return {
+          ...invoice,
+          _links: this.generateInvoiceLinks(invoice)
+        };
+      });
 
       return {
         data: dataWithLinks,
@@ -487,13 +562,15 @@ export class InvoiceService extends BaseService<IInvoice> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const invoice = await this.buildBaseQuery(trx, context)
+        const baseInvoice = await this.buildBaseQuery(trx, context)
           .where('invoices.invoice_id', id)
           .first();
   
-        if (!invoice) {
+        if (!baseInvoice) {
           return null;
         }
+
+        const [invoice] = await this.mergeRecurringSummary(trx, context, [baseInvoice as any]);
   
         // Get related data based on options
         const includeItems = options?.include_items !== false;
@@ -570,6 +647,23 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
+      const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
+
+      // Terms follow the client's effective billing identity; explicit caller
+      // values win.
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(trx, context.tenant, data.client_id, data.billing_profile_id);
+      }
+      const billingTerms = data.client_id
+        ? await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            data.client_id,
+            invoiceDate,
+            data.billing_profile_id,
+          )
+        : null;
+
       // Prepare invoice data
       const invoiceData = await this.filterAuditFields(trx, {
         invoice_id: uuidv4(),
@@ -577,8 +671,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         client_id: data.client_id,
         billing_cycle_id: data.billing_cycle_id,
         status: data.status || 'draft',
-        invoice_date: data.invoice_date || new Date().toISOString().split('T')[0],
-        due_date: data.due_date,
+        invoice_date: invoiceDate,
+        due_date: data.due_date ?? billingTerms?.dueDate,
+        payment_method: data.payment_method ?? billingTerms?.paymentMethod ?? null,
+        billing_profile_id: data.billing_profile_id ?? billingTerms?.billingProfileId ?? null,
         subtotal: data.subtotal || 0,
         tax: taxCalculation?.tax_amount || 0,
         total_amount: data.total_amount || 0,
@@ -601,7 +697,9 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Create line items if provided
       if (data.items?.length) {
-        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context);
+        // Only a caller-supplied profile makes the charges 'explicit'; a header
+        // profile back-filled from billingTerms keeps them 'client_default'.
+        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context, data.billing_profile_id ?? null);
       }
 
       // Audit log
@@ -658,6 +756,36 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new ConflictError('Cannot modify paid invoice status');
       }
 
+      // Payment method is a draft-only term; an unchanged value (null and
+      // undefined alike) is a harmless round-trip. Billing profile must belong
+      // to the invoice's client and is locked once any payment is recorded.
+      if (
+        data.payment_method !== undefined
+        && existing.status !== 'draft'
+        && (data.payment_method ?? null) !== (existing.payment_method ?? null)
+      ) {
+        throw new ConflictError('Payment method can only be changed on draft invoices');
+      }
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(
+          trx,
+          context.tenant,
+          data.client_id ?? existing.client_id,
+          data.billing_profile_id,
+        );
+      }
+      if (
+        data.billing_profile_id !== undefined
+        && data.billing_profile_id !== existing.billing_profile_id
+      ) {
+        const recordedPayment = await tenantDb(trx, context.tenant).table('invoice_payments')
+          .where({ invoice_id: id })
+          .first('invoice_id');
+        if (recordedPayment) {
+          throw new ConflictError('Billing profile cannot be changed once payments exist against the invoice');
+        }
+      }
+
       // Item replacement rewrites invoice_charges, so it is only valid for drafts
       // that are not tied to recurring service periods. Check before any write.
       if (data.items) {
@@ -686,6 +814,44 @@ export class InvoiceService extends BaseService<IInvoice> {
       const { items: _items, ...headerData } = data;
       const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
+      // Changing the billing profile of a draft re-resolves the profile-derived
+      // terms (payment method, due date); caller-supplied values in the same
+      // request win. Clearing the profile (null) falls back to the client default.
+      const profileChangedOnDraft = existing.status === 'draft'
+        && data.billing_profile_id !== undefined
+        && data.billing_profile_id !== existing.billing_profile_id;
+      let repointToProfileId: string | null | undefined;
+      let repointSource: 'explicit' | 'client_default' = 'client_default';
+      if (profileChangedOnDraft) {
+        const termsClientId = data.client_id ?? existing.client_id;
+        if (termsClientId) {
+          const rawInvoiceDate = data.invoice_date ?? existing.invoice_date;
+          const termsInvoiceDate = rawInvoiceDate instanceof Date
+            ? rawInvoiceDate.toISOString()
+            : String(rawInvoiceDate);
+          const terms = await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            termsClientId,
+            termsInvoiceDate,
+            data.billing_profile_id,
+          );
+          if (data.payment_method === undefined) {
+            updateData.payment_method = terms.paymentMethod;
+          }
+          if (data.due_date === undefined) {
+            updateData.due_date = terms.dueDate;
+          }
+          repointToProfileId = terms.billingProfileId;
+          // A caller-chosen profile is 'explicit' (same rule as create); a
+          // cleared profile falls back to the default -> 'client_default'.
+          repointSource = data.billing_profile_id ? 'explicit' : 'client_default';
+          if (!data.billing_profile_id) {
+            updateData.billing_profile_id = terms.billingProfileId;
+          }
+        }
+      }
+
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
         if (updateData[key] === undefined) {
@@ -697,6 +863,21 @@ export class InvoiceService extends BaseService<IInvoice> {
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .update(updateData);
+
+      // Re-point only the charges that were following the header (same rule as
+      // the invoice editor: profile equals the old header profile or is NULL).
+      // Charges attributed elsewhere keep profile and source; contract_line /
+      // contract / work_item charges that move keep their source. Skipped when
+      // items are replaced below (createInvoiceLineItems attributes the new ones).
+      if (repointToProfileId !== undefined && !data.items) {
+        await repointHeaderFollowingCharges(trx, {
+          tenant: context.tenant,
+          invoiceId: id,
+          fromProfileId: existing.billing_profile_id,
+          toProfileId: repointToProfileId,
+          source: repointSource,
+        });
+      }
 
       // Update line items if provided
       if (data.items) {
@@ -731,7 +912,20 @@ export class InvoiceService extends BaseService<IInvoice> {
         return it;
       });
 
-      await this.createInvoiceLineItems(id, normalizedItems, trx, context);
+      // Caller intent: a profile named in this request, else the header's
+      // existing profile unless it is just the client default.
+      let callerProfileId: string | null;
+      if (data.billing_profile_id !== undefined) {
+        callerProfileId = data.billing_profile_id;
+      } else {
+        const defaultProfileId = existing.client_id
+          ? await getClientDefaultBillingProfileId(trx, context.tenant, existing.client_id)
+          : null;
+        callerProfileId = existing.billing_profile_id && existing.billing_profile_id !== defaultProfileId
+          ? existing.billing_profile_id
+          : null;
+      }
+      await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -894,22 +1088,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     try {
       result = await deleteInvoiceWithKnex(knex, context.tenant, id, context.userId, {
         requireDraft: true,
-        // Audit row commits atomically with the delete.
-        onBeforeCommit: async (trx) => {
-          // auditLog silently skips when the tenant GUC is unset; scope it to this trx.
-          await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.tenant]);
-          await auditLog(trx, {
-            userId: context.userId,
-            operation: 'DELETE',
-            tableName: 'invoices',
-            recordId: id,
-            changedData: {},
-            details: {
-              action: 'invoice.deleted',
-              ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
-            },
-          });
-        },
+        // The engine writes the invoice_deleted audit row (writeInvoiceAudit) in the
+        // delete transaction; recurring provenance rides along as extra details.
+        auditDetails: recurringProvenance ? { recurring_provenance: recurringProvenance } : undefined,
       });
     } catch (error) {
       if (error instanceof InvoiceNotDraftError || error instanceof InvoiceHasPaymentsError) {
@@ -940,98 +1121,96 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'finalize');
 
     const { knex } = await this.getKnex();
-    const deferredEvents: DeferredEvent[] = [];
 
-    await withTransaction(knex, async (trx) => {
-      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+    // Cheap REST-contract pre-checks (404 / 409) before delegating. The engine
+    // re-validates under the row lock, so these are not a race.
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: data.invoice_id })
+      .first();
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found');
+    }
+    if (invoice.status !== 'draft') {
+      throw new ConflictError('Only draft invoices can be finalized');
+    }
+    const lineItems = await InvoiceModel.getInvoiceCharges(knex, context.tenant, data.invoice_id);
+    if (!lineItems.length) {
+      throw new ConflictError('Invoice must have line items to be finalized');
+    }
+
+    // REST and the UI share ONE finalize engine (finalizeInvoiceWithKnex): same
+    // locking, tax-source and export-readiness guards, hour-block activation,
+    // prepayment / negative-total credit issuance, audit row and best-effort
+    // post-commit steps. `internalValidation` because API-key requests carry no
+    // session; permission was checked above. Previously this method re-derived
+    // totals from the line items and skipped all of that.
+    let warnings: Array<{ step: string; message: string }> = [];
+    try {
+      const recurringProvenance = await withTransaction(knex, (trx) =>
+        this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id)
+      );
+      ({ warnings } = await finalizeInvoiceWithKnex(data.invoice_id, knex, context.tenant, context.userId, {
+        internalValidation: true,
+        finalizedAt: data.finalized_at || undefined,
+        auditDetails: recurringProvenance ? { recurring_provenance: recurringProvenance } : undefined,
+      }));
+    } catch (error) {
+      if (error instanceof ExpectedInvoiceActionError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
+    }
+
+    // INVOICE_FINALIZED / INVOICE_STATUS_CHANGED are API-surface events whose
+    // payload builders live in the server package (billing cannot import them),
+    // so they are published here, after the commit, best-effort.
+    try {
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(knex as any, context.tenant, data.invoice_id);
+      const finalized = await tenantDb(knex, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
-
-      if (!invoice) {
-        throw new NotFoundError('Invoice not found');
-      }
-
-      if (invoice.status !== 'draft') {
-        throw new ConflictError('Only draft invoices can be finalized');
-      }
-
-      // Validate invoice has required data
-      const lineItems = await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id);
-
-      if (!lineItems.length) {
-        throw new ConflictError('Invoice must have line items to be finalized');
-      }
-
-      // Calculate final amounts
-      const subtotal = lineItems.reduce((sum: number, item: any) => sum + Number(item.total_price || 0), 0);
-      const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
-      const totalAmount = subtotal + taxAmount;
-
-      const invoiceUpdate = await this.addUpdateAuditFields(trx, {
-        status: 'sent', // Change to sent instead of finalized
-        subtotal,
-        tax: taxAmount,
-        total_amount: totalAmount,
-        finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-      }, context, 'invoices');
-
-      // Update invoice status and amounts
-      await tenantDb(trx, context.tenant).table('invoices')
-        .where({ invoice_id: data.invoice_id })
-        .update(invoiceUpdate);
-
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
-
-      // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'UPDATE',
-        tableName: 'invoices',
-        recordId: data.invoice_id,
-        changedData: { status: 'finalized', subtotal, tax_amount: taxAmount, total_amount: totalAmount },
-        details: {
-          action: 'invoice.finalized',
-          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
-        }
-      });
-
-      // Publish event
       const finalizedAt = new Date().toISOString();
-      deferredEvents.push(() => publishWorkflowEvent({
-        eventType: 'INVOICE_FINALIZED',
-        payload: buildInvoiceFinalizedPayload({
-          invoiceId: data.invoice_id,
-          totalAmount,
-          userId: context.userId,
-          occurredAt: finalizedAt,
+      await publishDeferredEvents([
+        () => publishWorkflowEvent({
+          eventType: 'INVOICE_FINALIZED',
+          payload: buildInvoiceFinalizedPayload({
+            invoiceId: data.invoice_id,
+            totalAmount: Number(finalized?.total_amount ?? 0),
+            userId: context.userId,
+            occurredAt: finalizedAt,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt: finalizedAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
         }),
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: finalizedAt,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      }));
-
-      deferredEvents.push(() => publishWorkflowEvent({
-        eventType: 'INVOICE_STATUS_CHANGED',
-        payload: buildInvoiceStatusChangedPayload({
-          invoiceId: data.invoice_id,
-          previousStatus: String(invoice.status),
-          newStatus: 'sent',
-          changedAt: new Date().toISOString(),
-          recurringProvenance,
+        () => publishWorkflowEvent({
+          eventType: 'INVOICE_STATUS_CHANGED',
+          payload: buildInvoiceStatusChangedPayload({
+            invoiceId: data.invoice_id,
+            previousStatus: String(invoice.status),
+            newStatus: String(finalized?.status ?? 'sent'),
+            changedAt: new Date().toISOString(),
+            recurringProvenance,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
         }),
-        ctx: {
-          tenantId: context.tenant,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      }));
-    });
+      ]);
+    } catch (error) {
+      console.error('[InvoiceService.finalizeInvoice] Failed to publish finalize events', error);
+    }
 
-    await publishDeferredEvents(deferredEvents);
+    if (warnings.length > 0) {
+      console.warn('[InvoiceService.finalizeInvoice] Finalized with post-commit warnings', {
+        invoiceId: data.invoice_id,
+        warnings,
+      });
+    }
 
-    // Re-fetch after commit: getById runs on a pooled (non-transaction)
-    // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
@@ -1202,6 +1381,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           method: String(data.payment_method ?? 'manual'),
           receivedByUserId: context.userId,
           gatewayTransactionId: data.reference_number,
+          source: 'manual',
         }),
         ctx: {
           tenantId: context.tenant,
@@ -1930,7 +2110,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Apply filters if provided
       if (filters) {
-        baseQuery = this.applyInvoiceFilters(baseQuery, filters);
+        const cadenceInvoiceIds = await this.resolveCadenceFilterInvoiceIds(trx, context, filters);
+        baseQuery = this.applyInvoiceFilters(baseQuery, filters, cadenceInvoiceIds);
       }
 
       const [statusStats, monthlyStats, topClients] = await Promise.all([
@@ -1994,7 +2175,19 @@ export class InvoiceService extends BaseService<IInvoice> {
     try {
       await withTransaction(knex, async (trx) => {
         const client = await getClientDetails(trx, tenant, data.clientId);
-        const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
+
+        // A caller-selected profile must belong to this client (and be active);
+        // otherwise the client's default profile supplies the terms.
+        if (data.billingProfileId) {
+          await this.assertBillingProfileBelongsToClient(trx, tenant, data.clientId, data.billingProfileId);
+        }
+        const billingTerms = await resolveInvoiceBillingTerms(
+          trx,
+          tenant,
+          data.clientId,
+          currentDate,
+          data.billingProfileId,
+        );
 
         await tenantDb(trx, tenant).table('invoices').insert({
           invoice_id: invoiceId,
@@ -2002,7 +2195,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           client_id: data.clientId,
           invoice_number: invoiceNumber,
           invoice_date: currentDate,
-          due_date: computedDueDate,
+          due_date: billingTerms.dueDate,
+          payment_method: billingTerms.paymentMethod,
+          billing_profile_id: billingTerms.billingProfileId,
           status: 'draft',
           subtotal: 0,
           tax: 0,
@@ -2015,9 +2210,17 @@ export class InvoiceService extends BaseService<IInvoice> {
         await persistManualInvoiceCharges(
           trx,
           invoiceId,
+          // Mirrors the UI manual path (manualInvoiceActions): a charge carries
+          // the profile the caller named, else nothing -
+          // persistManualInvoiceCharges then attributes it to the client
+          // default ('client_default'). The header still uses the resolved
+          // profile; only caller-supplied profiles make charges 'explicit'.
           data.items.map((item) => ({
             ...item,
-            rate: Math.round(item.rate)
+            rate: Math.round(item.rate),
+            // LEVERAGE: pattern item-profile-or-caller-profile — see createInvoiceLineItems
+            // (the REST manual item schema has no per-item profile, so only the caller's argument applies)
+            billing_profile_id: data.billingProfileId ?? undefined
           })),
           client,
           sessionLike as any,
@@ -2191,37 +2394,84 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Helper Methods
   // ============================================================================
 
-  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
-    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+  /**
+   * Joins clients plus their billing address. The address derived table carries
+   * `tenant` and is joined on it (tenantJoinSubquery) so Citus keeps the join
+   * on one shard. One location per client (DISTINCT ON), billing address first,
+   * then default - same precedence as models/invoice.ts and invoiceQueries.ts.
+   */
+  protected joinClientBillingAddress(trx: Knex.Transaction, context: ServiceContext, query: Knex.QueryBuilder): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    // Use a subquery to get the billing address to avoid aggregate issues with Citus
+    const billingAddressSubquery = db.table('client_locations as cl')
+      .select(
+        trx.raw('DISTINCT ON (cl.tenant, cl.client_id) cl.client_id'),
+        'cl.tenant',
+        'cl.address_line1 as billing_address_line1',
+        'cl.address_line2 as billing_address_line2',
+        'cl.address_line3 as billing_address_line3',
+        'cl.city as billing_city',
+        'cl.state_province as billing_state_province',
+        'cl.postal_code as billing_postal_code',
+        'cl.country_name as billing_country_name'
+      )
+      .where(function() {
+        this.where('cl.is_billing_address', true)
+            .orWhere('cl.is_default', true);
+      })
+      .orderByRaw('cl.tenant, cl.client_id, cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST, cl.created_at ASC, cl.location_id ASC')
+      .as('billing_loc');
 
-    return tenantDb(trx, context.tenant).table('invoices')
-      .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
+    db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoinSubquery(query, billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id', {
+      type: 'left',
+      rootTenantColumn: 'clients.tenant',
+      joinedTenantColumn: 'billing_loc.tenant',
+    });
+    return query.select(
+      'clients.client_name',
+      'billing_loc.billing_address_line1',
+      'billing_loc.billing_address_line2',
+      'billing_loc.billing_address_line3',
+      'billing_loc.billing_city',
+      'billing_loc.billing_state_province',
+      'billing_loc.billing_postal_code',
+      'billing_loc.billing_country_name'
+    );
+  }
+
+  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    const paymentsSummary = this.buildInvoicePaymentsSummaryQuery(trx, context);
+
+    const query = db.table('invoices');
+    // The payments summary joins on tenant as well as invoice_id (Citus colocation).
+    // The rsp table must never appear here; see mergeRecurringSummary.
+    db.tenantJoinSubquery(query, paymentsSummary, 'invoice_payments_summary.invoice_id', 'invoices.invoice_id', {
+      type: 'left',
+      rootTenantColumn: 'invoices.tenant',
+      joinedTenantColumn: 'invoice_payments_summary.tenant',
+    });
+
+    return query
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
-        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due'),
-        'recurring_invoice_summary.recurring_service_period_start',
-        'recurring_invoice_summary.recurring_service_period_end',
-        'recurring_invoice_summary.recurring_invoice_window_start',
-        'recurring_invoice_summary.recurring_invoice_window_end',
-        trx.raw(`
-          CASE
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_cadence_window'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'
-            ELSE NULL
-          END as recurring_execution_window_kind
-        `),
-        trx.raw(`
-          CASE
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_anniversary'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_schedule'
-            ELSE NULL
-          END as recurring_cadence_source
-        `)
+        // Mirrors computeBalanceDue: total - credit - net payments (no clamp).
+        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0) - COALESCE(invoice_payments_summary.total_paid, 0)) as balance_due')
       );
   }
 
-  private applyInvoiceFilters(query: Knex.QueryBuilder, filters: InvoiceFilter): Knex.QueryBuilder {
+  /**
+   * `cadenceInvoiceIds` are the pre-resolved ids for the execution_window_kind /
+   * cadence_source filters (see resolveCadenceFilterInvoiceIds); this method must
+   * stay free of rsp references.
+   */
+  private applyInvoiceFilters(
+    query: Knex.QueryBuilder,
+    filters: InvoiceFilter,
+    cadenceInvoiceIds: string[] | null = null
+  ): Knex.QueryBuilder {
     // Common created_*/updated_* plus invoice/due/finalized windows. Unsupported
     // range keys throw rather than returning unfiltered invoices.
     this.applyRangeFilters(query, filters);
@@ -2270,20 +2520,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         case 'billing_cycle_id':
           query.where('invoices.billing_cycle_id', value);
           break;
-        case 'execution_window_kind':
-          if (value === 'contract_cadence_window') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
-          } else if (value === 'client_cadence_window') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
-          }
-          break;
-        case 'cadence_source':
-          if (value === 'contract_anniversary') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
-          } else if (value === 'client_schedule') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
-          }
-          break;
         case 'has_credit_applied':
           if (value) {
             query.where('invoices.credit_applied', '>', 0);
@@ -2293,6 +2529,11 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
       }
     });
+
+    if (cadenceInvoiceIds !== null) {
+      // Empty list: whereIn([]) compiles to a constant-false predicate, never `IN ()`.
+      query.whereIn('invoices.invoice_id', cadenceInvoiceIds);
+    }
 
     return query;
   }
@@ -2363,7 +2604,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
     const db = tenantDb(trx, context.tenant);
 
-    return db.tenantJoin(
+    const row = await db.tenantJoin(
       db.table('clients as c'),
       'client_locations as cl',
       'c.client_id',
@@ -2383,11 +2624,49 @@ export class InvoiceService extends BaseService<IInvoice> {
         'c.client_id',
         'c.client_name',
         'c.billing_email as email',
-        trx.raw(`CONCAT_WS(', ', NULLIF(cl.address_line1, 'N/A'), cl.address_line2, NULLIF(cl.city, 'N/A'), cl.state_province, cl.postal_code, NULLIF(cl.country_name, 'Unknown')) as billing_address`),
+        'cl.address_line1 as billing_address_line1',
+        'cl.address_line2 as billing_address_line2',
+        'cl.address_line3 as billing_address_line3',
+        'cl.city as billing_city',
+        'cl.state_province as billing_state_province',
+        'cl.postal_code as billing_postal_code',
+        'cl.country_name as billing_country_name',
         'cl.phone as phone_no'
       )
       .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
       .first();
+
+    return row ? this.withFormattedBillingAddress(row) : row;
+  }
+
+  /**
+   * Collapse the billing_* location columns selected by SQL into the single
+   * `billing_address` string API consumers see; formatting lives in TS so empty
+   * components are skipped in one place (formatLocationAddress).
+   */
+  private withFormattedBillingAddress<T extends Record<string, any>>(row: T): Record<string, any> {
+    const {
+      billing_address_line1,
+      billing_address_line2,
+      billing_address_line3,
+      billing_city,
+      billing_state_province,
+      billing_postal_code,
+      billing_country_name,
+      ...rest
+    } = row;
+    return {
+      ...rest,
+      billing_address: formatLocationAddress({
+        address_line1: billing_address_line1,
+        address_line2: billing_address_line2,
+        address_line3: billing_address_line3,
+        city: billing_city,
+        state_province: billing_state_province,
+        postal_code: billing_postal_code,
+        country_name: billing_country_name,
+      }),
+    };
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
@@ -2400,6 +2679,31 @@ export class InvoiceService extends BaseService<IInvoice> {
     return tenantDb(trx, context.tenant).table('tax_rates')
       .where({ tax_rate_id: taxRateId })
       .first();
+  }
+
+  /**
+   * Lifecycle audit trail (finalize / unfinalize / delete) for one invoice,
+   * oldest first. A deleted invoice's rows survive in audit_logs, so history of
+   * a deleted invoice is still readable, but a never-existing id has no rows and
+   * 404s.
+   */
+  async getInvoiceHistory(invoiceId: string, context: ServiceContext): Promise<InvoiceHistoryEntry[]> {
+    await this.validatePermissions(context, 'invoice', 'read');
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const history = await listInvoiceAuditHistory(trx, context.tenant, invoiceId);
+      if (history.length === 0) {
+        const exists = await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: invoiceId })
+          .select('invoice_id')
+          .first();
+        if (!exists) {
+          throw new NotFoundError('Invoice not found');
+        }
+      }
+      return history;
+    });
   }
 
   async getInvoiceTransactions(invoiceId: string, context: ServiceContext): Promise<any[]> {
@@ -2448,7 +2752,23 @@ export class InvoiceService extends BaseService<IInvoice> {
       .orderBy('created_at', 'desc');
   }
 
-  private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
+  /**
+   * `callerBillingProfileId` is the profile the CALLER chose for the invoice
+   * header (not whatever the header row happens to hold). Attribution rule,
+   * shared with the UI manual path (manualInvoiceActions: `item ?? caller`):
+   *   - item names a profile            -> that profile, source 'explicit'
+   *   - else caller chose a header one  -> that profile, source 'explicit'
+   *   - else (nothing chosen)           -> client default, 'client_default'
+   * A header profile that create() back-filled from the client default is NOT
+   * caller intent, so it must not be passed here.
+   */
+  private async createInvoiceLineItems(
+    invoiceId: string,
+    lineItems: any[],
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    callerBillingProfileId: string | null = null,
+  ): Promise<void> {
     // Line items persist to the canonical `invoice_charges` table (surfaced to
     // the `invoice_items` view). `total_price`/`net_amount` are calculated
     // server-side from `unit_price`/`quantity` when the caller omits them.
@@ -2490,8 +2810,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         location_id: item.location_id,
-        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
-        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
+        // LEVERAGE: pattern item-profile-or-caller-profile — item ?? caller, source explicit/client_default (also manualInvoiceActions, persistManualInvoiceCharges)
+        billing_profile_id: item.billing_profile_id ?? callerBillingProfileId ?? defaultBillingProfileId,
+        billing_profile_source: (item.billing_profile_id ?? callerBillingProfileId) ? 'explicit' : 'client_default',
         created_by: context.userId,
         tenant: context.tenant,
         created_at: new Date()

@@ -1,6 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import type { ITimePeriod, ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
+import { endOfConfiguredTimePeriod, yearBoundary } from './timePeriodCadence';
 
 export type TimePeriodSettings = ITimePeriodSettings;
 
@@ -39,14 +40,12 @@ function weekStartDay(setting: ITimePeriodSettings): number {
   return typeof setting.start_day === 'number' && setting.start_day >= 1 && setting.start_day <= 7 ? setting.start_day : 1;
 }
 
-function yearBoundary(setting: ITimePeriodSettings, year: number): Temporal.PlainDate {
-  const first = Temporal.PlainDate.from({ year, month: setting.start_month || 1, day: 1 });
-  return first.with({ day: Math.min(setting.start_day_of_month || 1, first.daysInMonth) });
-}
-
-/** Is the setting in force on date D? effective_from <= D <= effective_to (date parts). */
+/** Is the setting in force on date D? Active, and effective_from <= D <= effective_to (date parts). */
 // LEVERAGE: pattern period-grid — see note above
 export function isSettingEffectiveOn(setting: ITimePeriodSettings, date: Temporal.PlainDate): boolean {
+  if (setting.is_active === false) {
+    return false;
+  }
   if (setting.effective_from && Temporal.PlainDate.compare(parseDateValue(setting.effective_from), date) > 0) {
     return false;
   }
@@ -112,32 +111,10 @@ export function defaultEffectiveFrom(setting: ITimePeriodSettings, localToday: T
   return alignedPeriodStart(candidate, localToday) ?? localToday;
 }
 
-/** Exclusive end of the cell that starts at boundary B. */
+/** Exclusive end of the cell that starts at boundary B (see endOfConfiguredTimePeriod). */
 // LEVERAGE: pattern period-grid — see note above
 export function cellEnd(setting: ITimePeriodSettings, boundary: Temporal.PlainDate): Temporal.PlainDate {
-  const frequency = Math.max(1, setting.frequency || 1);
-
-  switch (setting.frequency_unit) {
-    case 'day':
-      return boundary.add({ days: frequency });
-    case 'week':
-      return boundary.add({ weeks: frequency });
-    case 'month': {
-      const startDay = monthStartDay(setting);
-      const endDay = typeof setting.end_day === 'number' ? setting.end_day : 0;
-      const idx = monthIndex(boundary);
-      if (endDay === 0) {
-        return clampedMonthDay(idx + frequency, 1);
-      }
-      // end_day is inclusive; storage is exclusive, hence +1 day.
-      const monthOffset = endDay >= startDay ? frequency - 1 : frequency;
-      return clampedMonthDay(idx + monthOffset, endDay).add({ days: 1 });
-    }
-    case 'year':
-      return yearBoundary(setting, boundary.year + frequency);
-    default:
-      throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
-  }
+  return endOfConfiguredTimePeriod(boundary, setting);
 }
 
 /** The cell containing D: { start: max(B, effective_from), end }, or null. */

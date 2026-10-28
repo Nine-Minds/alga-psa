@@ -3,15 +3,20 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const source = readFileSync(path.resolve(__dirname, '../webhookActions.ts'), 'utf8');
-// SUPPORTED_WEBHOOK_EVENTS lives in the shared retry module because a
+// The event list lives in the registry (server/src/lib/webhooks/eventRegistry.ts);
+// deliveryRetry.ts re-exports it as SUPPORTED_WEBHOOK_EVENTS because a
 // 'use server' file may only export async functions.
-const eventSource = readFileSync(
+const registrySource = readFileSync(
+  path.resolve(__dirname, '../../webhooks/eventRegistry.ts'),
+  'utf8',
+);
+const retrySource = readFileSync(
   path.resolve(__dirname, '../../webhooks/deliveryRetry.ts'),
   'utf8',
 );
 
-describe('SUPPORTED_WEBHOOK_EVENTS project metadata', () => {
-  it('contains every project event accepted by webhook creation and listWebhookEvents', () => {
+describe('webhook event metadata is registry-derived', () => {
+  it('registry declares every project event', () => {
     for (const eventType of [
       'project.created',
       'project.updated',
@@ -25,14 +30,17 @@ describe('SUPPORTED_WEBHOOK_EVENTS project metadata', () => {
       'project.task.assigned',
       'project.task.completed',
     ]) {
-      expect(eventSource).toContain(`'${eventType}'`);
+      expect(registrySource).toContain(`'${eventType}'`);
     }
+  });
 
-    expect(source).toMatch(
-      /import \{[^}]*\bSUPPORTED_WEBHOOK_EVENTS\b[^}]*\} from '@\/lib\/webhooks\/deliveryRetry';/,
-    );
-    expect(eventSource).toContain('export const SUPPORTED_WEBHOOK_EVENTS = [');
-    expect(source).toContain('eventTypes: z.array(z.enum(SUPPORTED_WEBHOOK_EVENTS)).min(1)');
-    expect(source).toContain('return [...SUPPORTED_WEBHOOK_EVENTS];');
+  it('retry module derives SUPPORTED_WEBHOOK_EVENTS from the registry', () => {
+    expect(retrySource).toContain('export const SUPPORTED_WEBHOOK_EVENTS = WEBHOOK_EVENT_NAMES');
+  });
+
+  it('admin actions list registry events and validate against the registry, not a hard-coded enum', () => {
+    expect(source).toContain('return [...WEBHOOK_EVENT_NAMES];');
+    expect(source).toContain('disallowedEventTypes');
+    expect(source).not.toMatch(/z\.enum\(SUPPORTED_WEBHOOK_EVENTS\)/);
   });
 });

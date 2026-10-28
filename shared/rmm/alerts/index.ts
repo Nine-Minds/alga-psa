@@ -15,5 +15,6 @@ export {
   runRmmAlertReconciliation,
   RECONCILIATION_INGEST_MARKER,
   type RmmActiveAlertFetcher,
+  type RmmActiveAlertSnapshot,
   type ReconciliationResult,
 } from './reconciliation';

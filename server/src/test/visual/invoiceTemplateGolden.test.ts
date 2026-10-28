@@ -319,6 +319,9 @@ describeDb('visual goldens: standard invoice templates', () => {
         client_id: clientId,
         location_name: 'Harborside Bakery',
         address_line1: '42 Harbor Lane',
+        // Blank (not NULL) second line: the billed address must skip it rather
+        // than print "42 Harbor Lane, , Portsmouth" (alga-2026-0002724).
+        address_line2: '',
         city: 'Portsmouth',
         state_province: 'NH',
         postal_code: '03801',
@@ -483,6 +486,10 @@ describeDb('visual goldens: standard invoice templates', () => {
     expect(viewModel, 'invoice view model').toBeTruthy();
     // Pixel tolerance can miss small digit changes: verify money separately.
     expect(viewModel).toMatchObject({ subtotal: 40000, tax: 3550, total: 43550 });
+    // Empty address components are skipped, never rendered as ", ,".
+    const customerAddress = (viewModel as any).customer?.address as string;
+    expect(customerAddress).toBe('42 Harbor Lane, Portsmouth, NH, 03801, United States');
+    expect(customerAddress).not.toMatch(/,\s*,/);
     expect(viewModel!.items.map(item => item.total).sort((a, b) => a - b)).toEqual([15000, 25000]);
 
     // getInvoiceCharges has no ORDER BY, so heap order decides item order.
@@ -532,6 +539,7 @@ describeDb('visual goldens: standard invoice templates', () => {
           title: 'Invoice',
           knex: db,
         });
+        expect(html, `${code} printed an empty address component`).not.toMatch(/,\s*,\s*Portsmouth/);
 
         await fs.mkdir(OUTPUT_DIR, { recursive: true });
         await fs.writeFile(path.join(OUTPUT_DIR, '.gitignore'), '*\n');

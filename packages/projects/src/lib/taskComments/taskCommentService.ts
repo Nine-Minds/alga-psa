@@ -13,9 +13,10 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildTaskCommentAddedPayload, buildTaskCommentUpdatedPayload } from '@alga-psa/workflow-streams';
-import { aggregateReactions, validateEmoji } from '@alga-psa/types';
+import { aggregateReactions, isMspPrincipalUserType, validateEmoji } from '@alga-psa/types';
 import type { IAggregatedReaction, IProjectTaskComment, IProjectTaskCommentWithUser, IReactionsBatchResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
@@ -24,7 +25,7 @@ import {
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
 
-export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' };
+export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' | 'service' };
 
 export type CreateTaskCommentInput = {
   taskId: string;
@@ -80,7 +81,7 @@ async function assertOwnCommentOrInternalUser(
   ownerUserId: string,
   action: 'update' | 'delete'
 ): Promise<void> {
-  if (user.user_type === 'internal') {
+  if (isMspPrincipalUserType(user.user_type)) {
     return;
   }
 
@@ -169,7 +170,7 @@ export async function createTaskCommentWithDb(
       .where({ user_id: userId })
       .first();
 
-    if (!userRecord || userRecord.user_type !== 'internal') {
+    if (!userRecord || !isMspPrincipalUserType(userRecord.user_type)) {
       throw new Error('Only internal users can comment on tasks');
     }
 
@@ -256,37 +257,45 @@ export async function createTaskCommentWithDb(
     }
 
     // Publish event (mention extraction happens in event handler)
-    await publishWorkflowEvent({
+    await publishCommentEvent(trx, 'project-task', {
+      tenantId: tenant,
+      taskId: comment.taskId,
+      commentId: newComment.task_comment_id,
+      userId,
       eventType: 'TASK_COMMENT_ADDED',
-      payload: buildTaskCommentAddedPayload({
-        taskId: comment.taskId,
-        projectId: task.project_id,
-        createdByUserId: userId,
-        taskCommentId: newComment.task_comment_id,
-        threadId,
-        parentCommentId,
-        isReply,
-        taskName: task.task_name,
-        commentContent: comment.note,  // BlockNote JSON with embedded mentions
-      }),
-      ctx: {
-        tenantId: tenant,
-        actor: { actorType: 'USER', actorUserId: userId },
-      },
-    });
+    }, async () => {
+      await publishWorkflowEvent({
+        eventType: 'TASK_COMMENT_ADDED',
+        payload: buildTaskCommentAddedPayload({
+          taskId: comment.taskId,
+          projectId: task.project_id,
+          createdByUserId: userId,
+          taskCommentId: newComment.task_comment_id,
+          threadId,
+          parentCommentId,
+          isReply,
+          taskName: task.task_name,
+          commentContent: comment.note,  // BlockNote JSON with embedded mentions
+        }),
+        ctx: {
+          tenantId: tenant,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
-    await publishEvent({
-      eventType: 'PROJECT_TASK_COMMENT_CREATED',
-      payload: {
-        tenantId: tenant,
-        taskId: comment.taskId,
-        projectId: task.project_id,
-        userId,
-        taskCommentId: newComment.task_comment_id,
-        taskName: task.task_name,
-        commentContent: comment.note,
-        isUpdate: false
-      }
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_CREATED',
+        payload: {
+          tenantId: tenant,
+          taskId: comment.taskId,
+          projectId: task.project_id,
+          userId,
+          taskCommentId: newComment.task_comment_id,
+          taskName: task.task_name,
+          commentContent: comment.note,
+          isUpdate: false
+        }
+      });
     });
 
     return newComment.task_comment_id;
@@ -381,36 +390,44 @@ export async function updateTaskCommentWithDb(
 
     // Publish event for smart mention notifications
     // Event handler will compare old vs new mentions and only notify NEW ones
-    await publishWorkflowEvent({
+    await publishCommentEvent(trx, 'project-task', {
+      tenantId: tenant,
+      taskId: existingComment.task_id,
+      commentId: taskCommentId,
+      userId,
       eventType: 'TASK_COMMENT_UPDATED',
-      payload: buildTaskCommentUpdatedPayload({
-        taskId: existingComment.task_id,
-        projectId: task.project_id,
-        updatedByUserId: userId,
-        taskCommentId,
-        taskName: task.task_name,
-        oldCommentContent: existingComment.note,  // Old BlockNote JSON
-        newCommentContent: updates.note ?? existingComment.note,          // New BlockNote JSON
-      }),
-      ctx: {
-        tenantId: tenant,
-        actor: { actorType: 'USER', actorUserId: userId },
-      },
-    });
+    }, async () => {
+      await publishWorkflowEvent({
+        eventType: 'TASK_COMMENT_UPDATED',
+        payload: buildTaskCommentUpdatedPayload({
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          updatedByUserId: userId,
+          taskCommentId,
+          taskName: task.task_name,
+          oldCommentContent: existingComment.note,  // Old BlockNote JSON
+          newCommentContent: updates.note ?? existingComment.note,          // New BlockNote JSON
+        }),
+        ctx: {
+          tenantId: tenant,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
-    await publishEvent({
-      eventType: 'PROJECT_TASK_COMMENT_UPDATED',
-      payload: {
-        tenantId: tenant,
-        taskId: existingComment.task_id,
-        projectId: task.project_id,
-        userId,
-        taskCommentId: taskCommentId,
-        taskName: task.task_name,
-        oldCommentContent: existingComment.note,
-        newCommentContent: updates.note,
-        isUpdate: true
-      }
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_UPDATED',
+        payload: {
+          tenantId: tenant,
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          userId,
+          taskCommentId: taskCommentId,
+          taskName: task.task_name,
+          oldCommentContent: existingComment.note,
+          newCommentContent: updates.note,
+          isUpdate: true
+        }
+      });
     });
   });
 }

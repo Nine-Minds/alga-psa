@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, flattenMarkdown } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { recordPath } from '@alga-psa/types';
 
 interface TicketCommentSearchRow {
   comment_id: string;
@@ -70,7 +71,8 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     title: row.ticket_title ?? row.ticket_number ?? row.ticket_id,
     subtitle: compactJoin([row.ticket_title, row.ticket_number]),
     body: resolveCommentBody(row),
-    url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`,
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    url: `${recordPath('ticket', row.ticket_id)}#comment-${row.comment_id}`,
     metadata: { author_kind: toCommentAuthorKind(row.author_type) },
     acl: {
       requiredPermission: 'ticket:read',
@@ -85,6 +87,8 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
   tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'c.ticket_id');
 
   return query
+    .whereNull('c.deleted_at')
+    .where('c.publish_state', 'published')
     .select(
       'c.comment_id',
       'c.ticket_id',

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { BUNDLE_CHILD_LOCKED_FIELDS } from '../../../../../packages/tickets/src/lib/bundleWorkflowLock';
 
 function readSource(relative: string): string {
   return fs.readFileSync(path.resolve(__dirname, relative), 'utf8');
@@ -16,21 +17,30 @@ function methodBody(source: string, start: string, end: string): string {
 
 /**
  * The REST ticket surface (mobile app, public API) must treat bundles the way
- * the in-app update action does: children cannot change workflow fields, and
+ * the in-app update action does: children of a sync_updates master cannot change workflow fields, and
  * a sync_updates master pushes its workflow changes down to the children.
  */
 describe('TicketService bundle parity with the web update action', () => {
   const service = readSource('../../../lib/api/services/TicketService.ts');
   const webAction = readSource('../../../../../packages/tickets/src/actions/optimizedTicketActions.ts');
 
-  it('locks the same child workflow fields the web action locks', () => {
+  it('locks the same child workflow fields the web action locks, through the shared rule', () => {
     const update = methodBody(service, 'async update(id: string, data: UpdateTicketData', 'private withDescriptionHtml');
-    expect(service).toContain("const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;");
-    expect(update).toContain('if (currentTicket.master_ticket_id) {');
+    const sharedRule = readSource('../../../../../packages/tickets/src/lib/bundleWorkflowLock.ts');
+
+    // The field list lives only in the shared module.
+    expect(sharedRule).toContain("export const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;");
+    expect(BUNDLE_CHILD_LOCKED_FIELDS).toEqual(['status_id', 'assigned_to', 'priority_id']);
+    expect(service).not.toContain("const BUNDLE_CHILD_LOCKED_FIELDS =");
+    expect(webAction).not.toContain("new Set(['status_id', 'assigned_to', 'priority_id'])");
+
+    // Both surfaces gate on the shared predicate and the shared constant.
+    for (const source of [service, webAction]) {
+      expect(source).toContain('isChildWorkflowLocked(');
+      expect(source).toContain('BUNDLE_CHILD_LOCKED_FIELDS');
+    }
     expect(update).toContain('BUNDLE_CHILD_LOCKED_FIELDS.filter(');
     expect(update).toContain('workflow fields are locked');
-
-    expect(webAction).toContain("const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);");
   });
 
   it('cascades master updates to children through the shared propagation engine', () => {

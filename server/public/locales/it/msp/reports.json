@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Utilizzo delle ore a pacchetto",
-        "description": "Monitorare l'uso delle ore a pacchetto, individuando situazioni di eccedenza",
+        "description": "Monitora l'utilizzo delle ore a pacchetto e individua le situazioni di eccedenza. I blocchi di ore prepagate (contrattuali e occasionali) sono elencati con il relativo consumo.",
         "empty": "Nessun contratto basato su pacchetti trovato"
       },
       "profitability": {
@@ -305,13 +305,21 @@
       "profit": "Profitto",
       "margin": "Margine",
       "plusVariableUsage": "+ utilizzo variabile",
-      "variableUsage": "Utilizzo variabile"
+      "variableUsage": "Utilizzo variabile",
+      "service": "Servizio",
+      "hourlyRate": "Tariffa / ora",
+      "expirationDate": "Scade",
+      "neverExpires": "Mai",
+      "adhocBlock": "Ad hoc"
     },
     "statusValues": {
       "active": "Attivo",
       "upcoming": "In arrivo",
       "yes": "Sì",
-      "no": "No"
+      "no": "No",
+      "expired": "Scaduto",
+      "voided": "Annullato",
+      "all": "Tutti gli stati"
     },
     "profitability": {
       "formats": {
@@ -414,6 +422,11 @@
         "allAgreements": "Tutti i contratti",
         "currency": "Valuta"
       }
+    },
+    "columnsMenu": {
+      "label": "Colonne",
+      "title": "Colonne",
+      "reset": "Ripristina colonne predefinite"
     }
   },
   "contractPerformance": {

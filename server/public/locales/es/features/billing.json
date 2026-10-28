@@ -67,6 +67,7 @@
     "taxBreakdown": "Desglose de impuestos",
     "manualInvoice": "Factura manual",
     "credits": "Créditos",
+    "currency": "Moneda",
     "financialArtifactSummary": "Factura solo financiera. Los períodos de servicio recurrentes aparecen únicamente en las líneas de detalle recurrentes.",
     "servicePeriod": "Período de servicio",
     "servicePeriods": "Períodos de servicio",
@@ -452,5 +453,20 @@
     "hoursUsed": "{{hours}} horas utilizadas",
     "hoursTotal": "{{hours}} horas en total",
     "rolloverHours": "Incluye {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimiento al recibir",
+      "net14": "neto 14",
+      "net15": "neto 15",
+      "net30": "neto 30",
+      "net7": "neto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferencia bancaria",
+      "check": "Cheque",
+      "creditCard": "Tarjeta de crédito"
+    },
+    "tenantDefault": "Predeterminado del inquilino ({{value}})"
   }
 }

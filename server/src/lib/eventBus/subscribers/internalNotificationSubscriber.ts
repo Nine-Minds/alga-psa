@@ -1,3 +1,4 @@
+import { isInteractiveUserType } from '@alga-psa/types';
 
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -1825,7 +1826,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             db.raw("CONCAT(first_name, ' ', last_name) as display_name"),
           )
           .whereIn('user_id', resolvedMentionedUserIds);
-        const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
+        // Non-interactive (service) users have no UI inbox, so a mention never notifies them.
+        const mentionedUsersToNotify = mentionedUsers
+          .filter((mentionedUser) => isInteractiveUserType(mentionedUser.user_type) || !mentionedUser.user_type)
+          // An internal note must never reach (or be previewed to) a client/portal user.
+          .filter((mentionedUser) => !comment?.isInternal || mentionedUser.user_type === 'internal')
+          .filter((mentionedUser) =>
           shouldCreateTicketCommentNotification(
             suppression,
             mentionedUser.user_type === 'client' ? 'contact' : 'internal',
@@ -2060,9 +2066,12 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+        let newlyMentionedUsersQuery = tenantScopedTable(db, 'users', tenantId)
+          .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
           .whereIn('user_id', resolvedNewlyMentionedUserIds);
+        // An internal note must never reach (or be previewed to) a client/portal user.
+        if (newComment?.isInternal) newlyMentionedUsersQuery = newlyMentionedUsersQuery.where('user_type', 'internal');
+        const newlyMentionedUsers = await newlyMentionedUsersQuery;
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {

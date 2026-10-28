@@ -105,7 +105,9 @@
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
-    "ticketsTemplates": "Modelli di ticket"
+    "ticketsTemplates": "Modelli di ticket",
+    "assetsCustody": "Apparecchiature in custodia",
+    "ticketsCannedResponses": "Risposte predefinite"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -154,7 +156,8 @@
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
       "profile": "Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "tags": "Tag"
     }
   },
   "dashboard": {

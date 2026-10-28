@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ITicket, IBoard, RmmCachedData } from '@alga-psa/types';
+import type { ITicket, IBoard, IUser, RmmCachedData } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface AssetQuickAddTicketRenderProps {
@@ -56,11 +56,19 @@ export interface AssetRmmCallbacks {
 }
 
 export interface AssetCrossFeatureCallbacks {
+  renderCustodyPhotos?: (documentIds: string[], eventId: string) => ReactNode;
+  recordCustodyEventWithPhotos?: (custodyId: string, input: unknown, photos: FormData) => Promise<unknown>;
   renderQuickAddTicket: (props: AssetQuickAddTicketRenderProps) => ReactNode;
   openTicketDetailsDrawer: (props: AssetTicketDetailsRenderProps) => Promise<void>;
   createTicketFromAsset: (data: CreateTicketFromAssetData) => Promise<ITicket | ActionMessageError | ActionPermissionError>;
   getAllBoards: (includeAll: boolean) => Promise<IBoard[]>;
   rmm: AssetRmmCallbacks;
+  /**
+   * Internal users for holder pickers (equipment custody). Injected because the user directory lives in
+   * @alga-psa/user-composition, which this package may not import. Optional: pickers degrade to
+   * "current holder only" when absent.
+   */
+  listInternalUsers?: () => Promise<IUser[]>;
 }
 
 const AssetCrossFeatureContext = createContext<AssetCrossFeatureCallbacks | null>(null);

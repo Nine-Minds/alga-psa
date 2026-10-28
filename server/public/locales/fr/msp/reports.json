@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Utilisation des heures de forfait",
-        "description": "Surveiller l'utilisation des heures de forfait et identifier les dépassements",
+        "description": "Surveillez l’utilisation des heures au forfait et repérez les dépassements. Les blocs d’heures prépayés (contractuels et ponctuels) y figurent avec leur consommation.",
         "empty": "Aucun contrat basé sur un forfait trouvé"
       },
       "profitability": {
@@ -305,13 +305,21 @@
       "profit": "Bénéfice",
       "margin": "Marge",
       "plusVariableUsage": "+ utilisation variable",
-      "variableUsage": "Utilisation variable"
+      "variableUsage": "Utilisation variable",
+      "service": "Service",
+      "hourlyRate": "Tarif / h",
+      "expirationDate": "Expire",
+      "neverExpires": "Jamais",
+      "adhocBlock": "Ponctuel"
     },
     "statusValues": {
       "active": "Actif",
       "upcoming": "À venir",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "expired": "Expiré",
+      "voided": "Annulé",
+      "all": "Tous les statuts"
     },
     "profitability": {
       "formats": {
@@ -414,6 +422,11 @@
         "allAgreements": "Tous les contrats",
         "currency": "Devise"
       }
+    },
+    "columnsMenu": {
+      "label": "Colonnes",
+      "title": "Colonnes",
+      "reset": "Rétablir les colonnes par défaut"
     }
   },
   "contractPerformance": {

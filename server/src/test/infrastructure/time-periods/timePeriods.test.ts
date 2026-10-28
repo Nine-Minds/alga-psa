@@ -2,9 +2,10 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
-import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { createTimePeriodSettings } from '@alga-psa/scheduling/actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { createNextTimePeriod as createNextTimePeriodForTenant } from '@alga-psa/scheduling/lib/timePeriodAutomation';
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from '../../../types/types.d';
 import * as tenantModule from '../../../lib/tenant';
@@ -55,6 +56,10 @@ describe('Time Periods Infrastructure', () => {
     runSeeds: true
   });
   let tenantId: string;
+
+  // The job-facing creator loads the tenant's settings itself; tests seed them in the DB.
+  const createNext = async (daysThreshold: number, options: { today?: Temporal.PlainDate } = {}) =>
+    (await createNextTimePeriodForTenant(context.db, tenantId, daysThreshold, options)).period;
 
   // Set up test context with database connection
   beforeAll(async () => {
@@ -295,7 +300,7 @@ describe('Time Periods Infrastructure', () => {
       },
       {
         time_period_settings_id: uuidv4(),
-        start_day: 15,
+        start_day: 16,
         end_day: 0,
         frequency: 1,
         frequency_unit: 'month',
@@ -325,17 +330,114 @@ describe('Time Periods Infrastructure', () => {
     const janFirstPeriod = findPeriodByStartDate(periods, '2023-01-01');
     expect(janFirstPeriod).toBeDefined();
     expect(toPlainDate(janFirstPeriod.start_date).toString()).toBe('2023-01-01');
-    expect(toPlainDate(janFirstPeriod.end_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(janFirstPeriod.end_date).toString()).toBe('2023-01-16');
 
     const febFirstPeriod = findPeriodByStartDate(periods, '2023-02-01');
     expect(febFirstPeriod).toBeDefined();
     expect(toPlainDate(febFirstPeriod.start_date).toString()).toBe('2023-02-01');
-    expect(toPlainDate(febFirstPeriod.end_date).toString()).toBe('2023-02-15');
+    expect(toPlainDate(febFirstPeriod.end_date).toString()).toBe('2023-02-16');
 
     const aprFirstPeriod = findPeriodByStartDate(periods, '2023-04-01');
     expect(aprFirstPeriod).toBeDefined();
     expect(toPlainDate(aprFirstPeriod.start_date).toString()).toBe('2023-04-01');
-    expect(toPlainDate(aprFirstPeriod.end_date).toString()).toBe('2023-04-15');
+    expect(toPlainDate(aprFirstPeriod.end_date).toString()).toBe('2023-04-16');
+  });
+
+  describe('generateTimePeriods cadence (T0-3)', () => {
+    const base = (overrides: Partial<ITimePeriodSettings>): ITimePeriodSettings => ({
+      time_period_settings_id: uuidv4(),
+      frequency: 1,
+      frequency_unit: 'week',
+      start_day: 1,
+      end_day: 0,
+      is_active: true,
+      effective_from: createTestDateISO({ year: 2020, month: 1, day: 1 }),
+      effective_to: undefined,
+      created_at: createTestDateISO({}),
+      updated_at: createTestDateISO({}),
+      tenant: tenantId,
+      ...overrides,
+    } as ITimePeriodSettings);
+    const pairs = (periods: any[]) =>
+      periods
+        .map((p) => [toPlainDate(p.start_date).toString(), toPlainDate(p.end_date).toString()])
+        .sort((a, b) => (a[0] < b[0] ? -1 : 1));
+
+    it('skips inactive settings', async () => {
+      const periods = await generateTimePeriods(
+        [base({ is_active: false }), base({ frequency_unit: 'day', frequency: 7, start_day: undefined })],
+        '2026-03-02',
+        '2026-03-16'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2026-03-02', '2026-03-09'],
+        ['2026-03-09', '2026-03-16'],
+      ]);
+      expect(await generateTimePeriods([base({ is_active: false })], '2026-03-02', '2026-03-30')).toEqual([]);
+    });
+
+    it('includes a period whose exclusive end equals the range end', async () => {
+      const periods = await generateTimePeriods([base({})], '2026-03-02', '2026-03-16');
+      expect(pairs(periods)).toEqual([
+        ['2026-03-02', '2026-03-09'],
+        ['2026-03-09', '2026-03-16'],
+      ]);
+    });
+
+    it('includes a period ending exactly at effective_to', async () => {
+      const periods = await generateTimePeriods(
+        [base({ effective_to: createTestDateISO({ year: 2026, month: 3, day: 16 }) })],
+        '2026-03-02',
+        '2026-04-30'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2026-03-02', '2026-03-09'],
+        ['2026-03-09', '2026-03-16'],
+      ]);
+    });
+
+    it('aligns a yearly profile to its configured start month', async () => {
+      const periods = await generateTimePeriods(
+        [base({ frequency_unit: 'year', start_day: undefined, start_month: 7, start_day_of_month: 1, end_month: 6, end_day_of_month: 0 })],
+        '2023-01-01',
+        '2025-07-01'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2023-07-01', '2024-07-01'],
+        ['2024-07-01', '2025-07-01'],
+      ]);
+    });
+
+    it('ends a seasonal yearly profile at end_month and restarts on start_month', async () => {
+      const periods = await generateTimePeriods(
+        [base({ frequency_unit: 'year', start_day: undefined, start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 })],
+        '2023-01-01',
+        '2025-01-01'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2023-07-01', '2024-01-01'],
+        ['2024-07-01', '2025-01-01'],
+      ]);
+    });
+
+    it('reads a monthly end_day as the last included day, so 1-15 / 16-end tile', async () => {
+      const periods = await generateTimePeriods(
+        [
+          base({ frequency_unit: 'month', start_day: 1, end_day: 15 }),
+          base({ frequency_unit: 'month', start_day: 16, end_day: 0 }),
+        ],
+        '2026-01-01',
+        '2026-04-01'
+      );
+      expect(pairs(periods)).toEqual([
+        ['2026-01-01', '2026-01-16'],
+        ['2026-01-16', '2026-02-01'],
+        ['2026-02-01', '2026-02-16'],
+        ['2026-02-16', '2026-03-01'],
+        ['2026-03-01', '2026-03-16'],
+        ['2026-03-16', '2026-04-01'],
+      ]);
+    });
   });
 
   describe('createNextTimePeriod', () => {
@@ -368,10 +470,11 @@ describe('Time Periods Infrastructure', () => {
         tenant: tenantId,
       };
       await createTimePeriod(initialPeriod);
+      await tenantTable(context, 'time_period_settings').insert(settings.map(withSettingsDefaults));
 
-      // createNextTimePeriod is a plain function, not a withAuth action: it
-      // reads the tenant from async-local context and throws without one.
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 7));
+      // createNextTimePeriod is a plain function, not a withAuth action: it loads the
+      // tenant's own active settings and takes no settings from the caller.
+      const result = await createNext(7);
 
       expect(result).not.toBeNull();
       expect(result!.tenant).toBe(tenantId);
@@ -400,8 +503,9 @@ describe('Time Periods Infrastructure', () => {
         tenant: tenantId,
       };
       await createTimePeriod(initialPeriod);
+      await tenantTable(context, 'time_period_settings').insert(settings.map(withSettingsDefaults));
 
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 5));
+      const result = await createNext(5);
 
       expect(result).toBeNull();
     });
@@ -440,7 +544,7 @@ describe('Time Periods Infrastructure', () => {
       const setting = sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 }));
       await insertSetting(setting);
 
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod([setting], 5));
+      const result = await createNext(5);
 
       expect(result).not.toBeNull();
       // [01-14, 01-21) is the current week; 01-21 is within 5 days, so 01-21..01-28 follows.
@@ -454,11 +558,14 @@ describe('Time Periods Infrastructure', () => {
       const today = Temporal.PlainDate.from('2024-01-17');
       const far = sundayWeekly('2024-02-04T00:00:00.000Z'); // 18 days out
       await insertSetting(far);
-      expect(await runWithTenant(tenantId, () => createNextTimePeriod([far], 5, { today }))).toBeNull();
+      expect(await createNext(5, { today })).toBeNull();
       expect(await storedPeriods()).toEqual([]);
 
       const near = { ...far, effective_from: '2024-01-21T00:00:00.000Z' }; // 4 days out
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod([near], 5, { today }));
+      await tenantTable(context, 'time_period_settings')
+        .where({ time_period_settings_id: far.time_period_settings_id })
+        .update({ effective_from: near.effective_from });
+      const result = await createNext(5, { today });
       expect(result).not.toBeNull();
       expect((await storedPeriods())[0]).toEqual(['2024-01-21', '2024-01-28']);
     });
@@ -512,7 +619,7 @@ describe('Time Periods Infrastructure', () => {
         expect(String(created.effective_from).slice(0, 10)).toBe('2026-10-04');
 
         const today = Temporal.PlainDate.from('2026-10-10');
-        await runWithTenant(tenantId, () => createNextTimePeriod([created], 0, { today }));
+        await createNext(0, { today });
         expect(await storedPeriods()).toEqual([['2026-10-04', '2026-10-11']]);
       });
 
@@ -551,7 +658,7 @@ describe('Time Periods Infrastructure', () => {
         await ensureTimePeriodCoversDate(context.db, tenantId, today);
         expect(await storedPeriods()).toEqual([]);
 
-        await runWithTenant(tenantId, () => createNextTimePeriod([created], 14, { today }));
+        await createNext(14, { today });
         expect((await storedPeriods())[0]).toEqual(['2026-10-18', '2026-10-25']);
       });
 

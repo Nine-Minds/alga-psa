@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { v4 as uuidv4 } from 'uuid'
 
 import { createTestDbConnection } from '@main-test-utils/dbConfig'
+import { insertTestServiceType } from '@main-test-utils/serviceTypeFixtures'
 
 let db: Knex
 let tenantId: string
@@ -255,13 +256,9 @@ async function ensureTenant(db: Knex): Promise<string> {
 
 async function seedService(db: Knex, tenant: string): Promise<{ serviceTypeId: string; serviceId: string }> {
   const serviceTypeId = uuidv4()
-  await tenantTable(db, tenant, 'service_types').insert({
+  await insertTestServiceType(db, tenant, {
     id: serviceTypeId,
-    tenant,
     name: `Ext Service Type ${serviceTypeId.slice(0, 6)}`,
-    order_number: Math.floor(Math.random() * 1000000),
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   })
 
   const serviceId = uuidv4()

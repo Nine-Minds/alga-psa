@@ -1,8 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
+import { createNextTimePeriod } from '@alga-psa/scheduling/lib/timePeriodAutomation';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 
@@ -46,14 +45,15 @@ export type NextTimePeriodOutcome =
 export async function createNextTimePeriodForTenant(tenantId: string): Promise<NextTimePeriodOutcome> {
   return runWithTenant(tenantId, async () => {
     const tenantKnex = await getConnection(tenantId);
-    const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
+    // The settings are loaded from the tenant's own rows inside createNextTimePeriod;
+    // this job cannot supply them.
+    const { settingsConfigured, period: result } = await createNextTimePeriod(tenantKnex, tenantId);
 
-    if (!settings || settings.length === 0) {
+    if (!settingsConfigured) {
       logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
       return { status: 'skipped', details: 'Skipped - no time period settings configured' };
     }
 
-    const result = await createNextTimePeriod(settings);
     const details = result
       ? `Created new time period ${result.start_date} to ${result.end_date}`
       : 'No new time period needed';

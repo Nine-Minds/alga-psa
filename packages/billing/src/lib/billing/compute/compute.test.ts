@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IBillingResult, IClientContractLine } from "@alga-psa/types";
 import { computeFixedCharges } from "./computeFixedCharges";
-import { computeTimeBasedCharges } from "./computeTimeBasedCharges";
+import { computeTimeBasedCharges, type HourlyServiceConfigEntry } from "./computeTimeBasedCharges";
 import {
   computeUsageBasedCharges,
   type UsageServiceConfigEntry,
@@ -30,6 +30,8 @@ const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
     taxAmount: Math.round(netAmountInCents * 0.1),
   }),
 };
+
+const NO_TAX_PORTS: ChargeComputeTaxPorts = { ...TEN_PERCENT_PORTS, getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }), getClientDefaultTaxRegionCode: () => null };
 
 const PERIOD = { startDate: "2026-08-01", endDate: "2026-09-01" };
 
@@ -265,7 +267,7 @@ describe("computeFixedCharges", () => {
 });
 
 describe("computeTimeBasedCharges", () => {
-  const HOURLY_CONFIG = {
+  const HOURLY_CONFIG: HourlyServiceConfigEntry = {
     config: {
       config_id: "cfg-h",
       hourly_rate: 15000,
@@ -471,12 +473,104 @@ describe("computeTimeBasedCharges", () => {
   });
 
   it("throws when no rate can be resolved", async () => {
+    const noContractRate = { config: { ...HOURLY_CONFIG.config, hourly_rate: null }, userTypeRates: new Map<string, number>() };
     expect(() =>
       computeTimeBasedCharges(
-        timeInputs({ timeEntries: [entry({ currency_rate: null })] }),
+        timeInputs({ serviceConfigMap: new Map([["svc-h", noContractRate]]), timeEntries: [entry({ currency_rate: null })] }),
         TEN_PERCENT_PORTS,
       ),
     ).toThrow(/Missing pricing for time entry/);
+  });
+
+  // Guide 09 / T13: billing must use the persisted contract terms — the line's
+  // minimum and rounding (what the contract screen shows and edits) and the
+  // contract's own hourly rate — not a catalog price added as a workaround.
+  describe("persisted contract line terms", () => {
+    // Shape of the White Rabbit review contract: the per-service copy says 0/0,
+    // the contract line says a 15-minute minimum rounded to 15 minutes, and the
+    // contract rate is $100.00/hr with no catalog price at all.
+    const contractConfig = (overrides: Record<string, unknown> = {}) => ({
+      config: { config_id: "cfg-h", hourly_rate: 10000, minimum_billable_time: 0, round_up_to_nearest: 0, ...overrides },
+      userTypeRates: new Map<string, number>(),
+    });
+    const LINE_TERMS = { minimum_billable_time: 15, round_up_to_nearest: 15 };
+    const run = (minutes: number[], options: { config?: ReturnType<typeof contractConfig>; plan?: Record<string, unknown>; currencyRate?: number | null; line?: Record<string, unknown> } = {}) =>
+      computeTimeBasedCharges(
+        {
+          ...timeInputs({
+            serviceConfigMap: new Map([["svc-h", options.config ?? contractConfig()]]),
+            timeEntries: minutes.map((billable, index) => entry({ entry_id: `e-${index}`, user_type: null, billable_duration: billable, currency_rate: options.currencyRate ?? null })),
+          }),
+          plan: options.plan ?? LINE_TERMS,
+          ...(options.line ? { clientContractLine: line({ contract_line_type: "Hourly", ...options.line }) } : {}),
+        },
+        NO_TAX_PORTS,
+      );
+
+    it("bills an entry below the line minimum at the minimum, at the contract rate", () => {
+      const { charges, explanations } = run([1]);
+      expect(charges).toHaveLength(1);
+      expect(charges[0]).toMatchObject({ quantity: 0.25, rate: 10000, total: 2500 });
+      expect(charges[0].workItemSnapshot).toMatchObject({ billedMinutes: 15, rate: 10000, netAmount: 2500 });
+      expect(explanations[0].markers).toContain("minimum_applied");
+      expect(explanations[0].inputs[0].value).toContain("(contract rate)");
+    });
+
+    it("rounds entries up to the line increment", () => {
+      const { charges } = run([16, 30, 31, 6]);
+      expect(charges.map((charge) => [charge.quantity, charge.total])).toEqual([[0.5, 5000], [0.5, 5000], [0.75, 7500], [0.25, 2500]]);
+    });
+
+    it("bills the guide 09 review entries at exactly $425.00 (17 entries of 1, 6 and 15 minutes)", () => {
+      const minutes = [...Array(6).fill(1), ...Array(5).fill(6), ...Array(6).fill(15)];
+      const { charges } = run(minutes);
+      expect(charges).toHaveLength(17);
+      expect(charges.every((charge) => charge.quantity === 0.25 && charge.rate === 10000 && charge.total === 2500)).toBe(true);
+      expect(charges.reduce((sum, charge) => sum + charge.total, 0)).toBe(42500);
+    });
+
+    it("the contract rate wins over the catalog price", () => {
+      const { charges } = run([60], { currencyRate: 15000 });
+      expect(charges[0]).toMatchObject({ quantity: 1, rate: 10000, total: 10000 });
+    });
+
+    it("uses the configured custom rate when the service has no hourly rate, then the catalog price", () => {
+      expect(run([60], { config: contractConfig({ hourly_rate: null, custom_rate: 12000 }), currencyRate: 15000 }).charges[0].total).toBe(12000);
+      expect(run([60], { config: contractConfig({ hourly_rate: null }), currencyRate: 15000 }).charges[0].total).toBe(15000);
+    });
+
+    it("an entry custom rate and a user-type rate still win over the contract rate", () => {
+      const byUserType = contractConfig();
+      byUserType.userTypeRates.set("contractor", 9000);
+      const typed = computeTimeBasedCharges({ ...timeInputs({ serviceConfigMap: new Map([["svc-h", byUserType]]), timeEntries: [entry({ user_type: "contractor", billable_duration: 60 })] }), plan: LINE_TERMS }, NO_TAX_PORTS);
+      expect(typed.charges[0].rate).toBe(9000);
+      const custom = computeTimeBasedCharges({ ...timeInputs({ serviceConfigMap: new Map([["svc-h", contractConfig()]]), timeEntries: [entry({ custom_rate: 8000, billable_duration: 60 })] }), plan: LINE_TERMS }, NO_TAX_PORTS);
+      expect(custom.charges[0].rate).toBe(8000);
+    });
+
+    it("applies the per-service terms only when the line carries none", () => {
+      const perService = contractConfig({ minimum_billable_time: 30, round_up_to_nearest: 10 });
+      expect(run([1], { config: perService, plan: {} }).charges[0]).toMatchObject({ quantity: 0.5, total: 5000 });
+      expect(run([1], { config: perService, plan: { minimum_billable_time: null, round_up_to_nearest: null } }).charges[0].total).toBe(5000);
+      expect(run([1], { config: perService }).charges[0].total).toBe(2500);
+    });
+
+    it("an explicit line 0 means no minimum and no rounding; it does not fall through to the per-service copy", () => {
+      const perService = contractConfig({ minimum_billable_time: 30, round_up_to_nearest: 30 });
+      const { charges, explanations } = run([1], {
+        config: perService,
+        plan: { minimum_billable_time: 0, round_up_to_nearest: 0 },
+      });
+      expect(charges[0]).toMatchObject({ rate: 10000, total: Math.round((1 / 60) * 10000) });
+      expect(charges[0].total).toBe(167);
+      expect(charges[0].workItemSnapshot).toMatchObject({ billedMinutes: 1 });
+      expect(explanations[0].markers).not.toContain("minimum_applied");
+    });
+
+    it("a system-managed default line bills raw minutes at the catalog price", () => {
+      const { charges } = run([6], { currencyRate: 15000, line: { is_system_managed_default: true } });
+      expect(charges[0]).toMatchObject({ quantity: 0.1, rate: 15000, total: 1500 });
+    });
   });
 
   it("freezes a ticket work-item snapshot with billed (rounded) minutes and integer money", async () => {

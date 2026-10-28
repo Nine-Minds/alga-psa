@@ -6,7 +6,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
-import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight, Edit } from 'lucide-react';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import { unitFixedServiceAmountCents } from '../../../lib/fixedServiceBasis';
 import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -23,6 +24,9 @@ const isReturnedActionError = (value: unknown) =>
 interface ContractOverviewProps {
   contractId: string;
   onNavigateToLines?: () => void;
+  /** Opens the Contract Lines tab with this line expanded and in edit mode. Omit (or set isReadOnly) to hide the Edit action. */
+  onEditLine?: (contractLineId: string) => void;
+  isReadOnly?: boolean;
 }
 
 const getTypeIcon = (type: 'Fixed' | 'Hourly' | 'Usage') => {
@@ -47,6 +51,13 @@ const getTypeBadgeVariant = (type: 'Fixed' | 'Hourly' | 'Usage'): 'info' | 'succ
   }
 };
 
+// A member reads as recurring seats (quantity x unit rate) when it is explicitly
+// unit-priced OR a catalog product: the engine bills products per unit whatever
+// their stored pricing_basis, so a legacy 'bundle' product row must never be
+// captioned as an "allocation of the bundle price".
+const billedPerUnit = (service: { pricing_basis: 'unit' | 'bundle' | null; item_kind?: string | null }): boolean =>
+  service.pricing_basis === 'unit' || service.item_kind === 'product';
+
 const ContractLineCard: React.FC<{
   line: IContractLineOverview;
   isExpanded: boolean;
@@ -57,6 +68,9 @@ const ContractLineCard: React.FC<{
   formatFrequencyLabel: (frequency: string) => string;
   formatServiceCountLabel: (count: number) => string;
   formatContractLineType: (value: string) => string;
+  billingTimingLabel: string;
+  editLabel?: string;
+  onEditLine?: () => void;
   includedServicesLabel: string;
   noServicesConfiguredLabel: string;
   billedOnRecordedUsageLabel: string;
@@ -82,6 +96,9 @@ const ContractLineCard: React.FC<{
   formatFrequencyLabel,
   formatServiceCountLabel,
   formatContractLineType,
+  billingTimingLabel,
+  editLabel,
+  onEditLine,
   includedServicesLabel,
   noServicesConfiguredLabel,
   billedOnRecordedUsageLabel,
@@ -94,12 +111,20 @@ const ContractLineCard: React.FC<{
   reportPeriodCountLabel,
   onStartLegacyTransition,
 }) => {
+  // The line's own rate is the amount for a bundle. A line billing product
+  // members is quantity x rate: the server resolves that with the shared
+  // valuation, and the line rate (a historical 0.00 placeholder) is never
+  // printed in its place -- no amount beats a wrong A$0.00.
+  const hasProductMembers = line.services.some((service) => service.item_kind === 'product');
+  const headerAmountCents = hasProductMembers ? (line.recurring_amount ?? null) : line.base_rate;
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
+      <div className="flex items-center">
       <button
         type="button"
+        id={`contract-overview-line-toggle-${line.contract_line_id}`}
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors text-left"
+        className="flex-1 min-w-0 flex items-center justify-between p-3 hover:bg-muted transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           {getTypeIcon(line.contract_line_type)}
@@ -111,10 +136,12 @@ const ContractLineCard: React.FC<{
               </Badge>
               <span>•</span>
               <span>{formatFrequencyLabel(line.billing_frequency)}</span>
-              {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
+              <span>•</span>
+              <span data-testid={`overview-line-billing-timing-${line.contract_line_id}`}>{billingTimingLabel}</span>
+              {line.contract_line_type === 'Fixed' && headerAmountCents !== null && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(line.base_rate, currencyCode)}</span>
+                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(headerAmountCents, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -133,6 +160,19 @@ const ContractLineCard: React.FC<{
           )}
         </div>
       </button>
+      {onEditLine && (
+        <button
+          type="button"
+          id={`contract-overview-edit-line-${line.contract_line_id}`}
+          aria-label={`${editLabel} ${line.contract_line_name}`}
+          onClick={onEditLine}
+          className="flex items-center gap-1 mr-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-muted rounded"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          {editLabel}
+        </button>
+      )}
+      </div>
 
       {isExpanded && line.services.length > 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
@@ -150,7 +190,7 @@ const ContractLineCard: React.FC<{
                       at a unit rate, a bundle member's quantity only allocates
                       the line total, and Usage bills records only. */}
                   {line.contract_line_type !== 'Usage' &&
-                    service.pricing_basis === 'unit' &&
+                    billedPerUnit(service) &&
                     service.quantity != null && (
                       <span data-testid={`fixed-recurring-seats-${service.service_id}`}>
                         {(() => {
@@ -169,7 +209,7 @@ const ContractLineCard: React.FC<{
                       </span>
                     )}
                   {line.contract_line_type !== 'Usage' &&
-                    service.pricing_basis !== 'unit' &&
+                    !billedPerUnit(service) &&
                     service.quantity != null &&
                     service.quantity > 1 && (
                       <>
@@ -242,7 +282,7 @@ const ContractLineCard: React.FC<{
                   {/* A unit-priced row already states its rate inside the
                       seat calculation; repeating it here would read as a
                       second, separate amount. */}
-                  {service.custom_rate !== null && service.pricing_basis !== 'unit' && (
+                  {service.custom_rate !== null && !billedPerUnit(service) && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
                       {formatCurrencyCents(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
@@ -267,7 +307,9 @@ const ContractLineCard: React.FC<{
 
 export const ContractOverview: React.FC<ContractOverviewProps> = ({
   contractId,
-  onNavigateToLines
+  onNavigateToLines,
+  onEditLine,
+  isReadOnly = false,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
@@ -487,7 +529,16 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
             {onNavigateToLines && (
               <button
                 type="button"
-                onClick={onNavigateToLines}
+                id="contract-overview-view-details"
+                onClick={() => {
+                  // A single line deep-links to it. The parent decides whether that
+                  // opens edit mode (read-only contracts only expand it).
+                  if (overview.contractLines.length === 1 && onEditLine) {
+                    onEditLine(overview.contractLines[0].contract_line_id);
+                  } else {
+                    onNavigateToLines();
+                  }
+                }}
                 className="text-xs text-blue-600 hover:text-blue-800 mt-1"
               >
                 {t('contractOverview.stats.viewDetails', { defaultValue: 'View details' })} →
@@ -554,6 +605,9 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   formatFrequencyLabel={formatFrequencyLabel}
                   formatServiceCountLabel={formatServiceCountLabel}
                   formatContractLineType={formatContractLineType}
+                  billingTimingLabel={getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
+                  editLabel={t('common.actions.edit', { defaultValue: 'Edit' })}
+                  onEditLine={onEditLine && !isReadOnly ? () => onEditLine(line.contract_line_id) : undefined}
                   includedServicesLabel={includedServicesLabel}
                   noServicesConfiguredLabel={noServicesConfiguredLabel}
                   billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}

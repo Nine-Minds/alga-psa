@@ -204,6 +204,10 @@
     "passwordMismatch": "Passwords do not match"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.",
+      "acceptancePending": "The customer administrator must accept co-management before this workspace can be used."
+    },
     "validation": {
       "required": "{{field}} is required.",
       "invalidType": "{{field}} has the wrong type.",
@@ -1580,7 +1584,42 @@
     }
   },
   "labels": {
-    "printColumns": "Print columns"
+    "printColumns": "Print columns",
+    "dialog": {
+      "assetTitle": "Print asset labels",
+      "batch_one": "One tag for the held item ({{count}})",
+      "batch_other": "One tag per held item ({{count}})",
+      "count_one": "{{count}} selected",
+      "count_other": "{{count}} selected",
+      "failed": "The labels could not be printed.",
+      "item": "Item",
+      "layout": "Layout",
+      "linkedAsset": "Linked asset",
+      "noAsset": "No asset",
+      "notFound": "These records could not be opened.",
+      "openPdf": "Open PDF",
+      "previewBatch_one": "Print {{count}} tag for the held item.",
+      "previewBatch_other": "Print {{count}} tags, one per held item.",
+      "previewPicked": "The tag will show this item's location and next action.",
+      "previewPickedNotHeld": "This item is not held, so the tag shows no location.",
+      "previewSingle": "The tag will show {{location}}.",
+      "previewSingleNoLocation": "The tag will show this item's next action.",
+      "previewSummary_one": "{{count}} item held.",
+      "previewSummary_other": "{{count}} items held.",
+      "printed_one": "Printed {{count}} label.",
+      "printed_other": "Printed {{count}} labels.",
+      "printing": "Preparing…",
+      "print": "Print",
+      "reason": "Reason",
+      "skipFailures": "Skip these and print the rest",
+      "skipped_one": "{{count}} record was skipped because it could not be opened.",
+      "skipped_other": "{{count}} records were skipped because they could not be opened.",
+      "template": "Template",
+      "ticketTitle": "Print work tags",
+      "tooMany": "You can print at most {{max}} labels at a time.",
+      "unnamedAsset": "Unnamed asset",
+      "useTemplate": "Use {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Checking Dependencies",
@@ -2172,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Switch view"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} more tags: {{names}}"
   }
 }
