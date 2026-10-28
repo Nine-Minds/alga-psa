@@ -104,4 +104,33 @@ describe('ticket comment mentions respect comment audience (N1)', () => {
 
     expect(notified().map((n: any) => n.user_id).sort()).toEqual(['client-1', 'internal-1']);
   });
+  describe('comment edited to add new mentions', () => {
+    const oldContent = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'no mentions yet' }] }]);
+    const updatedEvent = (isInternal: boolean) =>
+      ({
+        id: 'evt-2',
+        eventType: 'TICKET_COMMENT_UPDATED',
+        timestamp: new Date().toISOString(),
+        payload: {
+          tenantId: 'tenant-1',
+          ticketId: 'ticket-1',
+          userId: 'author-1',
+          oldComment: { id: 'c-1', content: oldContent, author: 'Author', isInternal },
+          newComment: { id: 'c-1', content, author: 'Author', isInternal },
+        },
+      }) as any;
+
+    it('internal comment edited to mention a client user: the client is not notified, the internal user is', async () => {
+      await internalNotificationSubscriberTestHarness.handleTicketCommentUpdated(updatedEvent(true), { db: fakeDb });
+
+      expect(notified().map((n: any) => n.user_id)).toEqual(['internal-1']);
+      expect(createNotificationMock.mock.calls.map((c: any[]) => c[1].user_id)).not.toContain('client-1');
+    });
+
+    it('portal-visible comment edited to mention a client user: the client is still notified', async () => {
+      await internalNotificationSubscriberTestHarness.handleTicketCommentUpdated(updatedEvent(false), { db: fakeDb });
+
+      expect(notified().map((n: any) => n.user_id)).toContain('client-1');
+    });
+  });
 });
