@@ -72,6 +72,39 @@ describe('CustomSelect', () => {
     expect(onValueChange).toHaveBeenCalledWith('option-7');
   });
 
+  it('keeps a value that arrives after mount inside a form', async () => {
+    // Radix mirrors the value into a hidden <select> for form submission and
+    // echoes that select's change event back through onValueChange. Before the
+    // option list has registered, the echo carries '' — which used to wipe the
+    // record an edit form had just loaded.
+    const onValueChange = vi.fn();
+    const Harness = () => {
+      const [value, setValue] = React.useState('');
+      React.useEffect(() => {
+        setValue('option-5');
+      }, []);
+      return (
+        <form>
+          <CustomSelect
+            id="prefilled-select"
+            options={options}
+            value={value}
+            required
+            onValueChange={(next) => {
+              onValueChange(next);
+              setValue(next);
+            }}
+          />
+        </form>
+      );
+    };
+
+    render(<Harness />);
+
+    await waitFor(() => expect(screen.getByRole('combobox').textContent).toContain('Option 5'));
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
   it('cancels the just-closed marker timer when unmounted right after closing', async () => {
     const { unmount } = render(
       <CustomSelect id="unmount-select" options={options} value="option-0" onValueChange={() => {}} />
