@@ -1119,7 +1119,7 @@ export const createQuoteFromTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const template = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1207,7 +1207,7 @@ export const duplicateQuote = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1282,7 +1282,7 @@ export const saveQuoteAsTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1360,7 +1360,7 @@ export const createQuoteRevision = withAuth(async (
     quoteId,
     'Permission denied: Cannot update quote'
   );
-  return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
+  return await withTransaction(knex, (trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
   });
 });
 
@@ -2058,7 +2058,7 @@ export const convertQuoteToContract = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2099,7 +2099,7 @@ export const convertQuoteToSalesOrder = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftSalesOrder(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,
@@ -2139,7 +2139,7 @@ export const convertQuoteToInvoice = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2174,7 +2174,7 @@ export const convertQuoteToBoth = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftContractAndInvoice(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,

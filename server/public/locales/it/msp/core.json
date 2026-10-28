@@ -156,7 +156,8 @@
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
       "profile": "Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "tags": "Tag"
     }
   },
   "dashboard": {

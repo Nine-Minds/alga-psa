@@ -949,12 +949,6 @@
       "type": "Tipo",
       "status": "Estado"
     },
-    "assetStatuses": {
-      "active": "Activo",
-      "inactive": "Inactivo",
-      "maintenance": "Mantenimiento",
-      "held_by_msp": "En custodia del MSP"
-    },
     "assetTypes": {
       "workstation": "Puesto de trabajo",
       "server": "Servidor",
@@ -1813,8 +1807,8 @@
     "in_stock": "En stock",
     "maintenance": "En mantenimiento",
     "inactive": "Inactivo",
-    "held_by_msp": "En custodia del MSP",
-    "retired": "Retirado"
+    "retired": "Retirado",
+    "held_by_msp": "En custodia del MSP"
   },
   "assetStatusKinds": {
     "deployable": "Desplegable",
@@ -2078,7 +2072,8 @@
       "doneBody": "{{name}} ({{tag}}) está ahora en custodia del MSP.",
       "printLabel": "Imprimir etiqueta del activo",
       "openAsset": "Abrir activo",
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "inCustodyOption": "{{asset}} — En custodia: {{location}}"
     }
   }
 }

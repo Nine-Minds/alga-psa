@@ -1,4 +1,5 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import { decodeTicketWhere } from './ticketWhereUrl';
 import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
@@ -137,5 +138,6 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     sortBy: params.get('sortBy') || 'entered_at',
     sortDirection: (params.get('sortDirection') as 'asc' | 'desc') || 'desc',
     bundleView: (params.get('bundleView') as 'bundled' | 'individual') || 'bundled',
+    where: decodeTicketWhere(params.get('where')).where,
   };
 }

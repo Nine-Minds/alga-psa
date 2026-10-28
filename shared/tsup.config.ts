@@ -3,6 +3,9 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
+    'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
+    'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
@@ -162,6 +165,8 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
+    /^@alga-psa\/predicates/,
     ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

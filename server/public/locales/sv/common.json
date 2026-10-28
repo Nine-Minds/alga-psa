@@ -2207,5 +2207,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Byt vy"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} taggar till: {{names}}"
   }
 }

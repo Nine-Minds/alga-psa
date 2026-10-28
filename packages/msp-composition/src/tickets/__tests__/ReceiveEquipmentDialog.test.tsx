@@ -3,12 +3,17 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mocks = vi.hoisted(() => ({ receiveEquipment: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  receiveEquipment: vi.fn(),
+  assets: [] as any[],
+  badges: new Map<string, any>(),
+  mutate: vi.fn(),
+}));
 
 vi.mock('../receiveEquipmentActions', () => ({ receiveEquipment: mocks.receiveEquipment }));
 vi.mock('swr', () => ({
-  default: () => ({ data: [] }),
-  useSWRConfig: () => ({ mutate: vi.fn() }),
+  default: () => ({ data: mocks.assets }),
+  useSWRConfig: () => ({ mutate: mocks.mutate }),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   // Resolve defaultValue with {{params}} interpolation, like i18next with no catalogue.
@@ -27,15 +32,17 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, onValueChange, options }: any) => (
     <select id={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
-      {options.map((o: any) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+      {id.endsWith("-asset") ? <option value="">--</option> : null}
+      {options.map((o: any) => (<option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>))}
     </select>
   ),
 }));
+vi.mock('@alga-psa/assets/components/custody/CustodyBadge', () => ({ useCustodyBadges: () => mocks.badges }));
 vi.mock('@alga-psa/ui/components/labels/LabelPrintDialog', () => ({ LabelPrintDialog: () => null }));
 vi.mock('@alga-psa/assets/actions/assetCustodyActions', () => ({ listCustodyBins: vi.fn(), listCustodyLocations: vi.fn() }));
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({ listAssets: vi.fn() }));
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({ uploadDocument: vi.fn() }));
-vi.mock('@alga-psa/assets/lib/assetCacheKeys', () => ({ matchAssetCacheKeys: () => () => false, matchEntityAssetsCacheKeys: () => () => false }));
+vi.mock('@alga-psa/assets/lib/assetCacheKeys', () => ({ matchAssetCacheKeys: (ids: string[]) => ({ ids }) }));
 vi.mock('@alga-psa/assets/components/shared/useAssetTypeOptions', () => ({
   useAssetTypeRegistry: () => [{ slug: 'docking_station', name: 'Docking Station', is_builtin: false }],
   buildAssetTypeOptions: (entries: any[], _t: unknown, opts: any) => [
@@ -125,5 +132,73 @@ describe('ReceiveEquipmentDialog New item type', () => {
     fireEvent.click(document.getElementById(`${idBase}-submit`)!);
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('Something went wrong.');
+  });
+});
+
+describe('ReceiveEquipmentDialog existing-asset picker', () => {
+  beforeEach(() => {
+    mocks.receiveEquipment.mockReset();
+    mocks.mutate.mockReset();
+    mocks.assets = [
+      { asset_id: 'a-free', name: 'Free Laptop', asset_tag: 'F-1' },
+      { asset_id: 'a-held', name: 'Held Dock', asset_tag: 'H-1' },
+    ];
+    mocks.badges = new Map();
+  });
+  afterEach(() => {
+    cleanup();
+    mocks.assets = [];
+    mocks.badges = new Map();
+  });
+
+  const openExisting = async () => {
+    render(<ReceiveEquipmentDialog ticket={ticket} />);
+    fireEvent.click(screen.getByText('Receive equipment'));
+    return (await screen.findByDisplayValue('--')) as HTMLSelectElement;
+  };
+
+  it('disables an asset that is already in custody and shows where it is', async () => {
+    mocks.badges = new Map([['a-held', { asset_id: 'a-held', state: 'in_office', location_label: 'Main Warehouse / Shelf C1', next_action_party: 'msp' }]]);
+    const select = await openExisting();
+    const held = Array.from(select.options).find((o) => o.value === 'a-held')!;
+    const free = Array.from(select.options).find((o) => o.value === 'a-free')!;
+    expect(held.disabled).toBe(true);
+    expect(held.textContent).toBe('Held Dock (H-1) — In custody: Main Warehouse / Shelf C1');
+    expect(free.disabled).toBe(false);
+  });
+
+  it('says "With vendor" for a held asset that is away', async () => {
+    mocks.badges = new Map([['a-held', { asset_id: 'a-held', state: 'with_vendor', location_label: null, next_action_party: 'vendor' }]]);
+    const select = await openExisting();
+    expect(Array.from(select.options).find((o) => o.value === 'a-held')!.textContent).toContain('In custody: With vendor');
+  });
+
+  it('leaves every option enabled when the badge read failed (empty map); the server stays the gate', async () => {
+    const select = await openExisting();
+    expect(Array.from(select.options).every((o) => !o.disabled)).toBe(true);
+    expect(Array.from(select.options).map((o) => o.textContent).join('|')).not.toContain('In custody');
+  });
+
+  it('shows a server refusal in the top alert, focuses the asset field and marks it aria-invalid', async () => {
+    mocks.receiveEquipment.mockResolvedValue({ success: false, error: { code: 'conflict', message: 'That asset is already in custody.' } });
+    const select = await openExisting();
+    fireEvent.change(select, { target: { value: 'a-free' } });
+    fireEvent.click(document.getElementById(`${idBase}-submit`)!);
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('That asset is already in custody.');
+    await waitFor(() => expect(document.activeElement).toBe(select));
+    expect(select.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('invalidates this ticket\'s Assets panel after a successful receive', async () => {
+    mocks.receiveEquipment.mockResolvedValue({
+      success: true,
+      data: { asset: { asset_id: 'a-free', name: 'Free Laptop', asset_tag: 'F-1' } },
+    });
+    const select = await openExisting();
+    fireEvent.change(select, { target: { value: 'a-free' } });
+    fireEvent.click(document.getElementById(`${idBase}-submit`)!);
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalledTimes(2));
+    expect(mocks.mutate.mock.calls[0][0]).toEqual({ ids: ['a-free', 't-1'] });
   });
 });

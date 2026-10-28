@@ -1,3 +1,4 @@
+import { decodeTicketWhere } from '@alga-psa/tickets/lib/ticketWhereUrl';
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -152,6 +153,11 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       };
 
       filtersFromURL.tags = normalizeTags(params.tags);
+    }
+    if (params?.where && typeof params.where === 'string') {
+      // Same v1 form the container writes; malformed or unknown-version values are dropped.
+      const decoded = decodeTicketWhere(params.where);
+      if (decoded.where) filtersFromURL.where = decoded.where;
     }
     if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
       // The CSV comes straight off the URL; only well-formed assignee ids may
@@ -327,7 +333,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       slaStatusFilter: initialFilters.slaStatusFilter || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',
-      bundleView: initialFilters.bundleView || 'bundled'
+      bundleView: initialFilters.bundleView || 'bundled',
+      where: initialFilters.where || undefined,
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
