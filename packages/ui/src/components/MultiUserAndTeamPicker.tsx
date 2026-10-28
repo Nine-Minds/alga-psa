@@ -195,8 +195,11 @@ const MultiUserAndTeamPicker = ({
   const filteredTeams = teams
     .filter(team => {
       if (!searchQuery) return true;
+      const needle = searchQuery.toLowerCase();
       const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
+      return `${team.team_name || ''}`.toLowerCase().includes(needle)
+        || leadName.includes(needle)
+        || (team.description || '').toLowerCase().includes(needle);
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
   const selectedTeams = teams.filter(team => validTeamValues.includes(team.team_id));
@@ -722,9 +725,14 @@ const MultiUserAndTeamPicker = ({
                           avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                           size="sm"
                         />
-                        <div className="ml-2 flex flex-col">
+                        <div className="ml-2 flex flex-col min-w-0">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
+                          {team.description && (
+                            <span className="text-xs text-gray-500 truncate" title={team.description}>
+                              {team.description}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
