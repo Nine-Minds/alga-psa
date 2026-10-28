@@ -18,6 +18,8 @@ Ticket: alga-2026-0002848   Design: docs/plans/2026-10-26-cm-l0g-plan.md
 | `scripts/lib/n1-schema.mjs` | test | structural N-1 assertions |
 | `scripts/tests/n1-schema.test.mjs` | test | |
 | `scripts/ci/attribute-card.mjs` | test | maps a failing path to the owning charter |
+| `scripts/ci/resolve-base.mjs` | test | gate baseline: the PR merge ref's first parent, not the stale `pull_request.base.sha` |
+| `scripts/tests/resolve-base.test.mjs` | test | |
 | `server/src/test/contract/hotPathScenario.ts` | test | 16 canonical psa-tenant steps |
 | `server/src/test/contract/hotPathQueryBudget.db.test.ts` | test | runner, UNSTABLE vs BUDGET EXCEEDED |
 | `server/src/test/contract/hotPathQueryBudget.json` | fixture | snapshot; raising a number is a reviewed diff |

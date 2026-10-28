@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import YAML from 'yaml';
 
-import { applyAllow, nonAdditiveChanges } from '../ci/artifact-drift.mjs';
+import { applyAllow, nonAdditiveChanges, readAllow, repoRoot } from '../ci/artifact-drift.mjs';
 import { writeDocument } from '../../sdk/scripts/lib/write-openapi-document.mjs';
 
 test('OpenAPI artifacts are identical for shared and copied schema values and preserve their data', (t) => {
@@ -143,4 +143,33 @@ test('allow entries match by pointer prefix and need to be per-document', () => 
   const allow = [{ doc: 'x.json', pointer: '/paths/~1things', reason: 'endpoint retired in this release' }];
   assert.equal(applyAllow(changes, 'x.json', allow).left.length, 0);
   assert.equal(applyAllow(changes, 'y.json', allow).left.length, 1);
+});
+
+// alga-2026-0002797: /api/v1/schedules and /schedules/search stopped documenting the
+// generic WorkV1ListQuery placeholders the schedule-entry handlers never read. The
+// committed allowlist must cover exactly that narrowing, nothing broader.
+test('committed allowlist covers the schedules query narrowing and nothing else', () => {
+  const allow = readAllow();
+  const placeholders = ['page', 'limit', 'sort', 'order', 'fields', 'search', 'query'];
+  for (const name of ['alga-openapi.ce.json', 'alga-openapi.ee.json']) {
+    const docPath = `sdk/docs/openapi/${name}`;
+    const after = JSON.parse(fs.readFileSync(path.join(repoRoot, docPath), 'utf8'));
+    const before = clone(after);
+    for (const p of ['/api/v1/schedules', '/api/v1/schedules/search']) {
+      const op = before.paths[p].get;
+      const have = new Set(op.parameters.map((x) => x.name));
+      for (const n of placeholders) if (!have.has(n)) op.parameters.push({ in: 'query', name: n, required: false, schema: { type: 'string' } });
+    }
+    const search = before.paths['/api/v1/schedules/search'].get;
+    search.extensions = { ...search.extensions, 'x-route-controller-mismatch': true };
+    const changes = nonAdditiveChanges(before, after);
+    assert.ok(changes.length >= 13, `${name}: fixture should reproduce the schedules narrowing`);
+    assert.deepEqual(applyAllow(changes, docPath, allow).left, []);
+
+    // An unrelated removal on a neighbouring time-sheet route is still caught.
+    const unrelated = clone(after);
+    unrelated.paths['/api/v1/time-sheets'].get.parameters = unrelated.paths['/api/v1/time-sheets'].get.parameters.filter((x) => x.name !== 'sort');
+    const left = applyAllow(nonAdditiveChanges(after, unrelated), docPath, allow).left;
+    assert.deepEqual(left.map((c) => c.kind), ['param-removed']);
+  }
 });
