@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
 import { IUser, ITeam, isInteractiveUserType } from '@alga-psa/types';
 import { ChevronDown, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
@@ -402,6 +403,24 @@ const UserAndTeamPicker = ({
   };
 
   const dropdownContent = (
+    // The dropdown is portaled to document.body, so inside a modal dialog it sits
+    // outside that dialog's focus scope: without a scope of its own the dialog's
+    // trap yanks focus out of the search box on the first keystroke. A nested
+    // trapped scope pauses the dialog's, same as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        // Only reclaim focus when closing left it nowhere (option picked); a click
+        // that landed on another field keeps it.
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-[10000] pointer-events-auto"
@@ -413,6 +432,13 @@ const UserAndTeamPicker = ({
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        // The trapped scope loops Tab inside the dropdown, so keyboard users need
+        // a way back out that does not require picking someone.
+        if (e.key === 'Escape') {
+          setIsOpen(false);
+        }
+      }}
     >
       <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
@@ -524,6 +550,7 @@ const UserAndTeamPicker = ({
         </div>
       </div>
     </div>
+    </FocusScope>
   );
 
   return (

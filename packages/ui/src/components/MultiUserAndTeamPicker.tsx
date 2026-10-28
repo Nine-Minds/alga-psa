@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
 import UserAvatar from './UserAvatar';
 import type { IUser } from '@alga-psa/types';
 import { ChevronDown, X, Search, UserMinus } from 'lucide-react';
@@ -570,6 +571,21 @@ const MultiUserAndTeamPicker = ({
   };
 
   const dropdownContent = (
+    // Portaled to document.body, so inside a modal dialog this sits outside that
+    // dialog's focus scope and its trap would steal every keystroke from the
+    // search box. A nested trapped scope pauses the dialog's, as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-50 pointer-events-auto"
@@ -581,6 +597,13 @@ const MultiUserAndTeamPicker = ({
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        // The trapped scope loops Tab inside the dropdown, so keyboard users need
+        // a way back out that does not require picking someone.
+        if (e.key === 'Escape') {
+          setIsOpen(false);
+        }
+      }}
     >
       <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
@@ -758,6 +781,7 @@ const MultiUserAndTeamPicker = ({
         )}
       </div>
     </div>
+    </FocusScope>
   );
 
   return (
