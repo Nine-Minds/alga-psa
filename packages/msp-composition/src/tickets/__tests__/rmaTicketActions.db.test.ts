@@ -40,7 +40,7 @@ vi.mock('@alga-psa/authorization/kernel', async (orig) => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/inventory/actions', () => ({ getRmaCase: async () => holder.rma, openWarrantyClaim: vi.fn() }));
 
-import { mirrorRmaToTicketLinks } from '../rmaTicketActions';
+import { getMirroredVendorCaseSystem, mirrorRmaToTicketLinks } from '../rmaTicketActions';
 
 let knex: Knex;
 let ticketId: string;
@@ -203,5 +203,59 @@ describe('mirrorRmaToTicketLinks (real external-link persistence)', () => {
       expect(rows[0].system).toBe(key);
       expect(rows[0].url).toBe(urlFor('DELL-7788'));
     });
+  });
+});
+
+describe('getMirroredVendorCaseSystem (reads the same link mirrorRmaToTicketLinks writes)', () => {
+  it('reports null before anything has been mirrored', async () => {
+    expect(await links()).toHaveLength(0);
+    expect(await getMirroredVendorCaseSystem(rmaId)).toBeNull();
+  });
+
+  it('reports "" (generic) after a generic mirror, not the raw "generic" system key', async () => {
+    await mirrorRmaToTicketLinks(rmaId);
+    expect(await getMirroredVendorCaseSystem(rmaId)).toBe('');
+  });
+
+  it('reports the custom:<slug> key after mirroring to a tenant custom system, and tracks a switch back to generic', async () => {
+    const slug = `vendorportal_${randomUUID().slice(0, 8).replace(/-/g, '')}`;
+    const key = `custom:${slug}`;
+    await knex('tenant_external_systems').insert({ tenant: holder.tenant, key, label: 'Vendor portal', url_template: null });
+    try {
+      await mirrorRmaToTicketLinks(rmaId, key);
+      expect(await getMirroredVendorCaseSystem(rmaId)).toBe(key);
+
+      await mirrorRmaToTicketLinks(rmaId);
+      expect(await getMirroredVendorCaseSystem(rmaId)).toBe('');
+    } finally {
+      await knex('tenant_external_systems').where({ tenant: holder.tenant, key }).del();
+    }
+  });
+
+  it('is scoped to this RMA: another RMA mirrored to a different system on the same ticket does not affect it', async () => {
+    const slug = `vendorportal_${randomUUID().slice(0, 8).replace(/-/g, '')}`;
+    const key = `custom:${slug}`;
+    await knex('tenant_external_systems').insert({ tenant: holder.tenant, key, label: 'Vendor portal', url_template: null });
+    try {
+      const rmaForOpen = holder.rma;
+      await mirrorRmaToTicketLinks(rmaId); // generic
+      const otherId = randomUUID();
+      const otherRma = { ...rmaForOpen, rma_id: otherId, rma_number: 'RMA-00008', rma_reference: 'DELL-1234' };
+      holder.rma = otherRma;
+      await mirrorRmaToTicketLinks(otherId, key); // custom, not generic
+
+      holder.rma = rmaForOpen; // back to rmaId's shape
+      expect(await getMirroredVendorCaseSystem(rmaId)).toBe('');
+      holder.rma = otherRma;
+      expect(await getMirroredVendorCaseSystem(otherId)).toBe(key);
+      expect(await links()).toHaveLength(2);
+    } finally {
+      await knex('tenant_external_systems').where({ tenant: holder.tenant, key }).del();
+    }
+  });
+
+  it('returns null when the RMA has no ticket, without touching external_entity_links', async () => {
+    holder.rma = { ...holder.rma, ticket_id: null };
+    expect(await getMirroredVendorCaseSystem(rmaId)).toBeNull();
   });
 });

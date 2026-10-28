@@ -91,6 +91,7 @@ export function RmaManager({
   initialDeadOwed,
   mirrorRmaToTicket,
   vendorCaseSystems,
+  getMirroredVendorCaseSystem,
 }: {
   initialCases: IRmaCase[];
   initialDeadOwed: DeadUnitOwedRow[];
@@ -98,6 +99,8 @@ export function RmaManager({
   mirrorRmaToTicket?: (rmaId: string, systemKey?: string) => Promise<unknown>;
   /** Tenant custom external systems a vendor case can be mirrored to (`custom:<slug>`); no picker when empty. */
   vendorCaseSystems?: Array<{ key: string; label: string }>;
+  /** Composition-root action: the vendor-case system currently mirrored to this RMA's ticket, if any. */
+  getMirroredVendorCaseSystem?: (rmaId: string) => Promise<unknown>;
 }) {
   const { money: fmtMinorUnits } = useCurrencyFormat();
   const money = formatMoney(fmtMinorUnits);
@@ -129,6 +132,7 @@ export function RmaManager({
   const [actioning, setActioning] = useState(false);
   const [rmaDetail, setRmaDetail] = useState<IRmaCase | null>(null);
   const [rmaUnavailable, setRmaUnavailable] = useState(false);
+  const [mirroredSystem, setMirroredSystem] = useState<string | undefined>(undefined);
 
   const RMA_TYPE_OPTIONS = [
     { value: 'standard', label: t('rma.types.standard', 'Standard') },
@@ -204,6 +208,32 @@ export function RmaManager({
       cancelled = true;
     };
   }, [rmaIdParam]);
+
+  // Which vendor-case system is already mirrored to this RMA's ticket, so the picker reopens on it
+  // instead of resetting to generic. Keyed on the id, not the whole object: a transition replaces
+  // `rmaDetail` (onChanged below) without changing which link is mirrored.
+  const rmaDetailId = rmaDetail?.rma_id ?? null;
+  useEffect(() => {
+    if (!rmaDetailId || !getMirroredVendorCaseSystem) {
+      setMirroredSystem(undefined);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await getMirroredVendorCaseSystem(rmaDetailId);
+        if (cancelled) return;
+        setMirroredSystem(typeof result === 'string' ? result : undefined);
+      } catch (e) {
+        if (cancelled) return;
+        console.error(e);
+        setMirroredSystem(undefined);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rmaDetailId, getMirroredVendorCaseSystem]);
 
   // `?assetId=` (from the asset's Warranty card) opens the claim dialog prefilled.
   useEffect(() => {
@@ -705,6 +735,7 @@ export function RmaManager({
               locations={locations}
               onMirrorToTicket={mirrorRmaToTicket ? mirrorToTicket : undefined}
               vendorCaseSystems={vendorCaseSystems}
+              selectedVendorCaseSystem={mirroredSystem}
               onChanged={async (updated) => {
                 setRmaDetail(updated);
                 await reload();

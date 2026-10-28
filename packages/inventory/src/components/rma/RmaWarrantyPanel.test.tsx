@@ -33,8 +33,12 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: () => null }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: () => null }));
 vi.mock('@alga-psa/ui/components/TextArea', () => ({ TextArea: () => null }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, value, options, onValueChange }: any) => (
+  // The real component always renders a "nothing selected" row for `placeholder` (even when
+  // `options` has no `value: ''` entry of its own); without an `<option value="">` here, a native
+  // <select> would silently fall back to selecting the first real option instead.
+  default: ({ id, value, placeholder, options, onValueChange }: any) => (
     <select id={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
+      <option value="">{placeholder ?? ''}</option>
       {options?.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   ),
@@ -139,5 +143,72 @@ describe('RmaWarrantyPanel (T029)', () => {
     fireEvent.change(picker, { target: { value: 'custom:dell' } });
     fireEvent.click(document.getElementById('rma-warranty-mirror-ticket')!);
     expect(onMirror).toHaveBeenLastCalledWith(expect.objectContaining({ rma_id: base.rma_id }), 'custom:dell');
+  });
+
+  it('reopens the picker on the already-mirrored system instead of resetting to generic', () => {
+    const onMirror = vi.fn(async () => undefined);
+    const systems = [{ key: 'custom:dell', label: 'Dell portal' }];
+
+    // Known at first render (e.g. the caller already resolved it before mounting this panel).
+    const { unmount } = render(
+      <RmaWarrantyPanel
+        rma={{ ...base, status: 'open' } as any}
+        vendors={[]}
+        locations={[]}
+        onChanged={vi.fn()}
+        onMirrorToTicket={onMirror}
+        vendorCaseSystems={systems}
+        selectedVendorCaseSystem="custom:dell"
+      />,
+    );
+    expect((document.getElementById('rma-warranty-mirror-system') as HTMLSelectElement).value).toBe('custom:dell');
+    fireEvent.click(document.getElementById('rma-warranty-mirror-ticket')!);
+    expect(onMirror).toHaveBeenLastCalledWith(expect.anything(), 'custom:dell');
+    unmount();
+    cleanup();
+
+    // Resolved asynchronously after mount (the real composition-root lookup): the picker must not
+    // stay stuck on the placeholder/generic value once the caller's effect delivers the answer.
+    const { rerender } = render(
+      <RmaWarrantyPanel
+        rma={{ ...base, status: 'open' } as any}
+        vendors={[]}
+        locations={[]}
+        onChanged={vi.fn()}
+        onMirrorToTicket={onMirror}
+        vendorCaseSystems={systems}
+      />,
+    );
+    expect((document.getElementById('rma-warranty-mirror-system') as HTMLSelectElement).value).toBe('');
+    rerender(
+      <RmaWarrantyPanel
+        rma={{ ...base, status: 'open' } as any}
+        vendors={[]}
+        locations={[]}
+        onChanged={vi.fn()}
+        onMirrorToTicket={onMirror}
+        vendorCaseSystems={systems}
+        selectedVendorCaseSystem="custom:dell"
+      />,
+    );
+    expect((document.getElementById('rma-warranty-mirror-system') as HTMLSelectElement).value).toBe('custom:dell');
+  });
+
+  it('never offers "generic" twice: the picker options are exactly the tenant\'s systems, with no explicit empty-value entry', () => {
+    render(
+      <RmaWarrantyPanel
+        rma={{ ...base, status: 'open' } as any}
+        vendors={[]}
+        locations={[]}
+        onChanged={vi.fn()}
+        onMirrorToTicket={vi.fn()}
+        vendorCaseSystems={[{ key: 'custom:dell', label: 'Dell portal' }]}
+      />,
+    );
+    const picker = document.getElementById('rma-warranty-mirror-system') as HTMLSelectElement;
+    const labels = Array.from(picker.options).map((o) => o.textContent);
+    // Exactly one "Generic link" row (the placeholder), not a second one duplicated into `options`.
+    expect(labels.filter((l) => l === 'Generic link')).toHaveLength(1);
+    expect(labels).toEqual(['Generic link', 'Dell portal']);
   });
 });

@@ -104,6 +104,16 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
   const [mirroring, setMirroring] = useState(false);
   const [systemKey, setSystemKey] = useState<string>(selectedVendorCaseSystem ?? '');
 
+  // `selectedVendorCaseSystem` arrives asynchronously (the composition root looks up the ticket's
+  // existing link after this panel mounts), so the initial useState value above is rarely enough:
+  // sync whenever the caller resolves it for *this* case, without stomping a choice the user already
+  // made in this session.
+  const rmaId = rma.rma_id;
+  useEffect(() => {
+    setSystemKey(selectedVendorCaseSystem ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-sync on a new case, not on every keystroke in the picker
+  }, [rmaId, selectedVendorCaseSystem]);
+
   const loadEvents = useCallback(async () => {
     try {
       const result = await listRmaCaseEvents(rma.rma_id);
@@ -461,10 +471,11 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             label={t('rma.warranty.mirrorSystem', 'Vendor case system')}
             value={systemKey}
             placeholder={t('rma.warranty.mirrorSystemGeneric', 'Generic link')}
-            options={[
-              { value: '', label: t('rma.warranty.mirrorSystemGeneric', 'Generic link') },
-              ...vendorCaseSystems.map((s) => ({ value: s.key, label: s.label })),
-            ]}
+            // The placeholder above already renders "Generic link" as the dropdown's empty-state row;
+            // an explicit `{ value: '', label: ... }` option here would show it a second time. `allowClear`
+            // gives the real affordance for going back to generic once a system has been chosen.
+            options={vendorCaseSystems.map((s) => ({ value: s.key, label: s.label }))}
+            allowClear
             onValueChange={(v: string) => setSystemKey(v)}
           />
         )}

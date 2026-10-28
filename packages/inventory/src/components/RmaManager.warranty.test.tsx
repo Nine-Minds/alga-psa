@@ -4,9 +4,10 @@
 import React from 'react';
 import fs from 'node:fs';
 import path from 'node:path';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RmaManager } from './RmaManager';
+import { getRmaCase } from '../actions';
 
 const nav = vi.hoisted(() => ({ params: new URLSearchParams(), replace: vi.fn(), push: vi.fn() }));
 
@@ -143,5 +144,27 @@ describe('RmaManager warranty statuses (T008)', () => {
     render(<RmaManager initialCases={cases as any} initialDeadOwed={[]} />);
     expect(screen.getByTestId('rma-cases-table').querySelectorAll('tbody tr')).toHaveLength(DB_STATUSES.length);
     expect(document.getElementById('rma-clear-status-filter')).toBeNull();
+  });
+
+  it('looks up the mirrored vendor-case system for the opened RMA, not before a case is open', async () => {
+    const rma = mk('open', 9);
+    vi.mocked(getRmaCase).mockResolvedValueOnce(rma as any);
+    const getMirrored = vi.fn(async () => 'custom:dell');
+    nav.params = new URLSearchParams(`rmaId=${rma.rma_id}`);
+    render(
+      <RmaManager
+        initialCases={[rma] as any}
+        initialDeadOwed={[]}
+        getMirroredVendorCaseSystem={getMirrored}
+      />,
+    );
+    await waitFor(() => expect(getMirrored).toHaveBeenCalledTimes(1));
+    expect(getMirrored).toHaveBeenCalledWith(rma.rma_id);
+  });
+
+  it('never looks up a mirrored system when no RMA is open', () => {
+    const getMirrored = vi.fn(async () => 'custom:dell');
+    render(<RmaManager initialCases={[mk('open', 10)] as any} initialDeadOwed={[]} getMirroredVendorCaseSystem={getMirrored} />);
+    expect(getMirrored).not.toHaveBeenCalled();
   });
 });

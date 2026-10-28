@@ -116,6 +116,26 @@ export const mirrorRmaToTicketLinks = withAuth(
   },
 );
 
+/**
+ * The vendor-case system currently mirrored to this RMA's ticket, if any (`''` for the generic link, `null`
+ * when nothing has been mirrored yet). Lets the picker reopen on the system actually in use instead of
+ * resetting to generic, without guessing: it reads the same link `mirrorRmaToTicketLinks` writes.
+ */
+export const getMirroredVendorCaseSystem = withAuth(
+  async (_user, _ctx, rmaId: string): Promise<string | null | RmaTicketError> => {
+    const rma = await getRmaCase(rmaId);
+    if (!rma || "actionError" in rma || "permissionError" in rma) {
+      return (rma as RmaTicketError | null) ?? actionError("RMA case not found.", "features/inventory:errors.rma.caseNotFound");
+    }
+    if (!rma.ticket_id) return null;
+    const links = await getTicketExternalLinks(rma.ticket_id);
+    if (!Array.isArray(links)) return asError(links, "Could not read the ticket's links.");
+    const existing = links.find((l) => (l.metadata as { rma_id?: string } | null)?.rma_id === rma.rma_id);
+    if (!existing) return null;
+    return existing.system === "generic" ? "" : existing.system;
+  },
+);
+
 export interface RmaVendorCaseSystem { key: string; label: string }
 
 /** The tenant's custom external systems, offered as targets for "Mirror vendor case to ticket". */
