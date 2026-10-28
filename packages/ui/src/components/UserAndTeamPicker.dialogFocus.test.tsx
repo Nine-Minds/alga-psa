@@ -55,9 +55,17 @@ const getUserAvatars = vi.fn(async () => new Map<string, string | null>());
 const getTeamAvatars = vi.fn(async () => new Map<string, string | null>());
 
 // Mirrors Quick Add Ticket: a modal dialog whose first field autofocuses, with a
-// picker whose dropdown is portaled to document.body.
-const InModalDialog = ({ children }: { children: React.ReactNode }) => (
-  <RadixDialog.Root open>
+// picker whose dropdown is portaled to document.body. `onOpenChange` stands in
+// for the dialog's dismissal - in the app that is what raises "Discard unsaved
+// changes?" or drops the user back on the dashboard.
+const InModalDialog = ({
+  children,
+  onOpenChange,
+}: {
+  children: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
+}) => (
+  <RadixDialog.Root open onOpenChange={onOpenChange}>
     <RadixDialog.Portal>
       <RadixDialog.Content aria-describedby={undefined}>
         <RadixDialog.Title>Quick Add Ticket</RadixDialog.Title>
@@ -123,6 +131,47 @@ describe('team pickers inside a modal dialog', () => {
     expect(document.activeElement).toBe(document.getElementById('assign-to'));
   });
 
+  it('leaves the surrounding dialog open when escape closes the dropdown', async () => {
+    vi.useFakeTimers();
+    const onOpenChange = vi.fn();
+    render(
+      <InModalDialog onOpenChange={onOpenChange}>
+        <UserAndTeamPicker
+          id="assign-to"
+          value=""
+          onValueChange={vi.fn()}
+          onTeamSelect={vi.fn()}
+          users={users}
+          teams={teams}
+          getUserAvatarUrlsBatch={getUserAvatars as any}
+          getTeamAvatarUrlsBatch={getTeamAvatars as any}
+        />
+      </InModalDialog>
+    );
+
+    await clickTrigger('assign-to');
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+
+    const search = screen.getByPlaceholderText('Search users or teams...') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.keyDown(search, { key: 'Escape' });
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(screen.queryByPlaceholderText('Search users or teams...')).toBeNull();
+    // Escape owned by the dropdown only: the ticket dialog must survive it.
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    // Once the dropdown is gone, escape belongs to the dialog again.
+    await act(async () => {
+      fireEvent.keyDown(document.getElementById('assign-to') as HTMLButtonElement, { key: 'Escape' });
+      vi.advanceTimersByTime(20);
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it('keeps focus in the MultiUserAndTeamPicker search box', async () => {
     vi.useFakeTimers();
     render(
@@ -150,5 +199,38 @@ describe('team pickers inside a modal dialog', () => {
     expect(search).toBeTruthy();
     expect(document.activeElement).toBe(search);
     expect(title.value).toBe('');
+  });
+
+  it('closes only the MultiUserAndTeamPicker dropdown on escape', async () => {
+    vi.useFakeTimers();
+    const onOpenChange = vi.fn();
+    render(
+      <InModalDialog onOpenChange={onOpenChange}>
+        <MultiUserAndTeamPicker
+          id="additional-agents"
+          values={['team-1']}
+          onValuesChange={vi.fn()}
+          users={users}
+          teams={teams}
+          showSearch
+          getUserAvatarUrlsBatch={getUserAvatars as any}
+          getTeamAvatarUrlsBatch={getTeamAvatars as any}
+        />
+      </InModalDialog>
+    );
+
+    await clickTrigger('additional-agents');
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+
+    const search = document.getElementById('additional-agents-search') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.keyDown(search, { key: 'Escape' });
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(document.getElementById('additional-agents-search')).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });

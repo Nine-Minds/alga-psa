@@ -291,6 +291,27 @@ const MultiUserAndTeamPicker = ({
     }
   }, [isOpen, showSearch]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the search
+  // box cannot stop them and the surrounding dialog closed too - taking any
+  // unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsOpen(false);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
+
   // Update dropdown position
   const updateDropdownPosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -597,13 +618,6 @@ const MultiUserAndTeamPicker = ({
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => {
-        // The trapped scope loops Tab inside the dropdown, so keyboard users need
-        // a way back out that does not require picking someone.
-        if (e.key === 'Escape') {
-          setIsOpen(false);
-        }
-      }}
     >
       <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
