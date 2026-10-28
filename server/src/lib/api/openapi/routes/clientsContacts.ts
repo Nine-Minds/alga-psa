@@ -90,7 +90,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       billing_email: zOpenApi.string().email().optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       is_inactive: zOpenApi.boolean().optional(),
-      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional(),
+      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional().describe(
+        'Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status.',
+      ),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );

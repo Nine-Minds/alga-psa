@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Failed to save client info",
       "addTeamMembers": "Failed to add team members",
+      "unsentInvites": "Send the invitation for each team member you added, or remove them, before continuing.",
+      "teamMembersNotCreated": "These team members were not created. Fix or remove each one before continuing:",
+      "teamProgressNotSaved": "These team members were created, but setup could not save its progress: {{users}}. If you leave setup and come back they may not show as added; their accounts already exist, so do not add them again. Select Next to continue.",
       "saveClient": "Failed to save client",
       "addContact": "Failed to add contact",
       "setupBilling": "Failed to setup billing",
@@ -414,6 +417,7 @@
       "invalidEmail": "Please enter a valid email address",
       "passwordLength": "Password must be at least 8 characters long",
       "saveFailed": "Failed to save team member",
+      "progressNotSaved": "{{email}} was created, but setup could not save its progress. If you leave setup and come back this member may not show as added; the account already exists, so do not add it again.",
       "inviteFailed": "Failed to send invitation",
       "roleRequired": "Please select a role",
       "generic": "An error occurred"

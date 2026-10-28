@@ -105,7 +105,9 @@
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
-    "ticketsTemplates": "Ärendemallar"
+    "ticketsTemplates": "Ärendemallar",
+    "assetsCustody": "Utrustning i förvar",
+    "ticketsCannedResponses": "Färdiga svar"
   },
   "marketing": {
     "dialogs": {
@@ -506,7 +508,8 @@
       "extensions": "Tillägg",
       "experimentalFeatures": "Experimentella funktioner",
       "profile": "Profil",
-      "security": "Säkerhet"
+      "security": "Säkerhet",
+      "tags": "Taggar"
     }
   },
   "dashboard": {

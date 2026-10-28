@@ -56,7 +56,12 @@ describe('asset billing profile reaches tickets from assets', () => {
       "import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';"
     );
     expect(text).toMatch(
-      /if \(asset_id && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(/
+      /if \(linkedAssetIds\.length > 0 && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(\s*\n\s*trx,\s*\n\s*tenant,\s*\n\s*linkedAssetIds\[0\],/
+    );
+    // With several assets the profile resolves from the first linked one, and
+    // the single `asset_id` ("opened from an asset") is always placed first.
+    expect(text).toMatch(
+      /const linkedAssetIds = Array\.from\(\s*\n\s*new Set\(\[\.\.\.\(asset_id \? \[asset_id as string\] : \[\]\), \.\.\.extras\.assetIds\]\)/
     );
   });
 

@@ -5,6 +5,7 @@ import { ClipboardList, ExternalLink, Loader2, Lock } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { useDrawer } from '@alga-psa/ui';
+import { useActionSurface } from '@alga-psa/ui/components/ActionSurface';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -37,6 +38,8 @@ export default function TicketLinkedTasksBadge({
   const [loading, setLoading] = useState(true);
   const [openingTaskId, setOpeningTaskId] = useState<string | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
+  // Inside a tile the linked tasks are the tile body, not a popover behind a button.
+  const inTile = useActionSurface() === 'tile';
 
   const skipFirstTasksFetch = useRef(Boolean(initialTasks));
   useEffect(() => {
@@ -153,23 +156,7 @@ export default function TicketLinkedTasksBadge({
     return null;
   }
 
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          id="ticket-linked-tasks-badge"
-          type="button"
-          variant="soft"
-          className="flex items-center"
-        >
-          <ClipboardList className="h-4 w-4 mr-1" />
-          {linkedTasks.length} {linkedTasks.length === 1 ? t('dialogs.ticketLinkedTasks.task', 'Task') : t('dialogs.ticketLinkedTasks.tasks', 'Tasks')}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-0">
-        <div className="px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
-          <h4 className="text-sm font-medium">{t('dialogs.ticketLinkedTasks.title', 'Linked Project Tasks')}</h4>
-        </div>
+  const taskList = (
         <div className="max-h-60 overflow-y-auto">
           {linkedTasks.map((task) => {
             const restrictedLabel = t(
@@ -229,6 +216,30 @@ export default function TicketLinkedTasksBadge({
             );
           })}
         </div>
+  );
+
+  if (inTile) {
+    return <div className="w-full rounded-md border border-[rgb(var(--color-border-100))]">{taskList}</div>;
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          id="ticket-linked-tasks-badge"
+          type="button"
+          variant="soft"
+          className="flex items-center"
+        >
+          <ClipboardList className="h-4 w-4 mr-1" />
+          {linkedTasks.length} {linkedTasks.length === 1 ? t('dialogs.ticketLinkedTasks.task', 'Task') : t('dialogs.ticketLinkedTasks.tasks', 'Tasks')}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-0">
+        <div className="px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
+          <h4 className="text-sm font-medium">{t('dialogs.ticketLinkedTasks.title', 'Linked Project Tasks')}</h4>
+        </div>
+        {taskList}
       </PopoverContent>
     </Popover>
   );

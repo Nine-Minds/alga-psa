@@ -185,4 +185,21 @@ describe('nextAuth product_code mapping', () => {
     expect((sessionResult.user as any).addons).toEqual(['voice']);
     expect((sessionResult.user as any).trial_end).toBe('2027-01-01T00:00:00.000Z');
   });
+  it.each([
+    ['co_managed', 'co_managed'],
+    ['psa', 'psa'],
+    [null, 'psa'],
+    ['not-a-product', 'psa'],
+  ])('stored product_code %j reaches the session as %j (unknown values never pass through)', async (stored, expected) => {
+    tenantFirstMock.mockResolvedValue({ plan: 'pro', product_code: stored });
+    const options = await getAuthOptions();
+    const token = await options.callbacks!.jwt!({
+      token: {},
+      user: { id: 'u-1', email: 'u@example.com', name: 'User', tenant: 'tenant-1', user_type: 'internal' } as any,
+      trigger: 'signIn',
+    } as any);
+    expect(token.product_code).toBe(expected);
+    const sessionResult = await options.callbacks!.session!({ session: { user: {} }, token } as any);
+    expect((sessionResult.user as any).product_code).toBe(expected);
+  });
 });

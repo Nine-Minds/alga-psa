@@ -98,6 +98,20 @@
         "assignedContractLine": "Linea contrattuale assegnata",
         "assignedWorkItem": "Elemento di lavoro assegnato",
         "unresolvedWork": "Lavoro irrisolto"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · scadenza il {{date}}",
+        "trigger": {
+          "contract_start": "Blocco prepagato: inizio contratto",
+          "exhaustion": "Blocco prepagato: esaurito",
+          "threshold": "Blocco prepagato: soglia di utilizzo",
+          "expiry": "Blocco prepagato: scadenza",
+          "renewal": "Blocco prepagato: rinnovo",
+          "manual": "Blocco prepagato: emesso manualmente"
+        },
+        "stalePendingWarning": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono inserimenti ore. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato.",
+        "stalePendingWarning_one": "{{count}} blocco prepagato in sospeso attende la finalizzazione da più di 14 giorni e trattiene inserimenti ore. Finalizza o elimina la relativa fattura in bozza affinché il tempo trattenuto possa essere fatturato.",
+        "stalePendingWarning_other": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono inserimenti ore. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato."
       }
     },
     "actions": {
@@ -273,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} selezionato/i",
@@ -308,6 +323,21 @@
       "any": "tutte",
       "clear": "Cancella",
       "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
+    },
+    "lateTime": {
+      "title": "Tempo a ore approvato in ritardo",
+      "description": "Questo tempo è stato approvato dopo l'emissione della fattura del relativo periodo di servizio. Le voci in attesa di fatturazione vengono aggiunte una sola volta alla fattura successiva, contrassegnate come tempo in ritardo. Le voci oltre il periodo di retrospettiva non vengono fatturate.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Tecnico",
+        "service": "Servizio",
+        "workDate": "Data di lavoro",
+        "hours": "Ore",
+        "closedPeriod": "Periodo di servizio chiuso",
+        "status": "Stato"
+      },
+      "nextInvoice": "Verrà fatturato nella prossima fattura",
+      "outsideLookback": "Oltre il periodo di retrospettiva — non fatturato"
     }
   },
   "manualInvoices": {
@@ -541,6 +571,17 @@
       "actionBar": {
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fattura finalizzata, ma un passaggio successivo non è stato completato: {{steps}}. La fattura è finalizzata; puoi ritentare quel passaggio.",
+      "steps": {
+        "credit_auto_apply": "applicazione automatica del credito",
+        "project_deposit_credits": "crediti di acconto del progetto",
+        "workflow_events": "eventi del workflow",
+        "accounting_export": "esportazione contabile",
+        "replenishment_status": "stato del rifornimento prepagato",
+        "autopay": "pagamento automatico"
       }
     }
   },
@@ -842,6 +883,19 @@
       "cancel": "Annulla",
       "confirm": "Annulla fattura",
       "voiding": "Annullamento…"
+    },
+    "history": {
+      "title": "Cronologia",
+      "empty": "Nessuna cronologia registrata.",
+      "loadFailed": "Impossibile caricare la cronologia della fattura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizzata",
+        "invoice_unfinalized": "Riaperta",
+        "invoice_deleted": "Eliminata"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "nessuno"
     }
   },
   "templateEditor": {
@@ -1362,7 +1416,7 @@
       "mediaSource": "Origine immagine",
       "mediaSourceLogo": "Logo aziendale",
       "mediaSourceCustom": "Immagine personalizzata",
-      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo della scheda cliente della tua azienda.",
       "mediaSourceUrl": "URL di origine",
       "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rinomina",
@@ -1412,7 +1466,14 @@
           "widthTooltip": "Usa la larghezza esatta inserita sotto",
           "heightTooltip": "Usa l'altezza esatta inserita sotto"
         }
-      }
+      },
+      "barcode": "Codice a barre",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Codice QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valore",
+      "barcodeHintWorkTag": "Testo o un campo come {{example}} (il link al record). Mantieni il codice largo almeno 20 mm circa perché sia leggibile.",
+      "barcodeHint": "Il testo da codificare. Mantieni il codice largo almeno 20 mm circa perché sia leggibile."
     },
     "shell": {
       "selectedLabel": "Selezionato:",
@@ -1425,7 +1486,11 @@
       "title": "Impostazioni pagina",
       "description": "Scegli un preset di carta e margine senza selezionare il nodo di pagina nascosto.",
       "paperPreset": "Preset carta",
-      "marginMm": "Margine (mm)"
+      "marginMm": "Margine (mm)",
+      "customSize": "Dimensione personalizzata…",
+      "customWidth": "Larghezza",
+      "customHeight": "Altezza",
+      "customUnit": "Unità"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleziona un componente sulla tela per vederne la gerarchia.",
@@ -1456,7 +1521,13 @@
         "noQuotesFound": "Nessun preventivo trovato.",
         "selectQuote": "Seleziona preventivo",
         "loadingQuoteDetails": "Caricamento dettagli preventivo…",
-        "loadingDocumentDetails": "Caricamento dettagli documento…"
+        "loadingDocumentDetails": "Caricamento dettagli documento…",
+        "zoom": {
+          "fit": "Adatta",
+          "actual": "100%",
+          "label": "Zoom anteprima",
+          "fitWithScale": "Adatta ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Progettazione",
@@ -2350,7 +2421,7 @@
     },
     "imagePicker": {
       "browse": "Sfoglia documenti",
-      "hiddenFromClients": "{{document}} è nascosto ai clienti. Non comparirà nei preventivi o nelle fatture visualizzati tramite il portale clienti.",
+      "hiddenFromClients": "{{document}} è nascosto ai clienti, che quindi non possono aprirlo nel portale clienti. Compare comunque nelle fatture e nei PDF dei preventivi che lo usano.",
       "updating": "Aggiornamento...",
       "markVisible": "Contrassegna come visibile ai clienti",
       "visibleInPortal": "Visibile nel portale clienti",
@@ -2399,11 +2470,13 @@
     "description": "Progetta i layout usati per generare i PDF e le anteprime di {{type}}.",
     "availableLayouts": "Layout disponibili",
     "actions": {
-      "newLayout": "Nuovo layout"
+      "newLayout": "Nuovo layout",
+      "setDefaultForClass": "Imposta come predefinito per {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origine"
+      "source": "Origine",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2435,7 +2508,10 @@
         "details": "Dettagli del layout"
       },
       "fields": {
-        "version": "Versione"
+        "version": "Versione",
+        "labelClass": "Classe di etichetta",
+        "labelFields": "Campi mostrati sull'etichetta",
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
@@ -2472,7 +2548,9 @@
     "types": {
       "salesOrder": "Ordine di vendita",
       "packingSlip": "Documento di trasporto",
-      "pickList": "Lista di prelievo"
+      "pickList": "Lista di prelievo",
+      "workTag": "Etichetta di lavoro / Etichetta",
+      "stagingManifest": "Distinta di imballaggio"
     }
   },
   "errors": {
@@ -2480,7 +2558,8 @@
       "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
       "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
       "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
-      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente"
+      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente",
+      "invoiceRead": "Permesso negato: richiesta lettura fatture"
     },
     "invoice": {
       "notFound": "Fattura non trovata",
@@ -2502,7 +2581,9 @@
       "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
       "missingField": "Manca un campo obbligatorio della fattura.",
       "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}.",
-      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente."
+      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente.",
+      "deleteNotDraft": "È possibile eliminare solo le fatture in bozza; annulla invece la fattura.",
+      "deleteHasPayments": "Le fatture con pagamenti registrati non possono essere eliminate."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",

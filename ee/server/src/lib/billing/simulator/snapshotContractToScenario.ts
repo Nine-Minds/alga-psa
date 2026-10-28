@@ -20,13 +20,16 @@ import type {
   ScenarioPricingSchedule,
   ScenarioBillingSchedule,
   ScenarioServiceConfig,
+  ScenarioPool,
   ScenarioPoolRef,
+  ScenarioPrepaidBlockConfig,
 } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { simulationRefusal } from "./simulationRefusal";
 import { normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import {
   ClientContractServiceConfigurationService,
@@ -139,6 +142,41 @@ function toCents(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
+interface PrepaidBlockRow {
+  contract_line_id?: string | null;
+  template_line_id?: string | null;
+  block_minutes: number | string;
+  block_price: number | string;
+  sold_as_service_id: string | null;
+  expiry_months: number | string | null;
+  trigger_on_exhaustion: boolean | null;
+  trigger_threshold_percent: number | string | null;
+  trigger_on_expiry: boolean | null;
+  trigger_on_renewal: boolean | null;
+  replenishment_tier: string | null;
+}
+
+/**
+ * Prepaid Block overlay (contract_line_prepaid_blocks / template twin) as a
+ * scenario config. The line itself stays a plain Hourly line, so snapshotting
+ * never hits the unsupported-contract_line_type error.
+ */
+function toScenarioPrepaidBlock(row: PrepaidBlockRow | undefined): ScenarioPrepaidBlockConfig | null {
+  if (!row) return null;
+  return {
+    block_minutes: Number(row.block_minutes),
+    block_price: toCents(row.block_price) ?? 0,
+    sold_as_service_id: row.sold_as_service_id ?? null,
+    expiry_months: row.expiry_months != null ? Number(row.expiry_months) : null,
+    trigger_on_exhaustion: Boolean(row.trigger_on_exhaustion),
+    trigger_threshold_percent:
+      row.trigger_threshold_percent != null ? Number(row.trigger_threshold_percent) : null,
+    trigger_on_expiry: Boolean(row.trigger_on_expiry),
+    trigger_on_renewal: Boolean(row.trigger_on_renewal),
+    replenishment_tier: row.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+  };
+}
+
 function toMidnightIso(value: unknown): ISO8601String {
   return `${toISODate(toPlainDate(value as string | Date))}T00:00:00Z`;
 }
@@ -180,6 +218,7 @@ export async function snapshotContractToScenario(
         "template_id",
         "template_name",
         "default_billing_frequency",
+        "currency_code",
       );
     if (template) {
       isTemplate = true;
@@ -188,15 +227,16 @@ export async function snapshotContractToScenario(
         contract_name: template.template_name,
         owner_client_id: null,
         billing_frequency: template.default_billing_frequency || "monthly",
-        currency_code: "USD",
+        currency_code: template.currency_code,
         is_system_managed_default: false,
       };
     }
   }
 
   if (!contract) {
-    throw new Error(
-      `Contract ${params.contractId} not found in tenant ${tenant}`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+      "This contract is not available. It may have been deleted; reload the page.",
     );
   }
 
@@ -353,6 +393,18 @@ export async function snapshotContractToScenario(
     });
     poolMembersByBucket.set(member.bucket_id, existing);
   }
+  const prepaidBlockRows = lineRows.length > 0
+    ? ((await db
+        .table(isTemplate ? "contract_template_line_prepaid_blocks" : "contract_line_prepaid_blocks")
+        .whereIn(
+          isTemplate ? "template_line_id" : "contract_line_id",
+          lineRows.map((line) => line.contract_line_id),
+        )
+        .select("*")) as PrepaidBlockRow[])
+    : [];
+  const prepaidBlockByLine = new Map<string, PrepaidBlockRow>(
+    prepaidBlockRows.map((row) => [String(row.template_line_id ?? row.contract_line_id ?? ""), row]),
+  );
   const templatePoolRowsByLine = isTemplate ? poolRowsByLine : new Map<string, PoolRow[]>();
 
   const templateConfigs = isTemplate
@@ -456,6 +508,7 @@ export async function snapshotContractToScenario(
             db,
             tenant,
             poolMembersByBucket,
+            toScenarioPrepaidBlock(prepaidBlockByLine.get(lineRow.contract_line_id)),
           )
         : buildScenarioLine(
             lineRow,
@@ -467,6 +520,7 @@ export async function snapshotContractToScenario(
             tenant,
             poolRowsByLine,
             poolMembersByBucket,
+            toScenarioPrepaidBlock(prepaidBlockByLine.get(lineRow.contract_line_id)),
           ),
     ),
   );
@@ -551,6 +605,7 @@ async function buildScenarioLine(
   tenant: string,
   poolRowsByLine: Map<string, PoolRow[]>,
   poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  prepaidBlock: ScenarioPrepaidBlockConfig | null,
 ): Promise<ScenarioLine> {
   const contractLineType = lineRow.contract_line_type;
   if (
@@ -558,9 +613,11 @@ async function buildScenarioLine(
     contractLineType !== "Hourly" &&
     contractLineType !== "Usage"
   ) {
-    throw new Error(
-      `Contract line ${lineRow.contract_line_id} ("${lineRow.contract_line_name}") ` +
-        `has unsupported contract_line_type "${contractLineType}"; expected Fixed, Hourly, or Usage`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+      `Contract line "${lineRow.contract_line_name}" has the line type "${contractLineType}", which the simulator can't price. ` +
+        "Change the line to Fixed, Hourly or Usage, then simulate again.",
+      { lineName: lineRow.contract_line_name, lineType: String(contractLineType) },
     );
   }
 
@@ -568,9 +625,11 @@ async function buildScenarioLine(
     configs.map(async (configDetails) => {
       const catalog = catalogByServiceId.get(configDetails.serviceId);
       if (!catalog) {
-        throw new Error(
-          `Service ${configDetails.serviceId} referenced by contract line ` +
-            `${lineRow.contract_line_id} ("${lineRow.contract_line_name}") is missing from service_catalog`,
+        throw simulationRefusal(
+          "CONTRACT_SIMULATION_SERVICE_NOT_IN_CATALOG",
+          `Contract line "${lineRow.contract_line_name}" uses a service that is no longer in the service catalog (${configDetails.serviceId}). ` +
+            "Remove it from the line or restore the service, then simulate again.",
+          { lineName: lineRow.contract_line_name, serviceId: configDetails.serviceId },
         );
       }
 
@@ -610,6 +669,8 @@ async function buildScenarioLine(
           db,
           tenant,
           contractLineId: lineRow.contract_line_id,
+          contractLineName: lineRow.contract_line_name,
+          serviceName: catalog.service_name,
           poolRowsByLine,
           poolMembersByBucket,
         }),
@@ -636,7 +697,15 @@ async function buildScenarioLine(
         ? Number(lineRow.overtime_threshold)
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
+    ...(prepaidBlock ? { prepaid_block: prepaidBlock } : {}),
     services,
+    ...withPools(
+      toScenarioPools(
+        poolRowsByLine.get(lineRow.contract_line_id) ?? [],
+        poolMembersByBucket,
+      ),
+      services,
+    ),
   };
 }
 
@@ -653,12 +722,15 @@ function buildTemplateScenarioLine(
   db: ReturnType<typeof tenantDb>,
   tenant: string,
   poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  prepaidBlock: ScenarioPrepaidBlockConfig | null,
 ): ScenarioLine {
   const lineType = lineRow.contract_line_type;
   if (lineType !== "Fixed" && lineType !== "Hourly" && lineType !== "Usage") {
-    throw new Error(
-      `Template line ${lineRow.contract_line_id} ("${lineRow.contract_line_name}") ` +
-        `has unsupported line_type "${lineType}"; expected Fixed, Hourly, or Usage`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+      `Contract line "${lineRow.contract_line_name}" has the line type "${lineType}", which the simulator can't price. ` +
+        "Change the line to Fixed, Hourly or Usage, then simulate again.",
+      { lineName: lineRow.contract_line_name, lineType: String(lineType) },
     );
   }
 
@@ -668,9 +740,11 @@ function buildTemplateScenarioLine(
   const services = memberships.flatMap((membership): ScenarioLineService[] => {
     const catalog = catalogByServiceId.get(membership.service_id);
     if (!catalog) {
-      throw new Error(
-        `Service ${membership.service_id} referenced by template line ` +
-          `${lineRow.contract_line_id} ("${lineRow.contract_line_name}") is missing from service_catalog`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_SERVICE_NOT_IN_CATALOG",
+        `Contract line "${lineRow.contract_line_name}" uses a service that is no longer in the service catalog (${membership.service_id}). ` +
+          "Remove it from the line or restore the service, then simulate again.",
+        { lineName: lineRow.contract_line_name, serviceId: membership.service_id },
       );
     }
 
@@ -818,7 +892,9 @@ function buildTemplateScenarioLine(
         ? Number(lineRow.overtime_threshold)
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
+    ...(prepaidBlock ? { prepaid_block: prepaidBlock } : {}),
     services,
+    ...withPools(toScenarioPools(templatePoolRows, poolMembersByBucket), services),
   };
 }
 
@@ -828,6 +904,9 @@ async function buildScenarioServiceConfig(
     db: ReturnType<typeof tenantDb>;
     tenant: string;
     contractLineId: string;
+    /** Names the user sees, for refusal messages. */
+    contractLineName: string;
+    serviceName: string;
     poolRowsByLine: Map<string, PoolRow[]>;
     poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>;
   },
@@ -838,11 +917,14 @@ async function buildScenarioServiceConfig(
     case "Fixed": {
       const fixed = configDetails.typeConfig as {
         base_rate?: number | null;
+        base_rate_basis?: "per_unit" | "share" | null;
         pricing_basis?: "unit" | "bundle" | null;
       } | null;
+      const fixedBaseRate = toCents(fixed?.base_rate ?? null);
       return {
         configuration_type: "Fixed",
-        base_rate: toCents(fixed?.base_rate ?? null),
+        base_rate: fixedBaseRate,
+        base_rate_basis: fixedBaseRate === null ? null : fixed?.base_rate_basis ?? null,
         pricing_basis: fixed?.pricing_basis ?? null,
       };
     }
@@ -910,9 +992,11 @@ async function buildScenarioServiceConfig(
         allow_rollover?: boolean;
       } | null;
       if (!bucket) {
-        throw new Error(
-          `Bucket configuration ${configDetails.baseConfig.config_id} for service ` +
-            `${configDetails.serviceId} has no bucket pool (contract_line_buckets) row`,
+        throw simulationRefusal(
+          "CONTRACT_SIMULATION_POOL_MISSING",
+          `"${poolContext.serviceName}" on contract line "${poolContext.contractLineName}" is set up as a bucket but has no included-hours pool. ` +
+            "Add the pool's included hours on the contract line, then simulate again.",
+          { serviceName: poolContext.serviceName, lineName: poolContext.contractLineName },
         );
       }
       // Preserve the weighted-burn pool configuration: the pool for this
@@ -932,11 +1016,63 @@ async function buildScenarioServiceConfig(
       };
     }
     default:
-      throw new Error(
-        `Service ${configDetails.serviceId} has unsupported configuration_type ` +
-          `"${configurationType}" (config ${configDetails.baseConfig.config_id})`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION",
+        `"${poolContext.serviceName}" on contract line "${poolContext.contractLineName}" has the configuration type "${configurationType}", which the simulator can't price. ` +
+          "Set the service to Fixed, Hourly, Usage or Bucket, then simulate again.",
+        {
+          serviceName: poolContext.serviceName,
+          lineName: poolContext.contractLineName,
+          configurationType: String(configurationType ?? "none"),
+        },
       );
   }
+}
+
+/**
+ * `pools` carries the pools no Bucket-config service already describes: a
+ * Bucket service IS its pool (removing it removes the pool), so listing the
+ * same pool here too would keep it alive after the service is edited away.
+ * Absent when empty, so pool-free scenarios are unchanged.
+ */
+function withPools(
+  pools: ScenarioPool[],
+  services: ScenarioLineService[],
+): { pools?: ScenarioPool[] } {
+  const describedByService = new Set(
+    services.flatMap((service) =>
+      service.configuration.configuration_type === "Bucket" &&
+      service.configuration.pool_id
+        ? [service.configuration.pool_id]
+        : [],
+    ),
+  );
+  const standalone = pools.filter((pool) => !describedByService.has(pool.pool_id));
+  return standalone.length > 0 ? { pools: standalone } : {};
+}
+
+/** The line's pool rows as scenario pools (allowance + members). */
+function toScenarioPools(
+  linePools: PoolRow[],
+  poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+): ScenarioPool[] {
+  return linePools.map((pool) => ({
+    pool_id: pool.bucket_id,
+    pool_name: pool.bucket_name,
+    covers_all_services: Boolean(pool.covers_all_services),
+    total_minutes: Number(pool.total_minutes ?? 0),
+    billing_period: pool.billing_period || "monthly",
+    overage_rate: toCents(pool.overage_rate) ?? 0,
+    allow_rollover: Boolean(pool.allow_rollover),
+    after_hours_multiplier:
+      pool.after_hours_multiplier != null
+        ? Number(pool.after_hours_multiplier)
+        : null,
+    business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+    members: poolMembersByBucketGet(poolMembersByBucket, pool.bucket_id).map(
+      (member) => ({ ...member }),
+    ),
+  }));
 }
 
 function poolMembersByBucketGet(
@@ -1110,14 +1246,15 @@ async function resolveClientBinding(
         "end_date",
       );
     if (!clientContract) {
-      throw new Error(
-        `Client contract ${params.clientContractId} not found in tenant ${tenant}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+        "This client contract is not available. It may have been deleted; reload the page.",
       );
     }
     if (clientContract.contract_id !== params.contractId) {
-      throw new Error(
-        `Client contract ${params.clientContractId} belongs to contract ` +
-          `${clientContract.contract_id}, not ${params.contractId}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+        "This client contract does not belong to the contract being simulated. Reload the page.",
       );
     }
 
@@ -1126,9 +1263,9 @@ async function resolveClientBinding(
       .where({ client_id: clientContract.client_id })
       .first("client_id", "client_name");
     if (!client) {
-      throw new Error(
-        `Client ${clientContract.client_id} referenced by client contract ` +
-          `${params.clientContractId} not found in tenant ${tenant}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "The client on this contract is not available. It may have been deleted; choose another client.",
       );
     }
 
@@ -1157,7 +1294,12 @@ async function resolveClientBinding(
       .table("clients")
       .where({ client_id: params.clientId })
       .first("client_id", "client_name");
-    if (!client) throw new Error("Simulation client is not available");
+    if (!client) {
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "The selected client is not available. It may have been deleted; choose another client.",
+      );
+    }
     return {
       clientBinding: {
         kind: "client",
@@ -1193,9 +1335,9 @@ async function resolveClientBinding(
       .where({ client_id: contract.owner_client_id })
       .first("client_id", "client_name");
     if (!client) {
-      throw new Error(
-        `Owner client ${contract.owner_client_id} of contract ` +
-          `${contract.contract_id} not found in tenant ${tenant}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "The client that owns this contract is not available. It may have been deleted; choose another client.",
       );
     }
 

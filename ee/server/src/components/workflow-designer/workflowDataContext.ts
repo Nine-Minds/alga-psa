@@ -98,6 +98,21 @@ type BlockContext = {
   inCatchBlock?: boolean;
 };
 
+type AssignedVarMeta = {
+  lastStepId: string;
+  lastStepName: string;
+  nestedPaths: string[][];
+  /** Schema of the variable itself when it holds one value (`vars.senderEmail`), when known. */
+  rootSchema?: JsonSchema;
+};
+
+/**
+ * Variables set by "Set variables" (and the wait steps) are listed as pseudo-steps whose id is
+ * `<step id>:<variable>`; a real step result keeps its own step id. Their shape is only as known as
+ * the assignment, so consumers treat them more loosely than an action's declared output.
+ */
+export const isAssignedVarStepId = (stepId: string | undefined): boolean => Boolean(stepId?.includes(':'));
+
 const metaGlobalSchema: JsonSchema = {
   type: 'object',
   properties: {
@@ -178,6 +193,8 @@ const normalizeAssignmentPath = (path: string): string => {
     || trimmed.startsWith('vars.')
     || trimmed.startsWith('meta.')
     || trimmed.startsWith('error.')
+    // The runtime writes `local.*` into the surrounding loop's scope, not a workflow variable.
+    || trimmed.startsWith('local.')
     || trimmed.startsWith('/');
   return scoped ? trimmed : `vars.${trimmed}`;
 };
@@ -391,7 +408,7 @@ export const buildDataContext = (
     }
   };
 
-  const assignedVars = new Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>();
+  const assignedVars = new Map<string, AssignedVarMeta>();
 
   const recordScopedAssignmentSchema = (assignmentPath: string, outputSchema: JsonSchema) => {
     const parsed = assignmentPathParts(assignmentPath);
@@ -404,14 +421,18 @@ export const buildDataContext = (
     }
   };
 
-  const recordAssignedVarPath = (assignmentPath: string, step: Step) => {
-    if (!assignmentPath.startsWith('vars.')) return;
+  const recordAssignedVarPath = (
+    assignmentPath: string,
+    step: Step,
+    assignedValue: unknown,
+    blockCtx: BlockContext
+  ) => {
+    // The runtime reads an unscoped key as a workflow variable (`senderEmail` → `vars.senderEmail`),
+    // so the pickers have to list it the same way; payload/meta/error/pointer targets aren't variables.
+    const parsed = assignmentPathParts(assignmentPath);
+    if (parsed?.scope !== 'vars' || parsed.parts.length === 0) return;
 
-    const remainder = assignmentPath.slice('vars.'.length);
-    const parts = remainder.split('.').filter(Boolean);
-    if (parts.length === 0) return;
-
-    const [rootName, ...nested] = parts;
+    const [rootName, ...nested] = parsed.parts;
     if (!rootName) return;
 
     const nodeStep = step as NodeStep;
@@ -428,14 +449,21 @@ export const buildDataContext = (
     existing.lastStepName = stepName;
     if (nested.length > 0) {
       existing.nestedPaths.push(nested);
+    } else {
+      // The variable holds one value, so it has no fields of its own; its type is the assigned
+      // reference's, which is what makes `vars.senderEmail` pickable at all.
+      const referencePath = extractDirectReferencePath(assignedValue);
+      existing.rootSchema = referencePath
+        ? cloneSchema(resolveReferenceSchema(referencePath, blockCtx))
+        : {};
     }
 
     assignedVars.set(rootName, existing);
   };
 
-  const buildAssignedVarSchema = (nestedPaths: string[][]): JsonSchema => {
+  const buildAssignedVarSchema = ({ nestedPaths, rootSchema }: AssignedVarMeta): JsonSchema => {
     if (!nestedPaths.length) {
-      return {};
+      return cloneSchema(rootSchema);
     }
 
     const root: JsonSchema = { type: 'object', properties: {} };
@@ -607,7 +635,7 @@ export const buildDataContext = (
   // all read the context it builds.
   type ReachableSnapshot = {
     stepCount: number;
-    assigned: Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>;
+    assigned: Map<string, AssignedVarMeta>;
   };
   const cloneAssigned = () =>
     new Map(Array.from(assignedVars.entries()).map(([key, value]) => [key, { ...value, nestedPaths: [...value.nestedPaths] }]));
@@ -694,8 +722,8 @@ export const buildDataContext = (
       if (step.type === 'transform.assign' || step.type === 'event.wait' || step.type === 'time.wait') {
         const config = (step as NodeStep).config as { assign?: Record<string, { $expr: string }> } | undefined;
         if (config?.assign) {
-          for (const path of Object.keys(config.assign)) {
-            recordAssignedVarPath(path, step);
+          for (const [path, assignedValue] of Object.entries(config.assign)) {
+            recordAssignedVarPath(path, step, assignedValue, blockCtx);
           }
         }
       }
@@ -775,7 +803,7 @@ export const buildDataContext = (
   const existingSaveAs = new Set(context.steps.map((entry) => entry.saveAs));
   for (const [saveAs, meta] of assignedVars.entries()) {
     if (existingSaveAs.has(saveAs)) continue;
-    const outputSchema = buildAssignedVarSchema(meta.nestedPaths);
+    const outputSchema = buildAssignedVarSchema(meta);
     context.steps.push({
       stepId: `${meta.lastStepId}:${saveAs}`,
       stepName: meta.lastStepName,

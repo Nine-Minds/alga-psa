@@ -133,6 +133,12 @@ describe('paymentApplier', () => {
     );
     expect(stats.paymentsApplied).toBe(1);
     expect(stats.paymentsReversed).toBe(0);
+    // Provenance is explicit: imports are never eligible for a customer confirmation email.
+    expect(recordExternalPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      't1',
+      expect.objectContaining({ source: 'accounting_sync' })
+    );
   });
 
   it('idempotent: same sync token on existing mapping → skip', async () => {

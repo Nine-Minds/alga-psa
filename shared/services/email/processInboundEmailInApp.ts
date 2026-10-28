@@ -1,3 +1,5 @@
+import type { TenantDb } from '@alga-psa/db';
+import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -31,7 +33,7 @@ import {
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
-import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
@@ -400,7 +402,11 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
     emailData.body?.text ??
     '';
 
-  return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  if (String(candidateText).trim()) return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  // HTML-only mail has no sanitizedText in the reply parser. Use its existing
+  // HTML text projection, without reviving quoted HTML when a text part exists.
+  if (emailData.body?.text?.trim()) return false;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
@@ -578,7 +584,7 @@ async function applyInboundReplyReopenTransition(params: {
 
   await withTenantAdminTransaction(
     params.tenantId,
-    async (trx: any, db: any) => {
+    async (trx: any, db: TenantDb) => {
     const previous = await db.table('tickets')
       .select('status_id')
       .where({ ticket_id: params.ticketId })
@@ -635,18 +641,6 @@ async function applyInboundReplyReopenTransition(params: {
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
   return `inbound-email:${input.tenantId}:${input.providerId}:${input.emailData.id}`;
-}
-
-/**
- * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
- * normalized form matches how the durable pipeline writes `email_metadata`
- * message ids; the raw trimmed (bracketed) form still matches legacy rows.
- */
-function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return [];
-  const normalized = normalizeRfc822MessageId(raw);
-  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
 }
 
 /**
@@ -868,6 +862,53 @@ async function resolveReplyTargetFromProviderThreadId(params: {
         threadId: row.threadId,
       })
     : null;
+}
+
+/**
+ * D2 (alga-2026-0002798): an external (client/contact/watcher) sender's reply
+ * must never be attached to an internal thread. Header matching (References
+ * fallback, provider thread id, In-Reply-To, reply token) can resolve to the
+ * internal note's thread; retarget to the ticket's newest non-internal thread,
+ * or to no parent (a top-level public comment) when the ticket has none.
+ */
+async function retargetAwayFromInternalThread(params: {
+  tenantId: string;
+  ticketId: string;
+  threadId?: string | null;
+  parentCommentId?: string | null;
+}): Promise<{ parentCommentId: string | null; retargeted: boolean }> {
+  const unchanged = { parentCommentId: params.parentCommentId ?? null, retargeted: false };
+  if (!params.threadId || !params.parentCommentId) {
+    return unchanged;
+  }
+
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const thread = await db.table('comment_threads')
+      .select('is_internal as isInternal')
+      .where({ thread_id: params.threadId })
+      .first();
+    if (!thread?.isInternal) {
+      return unchanged;
+    }
+
+    const publicThread = await db.table('comment_threads')
+      .select('thread_id as threadId')
+      .where({ ticket_id: params.ticketId, is_internal: false })
+      .orderBy('last_activity_at', 'desc')
+      .first();
+
+    let publicParentCommentId: string | null = null;
+    if (publicThread?.threadId) {
+      const latest = await db.table('comments')
+        .select('comment_id as parentCommentId')
+        .where({ thread_id: publicThread.threadId })
+        .orderBy('created_at', 'desc')
+        .orderBy('comment_id', 'desc')
+        .first();
+      publicParentCommentId = latest?.parentCommentId ?? null;
+    }
+    return { parentCommentId: publicParentCommentId, retargeted: true };
+  });
 }
 
 export async function processInboundEmailInApp(
@@ -1253,6 +1294,7 @@ export async function processInboundEmailInApp(
     ticketId: string;
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
+    threadId?: string | null;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
     const existingCommentId = await findExistingEmailComment({
       tenantId,
@@ -1524,11 +1566,32 @@ export async function processInboundEmailInApp(
           withoutOneOffRecipients(inboundWatchListRecipients),
           buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null, oneOffRecipients)
         );
+    let replyParentCommentId = params.parentCommentId ?? null;
+    if (!matchedSenderIsInternalUser) {
+      const retarget = await retargetAwayFromInternalThread({
+        tenantId,
+        ticketId: params.ticketId,
+        threadId: params.threadId,
+        parentCommentId: replyParentCommentId,
+      });
+      if (retarget.retargeted) {
+        console.warn('processInboundEmailInApp: external reply matched an internal thread; retargeted to public thread', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedBy: params.matchedBy,
+          internalThreadId: params.threadId ?? null,
+          publicParentCommentId: retarget.parentCommentId,
+        });
+      }
+      replyParentCommentId = retarget.parentCommentId;
+    }
     const commentId = await createCommentFromEmail(
       {
         ticket_id: params.ticketId,
         content: serializedBlocks,
-        parent_comment_id: params.parentCommentId ?? undefined,
+        parent_comment_id: replyParentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: matchedSenderContact?.user_id,
@@ -1642,6 +1705,7 @@ export async function processInboundEmailInApp(
           ticketId,
           matchedBy: 'reply_token',
           parentCommentId: replyTarget?.parentCommentId ?? null,
+          threadId: replyTarget?.threadId ?? null,
         });
         if (handled) {
           return handled;
@@ -1667,6 +1731,7 @@ export async function processInboundEmailInApp(
   // Thread headers fallback.
   let threadedTicketId: string | null = null;
   let threadedParentCommentId: string | null = null;
+  let threadedThreadId: string | null = null;
   if (!rerouteToNewTicket) {
     if (diagnostics) {
       diagnostics.threading.headerLookupAttempted = true;
@@ -1695,6 +1760,7 @@ export async function processInboundEmailInApp(
       if (threadTarget) {
         threadedTicketId = threadTarget.ticketId;
         threadedParentCommentId = threadTarget.parentCommentId;
+        threadedThreadId = threadTarget.threadId;
         if (diagnostics) {
           diagnostics.threading.headerLookupMatched = true;
           diagnostics.threading.headerLookupMissReason = null;
@@ -1747,6 +1813,7 @@ export async function processInboundEmailInApp(
       ticketId: threadedTicketId,
       matchedBy: 'thread_headers',
       parentCommentId: threadedParentCommentId,
+      threadId: threadedThreadId,
     });
     if (handled) {
       return handled;

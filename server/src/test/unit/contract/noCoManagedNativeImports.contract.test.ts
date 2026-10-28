@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+
+const root = path.resolve(__dirname, '../../../../..');
+
+function grep(pattern: string, paths: string[]): string[] {
+  try {
+    return execFileSync('git', ['grep', '--untracked', '-n', '-E', pattern, '--', ...paths], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+  } catch (error: any) {
+    if (error.status === 1) return [];
+    throw error;
+  }
+}
+
+describe('native files stay free of co-managed coupling', () => {
+  // Test files assert the absence; registry defaults and manifest must not mention it.
+  const native = [
+    'packages/db/src',
+    'packages/tickets/src/lib',
+    'packages/jobs/src',
+    'packages/event-schemas/src',
+    'packages/types/src/constants',
+    'shared/workflow/runtime',
+    'ee/temporal-workflows/src',
+  ];
+  const excluding = [':!**/*.test.ts', ':!**/*.contract.test.ts'];
+
+  it('imports nothing from @alga-psa/co-managed', () => {
+    expect(grep('@alga-psa/co-managed', [...native, ...excluding])).toEqual([]);
+  });
+
+  it('probes neither product_code nor co_manag in registry defaults or the manifest', () => {
+    const files = [
+      'packages/db/src/lib/tenantTableManifest.ts',
+      'packages/tickets/src/lib/ticketLifecycleHooks.ts',
+      'packages/tickets/src/lib/commentEventRegistry.ts',
+      'packages/tickets/src/lib/scheduledCommentAdmission.ts',
+      'packages/jobs/src/lib/jobDescriptors.ts',
+      'shared/workflow/runtime/registries/workflowTicketMutationRegistry.ts',
+      'shared/workflow/runtime/registries/workflowConversationRegistry.ts',
+    ];
+    expect(grep('product_code|co_manag|co-manag', files)).toEqual([]);
+  });
+
+  it('keeps co-managed out of the temporal deletion workflow', () => {
+    expect(grep('co_manag', ['ee/temporal-workflows', ':!**/*.test.ts'])).toEqual([]);
+  });
+});

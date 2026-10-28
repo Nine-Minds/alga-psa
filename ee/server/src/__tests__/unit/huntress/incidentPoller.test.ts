@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { HuntressIncidentReport } from '@ee/interfaces/huntress.interfaces';
+import type {
+  HuntressEscalation,
+  HuntressIncidentReport,
+} from '@ee/interfaces/huntress.interfaces';
 
 // vi.mock factories run during module import — hoist everything they read.
-const { state, processIncidentMock, createKnexMock } = vi.hoisted(() => {
+const { state, processIncidentMock, processEscalationMock, createKnexMock } = vi.hoisted(() => {
   const state: {
     integrationRow: Record<string, unknown> | undefined;
     updates: Array<Record<string, unknown>>;
@@ -23,7 +26,7 @@ const { state, processIncidentMock, createKnexMock } = vi.hoisted(() => {
     return knex;
   }
 
-  return { state, processIncidentMock: vi.fn(), createKnexMock };
+  return { state, processIncidentMock: vi.fn(), processEscalationMock: vi.fn(), createKnexMock };
 });
 
 vi.mock('@/lib/db', () => ({
@@ -32,6 +35,10 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@ee/lib/integrations/huntress/incidents/incidentProcessor', () => ({
   processIncident: processIncidentMock,
+}));
+
+vi.mock('@ee/lib/integrations/huntress/escalations/escalationProcessor', () => ({
+  processEscalation: processEscalationMock,
 }));
 
 vi.mock('@ee/lib/integrations/huntress/huntressClient', () => ({
@@ -71,8 +78,34 @@ const completeSettings = {
   pollIntervalMinutes: 5,
 };
 
-function clientReturning(incidents: HuntressIncidentReport[]) {
+function escalation(id: number, updatedAt: string): HuntressEscalation {
   return {
+    id,
+    organizations: [{ id: 1, name: 'Acme' }],
+    severity: 'high',
+    status: 'open',
+    subject: `e${id}`,
+    type: null,
+    type_code: null,
+    subtype: null,
+    created_at: updatedAt,
+    resolved_at: null,
+    updated_at: updatedAt,
+  };
+}
+
+function clientReturning(
+  incidents: HuntressIncidentReport[],
+  escalations: HuntressEscalation[] = []
+) {
+  return {
+    listEscalationsPage: vi.fn(async () => ({
+      escalations: [...escalations].sort(
+        (a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)
+      ),
+      pagination: {},
+    })),
+    getEscalation: vi.fn(),
     listIncidentReportsPage: vi.fn(async () => ({
       // API returns newest first.
       incident_reports: [...incidents].sort(
@@ -156,5 +189,97 @@ describe('pollHuntressIncidents', () => {
     expect(finalUpdate.sync_error).toBe('boom');
     // Cursor stops at the last successful incident.
     expect(JSON.parse(String(finalUpdate.settings)).incidentCursor).toBe('2026-06-09T09:00:00Z');
+  });
+
+  it('does not touch escalations when ingestion is off (the default)', async () => {
+    state.client = clientReturning([], [escalation(1, '2026-06-09T09:00:00Z')]);
+    const result = await pollHuntressIncidents({ tenantId: 'tenant-1', integrationId: 'int-1' });
+
+    expect(result.success).toBe(true);
+    expect(result.escalations).toBeUndefined();
+    expect((state.client as any).listEscalationsPage).not.toHaveBeenCalled();
+    expect(processEscalationMock).not.toHaveBeenCalled();
+  });
+
+  it('processes escalations ascending and advances their own cursor when enabled', async () => {
+    state.integrationRow = {
+      ...state.integrationRow!,
+      settings: { ...completeSettings, ingestEscalations: true, escalationCursor: '2026-06-09T08:00:00Z' },
+    };
+    state.client = clientReturning(
+      [incident(1, '2026-06-09T09:30:00Z')],
+      [escalation(7, '2026-06-09T09:00:00Z'), escalation(8, '2026-06-09T10:00:00Z')]
+    );
+    processIncidentMock.mockResolvedValue({ ok: true, action: 'create_ticket' });
+    processEscalationMock.mockResolvedValue({ ok: true, targets: [] });
+
+    const result = await pollHuntressIncidents({ tenantId: 'tenant-1', integrationId: 'int-1' });
+
+    expect(result.success).toBe(true);
+    expect(result.escalations).toMatchObject({ processed: 2, failed: 0 });
+    expect(processEscalationMock.mock.calls.map((c) => c[3].id)).toEqual([7, 8]);
+    const saved = JSON.parse(String(state.updates[state.updates.length - 1].settings));
+    expect(saved.incidentCursor).toBe('2026-06-09T09:30:00Z');
+    expect(saved.escalationCursor).toBe('2026-06-09T10:00:00Z');
+    expect(saved.ingestEscalations).toBe(true);
+  });
+
+  it('an escalation failure does not hold back the incident cursor', async () => {
+    state.integrationRow = {
+      ...state.integrationRow!,
+      settings: { ...completeSettings, ingestEscalations: true, escalationCursor: '2026-06-09T08:00:00Z' },
+    };
+    state.client = clientReturning(
+      [incident(1, '2026-06-09T09:30:00Z')],
+      [escalation(7, '2026-06-09T09:00:00Z'), escalation(8, '2026-06-09T10:00:00Z')]
+    );
+    processIncidentMock.mockResolvedValue({ ok: true, action: 'create_ticket' });
+    processEscalationMock
+      .mockResolvedValueOnce({ ok: true, targets: [] })
+      .mockResolvedValueOnce({ ok: false, targets: [], error: 'kaboom' });
+
+    const result = await pollHuntressIncidents({ tenantId: 'tenant-1', integrationId: 'int-1' });
+
+    expect(result.success).toBe(false);
+    expect(result.processed).toBe(1);
+    const finalUpdate = state.updates[state.updates.length - 1];
+    expect(finalUpdate.sync_status).toBe('error');
+    expect(finalUpdate.sync_error).toBe('Escalations: kaboom');
+    const saved = JSON.parse(String(finalUpdate.settings));
+    expect(saved.incidentCursor).toBe('2026-06-09T09:30:00Z');
+    expect(saved.escalationCursor).toBe('2026-06-09T09:00:00Z');
+  });
+
+  it('an escalation list failure still lets incidents complete', async () => {
+    state.integrationRow = {
+      ...state.integrationRow!,
+      settings: { ...completeSettings, ingestEscalations: true },
+    };
+    const client = clientReturning([incident(1, '2026-06-09T09:30:00Z')]);
+    client.listEscalationsPage.mockRejectedValueOnce(new Error('403'));
+    state.client = client;
+    processIncidentMock.mockResolvedValue({ ok: true, action: 'create_ticket' });
+
+    const result = await pollHuntressIncidents({ tenantId: 'tenant-1', integrationId: 'int-1' });
+
+    expect(result.processed).toBe(1);
+    expect(result.escalations?.error).toBe('403');
+    const saved = JSON.parse(String(state.updates[state.updates.length - 1].settings));
+    expect(saved.incidentCursor).toBe('2026-06-09T09:30:00Z');
+  });
+
+  it('does not bump the last-poll time when the incident list call fails', async () => {
+    const client = clientReturning([]);
+    client.listIncidentReportsPage.mockRejectedValueOnce(new Error('500'));
+    state.client = client;
+
+    const result = await pollHuntressIncidents({ tenantId: 'tenant-1', integrationId: 'int-1' });
+
+    expect(result.success).toBe(false);
+    const finalUpdate = state.updates[state.updates.length - 1];
+    expect(finalUpdate.sync_status).toBe('error');
+    expect(finalUpdate.sync_error).toBe('500');
+    expect(finalUpdate).not.toHaveProperty('last_incremental_sync_at');
+    expect(JSON.parse(String(finalUpdate.settings)).incidentCursor).toBe('2026-06-09T08:00:00Z');
   });
 });

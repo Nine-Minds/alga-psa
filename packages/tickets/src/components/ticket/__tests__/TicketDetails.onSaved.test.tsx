@@ -2,6 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
@@ -473,6 +474,13 @@ describe('TicketDetails onSaved notifications (activity list refresh)', () => {
   });
 
   async function openDeleteAndConfirm() {
+    // Delete is the last item of the header's More menu.
+    const more = await waitFor(() => {
+      const el = document.querySelector('[id$="-more-actions-button"]');
+      if (!el) throw new Error('more actions button not rendered');
+      return el as HTMLElement;
+    });
+    await userEvent.click(more);
     const button = await waitFor(() => {
       const el = document.querySelector('[id$="delete-ticket-button"]');
       if (!el) throw new Error('delete button not rendered');

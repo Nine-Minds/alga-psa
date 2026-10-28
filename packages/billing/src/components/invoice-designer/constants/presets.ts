@@ -35,7 +35,7 @@ export interface LayoutPresetNodeDefinition {
 }
 
 export interface LayoutPresetDefinition {
-  documentKind?: 'invoice' | 'quote' | 'sales-order';
+  documentKind?: 'invoice' | 'quote' | 'sales-order' | 'work-tag' | 'staging-manifest';
   id: string;
   label: string;
   description: string;
@@ -729,7 +729,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       { key: 'logo', type: 'logo', parentKey: 'column-logo', offset: { x: 0, y: 0 }, size: { width: 200, height: 120 } },
       { key: 'address', type: 'text', parentKey: 'column-address', offset: { x: 0, y: 0 }, size: { width: 220, height: 140 } },
-      { key: 'qr', type: 'qr', parentKey: 'column-qr', offset: { x: 0, y: 0 }, size: { width: 140, height: 140 } },
+      { key: 'qr', type: 'barcode', parentKey: 'column-qr', offset: { x: 0, y: 0 }, size: { width: 140, height: 140 }, metadata: { symbology: 'qr' } },
     ],
     constraints: [
       { type: 'aspect-ratio', node: 'qr', ratio: 1, strength: 'strong' },

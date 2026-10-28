@@ -18,6 +18,8 @@ import logger from '@alga-psa/core/logger';
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
+// LEVERAGE: friction tenancy-server-barrel — the '@alga-psa/tenancy/server' barrel mixes next/auth-dependent and pure code; import the auth-free subpath.
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/lib/tenantPortalUrl';
 import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
@@ -48,6 +50,15 @@ async function startServices() {
     // the same PostHog-backed feature evaluator in this process as well.
     registerFeatureFlagChecker((flag, context) => featureFlags.isEnabled(flag, context));
 
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      logger.error('Failed to install co-managed write admission:', error);
+    }
+
     initializeWorkflowRuntimeV2();
 
     // Workflow actions resolve email integrations through a runtime registry.
@@ -56,6 +67,7 @@ async function startServices() {
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
+      buildTenantPortalUrl,
     });
 
     await registerEnterpriseStorageProviders();

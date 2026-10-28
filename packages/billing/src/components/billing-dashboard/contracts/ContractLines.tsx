@@ -2,7 +2,7 @@
 
 
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -43,6 +43,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
+import { PrepaidBlockPanel } from './PrepaidBlockPanel';
 import { RecurringUnitSchedulePanel } from './RecurringUnitSchedulePanel';
 import {
   listBucketBusinessHoursSchedules,
@@ -65,11 +66,14 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { BillingTimingField } from './BillingTimingField';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import {
   isAdvanceTimingAllowedForLineType,
   resolveEffectiveBillingTiming,
 } from '@shared/billingClients/contractLineTimingRule';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -79,9 +83,18 @@ interface ContractLinesProps {
    * with no owner), location controls are hidden.
    */
   clientId?: string | null;
+  /**
+   * The contract's start date (`YYYY-MM-DD`) for the client this tab is scoped to.
+   * With `clientId`, lets Fixed lines say when their first partial period will invoice.
+   */
+  startDate?: string | null;
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
   focusContractLineId?: string | null;
+  /** One-shot request to open this line in edit mode (ignored when read-only). Plain focus links leave it unset. */
+  editIntentLineId?: string | null;
+  /** Called once the edit intent has been handled (applied or refused), so the parent clears it. */
+  onEditIntentConsumed?: () => void;
 }
 
 interface DetailedContractLineMapping {
@@ -98,6 +111,8 @@ interface DetailedContractLineMapping {
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: 'client' | 'contract';
   contract_line_type: string;
+  /** Derived label kind: 'PrepaidBlock' for Hourly lines with a prepaid block config. */
+  display_kind?: string;
   default_rate?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
@@ -168,7 +183,9 @@ const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, startDate = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null, editIntentLineId = null, onEditIntentConsumed }) => {
+  // One schedule fetch for the whole tab; every Fixed row's first-invoice hint reads it.
+  const { schedule: clientSchedule } = useClientBillingSchedule(clientId, !!startDate);
   const { t } = useTranslation('msp/contracts');
 
   const handleAssignLineBillingProfile = async (
@@ -718,6 +735,28 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
+  // One-shot edit intent (Overview "Edit"): once the target line has loaded, open it in the
+  // same edit mode the Edit button uses, then tell the parent to clear the intent. The ref
+  // guards against refetches/re-renders re-running it while the async edit setup is in flight;
+  // clearing the intent in the parent keeps later manual collapses from re-triggering edit mode.
+  const handleEditRef = useRef(handleEditContractLine);
+  handleEditRef.current = handleEditContractLine;
+  const consumedEditIntentRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editIntentLineId) {
+      consumedEditIntentRef.current = null;
+      return;
+    }
+    if (consumedEditIntentRef.current === editIntentLineId) return;
+    const target = contractLines.find((line) => line.contract_line_id === editIntentLineId);
+    if (!target) return; // lines not loaded yet; effect re-runs when they arrive
+    consumedEditIntentRef.current = editIntentLineId;
+    if (!isReadOnly) {
+      void handleEditRef.current(target);
+    }
+    onEditIntentConsumed?.();
+  }, [editIntentLineId, contractLines, isReadOnly, onEditIntentConsumed]);
+
   const handleEffectiveBoundaryChange = async (contractLineId: string, boundary: string) => {
     setEffectiveBoundary(boundary);
     if (!boundary) return;
@@ -905,6 +944,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
           if (editData.base_rate !== undefined) {
             typeConfig.base_rate = editData.base_rate;
+            // The edit keeps what the stored number means (share vs per unit); a
+            // rate on a member that had none is a unit price.
+            typeConfig.base_rate_basis = serviceConfig.typeConfig?.base_rate_basis ?? 'per_unit';
           }
         }
 
@@ -930,7 +972,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                 unit_of_measure:
                   editData.unit_of_measure || addition.selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
-            : { base_rate: editData.base_rate ?? addition.selection.customRate };
+            // A Fixed member's authoring default is the catalog price per unit.
+            : { base_rate: editData.base_rate ?? addition.selection.customRate, base_rate_basis: 'per_unit' as const };
 
         return {
           serviceId: addition.selection.service.service_id,
@@ -1278,7 +1321,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <span>{t('contractLines.columns.type', { defaultValue: 'Type' })}:</span>
                         <Badge
                           variant={
-                            line.contract_line_type === 'Fixed'
+                            line.display_kind === 'PrepaidBlock'
+                              ? 'primary'
+                              : line.contract_line_type === 'Fixed'
                               ? 'info'
                               : line.contract_line_type === 'Hourly'
                               ? 'success'
@@ -1288,11 +1333,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           }
                           className="text-xs"
                         >
-                          {formatContractLineType(line.contract_line_type)}
+                          {formatContractLineType(line.display_kind ?? line.contract_line_type)}
                         </Badge>
                         <span>•</span>
                         <span>
                           {t('contractLines.columns.frequency', { defaultValue: 'Frequency' })}: {formatBillingFrequency(line.billing_frequency)}
+                        </span>
+                        <span>•</span>
+                        <span data-testid={`contract-line-billing-timing-${line.contract_line_id}`}>
+                          {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}:{' '}
+                          {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                         </span>
                         {services.length > 0 && (
                           <>
@@ -1593,10 +1643,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
-                                      ? t('billing.timing.advance', { defaultValue: 'In Advance' })
-                                      : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
+                                    {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                                   </p>
+                                )}
+                                {line.contract_line_type === 'Fixed' && (
+                                  <div className="mt-2">
+                                    <ArrearsFirstInvoiceHint
+                                      id={`first-invoice-hint-${line.contract_line_id}`}
+                                      lineType={line.contract_line_type}
+                                      cadenceOwner={
+                                        editingLineId === line.contract_line_id && !pricingOnly
+                                          ? editLineData.cadence_owner || line.cadence_owner || 'client'
+                                          : line.cadence_owner || 'client'
+                                      }
+                                      billingTiming={
+                                        editingLineId === line.contract_line_id && !pricingOnly
+                                          ? editLineData.billing_timing || line.billing_timing || 'arrears'
+                                          : line.billing_timing || 'arrears'
+                                      }
+                                      startDate={startDate}
+                                      clientSchedule={clientSchedule}
+                                      today={new Date()}
+                                    />
+                                  </div>
                                 )}
                               </div>
                               <div>
@@ -1945,45 +2014,45 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
                                               : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
-                                              : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
+                                              : serviceConfig.typeConfig?.base_rate_basis === 'share'
+                                              ? t('contractLines.services.shareOfLineFee', { defaultValue: 'Share of line fee' })
+                                              : t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })}
                                           </Label>
                                           {isEditing ? (
-                                            <div className="relative mt-1">
-                                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{getCurrencySymbol(contract.currency_code || 'USD')}</span>
-                                              <Input
-                                                id={`rate-${serviceConfig.configuration.config_id}`}
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                  serviceConfig.configuration.configuration_type === 'Hourly'
-                                                    ? (editData.hourly_rate !== undefined ? (editData.hourly_rate / 100).toFixed(2) : '')
-                                                    : (editData.base_rate !== undefined ? (editData.base_rate / 100).toFixed(2) : '')
+                                            <Input
+                                              leadingAdornment={getCurrencySymbol(contract.currency_code || 'USD')}
+                                              containerClassName="mt-1"
+                                              id={`rate-${serviceConfig.configuration.config_id}`}
+                                              type="number"
+                                              min="0"
+                                              step="0.01"
+                                              value={
+                                                serviceConfig.configuration.configuration_type === 'Hourly'
+                                                  ? (editData.hourly_rate !== undefined ? (editData.hourly_rate / 100).toFixed(2) : '')
+                                                  : (editData.base_rate !== undefined ? (editData.base_rate / 100).toFixed(2) : '')
+                                              }
+                                              onChange={(e) => {
+                                                const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : undefined;
+                                                if (serviceConfig.configuration.configuration_type === 'Hourly') {
+                                                  setEditServiceConfigs({
+                                                    ...editServiceConfigs,
+                                                    [configId]: {
+                                                      ...editData,
+                                                      hourly_rate: cents
+                                                    }
+                                                  });
+                                                } else {
+                                                  setEditServiceConfigs({
+                                                    ...editServiceConfigs,
+                                                    [configId]: {
+                                                      ...editData,
+                                                      base_rate: cents
+                                                    }
+                                                  });
                                                 }
-                                                onChange={(e) => {
-                                                  const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : undefined;
-                                                  if (serviceConfig.configuration.configuration_type === 'Hourly') {
-                                                    setEditServiceConfigs({
-                                                      ...editServiceConfigs,
-                                                      [configId]: {
-                                                        ...editData,
-                                                        hourly_rate: cents
-                                                      }
-                                                    });
-                                                  } else {
-                                                    setEditServiceConfigs({
-                                                      ...editServiceConfigs,
-                                                      [configId]: {
-                                                        ...editData,
-                                                        base_rate: cents
-                                                      }
-                                                    });
-                                                  }
-                                                }}
-                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                                className="pl-10"
-                                              />
-                                            </div>
+                                              }}
+                                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                            />
                                           ) : (
                                             <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                               {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
@@ -2039,6 +2108,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           />
                                           {editBucketConfigs[serviceConfig.service.service_id] && (
                                             <BucketOverlayFields
+                                              currencyCode={contract.currency_code || 'USD'}
                                               mode={serviceConfig.configuration.configuration_type === 'Hourly' ? 'hours' : 'usage'}
                                               value={editBucketConfigs[serviceConfig.service.service_id] || {}}
                                               onChange={(next) => {
@@ -2140,7 +2210,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           </div>
                         </div>
                       )}
-                      {/* Line-level bucket pools (weighted-burn model). */}
+                      {line.display_kind === 'PrepaidBlock' ? (
+                        <PrepaidBlockPanel
+                          contractLineId={line.contract_line_id}
+                          currencyCode={contract.currency_code}
+                          isReadOnly={isReadOnly}
+                          onChanged={() => {
+                            void loadServicesForLine(line.contract_line_id, true);
+                          }}
+                        />
+                      ) : (
+                      /* Line-level bucket pools (weighted-burn model). Not offered on Prepaid Block lines. */
                       <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
                         <BucketPoolEditor
                           contractLineId={line.contract_line_id}
@@ -2154,11 +2234,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             service_name: serviceConfig.service.service_name,
                           }))}
                           schedules={bucketSchedules}
+                          currencyCode={contract.currency_code}
                           onChanged={() => {
                             void loadServicesForLine(line.contract_line_id, true);
                           }}
                         />
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2180,6 +2262,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             onClose={() => setShowAddDialog(false)}
             contractId={contract.contract_id}
             onAdd={handleAddContractLines}
+            currencyCode={contract.currency_code || 'USD'}
           />
 
           <CreateCustomContractLineDialog
@@ -2187,6 +2270,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             onClose={() => setShowCreateCustomDialog(false)}
             contractId={contract.contract_id}
             currencyCode={contract.currency_code}
+            clientId={clientId}
+            contractStartDate={startDate}
             onCreated={handleAddContractLines}
           />
 

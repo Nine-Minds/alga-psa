@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import type { PartialBlock } from '@blocknote/core';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
   NON_BUSINESS_DAY_POLICIES,
@@ -10,8 +10,7 @@ import {
   type NonBusinessDayPolicy,
   type RecurrenceRule,
 } from '@alga-psa/shared/lib/recurrence';
-import type { PendingTag } from '@alga-psa/types';
-import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
+import type { ITicketTemplate, TicketTemplateListItem, TicketTemplateUsage } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -30,8 +29,8 @@ import {
   TranslatedUnsavedChangesProvider,
   useRegisterUnsavedChanges,
 } from '@alga-psa/ui/context/UnsavedChangesContext';
-import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getTicketTemplate, listTicketTemplates } from '../../actions/ticketTemplateActions';
 import {
   archiveRecurringTicketDefinition,
   createRecurringTicketDefinition,
@@ -46,7 +45,8 @@ import {
   recurringTicketDefinitionInputSchema,
   type OpenPreviousPolicy,
 } from '../../lib/recurring/definitionInput';
-import { RECURRING_TITLE_TOKENS } from '../../lib/recurring/titleTemplate';
+import type { RecurringTicketOverrides } from '../../lib/recurring/effectiveFields';
+import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import type { RecurringDefinitionDetail, RecurringSchedulePreview } from '../../lib/recurring/types';
 import { RecurringClientsSection } from './RecurringClientsSection';
 import { RecurringHistorySection } from './RecurringHistorySection';
@@ -56,13 +56,13 @@ import {
   CategoryField,
   PriorityField,
 } from './RecurringFieldGroups';
-import { useRecurringReferenceData } from './useRecurringReferenceData';
+import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
+import { useTicketFieldReferenceData } from '../useTicketFieldReferenceData';
 import { useRecurringTicketPermissions } from './useRecurringTicketPermissions';
 import {
   calendarStringToDate,
   dateToCalendarString,
   formatInstant,
-  isBlankDocument,
   recurringErrorMessage,
   toDescribeTranslate,
   unwrapRecurring,
@@ -73,18 +73,13 @@ const MESSAGE_KEY_PREFIX = 'features/tickets:';
 
 interface FormState {
   name: string;
-  title_template: string;
-  description: PartialBlock[] | null;
-  board_id: string;
+  ticket_template_id: string;
+  /** Overrides of the template for this schedule; each group is present (overridden) or absent (inherited). */
+  overrides: RecurringTicketOverrides;
   status_id: string | null;
-  priority_id: string;
-  category_id: string | null;
-  subcategory_id: string | null;
   assigned_to: string | null;
   assigned_team_id: string | null;
   additional_agent_ids: string[];
-  tags: PendingTag[];
-  checklist_template_id: string | null;
   recurrence: RecurrenceRule;
   start_date: string;
   create_time: string;
@@ -95,21 +90,15 @@ interface FormState {
   notify_client_on_create: boolean;
 }
 
-function emptyForm(): FormState {
+function emptyForm(templateId: string): FormState {
   return {
     name: '',
-    title_template: '',
-    description: null,
-    board_id: '',
+    ticket_template_id: templateId,
+    overrides: {},
     status_id: null,
-    priority_id: '',
-    category_id: null,
-    subcategory_id: null,
     assigned_to: null,
     assigned_team_id: null,
     additional_agent_ids: [],
-    tags: [],
-    checklist_template_id: null,
     recurrence: defaultRuleForFrequency('weekly'),
     start_date: dateToCalendarString(new Date()),
     create_time: '08:00',
@@ -125,18 +114,12 @@ function formFromDetail(detail: RecurringDefinitionDetail): FormState {
   const d = detail.definition;
   return {
     name: d.name,
-    title_template: d.title_template,
-    description: d.description as PartialBlock[] | null,
-    board_id: d.board_id,
+    ticket_template_id: d.ticket_template_id,
+    overrides: d.overrides,
     status_id: d.status_id,
-    priority_id: d.priority_id,
-    category_id: d.category_id,
-    subcategory_id: d.subcategory_id,
     assigned_to: d.assigned_to,
     assigned_team_id: d.assigned_team_id,
     additional_agent_ids: d.additional_agent_ids,
-    tags: d.tags.map((tag) => ({ tag_text: tag, isNew: false })),
-    checklist_template_id: d.checklist_template_id,
     recurrence: d.recurrence,
     start_date: d.start_date,
     create_time: d.create_time,
@@ -152,20 +135,12 @@ function toInput(form: FormState, isActive: boolean) {
   return {
     name: form.name,
     is_active: isActive,
-    title_template: form.title_template,
-    description: isBlankDocument(form.description as Record<string, unknown>[] | null)
-      ? null
-      : (form.description as Record<string, unknown>[]),
-    board_id: form.board_id,
+    ticket_template_id: form.ticket_template_id,
+    overrides: form.overrides,
     status_id: form.status_id,
-    priority_id: form.priority_id,
-    category_id: form.category_id,
-    subcategory_id: form.subcategory_id,
     assigned_to: form.assigned_to,
     assigned_team_id: form.assigned_team_id,
     additional_agent_ids: form.additional_agent_ids,
-    tags: form.tags.map((tag) => tag.tag_text),
-    checklist_template_id: form.checklist_template_id,
     recurrence: form.recurrence,
     start_date: form.start_date,
     create_time: form.create_time,
@@ -191,20 +166,25 @@ export interface RecurringTicketEditorProps {
 }
 
 /**
- * Create / edit page body for a recurring ticket definition: ticket template, schedule, behaviour,
+ * Create / edit page body for a recurring ticket definition: ticket template, overrides, dispatch, schedule, behaviour,
  * clients and history. Clients and history only exist once the definition is saved, so creating
  * redirects to the saved definition where clients are added.
  */
 function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps) {
   const { t, i18n } = useTranslation('features/tickets');
   const router = useRouter();
-  const reference = useRecurringReferenceData();
+  const searchParams = useSearchParams();
+  const reference = useTicketFieldReferenceData();
   const permissions = useRecurringTicketPermissions();
+  const templatePermissions = useTicketTemplatePermissions();
   const isNew = definitionId === 'new';
 
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
+  const [form, setForm] = useState<FormState>(() => emptyForm(searchParams?.get('template') ?? ''));
+  const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm(searchParams?.get('template') ?? '')));
+  const [templates, setTemplates] = useState<TicketTemplateListItem[]>([]);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [template, setTemplate] = useState<(ITicketTemplate & TicketTemplateUsage) | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -213,8 +193,6 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
   const [preview, setPreview] = useState<RecurringSchedulePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
-  const [editorKey, setEditorKey] = useState(0);
-  const titleRef = useRef<HTMLInputElement | null>(null);
 
   const archived = detail?.definition.archived_at != null;
   // Until the permission check resolves nothing is locked, so a permitted user never sees a flash of disabled fields;
@@ -244,15 +222,45 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
     void (async () => {
       const result = await load();
       if (result) {
-        const seeded = formFromDetail(result);
-        setForm(seeded);
-        setBaseline(snapshot(seeded));
-        setEditorKey((key) => key + 1);
+        // Coming back from "New template": the freshly created template replaces the stored one (saved on Save).
+        const returned = searchParams?.get('template');
+        const stored = formFromDetail(result);
+        setForm(returned ? { ...stored, ticket_template_id: returned } : stored);
+        // The baseline is the stored definition, so a template picked via "New template" counts as an unsaved change.
+        setBaseline(snapshot(stored));
       }
     })();
     // The form is seeded once per definition; later refreshes must not overwrite unsaved edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definitionId]);
+
+  // Every template, inactive ones included: a schedule may still use a template that is no longer offered for manual use (R4).
+  useEffect(() => {
+    void (async () => {
+      try {
+        setTemplates(unwrapRecurring(await listTicketTemplates({ includeInactive: true })));
+      } catch (error) {
+        setTemplatesError(error instanceof Error ? error.message : String(error));
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!form.ticket_template_id) { setTemplate(null); return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = unwrapRecurring(await getTicketTemplate(form.ticket_template_id));
+        if (cancelled) return;
+        setTemplate(result);
+        if (result.board_id) void reference.ensureBoard(result.board_id).catch(() => undefined);
+      } catch (error) {
+        if (!cancelled) setTemplatesError(error instanceof Error ? error.message : String(error));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ticket_template_id]);
 
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
@@ -274,13 +282,14 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
 
   // Next 5 due dates for the draft schedule, debounced, in the tenant timezone.
   const schedule = useMemo(() => ({
+    ticket_template_id: form.ticket_template_id || null,
     recurrence: form.recurrence,
     start_date: form.start_date,
     create_time: form.create_time,
     due_time: form.due_time,
     lead_days: form.lead_days,
     non_business_day_policy: form.non_business_day_policy,
-  }), [form.recurrence, form.start_date, form.create_time, form.due_time, form.lead_days, form.non_business_day_policy]);
+  }), [form.ticket_template_id, form.recurrence, form.start_date, form.create_time, form.due_time, form.lead_days, form.non_business_day_policy]);
 
   useEffect(() => {
     const parsed = recurringSchedulePreviewInputSchema.safeParse(schedule);
@@ -357,11 +366,6 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
     }
   };
 
-  const insertToken = (token: string) => {
-    patch({ title_template: `${form.title_template}{{${token}}}` });
-    titleRef.current?.focus();
-  };
-
   if (loading) {
     return <FormCardsSkeleton id={`${ID}-loading`} label={t('recurring.loading', 'Loading…')} />;
   }
@@ -376,6 +380,31 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
     next: t('recurring.schedule.policy.next', 'Move to the next business day'),
   };
   const timeZone = preview?.time_zone ?? detail?.time_zone ?? 'UTC';
+  // Status is validated against the board the ticket lands on: the schedule override, else the template's.
+  const effectiveBoardId = form.overrides.board?.board_id ?? template?.board_id ?? null;
+
+  const toggleOverride = (group: 'board' | 'priority' | 'category', enabled: boolean) => {
+    const { [group]: _removed, ...rest } = form.overrides;
+    if (!enabled) { patch({ overrides: rest }); return; }
+    const initial: RecurringTicketOverrides =
+      group === 'board' ? { board: { board_id: template?.board_id ?? '', status_id: null } }
+        : group === 'priority' ? { priority: { priority_id: template?.priority_id ?? '' } }
+          : { category: { category_id: template?.category_id ?? null, subcategory_id: template?.subcategory_id ?? null } };
+    patch({ overrides: { ...rest, ...initial } });
+  };
+
+  const overrideGroup = (group: 'board' | 'priority' | 'category', title: string, enabled: boolean, body: React.ReactNode) => (
+    <div key={group} className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+      <Switch
+        id={`${ID}-override-${group}`}
+        checked={enabled}
+        disabled={readOnly}
+        onCheckedChange={(checked) => toggleOverride(group, checked)}
+        label={title}
+      />
+      {enabled && body}
+    </div>
+  );
 
   return (
     <div id={`${ID}-editor`} className="space-y-6 p-6">
@@ -440,80 +469,109 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
       </SectionCard>
 
       <SectionCard id={`${ID}-template`} title={t('recurring.sections.template', 'Ticket template')}>
-        <div className="md:max-w-2xl">
-          <Label htmlFor={`${ID}-title`}>{t('recurring.fields.title', 'Ticket title')}</Label>
-          <Input
-            id={`${ID}-title`}
-            ref={titleRef}
-            value={form.title_template}
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
+          {t('recurring.template.intro', 'What the ticket looks like comes from a shared ticket template. Changing the template changes every schedule that uses it, from the next ticket on.')}
+        </p>
+        {templatesError && <Alert variant="destructive"><AlertDescription>{templatesError}</AlertDescription></Alert>}
+        <div className="max-w-md">
+          <Label htmlFor={`${ID}-template-select`}>{t('recurring.template.select', 'Ticket template')}</Label>
+          <CustomSelect
+            id={`${ID}-template-select`}
+            value={form.ticket_template_id}
             disabled={readOnly}
-            onChange={(event) => patch({ title_template: event.target.value })}
+            placeholder={t('recurring.template.placeholder', 'Select a ticket template')}
+            onValueChange={(value) => patch({ ticket_template_id: value })}
+            options={templates.map((candidate) => ({
+              value: candidate.template_id,
+              label: candidate.is_active ? candidate.name : t('recurring.template.inactiveOption', '{{name}} (inactive)', { name: candidate.name }),
+            }))}
           />
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-[rgb(var(--color-text-500))]">{t('recurring.fields.titleTokens', 'Insert:')}</span>
-            {RECURRING_TITLE_TOKENS.map((token) => (
-              <Button
-                key={token}
-                id={`${ID}-token-${token.replace(/_/g, '-')}`}
-                type="button"
-                variant="outline"
-                size="xs"
-                disabled={readOnly}
-                onClick={() => insertToken(token)}
-              >
-                {`{{${token}}}`}
-              </Button>
-            ))}
-          </div>
         </div>
-        <div>
-          <Label htmlFor={`${ID}-description`}>{t('recurring.fields.description', 'Description')}</Label>
-          <div className="min-w-0 w-full">
-            {readOnly ? (
-              // TextEditor has no read-only mode, so a locked definition shows its description in the read-only viewer.
-              isBlankDocument(form.description as Record<string, unknown>[] | null) ? (
-                <p id={`${ID}-description`} className="text-sm text-[rgb(var(--color-text-500))]">—</p>
-              ) : (
-                <RichTextViewer id={`${ID}-description`} content={form.description as PartialBlock[]} />
-              )
-            ) : (
-              <TextEditor
-                key={`${ID}-description-${editorKey}`}
-                id={`${ID}-description`}
-                initialContent={form.description ?? undefined}
-                onContentChange={(content) => patch({ description: content })}
-                placeholder={t('recurring.fields.descriptionPlaceholder', 'Description')}
-              />
+        {template && (
+          <div id={`${ID}-template-summary`} className="space-y-1 rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm">
+            <p className="font-medium">{template.title}</p>
+            <p className="text-[rgb(var(--color-text-500))]">
+              {t('recurring.template.summary', '{{checklist}} checklist item(s), {{tags}} tag(s)', {
+                checklist: template.checklist.length,
+                tags: template.tags.length,
+              })}
+            </p>
+            {!template.is_active && (
+              <p id={`${ID}-template-inactive`} className="text-[rgb(var(--color-text-500))]">
+                {t('recurring.template.inactiveNotice', 'This template is inactive: hidden from the template picker; still used by {{count}} schedules.', { count: template.schedule_count })}
+              </p>
             )}
+            {template.schedule_count > 1 && (
+              <p className="text-[rgb(var(--color-text-500))]">
+                {t('recurring.template.sharedNotice', 'Used by {{count}} schedules. Editing the template changes all of them.', { count: template.schedule_count })}
+              </p>
+            )}
+            <div className="flex gap-4 pt-1">
+              {templatePermissions.update && (
+                <Link id={`${ID}-template-edit`} href={`/msp/tickets/templates/${template.template_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                  {t('recurring.template.edit', 'Edit template')}
+                </Link>
+              )}
+              {templatePermissions.create && (
+                <Link id={`${ID}-template-new`} href={`/msp/tickets/templates/new?scheduleReturn=${isNew ? 'new' : definitionId}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                  {t('recurring.template.new', 'New template')}
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
-        <BoardStatusFields
-          idPrefix={`${ID}-board-status`}
-          reference={reference}
-          disabled={readOnly}
-          value={{ board_id: form.board_id, status_id: form.status_id }}
-          onChange={(value) => patch({
-            ...value,
-            // Priorities and categories belong to the board, so a board change clears them.
-            ...(value.board_id !== form.board_id ? { priority_id: '', category_id: null, subcategory_id: null } : {}),
-          })}
-        />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <PriorityField
-            idPrefix={`${ID}-priority-field`}
-            reference={reference}
-            disabled={readOnly}
-            boardId={form.board_id}
-            value={form.priority_id || null}
-            onChange={(priorityId) => patch({ priority_id: priorityId })}
-          />
-          <CategoryField
-            idPrefix={`${ID}-category-field`}
-            reference={reference}
-            disabled={readOnly}
-            boardId={form.board_id}
-            value={{ category_id: form.category_id, subcategory_id: form.subcategory_id }}
-            onChange={(value) => patch(value)}
+        )}
+        {preview?.sample_title != null && (
+          <p id={`${ID}-sample-title`} className="text-sm">
+            <span className="text-[rgb(var(--color-text-500))]">{t('recurring.template.sampleTitle', 'First ticket title:')} </span>
+            {preview.sample_title}
+          </p>
+        )}
+        <p className="text-xs text-[rgb(var(--color-text-500))]">
+          {t('recurring.template.tokensHelp', 'Template titles can use {{tokens}}; they are filled in per ticket.', { tokens: TICKET_TITLE_TOKENS.map((token) => `{{${token}}}`).join(' ') })}
+        </p>
+      </SectionCard>
+
+      <SectionCard id={`${ID}-overrides`} title={t('recurring.sections.overrides', 'Overrides for this schedule')}>
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
+          {t('recurring.overridesSection.intro', 'Leave a group off to use the template. Each client can override these again.')}
+        </p>
+        {overrideGroup('board', t('recurring.overrides.groups.board', 'Override board and status'), form.overrides.board !== undefined,
+          form.overrides.board && (
+            <BoardStatusFields
+              idPrefix={`${ID}-override-board`} reference={reference} disabled={readOnly} value={form.overrides.board}
+              onChange={(board) => patch({ overrides: { ...form.overrides, board } })}
+            />
+          ))}
+        {overrideGroup('priority', t('recurring.overrides.groups.priority', 'Override priority'), form.overrides.priority !== undefined,
+          form.overrides.priority && (
+            <PriorityField
+              idPrefix={`${ID}-override-priority`} reference={reference} disabled={readOnly} boardId={effectiveBoardId ?? ''}
+              value={form.overrides.priority.priority_id || null}
+              onChange={(priorityId) => patch({ overrides: { ...form.overrides, priority: { priority_id: priorityId } } })}
+            />
+          ))}
+        {overrideGroup('category', t('recurring.overrides.groups.category', 'Override category'), form.overrides.category !== undefined,
+          form.overrides.category && (
+            <CategoryField
+              idPrefix={`${ID}-override-category`} reference={reference} disabled={readOnly} boardId={effectiveBoardId ?? ''}
+              value={form.overrides.category}
+              onChange={(category) => patch({ overrides: { ...form.overrides, category } })}
+            />
+          ))}
+      </SectionCard>
+
+      <SectionCard id={`${ID}-dispatch`} title={t('recurring.sections.dispatch', 'Dispatch')}>
+        <div className="max-w-md">
+          <Label htmlFor={`${ID}-status`}>{t('recurring.fields.status', 'Status')}</Label>
+          <CustomSelect
+            id={`${ID}-status`}
+            value={form.status_id ?? ''}
+            disabled={readOnly || !effectiveBoardId}
+            onValueChange={(value) => patch({ status_id: value || null })}
+            options={[
+              { value: '', label: t('recurring.fields.statusBoardDefault', 'Board default') },
+              ...(effectiveBoardId ? (reference.boardData[effectiveBoardId]?.statuses ?? []) : []).map((status) => ({ value: status.status_id, label: status.name })),
+            ]}
           />
         </div>
         <AssignmentFields
@@ -527,26 +585,6 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
           }}
           onChange={(value) => patch(value)}
         />
-        <QuickAddTagPicker
-          id={`${ID}-tags`}
-          entityType="ticket"
-          pendingTags={form.tags}
-          onPendingTagsChange={(tags) => patch({ tags })}
-          disabled={readOnly}
-        />
-        <div className="max-w-md">
-          <Label htmlFor={`${ID}-checklist-template`}>{t('recurring.fields.checklistTemplate', 'Checklist template')}</Label>
-          <CustomSelect
-            id={`${ID}-checklist-template`}
-            value={form.checklist_template_id ?? ''}
-            disabled={readOnly}
-            onValueChange={(value) => patch({ checklist_template_id: value || null })}
-            options={[
-              { value: '', label: t('recurring.fields.noChecklist', 'None') },
-              ...reference.checklistTemplates.map((template) => ({ value: template.template_id, label: template.name })),
-            ]}
-          />
-        </div>
       </SectionCard>
 
       <SectionCard id={`${ID}-schedule`} title={t('recurring.sections.schedule', 'Schedule')}>

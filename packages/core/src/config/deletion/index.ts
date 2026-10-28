@@ -1,3 +1,4 @@
+import { predicateReferencesValue, type PredicateNode } from '@alga-psa/predicates';
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -7,6 +8,14 @@ import type { Knex } from 'knex';
 // the predicate by table name matches tenantDb.table()'s behaviour exactly.
 const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
   trx(table).where(`${table}.tenant`, tenant);
+
+const countPredicateReferences = (table: string, column: string, path: string) =>
+  async (trx: Knex | Knex.Transaction, { tenant, entityId }: { tenant: string; entityId: string }): Promise<number> => {
+    const rows: Array<Record<string, PredicateNode>> = await tenantScopedTable(trx, tenant, table).select(column);
+    return rows.filter((row) => predicateReferencesValue(row[column], path, entityId)).length;
+  };
+
+export const countBoardChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'board_id');
 
 const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
@@ -104,6 +113,39 @@ const countCompositeTaxComponentUsage = async (
   return Number(result?.count ?? 0);
 };
 
+// email_sender_routes.board_id is only populated for route_type='board' (a
+// table CHECK enforces it), but the predicate is spelled out so the count
+// matches deleteBoard's own check exactly.
+const countBoardSenderRoutes = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'email_sender_routes')
+    .where({ route_type: 'board', board_id: options.entityId })
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
+// Mirrors deleteBoard's own recurring-schedule check: archived definitions are
+// read-only forever (loadWritableDefinition throws DEFINITION_ARCHIVED and
+// there is no unarchive or hard delete), so blocking on one would leave the
+// board permanently undeletable. They also never generate tickets, so their
+// board_id is inert history.
+const countActiveBoardRecurringDefinitions = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'recurring_ticket_definitions')
+    .where({ board_id: options.entityId })
+    .whereNull('archived_at')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -131,6 +173,20 @@ const getStatusType = async (
     .first();
 
   return status?.status_type ?? null;
+};
+
+// Project staging (C6): reserved or staged stock lines still hold stock. Deleting the project would leave
+// those claims orphaned, so it is refused until they are released or installed.
+const countActiveStagingStockClaims = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'project_staging_lines')
+    .where({ project_id: options.entityId, kind: 'stock' })
+    .whereIn('status', ['reserved', 'staged'])
+    .count<{ count: string }>('* as count')
+    .first();
+  return Number(result?.count ?? 0);
 };
 
 const countAssetAssociations = (entityType: string) => {
@@ -321,6 +377,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countProjectTaskWorkItems('time_entries')
       },
       { type: 'project_material', table: 'project_materials', foreignKey: 'project_id', label: 'material' },
+      {
+        type: 'staging_stock_claim',
+        table: 'project_staging_lines',
+        label: 'reserved or staged stock item',
+        countQuery: countActiveStagingStockClaims
+      },
       {
         type: 'asset_association',
         table: 'asset_associations',
@@ -587,9 +649,30 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'board',
     supportsInactive: false,
     supportsArchive: false,
+    // deleteBoard blocks on these with its own codes before it ever reaches the
+    // lightweight path; they are mirrored here so that path reports a proper
+    // dependency instead of letting the raw FK error escape.
     dependencies: [
       { type: 'ticket', table: 'tickets', foreignKey: 'board_id', label: 'ticket' },
-      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' }
+      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' },
+      { type: 'inbound_ticket_default', table: 'inbound_ticket_defaults', foreignKey: 'board_id', label: 'inbound email default' },
+      {
+        type: 'email_sender_route',
+        table: 'email_sender_routes',
+        label: 'outbound sender route',
+        countQuery: countBoardSenderRoutes
+      },
+      { type: 'ticket_template', table: 'ticket_templates', foreignKey: 'board_id', label: 'ticket template' },
+      {
+        type: 'recurring_ticket_definition',
+        table: 'recurring_ticket_definitions',
+        label: 'recurring ticket schedule',
+        countQuery: countActiveBoardRecurringDefinitions
+      },
+      { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', countQuery: countBoardChecklistApplyRules, label: 'checklist apply rule' },
+      // board_id is only ever set when scope='board' (canned_responses_scope_target_check),
+      // so a plain board_id count already means "board-scoped response".
+      { type: 'canned_response', table: 'canned_responses', foreignKey: 'board_id', label: 'board canned response' }
     ]
   },
   interaction_type: {
@@ -630,9 +713,11 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'quote_activities',
         label: 'quote activity',
         countQuery: async (trx, options) => {
+          // Every save writes an 'updated' row; only real history (sent, status
+          // changes, conversions...) should block a hard delete of a draft.
           const result = await tenantScopedTable(trx, options.tenant, 'quote_activities')
             .where({ quote_id: options.entityId })
-            .whereNot('activity_type', 'created')
+            .whereNotIn('activity_type', ['created', 'updated'])
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);

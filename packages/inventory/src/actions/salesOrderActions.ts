@@ -23,11 +23,16 @@ import {
 } from '@alga-psa/types';
 import {
   availableQuantity,
-  applyAllocationDelta,
   publishInventoryEvent,
-  recomputeSerializedOnHand,
   timestampPayload,
 } from '../lib';
+import {
+  claimCounter,
+  claimFifoUnits,
+  releaseClaimedUnits,
+  releaseCounter,
+  resolveAllocationLocation as resolveSharedAllocationLocation,
+} from '../lib/allocation';
 import { kitActionErrorFrom } from '../lib/kitActionErrors';
 import { assertProcurableSo } from '../lib/salesOrderState';
 import { explodeKitOntoSalesOrder } from './kitActions';
@@ -244,20 +249,13 @@ async function totalAvailable(trx: Knex.Transaction, tenant: string, serviceId: 
 }
 
 /** Resolve the single location an allocation should draw from: default first, else most-available. */
-async function resolveAllocationLocation(
+function resolveAllocationLocation(
   trx: Knex.Transaction,
   tenant: string,
   serviceId: string,
   meta: ProductMeta,
 ): Promise<string | null> {
-  if (meta.default_location_id) return meta.default_location_id;
-  const rows = await trx('stock_levels').where({ tenant, service_id: serviceId });
-  let best: { location_id: string; available: number } | null = null;
-  for (const r of rows as any[]) {
-    const avail = availableQuantity(r);
-    if (avail > 0 && (!best || avail > best.available)) best = { location_id: r.location_id, available: avail };
-  }
-  return best?.location_id ?? null;
+  return resolveSharedAllocationLocation(trx, tenant, serviceId, meta.default_location_id);
 }
 
 /** Allocate one line's outstanding quantity per the SO's allocation mode. Partial/zero is fine (backorder). */
@@ -276,27 +274,13 @@ async function allocateLine(
     // Pick in_stock units, preferring the resolved location, then FIFO by received_at.
     // FOR UPDATE SKIP LOCKED: a unit mid-claim by a concurrent confirm/fulfill is
     // invisible here, so two orders can never allocate the same unit (F022).
-    const q = trx('stock_units')
-      .where({ tenant, service_id: line.service_id, status: 'in_stock' })
-      .forUpdate()
-      .skipLocked()
-      .limit(remaining);
-    // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
-    const units = preferred
-      ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST, unit_id ASC', [preferred])) as any[])
-      : ((await q.orderByRaw('received_at ASC NULLS LAST, unit_id ASC')) as any[]);
-
-    const touched = new Set<string>();
-    const stockUnitTouches: StockUnitSearchTouch[] = [];
-    for (const u of units) {
-      await trx('stock_units')
-        .where({ tenant, unit_id: u.unit_id })
-        .update({ status: 'allocated', allocated_so_line_id: line.so_line_id, updated_at: trx.fn.now() });
-      if (u.location_id) touched.add(u.location_id);
-      stockUnitTouches.push({ unit_id: u.unit_id, service_id: line.service_id });
-    }
-    for (const loc of touched) await recomputeSerializedOnHand(trx, tenant, line.service_id, loc);
-    return stockUnitTouches;
+    const units = await claimFifoUnits(trx, tenant, {
+      serviceId: line.service_id,
+      quantity: remaining,
+      preferredLocationId: preferred,
+      claimant: { kind: 'so_line', id: line.so_line_id },
+    });
+    return units.map((u) => ({ unit_id: u.unit_id, service_id: line.service_id }));
   }
 
   // Non-serialized: bump the per-location reserved (soft) / held (hard) counter,
@@ -305,15 +289,15 @@ async function allocateLine(
   // row is locked first so concurrent confirms serialize on the availability read.
   const location = await resolveAllocationLocation(trx, tenant, line.service_id, meta);
   if (!location) return []; // nothing on hand anywhere → backorder
-  const level = await trx('stock_levels')
-    .where({ tenant, service_id: line.service_id, location_id: location })
-    .forUpdate()
-    .first();
-  const available = level ? availableQuantity(level) : 0;
-  const reserve = Math.max(0, Math.min(available, remaining));
-  if (reserve <= 0) return [];
   const column = so.allocation_mode === 'hard' ? 'held_quantity' : 'reserved_quantity';
-  await applyAllocationDelta(trx, tenant, line.service_id, location, column, reserve);
+  const { claimed: reserve } = await claimCounter(trx, tenant, {
+    serviceId: line.service_id,
+    locationId: location,
+    column,
+    requested: remaining,
+    mode: 'up_to_available',
+  });
+  if (reserve <= 0) return [];
   // Attribute the reservation to the line so release/fulfill can drain exactly what
   // was reserved, and backorder math can add back the line's own claim (F025).
   await trx('sales_order_lines')
@@ -326,28 +310,6 @@ async function allocateLine(
   return [];
 }
 
-/** Decrement a per-location allocation counter for a service by `amount`, draining from the rows that hold it. */
-async function reverseAllocationCounter(
-  trx: Knex.Transaction,
-  tenant: string,
-  serviceId: string,
-  column: 'reserved_quantity' | 'held_quantity',
-  amount: number,
-): Promise<void> {
-  if (amount <= 0) return;
-  let remaining = amount;
-  const rows = (await trx('stock_levels')
-    .where({ tenant, service_id: serviceId })
-    .andWhere(column, '>', 0)
-    .orderBy(column, 'desc')) as any[];
-  for (const r of rows) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(r[column]));
-    await applyAllocationDelta(trx, tenant, serviceId, r.location_id, column, -take);
-    remaining -= take;
-  }
-}
-
 /** Reverse every allocation held by an SO's lines (serialized units → in_stock; reserved/held counters drained). */
 async function releaseAllocations(
   trx: Knex.Transaction,
@@ -355,23 +317,9 @@ async function releaseAllocations(
   so: ISalesOrder,
   lines: ISalesOrderLine[],
 ): Promise<StockUnitSearchTouch[]> {
-  const stockUnitTouches: StockUnitSearchTouch[] = [];
   // Serialized: return any units still parked on these lines (not yet delivered) to in_stock.
-  const lineIds = lines.map((l) => l.so_line_id);
-  if (lineIds.length > 0) {
-    const units = (await trx('stock_units')
-      .where({ tenant, status: 'allocated' })
-      .whereIn('allocated_so_line_id', lineIds)) as any[];
-    for (const u of units) {
-      await trx('stock_units')
-        .where({ tenant, unit_id: u.unit_id })
-        .update({ status: 'in_stock', allocated_so_line_id: null, updated_at: trx.fn.now() });
-      stockUnitTouches.push({ unit_id: u.unit_id, service_id: u.service_id });
-    }
-    for (const u of units) {
-      if (u.location_id) await recomputeSerializedOnHand(trx, tenant, u.service_id, u.location_id);
-    }
-  }
+  const released = await releaseClaimedUnits(trx, tenant, 'so_line', lines.map((l) => l.so_line_id));
+  const stockUnitTouches: StockUnitSearchTouch[] = released.map((u) => ({ unit_id: u.unit_id, service_id: u.service_id }));
 
   // Non-serialized: drain exactly what each line reserved (quantity_reserved at
   // reserved_location_id) — draining "outstanding" would poach other orders'
@@ -382,13 +330,7 @@ async function releaseAllocations(
     if (meta.is_serialized || meta.is_kit) continue;
     if (line.fulfillment_type === 'drop_ship') continue;
     const reserved = Number(line.quantity_reserved ?? 0);
-    if (reserved > 0) {
-      if (line.reserved_location_id) {
-        await applyAllocationDelta(trx, tenant, line.service_id, line.reserved_location_id, column, -reserved);
-      } else {
-        await reverseAllocationCounter(trx, tenant, line.service_id, column, reserved);
-      }
-    }
+    await releaseCounter(trx, tenant, line.service_id, line.reserved_location_id, column, reserved);
     await trx('sales_order_lines')
       .where({ tenant, so_line_id: line.so_line_id })
       .update({ quantity_reserved: 0, reserved_location_id: null, updated_at: trx.fn.now() });

@@ -87,6 +87,11 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'billing_settings', action: 'read', msp: true, client: false, description: 'View billing rates and rules', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'billing_settings', action: 'update', msp: true, client: false, description: 'Modify billing rates and configuration', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
 
+  { resource: 'canned_response', action: 'create', msp: true, client: false, description: 'Create canned ticket responses', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'canned_response', action: 'delete', msp: true, client: false, description: 'Delete canned ticket responses', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'canned_response', action: 'read', msp: true, client: false, description: 'View canned ticket responses and insert them into comments', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
+  { resource: 'canned_response', action: 'update', msp: true, client: false, description: 'Modify canned ticket responses', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+
   { resource: 'client', action: 'create', msp: true, client: false, description: 'Add new client accounts', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'client', action: 'create', msp: false, client: true, description: 'Create client information', products: ['psa'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'client', action: 'delete', msp: true, client: false, description: 'Remove client accounts', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Technician'] } },

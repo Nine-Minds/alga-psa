@@ -297,7 +297,7 @@
         "description": "Skonfiguruj zaawansowane opcje przetwarzania poczty e-mail",
         "folderFiltersLabel": "Filtry folderów",
         "folderFiltersPlaceholder": "Skrzynka odbiorcza, pomoc techniczna, folder niestandardowy",
-        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza)",
+        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza). Użyj dokładnej nazwy folderu widocznej w programie Outlook, a foldery zagnieżdżone zapisuj jako Skrzynka odbiorcza/Podfolder.",
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {

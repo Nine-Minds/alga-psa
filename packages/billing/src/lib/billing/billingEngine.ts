@@ -13,6 +13,7 @@ import {
   normalizeResolvedContractCharge,
 } from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from "../prepaidBlockDates";
 import {
   IBillingPeriod,
   IBillingResult,
@@ -28,6 +29,7 @@ import {
   IProductCharge,
   ILicenseCharge,
   IHourBlockCharge,
+  IPrepaidBlockCharge,
   IProjectBillingConfig,
   IProjectBillingScheduleEntry,
   IProjectPhaseRateOverride,
@@ -67,7 +69,6 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
 import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import {
   ambiguousTicketProjectLinksQuery,
@@ -112,19 +113,18 @@ import {
 } from "./compute";
 import {
   resolveChargeProfile,
+  resolveChargeProfileFor,
   type ChargeProfileAssignments,
 } from "./billingProfileResolution";
+import {
+  DatabaseChargeSource,
+  resolveContractLineChargesWithDiagnostics,
+  type ChargeFamily,
+  type ContractObligationSink,
+  type PooledTimeExclusion,
+  type ResolvedLineCharge,
+} from "./chargeResolution";
 
-interface ContractObligationSink {
-  obligations: UnpricedContractBillingObligation[];
-  taxContexts: Record<string, ChargeComputeTaxContext>;
-  /**
-   * Usage-billed services whose due service period has no eligible
-   * usage_tracking record. Usage billing is record-driven; these statuses let
-   * callers surface "missing usage" instead of a silent empty result.
-   */
-  usageStatuses?: IUsageServicePeriodStatus[];
-}
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
@@ -154,6 +154,7 @@ import {
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
 import { resolveContractLineBillingWindow } from "./contractLineWindow";
+import { findWindow, loadCarriedForwardWindows } from "./lateHourlyTime";
 import {
   contractAdjustmentDateOnly,
   reconcileContractChangeAdjustmentsForInvoice,
@@ -189,6 +190,14 @@ type CalculateBillingOptions = {
     include: boolean;
     timeEntryIds?: string[];
     usageRecordIds?: string[];
+  };
+  /**
+   * Scheduled Prepaid Block issuances selected for this invoice
+   * (`schedule:{tenant}:prepaid_block:{issuanceId}` selector keys). Each one
+   * becomes an up-front `prepaid_block` charge.
+   */
+  prepaidBlockSelection?: {
+    issuanceIds: string[];
   };
   projectTarget?: {
     projectId: string;
@@ -1776,7 +1785,13 @@ export class BillingEngine {
         ]
       : projectMaterialWarnings;
 
-    if (clientContractLines.length === 0 && !nonContractSelection?.include) {
+    const prepaidBlockIssuanceIds =
+      options.prepaidBlockSelection?.issuanceIds ?? [];
+    if (
+      clientContractLines.length === 0 &&
+      !nonContractSelection?.include &&
+      prepaidBlockIssuanceIds.length === 0
+    ) {
       if (materialCharges.length === 0 && !projectBillingContext) {
         return {
           charges: [],
@@ -1812,112 +1827,83 @@ export class BillingEngine {
       console.log(
         `Processing contract line: ${clientContractLine.contract_line_name}`,
       );
-      const familyObligationSinks = Array.from(
-        { length: 6 },
-        () => ({ obligations: [], taxContexts: {} }) as ContractObligationSink,
-      );
-      await Promise.all([
-        options.projectTarget
-          ? Promise.resolve()
-          : this.loadFixedPriceObligation(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              cycle,
-              recurringTimingSelections[
-                clientContractLine.client_contract_line_id
-              ],
-              options.recurringTimingSelectionSource,
-              undefined,
-              familyObligationSinks[0],
-            ),
-        targetProjectConfig?.billing_model === "fixed_price"
-          ? Promise.resolve()
-          : projectBillingContext || options.projectTarget
-            ? this.loadTimeBasedObligation(
+      // Which charges the line produces is decided once, by the shared
+      // resolver (also used by the contract simulator). A project-driven run is
+      // not pool-aware and only prices time.
+      const families: Set<ChargeFamily> = options.projectTarget
+        ? targetProjectConfig?.billing_model === "fixed_price"
+          ? new Set()
+          : new Set<ChargeFamily>(["hourly"])
+        : new Set<ChargeFamily>([
+            "fixed",
+            "hourly",
+            "usage",
+            "bucket",
+            "product",
+            "license",
+          ]);
+      const resolved = await this.resolveLineCharges({
+        clientId,
+        billingPeriod,
+        line: clientContractLine,
+        cycle,
+        timing:
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+        timingSource: options.recurringTimingSelectionSource,
+        projectContext: projectBillingContext,
+        projectTarget: options.projectTarget,
+        families,
+        pools: options.projectTarget ? "ignore" : "apply",
+      });
+      for (const charge of resolved.charges) {
+        contractObligations.push(charge.obligation);
+        contractTaxContexts[charge.obligation.taxContextKey] = charge.taxContext;
+      }
+      usageServicePeriodStatuses.push(...resolved.usageStatuses);
+
+      // Prepaid Block lines: zero-dollar consumption info lines for time that
+      // drew the line's blocks within the line's service period. Covered time
+      // is then marked invoiced alongside the hourly remainder (overage).
+      if (
+        !options.projectTarget &&
+        (clientContractLine.contract_line_type === "Hourly" ||
+          clientContractLine.contract_line_type === undefined)
+      ) {
+        const blockLineSelection =
+          recurringTimingSelections[clientContractLine.client_contract_line_id];
+        if (
+          cycle ||
+          blockLineSelection ||
+          options.recurringTimingSelectionSource === "persisted"
+        ) {
+          const blockLineTiming = this.resolveServiceDrivenChargeTiming(
+            billingPeriod,
+            clientContractLine,
+            cycle,
+            blockLineSelection,
+            options.recurringTimingSelectionSource,
+          );
+          if (blockLineTiming) {
+            totalCharges = totalCharges.concat(
+              await this.calculateContractLineHourBlockCharges(
                 clientId,
-                billingPeriod,
                 clientContractLine,
-                cycle,
-                recurringTimingSelections[
-                  clientContractLine.client_contract_line_id
-                ],
-                options.recurringTimingSelectionSource,
-                projectBillingContext,
-                options.projectTarget,
-                familyObligationSinks[1],
-              )
-            : this.loadTimeBasedObligation(
-                clientId,
-                billingPeriod,
-                clientContractLine,
-                cycle,
-                recurringTimingSelections[
-                  clientContractLine.client_contract_line_id
-                ],
-                options.recurringTimingSelectionSource,
-                undefined,
-                undefined,
-                familyObligationSinks[1],
+                blockLineTiming,
               ),
-        options.projectTarget
-          ? Promise.resolve()
-          : this.loadUsageBasedObligation(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              cycle,
-              recurringTimingSelections[
-                clientContractLine.client_contract_line_id
-              ],
-              options.recurringTimingSelectionSource,
-              familyObligationSinks[2],
-            ),
-        options.projectTarget
-          ? Promise.resolve()
-          : this.loadBucketObligation(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              familyObligationSinks[3],
-              cycle,
-              recurringTimingSelections[clientContractLine.client_contract_line_id],
-              options.recurringTimingSelectionSource,
-            ),
-        options.projectTarget
-          ? Promise.resolve()
-          : this.loadProductObligation(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              cycle,
-              recurringTimingSelections[
-                clientContractLine.client_contract_line_id
-              ],
-              options.recurringTimingSelectionSource,
-              familyObligationSinks[4],
-            ),
-        options.projectTarget
-          ? Promise.resolve()
-          : this.loadLicenseObligation(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              cycle,
-              recurringTimingSelections[
-                clientContractLine.client_contract_line_id
-              ],
-              options.recurringTimingSelectionSource,
-              familyObligationSinks[5],
-            ),
-      ]);
-      for (const sink of familyObligationSinks) {
-        contractObligations.push(...sink.obligations);
-        Object.assign(contractTaxContexts, sink.taxContexts);
-        if (sink.usageStatuses) {
-          usageServicePeriodStatuses.push(...sink.usageStatuses);
+            );
+          }
         }
       }
+    }
+
+    if (prepaidBlockIssuanceIds.length > 0 && !options.projectTarget) {
+      totalCharges = totalCharges.concat(
+        await this.loadPrepaidBlockIssuanceCharges(
+          clientId,
+          billingPeriod,
+          prepaidBlockIssuanceIds,
+        ),
+      );
     }
 
     if (clientContractLines.length > 0 && materialCharges.length > 0) {
@@ -3207,6 +3193,291 @@ export class BillingEngine {
     return computeHourBlockCharges({ billingPeriod, blocks }).charges;
   }
 
+  /**
+   * Contract-line variant of {@link calculateHourBlockUsageCharges}: zero-dollar
+   * consumption lines for a Prepaid Block line's own blocks, in the line's
+   * service period, with `client_contract_line_id` set (plan section 4).
+   *
+   * Only allocations to `active` or `expired` blocks count. An entry with any
+   * allocation to the line's `pending` block is held (see
+   * applyPrepaidBlockCoverageToTimeEntries), so it contributes no consumption
+   * here either; otherwise its minutes would be shown now and again once the
+   * block activates.
+   */
+  private async calculateContractLineHourBlockCharges(
+    clientId: string,
+    clientContractLine: IClientContractLine,
+    timing: ResolvedRecurringChargeTiming,
+  ): Promise<IHourBlockCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const tenant = this.tenant;
+
+    const db = tenantDb(this.knex, tenant);
+    const query = db.table("hour_block_time_allocations as hba");
+    db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
+    db.tenantJoin(
+      query,
+      "time_entries as te",
+      "hba.time_entry_id",
+      "te.entry_id",
+    );
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "hb.service_id",
+      "sc.service_id",
+      { type: "left" },
+    );
+
+    const allocationRows = await query
+      .where({
+        "hb.client_id": clientId,
+        "hb.contract_line_id": clientContractLine.contract_line_id,
+        "te.invoiced": false,
+      })
+      .where("te.approval_status", "APPROVED")
+      .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
+      .where("te.end_time", "<", timing.servicePeriodEndExclusive)
+      .orderBy("hb.purchased_at", "asc")
+      .orderBy("hb.block_id", "asc")
+      .select(
+        "hb.block_id",
+        "hb.status as block_status",
+        "hb.remaining_minutes",
+        "hb.service_id",
+        "sc.service_name as service_name",
+        "hba.time_entry_id",
+        "hba.minutes",
+        "te.billable_duration",
+      );
+
+    // Any allocation to the line's pending block holds the whole entry (see
+    // applyPrepaidBlockCoverageToTimeEntries), so it contributes nothing here.
+    const heldEntryIds = new Set<string>(
+      allocationRows
+        .filter((row: any) => row.block_status === "pending")
+        .map((row: any) => row.time_entry_id),
+    );
+    const rows = allocationRows.filter(
+      (row: any) =>
+        !heldEntryIds.has(row.time_entry_id) &&
+        (row.block_status === "active" || row.block_status === "expired"),
+    );
+    if (rows.length === 0) return [];
+
+    const { aggregateHourBlockBurnRows, computeHourBlockCharges } =
+      await import("./compute/computeHourBlockCharges");
+    const blocks = aggregateHourBlockBurnRows(rows);
+    const profile = resolveChargeProfileFor(
+      await this.loadChargeProfileAssignments(clientId, clientContractLine),
+    );
+
+    return computeHourBlockCharges({
+      billingPeriod: {
+        startDate: timing.servicePeriodStart,
+        endDate: timing.servicePeriodEnd,
+      },
+      blocks,
+    }).charges.map((charge) => ({
+      ...charge,
+      client_contract_line_id: clientContractLine.client_contract_line_id,
+      client_contract_id: clientContractLine.client_contract_id || undefined,
+      contract_name: clientContractLine.contract_name || undefined,
+      location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: profile?.billingProfileId ?? null,
+      billing_profile_source: profile?.source ?? null,
+    }));
+  }
+
+  /**
+   * Up-front `prepaid_block` charges for the selected scheduled issuances
+   * (plan section 4). Quantity is the block size in hours, `rate` the price per
+   * hour in whole minor units, and `total` is authoritative at the configured
+   * block price. Currency is the contract's, never a column default.
+   */
+  private async loadPrepaidBlockIssuanceCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    issuanceIds: string[],
+  ): Promise<IPrepaidBlockCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const tenant = this.tenant;
+    const db = tenantDb(this.knex, tenant);
+
+    const query = db.table("contract_line_block_issuances as cbi");
+    db.tenantJoin(
+      query,
+      "contract_line_prepaid_blocks as cfg",
+      "cfg.contract_line_id",
+      "cbi.contract_line_id",
+    );
+    db.tenantJoin(
+      query,
+      "contract_lines as cl",
+      "cl.contract_line_id",
+      "cbi.contract_line_id",
+    );
+    db.tenantJoin(query, "contracts as ct", "ct.contract_id", "cl.contract_id");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cfg.sold_as_service_id",
+      { type: "left" },
+    );
+    const issuances = await query
+      .where("cbi.client_id", clientId)
+      .whereIn("cbi.issuance_id", issuanceIds)
+      .orderBy("cbi.due_date", "asc")
+      .orderBy("cbi.issuance_id", "asc")
+      .select(
+        "cbi.issuance_id",
+        "cbi.contract_line_id",
+        "cbi.client_contract_id",
+        "cbi.status",
+        "cbi.due_date",
+        "cfg.block_minutes",
+        "cfg.block_price",
+        "cfg.expiry_months",
+        "cfg.sold_as_service_id",
+        "ct.currency_code as contract_currency_code",
+        "ct.contract_name",
+        "cl.billing_profile_id as line_billing_profile_id",
+        "cl.location_id as line_location_id",
+        "sc.service_name as sold_as_service_name",
+        "sc.tax_rate_id as sold_as_tax_rate_id",
+      );
+
+    const found = new Set(issuances.map((row: any) => row.issuance_id));
+    const missing = issuanceIds.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw new Error(
+        `Prepaid block issuance ${missing.join(", ")} was not found for this client, or its line no longer has a prepaid block configuration.`,
+      );
+    }
+
+    const client = await db
+      .table("clients")
+      .where({ client_id: clientId })
+      .first();
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
+    }
+    const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
+    const clientDefaultBillingProfileId =
+      await this.getClientDefaultBillingProfileId(clientId);
+
+    const charges: IPrepaidBlockCharge[] = [];
+    const businessToday = await resolvePrepaidBlockBusinessDate(this.knex, tenant);
+    for (const row of issuances) {
+      if (row.status !== "scheduled") {
+        throw new Error(
+          `Prepaid block issuance ${row.issuance_id} is ${row.status}, not scheduled; it cannot be invoiced.`,
+        );
+      }
+      // Server-side readiness guard (the Invoices screen shows such rows as early): a date-triggered
+      // block (expiry, renewal) must not be issued before its due date, or the new block's expiry
+      // clock would start while the old block still has hours.
+      // Both sides on the tenant business date (the listing's readiness uses the same
+      // source), and the due date read TZ-independently from the date column.
+      const dueDate = toPrepaidBlockDateOnly(row.due_date) ?? String(row.due_date).slice(0, 10);
+      if (dueDate > businessToday) {
+        throw new Error(
+          `Prepaid block issuance ${row.issuance_id} is not due until ${dueDate}; it cannot be invoiced yet.`,
+        );
+      }
+      if (!row.sold_as_service_id) {
+        throw new Error(
+          `Prepaid block line ${row.contract_line_id} has no sold-as service configured.`,
+        );
+      }
+      if (!row.contract_currency_code) {
+        throw new Error(
+          `Contract for prepaid block line ${row.contract_line_id} has no currency.`,
+        );
+      }
+      const blockMinutes = Number(row.block_minutes);
+      const blockPrice = Number(row.block_price);
+      const scopeRows = await db
+        .table("contract_line_services")
+        .where({ contract_line_id: row.contract_line_id })
+        .select("service_id");
+      const hours = blockMinutes / 60;
+      const rate = Math.round(blockPrice / hours);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        await this.getTaxInfoFromService({
+          service_id: row.sold_as_service_id,
+          tax_rate_id: row.sold_as_tax_rate_id,
+        });
+      const effectiveTaxRegion =
+        serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        try {
+          const taxResult = await new TaxService().calculateTax(
+            client.client_id,
+            blockPrice,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            row.contract_currency_code,
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating tax for prepaid block issuance ${row.issuance_id}:`,
+            error,
+          );
+        }
+      }
+
+      const profile = resolveChargeProfile({
+        contractLineBillingProfileId: row.line_billing_profile_id ?? null,
+        clientDefaultBillingProfileId,
+      });
+      charges.push({
+        type: "prepaid_block",
+        issuance_id: row.issuance_id,
+        contract_line_id: row.contract_line_id,
+        client_contract_id: row.client_contract_id,
+        contract_name: row.contract_name || undefined,
+        serviceId: row.sold_as_service_id,
+        serviceName: row.sold_as_service_name ?? "Prepaid block",
+        block_minutes: blockMinutes,
+        block_price: blockPrice,
+        currency_code: row.contract_currency_code,
+        expiry_months:
+          row.expiry_months === null || row.expiry_months === undefined
+            ? null
+            : Number(row.expiry_months),
+        scope_service_ids: scopeRows.map((scope: any) => scope.service_id),
+        quantity: hours,
+        rate,
+        total: blockPrice,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: "advance",
+        location_id: row.line_location_id ?? null,
+        billing_profile_id: profile.billingProfileId,
+        billing_profile_source: profile.source,
+      } satisfies IPrepaidBlockCharge);
+    }
+    return charges;
+  }
+
   private async getClientContractLinesForBillingPeriod(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -3839,6 +4110,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.base_rate_basis as base_rate_basis",
         "clsfc.pricing_basis as pricing_basis",
       );
 
@@ -4035,6 +4307,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.base_rate_basis as base_rate_basis",
         "clsfc.pricing_basis as pricing_basis",
         // Note: enable_proration is on contract_lines, not service config
       );
@@ -4213,7 +4486,145 @@ export class BillingEngine {
   }
 
   /** Compatibility preview/test adapter: load facts, then use shared pricing. */
-  private async calculateFixedPriceCharges(
+  /**
+   * Resolve one line's unpriced charges through the shared resolver, with this
+   * engine's database source. Compatibility adapters and the main loop both go
+   * through here.
+   */
+  private async resolveLineCharges(input: {
+    clientId: string;
+    billingPeriod: IBillingPeriod;
+    line: IClientContractLine;
+    cycle?: string;
+    timing?: ResolvedRecurringChargeTiming;
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"];
+    preloaded?: PreloadedFixedChargeInputs;
+    projectContext?: ProjectBillingContext | null;
+    projectTarget?: CalculateBillingOptions["projectTarget"];
+    families: ReadonlySet<ChargeFamily>;
+    pools?: "apply" | "ignore";
+    untimedWithoutCadence?: boolean;
+  }): Promise<{
+    charges: ResolvedLineCharge[];
+    usageStatuses: IUsageServicePeriodStatus[];
+  }> {
+    await this.initKnex();
+    if (!this.tenant) throw new Error("tenant context not found");
+    const { clientId, billingPeriod, line } = input;
+    const asRecurring = (timing: unknown) =>
+      timing as ResolvedRecurringChargeTiming;
+    const source = new DatabaseChargeSource(
+      {
+        knex: this.knex,
+        tenant: this.tenant,
+        getBillingCycle: (id, date) => this.getBillingCycle(id, date),
+        buildRecurringChargeTimingSelection: (period, contractLine, cycle) =>
+          this.buildRecurringChargeTimingSelection(period, contractLine, cycle),
+        loadChargeProfileAssignments: (id, contractLine) =>
+          this.loadChargeProfileAssignments(id, contractLine),
+        loadChargeComputeTaxContext: (taxInput) =>
+          this.loadChargeComputeTaxContext(taxInput),
+      },
+      {
+        clientId,
+        billingPeriod,
+        clientContractLine: line,
+        billingCycle: input.cycle,
+        recurringTimingSelection: input.timing,
+        recurringTimingSelectionSource: input.timingSource,
+        projectTarget: Boolean(input.projectTarget),
+        untimedWithoutCadence: input.untimedWithoutCadence,
+        loaders: {
+          fixed: (timing, sink) =>
+            this.loadFixedPriceObligation(
+              clientId,
+              billingPeriod,
+              line,
+              input.cycle,
+              asRecurring(timing),
+              input.timingSource,
+              input.preloaded,
+              sink,
+            ),
+          hourly: (timing, exclusion, sink) =>
+            this.loadTimeBasedObligation(
+              clientId,
+              billingPeriod,
+              line,
+              input.cycle,
+              asRecurring(timing),
+              input.timingSource,
+              input.projectContext,
+              input.projectTarget,
+              sink,
+              exclusion,
+            ),
+          usage: (timing, sink) =>
+            this.loadUsageBasedObligation(
+              clientId,
+              billingPeriod,
+              line,
+              input.cycle,
+              asRecurring(timing),
+              input.timingSource,
+              sink,
+            ),
+          recurringQuantity: (kind, timing, sink) =>
+            this.loadRecurringQuantityObligation(
+              clientId,
+              billingPeriod,
+              line,
+              input.cycle,
+              kind,
+              asRecurring(timing),
+              input.timingSource,
+              sink,
+            ),
+        },
+      },
+    );
+    const { charges, diagnostics } = await resolveContractLineChargesWithDiagnostics(source, {
+      families: input.families,
+      pools: input.pools,
+    });
+    if (diagnostics.unhandledLineType || diagnostics.unhandledServices.length > 0) {
+      // The engine prices the line as it always has; this only reports what no
+      // charge family handles. (The simulator throws for the same input.)
+      console.warn(
+        `[BillingEngine] Contract line ${source.line.clientContractLineId} has configuration no charge family handles`,
+        diagnostics,
+      );
+    }
+    return {
+      charges,
+      usageStatuses: source.usageStatuses as IUsageServicePeriodStatus[],
+    };
+  }
+
+  /** Compatibility adapter: resolve one family's facts, then use shared pricing. */
+  private async calculateFamilyCharges<T extends IBillingCharge>(
+    family: ChargeFamily,
+    input: Omit<Parameters<BillingEngine["resolveLineCharges"]>[0], "families">,
+  ): Promise<T[]> {
+    const { charges } = await this.resolveLineCharges({
+      ...input,
+      families: new Set([family]),
+      pools: input.projectTarget ? "ignore" : "apply",
+    });
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    for (const charge of charges) {
+      sink.obligations.push(charge.obligation);
+      sink.taxContexts[charge.obligation.taxContextKey] = charge.taxContext;
+    }
+    return this.calculateLoadedContractObligations(
+      sink,
+      input.clientId,
+      input.billingPeriod,
+      input.line.currency_code || "USD",
+    ) as T[];
+  }
+
+  private calculateFixedPriceCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     line: IClientContractLine,
@@ -4222,26 +4633,12 @@ export class BillingEngine {
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
     preloaded?: PreloadedFixedChargeInputs,
   ): Promise<IFixedPriceCharge[]> {
-    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
-    await this.loadFixedPriceObligation(
-      clientId,
-      billingPeriod,
-      line,
-      cycle,
-      timing,
-      timingSource,
-      preloaded,
-      sink,
-    );
-    return this.calculateLoadedContractObligations(
-      sink,
-      clientId,
-      billingPeriod,
-      line.currency_code || "USD",
-    ) as IFixedPriceCharge[];
+    return this.calculateFamilyCharges<IFixedPriceCharge>("fixed", {
+      clientId, billingPeriod, line, cycle, timing, timingSource, preloaded,
+    });
   }
 
-  private async calculateTimeBasedCharges(
+  private calculateTimeBasedCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     line: IClientContractLine,
@@ -4251,27 +4648,12 @@ export class BillingEngine {
     projectContext?: ProjectBillingContext | null,
     projectTarget?: CalculateBillingOptions["projectTarget"],
   ): Promise<ITimeBasedCharge[]> {
-    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
-    await this.loadTimeBasedObligation(
-      clientId,
-      billingPeriod,
-      line,
-      cycle,
-      timing,
-      timingSource,
-      projectContext,
-      projectTarget,
-      sink,
-    );
-    return this.calculateLoadedContractObligations(
-      sink,
-      clientId,
-      billingPeriod,
-      line.currency_code || "USD",
-    ) as ITimeBasedCharge[];
+    return this.calculateFamilyCharges<ITimeBasedCharge>("hourly", {
+      clientId, billingPeriod, line, cycle, timing, timingSource, projectContext, projectTarget,
+    });
   }
 
-  private async calculateUsageBasedCharges(
+  private calculateUsageBasedCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     line: IClientContractLine,
@@ -4279,25 +4661,12 @@ export class BillingEngine {
     timing?: ResolvedRecurringChargeTiming,
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<IUsageBasedCharge[]> {
-    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
-    await this.loadUsageBasedObligation(
-      clientId,
-      billingPeriod,
-      line,
-      cycle,
-      timing,
-      timingSource,
-      sink,
-    );
-    return this.calculateLoadedContractObligations(
-      sink,
-      clientId,
-      billingPeriod,
-      line.currency_code || "USD",
-    ) as IUsageBasedCharge[];
+    return this.calculateFamilyCharges<IUsageBasedCharge>("usage", {
+      clientId, billingPeriod, line, cycle, timing, timingSource,
+    });
   }
 
-  private async calculateProductCharges(
+  private calculateProductCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     line: IClientContractLine,
@@ -4305,25 +4674,12 @@ export class BillingEngine {
     timing?: ResolvedRecurringChargeTiming,
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<IProductCharge[]> {
-    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
-    await this.loadProductObligation(
-      clientId,
-      billingPeriod,
-      line,
-      cycle,
-      timing,
-      timingSource,
-      sink,
-    );
-    return this.calculateLoadedContractObligations(
-      sink,
-      clientId,
-      billingPeriod,
-      line.currency_code || "USD",
-    ) as IProductCharge[];
+    return this.calculateFamilyCharges<IProductCharge>("product", {
+      clientId, billingPeriod, line, cycle, timing, timingSource,
+    });
   }
 
-  private async calculateLicenseCharges(
+  private calculateLicenseCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     line: IClientContractLine,
@@ -4331,22 +4687,9 @@ export class BillingEngine {
     timing?: ResolvedRecurringChargeTiming,
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<ILicenseCharge[]> {
-    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
-    await this.loadLicenseObligation(
-      clientId,
-      billingPeriod,
-      line,
-      cycle,
-      timing,
-      timingSource,
-      sink,
-    );
-    return this.calculateLoadedContractObligations(
-      sink,
-      clientId,
-      billingPeriod,
-      line.currency_code || "USD",
-    ) as ILicenseCharge[];
+    return this.calculateFamilyCharges<ILicenseCharge>("license", {
+      clientId, billingPeriod, line, cycle, timing, timingSource,
+    });
   }
 
   private async calculateBucketPlanCharges(
@@ -4364,7 +4707,37 @@ export class BillingEngine {
     ) as IBucketCharge[];
   }
 
-  /** Load and normalize one fixed family without performing charge math. */
+  /**
+   * Pool (bucket) charges for one line, left in `obligationSink`. Pool coverage
+   * and charge identity come from the shared resolver; this only binds the
+   * database source to the caller's cadence (none for legacy isolated callers).
+   */
+  private async loadBucketObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    obligationSink: ContractObligationSink,
+    billingCycle?: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+  ): Promise<void> {
+    const { charges } = await this.resolveLineCharges({
+      clientId,
+      billingPeriod,
+      line,
+      cycle: billingCycle,
+      timing: recurringTimingSelection,
+      timingSource: recurringTimingSelectionSource,
+      families: new Set<ChargeFamily>(["bucket"]),
+      untimedWithoutCadence: true,
+    });
+    for (const charge of charges) {
+      obligationSink.obligations.push(charge.obligation);
+      obligationSink.taxContexts[charge.obligation.taxContextKey] = charge.taxContext;
+    }
+  }
+
+  // LEVERAGE: friction engine-owned-loaders — the per-family loaders still live in the engine and are reached through DatabaseChargeSource's host/loaders seam; they belong in the database source (the old unit-test seam stubs them on the engine)
   private async loadFixedPriceObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -4603,6 +4976,7 @@ export class BillingEngine {
               configuration_quantity: service.configuration_quantity,
               configuration_custom_rate: service.configuration_custom_rate,
               service_base_rate: service.service_base_rate,
+              base_rate_basis: service.base_rate_basis,
               service_line_custom_rate: service.service_line_custom_rate,
               default_rate: service.default_rate,
               pricing_basis: service.pricing_basis,
@@ -4628,6 +5002,8 @@ export class BillingEngine {
             // other candidates so computeFixedCharges cannot fall back to a
             // stale configuration or catalog column.
             service_base_rate: resolvedRateCents,
+            // The resolved unit price is per unit, whatever the baseline row said.
+            base_rate_basis: "per_unit",
             configuration_custom_rate: null,
             currency_rate: catalogRate,
             default_rate: null,
@@ -5218,6 +5594,7 @@ export class BillingEngine {
     }
   }
 
+  // LEVERAGE: pattern per-entry-vs-aggregated-hours — this prices each time entry as its own line; the simulator aggregates assumed hours into one synthetic entry per service per period, so rounding/min-increment rules can diverge between the two
   private async loadTimeBasedObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -5228,6 +5605,8 @@ export class BillingEngine {
     projectBillingContext: ProjectBillingContext | null | undefined,
     projectTarget: CalculateBillingOptions["projectTarget"] | undefined,
     obligationSink: ContractObligationSink,
+    /** Time a pool prices instead (resolver-supplied); null when none. */
+    pooledTimeExclusion: PooledTimeExclusion | null = null,
   ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
@@ -5342,10 +5721,12 @@ export class BillingEngine {
         configuration_type: "Hourly",
         quantity: configDetails.baseConfig.quantity ?? null,
         custom_rate: configDetails.baseConfig.custom_rate ?? null,
+        // A stored 0 or unset rate is "no contract rate": null lets it fall
+        // through to the catalog price instead of billing at zero.
         hourly_rate:
-          hourlyDetails.hourly_rate != null
+          hourlyDetails.hourly_rate != null && Number(hourlyDetails.hourly_rate) > 0
             ? Number(hourlyDetails.hourly_rate)
-            : 0,
+            : null,
         minimum_billable_time: hourlyDetails.minimum_billable_time ?? 0,
         round_up_to_nearest: hourlyDetails.round_up_to_nearest ?? 0,
       } as IContractLineServiceConfiguration & IContractLineServiceHourlyConfig;
@@ -5372,6 +5753,25 @@ export class BillingEngine {
         servicePeriodStartExclusive,
         servicePeriodEndExclusive,
       });
+
+    // Approved time dated inside an earlier window that an invoice already
+    // claimed can never join that invoice and falls outside every later
+    // window, so it would never bill. It rides this line's next invoice instead
+    // (exactly once, via the invoiced flag); see lateHourlyTime.ts.
+    const carriedWindows = projectTarget
+      ? []
+      : await loadCarriedForwardWindows(this.knex, tenant, {
+          obligationIds: [
+            ...new Set(
+              [
+                clientContractLine.client_contract_line_id,
+                clientContractLine.contract_line_id,
+              ].filter((id): id is string => Boolean(id)),
+            ),
+          ],
+          before: servicePeriodStartExclusive,
+          periodEndExclusive: servicePeriodEndExclusive,
+        });
 
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
@@ -5469,29 +5869,41 @@ export class BillingEngine {
       })
       .where("time_entries.approval_status", "APPROVED");
 
-    if (!projectTarget) {
-      const bucketServices = await Promise.all(configuredServiceIds.map(async (serviceId) => (
-        await resolveBucketForLine(this.knex, tenant, clientContractLine.contract_line_id, serviceId)
-          ? serviceId : null
-      )));
-      const coveredServiceIds = bucketServices.filter((serviceId): serviceId is string => serviceId !== null);
-      if (coveredServiceIds.length > 0) {
-        // Explicitly attributed bucket work is priced once by the pool's
-        // overage obligation. Unassigned rows have not drawn from that pool;
-        // retain their existing attribution path instead of hiding them.
-        query.where(function (this: Knex.QueryBuilder) {
-          this.whereNull("time_entries.contract_line_id")
-            .orWhereNotIn("time_entries.service_id", coveredServiceIds);
-        });
-      }
+    if (pooledTimeExclusion && pooledTimeExclusion.serviceIds.length > 0) {
+      // Explicitly attributed pooled work is priced once by the pool's
+      // overage obligation. Unassigned rows have not drawn from that pool;
+      // retain their existing attribution path instead of hiding them.
+      // Which services a pool absorbs is decided by the shared resolver
+      // (chargeResolution), not here.
+      query.where(function (this: Knex.QueryBuilder) {
+        this.whereNull("time_entries.contract_line_id")
+          .orWhereNotIn("time_entries.service_id", pooledTimeExclusion.serviceIds);
+      });
     }
 
     if (projectTarget) {
       query.where("projects.project_id", projectTarget.projectId);
     } else {
-      query
-        .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
-        .where("time_entries.end_time", "<", servicePeriodEndExclusive);
+      query.where(function (this: Knex.QueryBuilder) {
+        this.where(function (this: Knex.QueryBuilder) {
+          this.where(
+            "time_entries.start_time",
+            ">=",
+            servicePeriodStartExclusive,
+          ).where("time_entries.end_time", "<", servicePeriodEndExclusive);
+        });
+        for (const window of carriedWindows) {
+          // Carried time is only the line's own assigned time.
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.where(
+              "time_entries.contract_line_id",
+              clientContractLine.contract_line_id,
+            )
+              .where("time_entries.start_time", ">=", window.startInclusive)
+              .where("time_entries.start_time", "<", window.endExclusive);
+          });
+        }
+      });
     }
 
     const fixedPriceProjectIds =
@@ -5535,7 +5947,23 @@ export class BillingEngine {
       ),
     );
 
-    const timeEntries = await query;
+    const loadedTimeEntries = await query;
+    // Only a window an issued invoice closed makes the time "late". Voided,
+    // cancelled and draft windows carry the same way but as ordinary time.
+    for (const entry of loadedTimeEntries) {
+      const window = findWindow(carriedWindows, entry.start_time);
+      if (window?.closed) {
+        entry.late_for_service_period = window.source;
+      }
+    }
+    // Prepaid Block lines: minutes already drawn from the line's blocks are
+    // not priced here, and entries touching a pending block are held.
+    const timeEntries = projectTarget
+      ? loadedTimeEntries
+      : await this.applyPrepaidBlockCoverageToTimeEntries(
+          clientContractLine.contract_line_id,
+          loadedTimeEntries,
+        );
 
     const obligation = {
       kind: "hourly",
@@ -5549,6 +5977,8 @@ export class BillingEngine {
           enable_overtime: plan.enable_overtime,
           overtime_threshold: plan.overtime_threshold,
           overtime_rate: plan.overtime_rate,
+          minimum_billable_time: plan.minimum_billable_time,
+          round_up_to_nearest: plan.round_up_to_nearest,
         },
         serviceConfigMap,
         timeEntries,
@@ -5595,6 +6025,65 @@ export class BillingEngine {
       charge: obligation,
     });
     return;
+  }
+
+  /**
+   * Overage subtraction for Prepaid Block lines (plan section 4).
+   *
+   * Minutes an entry drew from the line's `active` or `expired` blocks are
+   * already paid for and are removed from what the hourly obligation prices;
+   * the remainder bills at the line's hourly rate. An entry with ANY minutes
+   * allocated to the line's `pending` block is HELD: not priced, not marked
+   * invoiced. It surfaces once the block activates (then it is covered or
+   * partially covered) or falls back to overage if the block is voided. Only
+   * blocks owned by this contract line count; ad-hoc blocks are untouched.
+   * Lines without blocks pay one indexed lookup and change nothing.
+   */
+  private async applyPrepaidBlockCoverageToTimeEntries<
+    T extends { entry_id: string; billable_duration: number | string },
+  >(contractLineId: string, timeEntries: T[]): Promise<T[]> {
+    if (timeEntries.length === 0) return timeEntries;
+    const db = tenantDb(this.knex, this.tenant as string);
+    const query = db.table("hour_block_time_allocations as hba");
+    db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
+    const rows: Array<{ time_entry_id: string; status: string; minutes: string | number }> =
+      await query
+        .where("hb.contract_line_id", contractLineId)
+        .whereIn(
+          "hba.time_entry_id",
+          timeEntries.map((entry) => entry.entry_id),
+        )
+        .select("hba.time_entry_id", "hb.status", "hba.minutes");
+    if (rows.length === 0) return timeEntries;
+
+    const coveredByEntry = new Map<string, number>();
+    const heldEntries = new Set<string>();
+    for (const row of rows) {
+      const minutes = Number(row.minutes) || 0;
+      if (minutes <= 0) continue;
+      if (row.status === "pending") {
+        heldEntries.add(row.time_entry_id);
+      } else if (row.status === "active" || row.status === "expired") {
+        coveredByEntry.set(
+          row.time_entry_id,
+          (coveredByEntry.get(row.time_entry_id) ?? 0) + minutes,
+        );
+      }
+    }
+
+    const result: T[] = [];
+    for (const entry of timeEntries) {
+      if (heldEntries.has(entry.entry_id)) continue;
+      const covered = coveredByEntry.get(entry.entry_id) ?? 0;
+      if (covered <= 0) {
+        result.push(entry);
+        continue;
+      }
+      const remainder = Number(entry.billable_duration) - covered;
+      if (remainder <= 0) continue;
+      result.push({ ...entry, billable_duration: remainder });
+    }
+    return result;
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
@@ -7049,305 +7538,6 @@ export class BillingEngine {
       });
     }
     return charges;
-  }
-
-  private async loadBucketObligation(
-    clientId: string,
-    billingPeriod: IBillingPeriod,
-    contractLine: IClientContractLine,
-    obligationSink: ContractObligationSink,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<void> {
-    await this.initKnex();
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
-    }
-
-    const db = tenantDb(this.knex, this.tenant);
-    const client = await db
-      .table("clients")
-      .where({
-        client_id: clientId,
-        tenant: this.tenant,
-      })
-      .first();
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
-    }
-
-    // Get the line's bucket pools (weighted-burn model). A pool is line-owned
-    // and holds its own totals/overage/rollover; member services draw from it
-    // (member rows are multiplier overrides under a catch-all).
-    const poolQuery = db.table<any>("contract_line_buckets as clb");
-
-    const pools = await poolQuery
-      .where({
-        "clb.tenant": client.tenant,
-        "clb.contract_line_id": contractLine.client_contract_line_id,
-      })
-      .select("clb.*");
-
-    if (!pools || pools.length === 0) {
-      return;
-    }
-
-    // Legacy isolated calculator callers have no cadence selection. Live recurring
-    // generation must use the same persisted period as the other charge families.
-    const timing = billingCycle || recurringTimingSelectionSource || recurringTimingSelection
-      ? this.resolveRecurringChargeTiming(billingPeriod, contractLine, billingCycle,
-          recurringTimingSelection, recurringTimingSelectionSource)
-      : undefined;
-    if (timing === null) return;
-
-    // Load persisted allowance state here; deterministic aggregation, rollover
-    // application, overage pricing, and explanations live in shared compute.
-    // One charge per bucket per period, as today one-per-config.
-    await Promise.all(
-      pools.map(async (pool): Promise<IBucketCharge[]> => {
-        const usageRecords = await db
-          .table("bucket_usage")
-          .where({
-            tenant: client.tenant,
-            client_id: clientId,
-            bucket_id: pool.bucket_id,
-          })
-          .where("period_start", ">=", timing?.servicePeriodStartExclusive ?? billingPeriod.startDate)
-          .where("period_end", "<=", timing?.servicePeriodEnd ?? billingPeriod.endDate)
-          .select("*");
-
-        if (usageRecords.length === 0) return [];
-
-        // Pool display name: bucket_name when set, else the member service name
-        // (or the bucket's id as a last resort).
-        const members = await db
-          .table("contract_line_bucket_services as clbs")
-          .where({
-            "clbs.tenant": client.tenant,
-            "clbs.bucket_id": pool.bucket_id,
-          })
-          .select(
-            "clbs.service_id",
-            "sc.service_name",
-            "sc.tax_rate_id",
-            "sc.unit_of_measure",
-            "sc.unit_code",
-            "sc.billing_method",
-          )
-          .join("service_catalog as sc", function (this: any) {
-            this.on("sc.service_id", "=", "clbs.service_id").andOn(
-              "sc.tenant",
-              "=",
-              "clbs.tenant",
-            );
-          })
-          .orderBy("clbs.service_id", "asc");
-        const memberMetadataByService = new Map(
-          members.map((member) => [
-            member.service_id,
-            {
-              service_name: member.service_name as string,
-              tax_rate_id: (member.tax_rate_id as string | null) ?? null,
-              unit_of_measure:
-                (member.unit_of_measure as string | null) ?? null,
-              unit_code: (member.unit_code as string | null) ?? null,
-              billing_method: (member.billing_method as string | null) ?? null,
-            },
-          ]),
-        );
-        const serviceName = pool.bucket_name
-          ? pool.bucket_name
-          : members.length === 1
-            ? members[0].service_name
-            : `Bucket pool ${String(pool.bucket_id).slice(0, 8)}`;
-        const firstMemberServiceId = members[0]?.service_id ?? null;
-        const firstMemberTaxRateId = members[0]?.tax_rate_id ?? null;
-        const firstMemberUnitOfMeasure = members[0]?.unit_of_measure ?? null;
-        const firstMemberUnitCode = members[0]?.unit_code ?? null;
-        const firstMemberBillingMethod = members[0]?.billing_method ?? null;
-
-        // Weighted when any member multiplier ≠ 1 or an after-hours rule exists.
-        const memberMultipliers = await db
-          .table("contract_line_bucket_services")
-          .where({ tenant: client.tenant, bucket_id: pool.bucket_id })
-          .select("burn_multiplier")
-          .orderBy("service_id", "asc");
-        const isWeighted =
-          Number(pool.after_hours_multiplier) !== 0 ||
-          memberMultipliers.some(
-            (member) => Number(member.burn_multiplier) !== 1,
-          );
-
-        // A zero-member pool (dormant catch-all or emptied member-scoped pool)
-        // still covers the line but has no member to key the charge on. The
-        // pool identity is carried honestly in config_id (= bucket_id); the
-        // service FK fields stay null so bucket_id NEVER masquerades as a
-        // service_catalog id on invoice rows.
-        const chargeServiceId = firstMemberServiceId;
-        const chargeTaxRateId =
-          members.length > 0 ? firstMemberTaxRateId : null;
-        const chargeUnitOfMeasure =
-          members.length > 0 ? firstMemberUnitOfMeasure : null;
-        const chargeUnitCode = members.length > 0 ? firstMemberUnitCode : null;
-        const chargeBillingMethod =
-          members.length > 0 ? firstMemberBillingMethod : null;
-
-        // Per-period weighted contributions: the SAME draw set and weighted math
-        // the reconciliation uses. Overage is attributed to the services that
-        // actually burned it (pro-rata by weighted minutes), never an arbitrary
-        // member. A catch-all non-member contributor still earns its own
-        // portion with its own catalog tax metadata.
-        const contributionsByPeriod = new Map<
-          string,
-          Array<{ serviceId: string; weightedMinutes: number }>
-        >();
-        for (const usage of usageRecords) {
-          const startIso = toISODate(toPlainDate(usage.period_start));
-          const endIso = toISODate(toPlainDate(usage.period_end));
-          const key = `${startIso}:${endIso}`;
-          if (contributionsByPeriod.has(key)) continue;
-          const endExclusive = new Date(`${endIso}T00:00:00.000Z`);
-          endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
-          const contributions = await computePoolContributionsByService(
-            this.knex,
-            client.tenant,
-            {
-              bucketId: pool.bucket_id,
-              contractLineId: pool.contract_line_id,
-              coversAllServices: Boolean(pool.covers_all_services),
-              periodStart: new Date(`${startIso}T00:00:00.000Z`),
-              periodEndExclusive: endExclusive,
-            },
-          );
-          contributionsByPeriod.set(key, contributions);
-        }
-
-        // Catalog metadata for contributors that are not explicit members of the
-        // pool (a catch-all non-member burns at 1x and still contributes).
-        const contributorServiceIds = Array.from(contributionsByPeriod.values())
-          .flat()
-          .map((contribution) => contribution.serviceId);
-        const catalogServiceIds = Array.from(
-          new Set(
-            contributorServiceIds.filter(
-              (id) => !memberMetadataByService.has(id),
-            ),
-          ),
-        );
-        const catalogMetadataByService = new Map<
-          string,
-          {
-            service_name: string;
-            tax_rate_id: string | null;
-            unit_of_measure: string | null;
-            unit_code: string | null;
-            billing_method: string | null;
-          }
-        >();
-        if (catalogServiceIds.length > 0) {
-          const catalogRows = await db
-            .table("service_catalog as sc")
-            .where({ "sc.tenant": client.tenant })
-            .whereIn("sc.service_id", catalogServiceIds)
-            .select(
-              "sc.service_id",
-              "sc.service_name",
-              "sc.tax_rate_id",
-              "sc.unit_of_measure",
-              "sc.unit_code",
-              "sc.billing_method",
-            );
-          for (const row of catalogRows) {
-            catalogMetadataByService.set(row.service_id, {
-              service_name: row.service_name as string,
-              tax_rate_id: (row.tax_rate_id as string | null) ?? null,
-              unit_of_measure: (row.unit_of_measure as string | null) ?? null,
-              unit_code: (row.unit_code as string | null) ?? null,
-              billing_method: (row.billing_method as string | null) ?? null,
-            });
-          }
-        }
-        const metadataFor = (serviceId: string) =>
-          memberMetadataByService.get(serviceId) ??
-          catalogMetadataByService.get(serviceId);
-
-        const serviceContributions = Array.from(
-          contributionsByPeriod.entries(),
-        ).map(([key, contributions]) => {
-          const [periodStart, periodEnd] = key.split(":");
-          return {
-            periodStart,
-            periodEnd,
-            services: contributions.map((contribution) => {
-              const metadata = metadataFor(contribution.serviceId);
-              return {
-                service_id: contribution.serviceId,
-                service_name:
-                  pool.bucket_name ?? metadata?.service_name ?? undefined,
-                tax_rate_id: metadata?.tax_rate_id ?? null,
-                unit_of_measure: metadata?.unit_of_measure ?? null,
-                unit_code: metadata?.unit_code ?? null,
-                billing_method: metadata?.billing_method ?? null,
-                weightedMinutes: contribution.weightedMinutes,
-              };
-            }),
-          };
-        });
-
-        const obligation = {
-          kind: "bucket",
-          executionMode: "live",
-          inputs: {
-            billingPeriod,
-            timing,
-            clientContractLine: contractLine,
-            client,
-            config: {
-              config_id: pool.bucket_id,
-              service_id: chargeServiceId,
-              service_name: serviceName,
-              tax_rate_id: chargeTaxRateId,
-              unit_of_measure: chargeUnitOfMeasure,
-              unit_code: chargeUnitCode,
-              billing_method: chargeBillingMethod,
-              total_minutes: pool.total_minutes,
-              overage_rate: pool.overage_rate,
-              allow_rollover: pool.allow_rollover,
-              isWeighted,
-            },
-            usageRecords,
-            contractCurrency: contractLine.currency_code || "USD",
-            billingProfile: await this.loadChargeProfileAssignments(
-              clientId,
-              contractLine,
-            ),
-            serviceContributions,
-          },
-          taxContext: await this.loadChargeComputeTaxContext({
-            client,
-            locationId: contractLine.location_id,
-            services: [
-              ...contributorServiceIds.map((serviceId) => ({
-                tax_rate_id: metadataFor(serviceId)?.tax_rate_id ?? null,
-              })),
-              { tax_rate_id: chargeTaxRateId },
-            ],
-            billingProfileIds: [
-              contractLine.billing_profile_id,
-              contractLine.contract_billing_profile_id,
-            ],
-          }),
-        } as const;
-        this.addContractObligation(obligationSink, {
-          obligationId: `bucket:${contractLine.client_contract_line_id}:${pool.bucket_id}`,
-          tenantId: this.tenant as string,
-          contractLineId: contractLine.client_contract_line_id,
-          charge: obligation,
-        });
-        return [];
-      }),
-    );
   }
 
   private async hasExistingServicePeriodCharge(

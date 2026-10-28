@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Wykorzystanie puli godzin",
-        "description": "Monitoruj wykorzystanie puli godzin i identyfikuj przekroczenia",
+        "description": "Monitoruj wykorzystanie godzin w pakietach i identyfikuj przekroczenia. Opłacone z góry bloki godzin (kontraktowe i doraźne) są wymienione wraz z ich zużyciem.",
         "empty": "Nie znaleziono kontraktów opartych na puli godzin"
       },
       "profitability": {
@@ -305,13 +305,21 @@
       "profit": "Zysk",
       "margin": "Marża",
       "plusVariableUsage": "+ zmienne użycie",
-      "variableUsage": "Zmienne użycie"
+      "variableUsage": "Zmienne użycie",
+      "service": "Usługa",
+      "hourlyRate": "Stawka / h",
+      "expirationDate": "Wygasa",
+      "neverExpires": "Nigdy",
+      "adhocBlock": "Doraźny"
     },
     "statusValues": {
       "active": "Aktywny",
       "upcoming": "Nadchodzący",
       "yes": "Tak",
-      "no": "Nie"
+      "no": "Nie",
+      "expired": "Wygasły",
+      "voided": "Unieważniony",
+      "all": "Wszystkie statusy"
     },
     "profitability": {
       "formats": {
@@ -414,6 +422,11 @@
         "allAgreements": "Wszystkie umowy",
         "currency": "Waluta"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolumny",
+      "title": "Kolumny",
+      "reset": "Przywróć domyślne kolumny"
     }
   },
   "contractPerformance": {

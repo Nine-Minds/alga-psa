@@ -18,6 +18,7 @@ import { assumptionKey } from "./syntheticActivity";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import { loadSimulatorInvoiceParties } from "./invoicePreviewContext";
 import { enrichWithGroupedItems } from "@alga-psa/billing/lib/adapters/invoiceAdapters";
+import { simulationRefusal } from "./simulationRefusal";
 
 export interface AssumptionPeriodWindow {
   start: ISO8601String;
@@ -94,7 +95,10 @@ export function buildReplayAssumptionPeriods(
 ): AssumptionPeriodWindow[] {
   const requestedEnd = toPlainDate(endDateExclusive);
   if (Temporal.PlainDate.compare(toPlainDate(startDate), requestedEnd) >= 0) {
-    throw new Error("Replay end must be after replay start");
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+      "The replay range must end after it starts and cover no more than 120 billing periods.",
+    );
   }
   let period = periodContaining(scenario, startDate);
   const periods: AssumptionPeriodWindow[] = [];
@@ -104,7 +108,10 @@ export function buildReplayAssumptionPeriods(
     periods.push(period);
     period = periodContaining(scenario, period.endExclusive);
     if (periods.length > 120) {
-      throw new Error("Replay range exceeds the 120-period safety limit");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+        "The replay range must end after it starts and cover no more than 120 billing periods.",
+      );
     }
   }
   return periods;
@@ -454,8 +461,9 @@ async function loadReplayInvoices(
 
 function requireClientBinding(scenario: ContractScenario): string {
   if (scenario.client_binding.kind !== "client") {
-    throw new Error(
-      "Historical assumptions require a scenario bound to a real client",
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_HISTORY_REQUIRES_CLIENT",
+      "Historical assumptions need a scenario bound to a real client. Choose a client for this simulation, then try again.",
     );
   }
   return scenario.client_binding.client_id;

@@ -6,6 +6,7 @@ import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySumm
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
@@ -21,6 +22,7 @@ import { UnresolvedChargeReview } from '@alga-psa/billing/components/billing-das
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
 import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
 import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';
+import { getClientSoftwareSummary } from '@alga-psa/assets/actions/softwareActions';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
@@ -39,6 +41,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
         prefilledClient={props.prefilledClient}
         prefilledContact={props.prefilledContact}
         prefilledDescription={props.prefilledDescription}
+        renderAssetPicker={renderQuickAddAssetPicker}
       />
     ),
     []
@@ -190,6 +193,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      getClientSoftwareSummary,
       renderHourBlocksSection,
       renderClientOpportunities,
       renderClientBillingProfileSpend,
@@ -210,6 +214,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      getClientSoftwareSummary,
       renderHourBlocksSection,
       renderClientOpportunities,
       renderClientBillingProfileSpend,

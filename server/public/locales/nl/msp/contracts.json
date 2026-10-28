@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Actief",
+    "scheduled": "Gepland",
+    "startsOn": "Begint op {{date}}",
     "draft": "Voorlopige versie",
     "expired": "Verlopen",
     "terminated": "Beëindigd"
@@ -94,7 +96,7 @@
     },
     "timing": {
       "advance": "Van tevoren",
-      "arrears": "Met betalingsachterstand"
+      "arrears": "Achteraf"
     }
   },
   "po": {
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "De live klantstatus wordt beheerd door de onderstaande toewijzingslevenscyclus.",
+      "scheduledExplanation": "Dit contract is actief en begint met factureren op {{date}}.",
       "assignmentStatus": "Toewijzingsstatus",
       "billingFrequencyLabel": "Factureerfrequentie *",
       "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Actief",
+      "scheduled": "Gepland",
       "draft": "Concept",
       "expired": "Verlopen",
       "terminated": "Beëindigd"
@@ -583,7 +587,8 @@
       "failedToUpdate": "Contractregel bijwerken is mislukt",
       "failedToResetRate": "Kan het regeltarief niet opnieuw instellen",
       "protectedStartDate": "De startdatum moet op of vóór {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
-      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen."
+      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
+      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd."
     },
     "loading": {
       "contractLines": "Contractregels laden",
@@ -611,6 +616,7 @@
       "quantityShort": "Aantal: {{quantity}}",
       "quantityTaxAllocation": "Hoeveelheid (voor belastingtoewijzing)",
       "rateTaxAllocation": "Tarief (voor belastingtoewijzing)",
+      "shareOfLineFee": "Aandeel in het regeltarief",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}}-service",
       "unitOfMeasure": "Meeteenheid",
@@ -766,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Standaard basistarief:",
-      "defaultRatePlaceholder": "Standaard: ${{rate}}",
+      "defaultRatePlaceholder": "Standaard: {{rate}}",
       "enterBaseRate": "Voer basistarief in",
       "leaveBlankDefault": "Laat leeg om het standaardtarief te gebruiken",
       "notSet": "Niet ingesteld",
@@ -774,7 +780,7 @@
       "title": "Vast tarief configuratie"
     },
     "hourlyConfig": {
-      "defaultRate": "Standaard: ${{rate}}",
+      "defaultRate": "Standaard: {{rate}}",
       "hourlyRate": "Uurtarief",
       "minimumBillableMinutes": "Minimum factureerbare minuten",
       "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
@@ -800,7 +806,7 @@
     },
     "title": "Contractregels uit presets toevoegen",
     "usageConfig": {
-      "defaultRate": "Standaard: ${{rate}}",
+      "defaultRate": "Standaard: {{rate}}",
       "recordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze services te factureren.",
       "ratePerUnit": "Tarief (per eenheid)",
       "unitHint": "bijv. GB, API-aanroep, gebruiker",
@@ -827,7 +833,9 @@
       "hourlyTitle": "Per uur",
       "usageDescription": "Factureer voor verbruikte eenheden.",
       "usageTitle": "Op verbruik",
-      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid."
+      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid.",
+      "prepaidBlockTitle": "Prepaid blok",
+      "prepaidBlockDescription": "Factureer vooraf een blok uren; geregistreerde tijd put het uit en het volgende blok wordt gefactureerd wanneer het op is."
     },
     "billingTiming": {
       "advance": "Vooraf (factureren aan het begin van de periode)",
@@ -895,7 +903,8 @@
       "usageServiceRequired": "Minstens één verbruiksgebaseerde service is vereist",
       "usageServiceSelectRequired": "Service {{index}}: selecteer een service",
       "invalidQuantity": "Hoeveelheid moet nul of hoger zijn.",
-      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in."
+      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in.",
+      "prepaidBlockCurrencyRequired": "Het contract heeft een valuta nodig voordat een prepaid blok kan worden geprijsd."
     },
     "fixedServicesPricingIntent": "Kies per service een bundelprijs of terugkerende plaatsen/eenheden.",
     "fixedServicesPricingExplanation": "Bundelverdelingen delen het basistarief van de regel. Terugkerende plaatsen factureren elke periode het afgesproken aantal × tarief per eenheid, zonder verbruiksregistraties.",
@@ -906,7 +915,9 @@
     "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
     "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt.",
     "startDateLabel": "Startdatum regel",
-    "endDateLabel": "Einddatum regel"
+    "endDateLabel": "Einddatum regel",
+    "prepaidBlockTitle": "Prepaid blok",
+    "prepaidBlockDescription": "Stel de blokgrootte en prijs in. De prijs is standaard uren x tarief van de dienst en wordt opgeslagen als expliciet bedrag."
   },
   "pricingSchedules": {
     "list": {
@@ -1252,7 +1263,8 @@
       "hourlyRateLabel": "Uurtarief:",
       "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
       "unitAmountLabel": "Terugkerend bedrag:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid blok"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
@@ -1279,9 +1291,7 @@
     },
     "loadingTemplate": "Sjabloon laden...",
     "servicesLabel": "Services",
-    "summary": {
-      "clientCurrency": "Valuta van de klant"
-    },
+    "summary": {},
     "templateBadge": "Sjabloon",
     "templateNotFound": "Contractsjabloon niet gevonden",
     "templateSnapshotTitle": "Sjabloonmomentopname",
@@ -1327,6 +1337,16 @@
       "open": "Simuleren",
       "title": "Sjabloonsimulatie"
     },
+    "pricing": {
+      "title": "Prijzen per valuta",
+      "addCurrency": "Valuta toevoegen",
+      "removeCurrency": "Verwijderen",
+      "missing": "{{count}} bedrag(en) ontbreekt/ontbreken",
+      "baseCurrency": "(basis)",
+      "changeBaseCurrency": "Basisvaluta wijzigen",
+      "changeBaseConfirm": "Basisvaluta wijzigen naar {{currency}}? Bestaande bedragen worden NIET omgerekend: ze behouden hun numerieke waarde en worden gelezen als {{currency}}.",
+      "noSlots": "Deze sjabloon heeft nog geen bedragen om te prijzen."
+    },
     "discounts": {
       "title": "Standaardcontractkortingen",
       "help": "Elk klantcontract krijgt een onafhankelijke bewerkbare kopie. Contractbrede kortingen gelden voor alle geschikte regels.",
@@ -1341,6 +1361,10 @@
       "add": "Standaardkorting toevoegen",
       "chooseLine": "Kies een sjabloonregel",
       "chooseService": "Kies een service"
+    },
+    "prepaidBlock": {
+      "setup": "Verkopen als prepaid blok",
+      "blockNeutral": "{{hours}} u / {{price}} (in de valuta van de klant)"
     }
   },
   "quickStart": {
@@ -1529,6 +1553,9 @@
       "confirm": "Bevestigen en doorgaan",
       "cancel": "Terug"
     },
+    "templatePicker": {
+      "needsRates": "{{currency}}-tarieven vereist"
+    },
     "discounts": {
       "help": "Contractbrede kortingen gelden voor elke geschikte kostenpost die dit contract factureert. Ze worden samen met het contract aangemaakt zodra u de installatie voltooit, en de simulatie hieronder rekent ze mee.",
       "draftDialog": {
@@ -1658,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Facturatiecadans:",
         "notSpecified": "Niet gespecificeerd",
-        "templateLabel": "Sjabloon:"
+        "templateLabel": "Sjabloon:",
+        "currencyLabel": "Basisvaluta:"
       },
       "selectTemplateOptional": "Selecteer een sjabloon (optioneel)",
       "startFromTemplate": "Starten vanaf sjabloon"
@@ -1716,10 +1744,6 @@
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
-    },
-    "advanceSuggestion": {
-      "message": "Bij facturering achteraf kan deze regel pas worden gefactureerd na afloop van de eerste serviceperiode. Bij facturering vooraf volgens het contractritme wordt hij op de startdatum gefactureerd.",
-      "action": "Vooraf factureren volgens het contractritme"
     }
   },
   "wizardProducts": {
@@ -1850,7 +1874,8 @@
       "products": "Producten",
       "hourlyServices": "Uurservices",
       "usageBasedServices": "Verbruiksgebaseerde services",
-      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})"
+      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "client": "Klant",
@@ -1969,7 +1994,7 @@
     },
     "total": {
       "title": "Geschat maandtotaal",
-      "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
+      "description": "Producten en vaste kosten zijn in dit totaal opgenomen. Uur- en verbruiksservices worden op basis van werkelijk gebruik gefactureerd.",
       "perMonth": "per maand",
       "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
     },
@@ -1979,6 +2004,14 @@
       "itemPo": "Bevestig PO-vereisten (indien van toepassing)",
       "itemDates": "Verifieer de start- en einddatums",
       "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} regel",
+      "badgeCount_other": "{{count}} regels",
+      "blockSummary": "{{hours}} uur voor {{price}}",
+      "expiresAfter_one": "verloopt na {{count}} maand",
+      "expiresAfter_other": "verloopt na {{count}} maanden",
+      "neverExpires": "verloopt nooit"
     }
   },
   "wizardTemplateLines": {
@@ -2001,8 +2034,15 @@
     "unitRate": "Tarief per eenheid",
     "serviceRate": "Servicetarief",
     "noCurrencyPrice": "Geen prijs in {{currency}} voor deze service. Voer een tarief in, anders kan het contract niet worden aangemaakt.",
-    "templateRateNote": "Uit het sjabloon (het bedrag heeft geen valutatag).",
-    "reviewTitle": "Regels aangemaakt op basis van het sjabloon"
+    "reviewTitle": "Regels aangemaakt op basis van het sjabloon",
+    "fallbackAlert": "Deze sjabloon heeft geen tarieven in {{currency}}. De structuur wordt gekopieerd; voer hieronder bedragen in {{currency}} in. Sjabloonbedragen worden alleen ter referentie getoond en niet omgerekend.",
+    "templateReference": "Sjabloon: {{amount}} {{currency}}",
+    "catalogPrice": "Catalogusprijs",
+    "fromTemplateCurrency": "Uit de sjabloon ({{currency}})",
+    "fromTemplatePriceSet": "Uit de {{currency}}-tarieven van de sjabloon",
+    "noCurrencyAmount": "Geen bedrag in {{currency}}. Voer er een in, anders kan het contract niet worden aangemaakt.",
+    "overtimeRate": "Overwerktarief",
+    "bucketOverageRate": "Overschrijdingstarief"
   },
   "templateWizard": {
     "title": {
@@ -2046,8 +2086,10 @@
           "usage": "Verbruik"
         }
       },
-      "recurringQuantityInvalid": "De terugkerende hoeveelheid voor \"{{serviceName}}\" moet een geheel getal van nul of meer zijn en een eventueel eenheidstarief moet een geldig bedrag zijn."
-    }
+      "recurringQuantityInvalid": "De terugkerende hoeveelheid voor \"{{serviceName}}\" moet een geheel getal van nul of meer zijn en een eventueel eenheidstarief moet een geldig bedrag zijn.",
+      "currencyRequired": "Basisvaluta is verplicht"
+    },
+    "currency": "Basisvaluta *"
   },
   "templateBasics": {
     "heading": "Sjabloonbasis",
@@ -2065,7 +2107,8 @@
     "help": {
       "templateName": "Gebruik een beschrijvende naam zodat teams snel het juiste sjabloon kunnen identificeren.",
       "internalNotes": "Deze notities blijven bij het sjabloon om context te bieden wanneer teamleden het gebruiken.",
-      "billingFrequency": "Bepaalt de standaardcadans wanneer het sjabloon wordt toegepast. Deze kan per klant nog worden aangepast."
+      "billingFrequency": "Bepaalt de standaardcadans wanneer het sjabloon wordt toegepast. Deze kan per klant nog worden aangepast.",
+      "currency": "Tarieven die in deze wizard worden ingevoerd, zijn in deze valuta. Prijzen in andere valuta kunt u daarna aan de sjabloon toevoegen. Bedragen worden nooit omgerekend."
     }
   },
   "templateFixed": {
@@ -2200,18 +2243,20 @@
   },
   "templateReview": {
     "heading": "Sjabloon controleren",
-    "description": "Bevestig de inhoud van het sjabloon. Tarieven worden bepaald door de prijs van elke service in de valuta van de klant wanneer een contract op basis van dit sjabloon wordt aangemaakt.",
+    "description": "Bevestig de inhoud van het sjabloon. Tarieven worden opgeslagen in de basisvaluta van het sjabloon. Andere valuta's gebruiken de prijssets van het sjabloon, of u voert de bedragen in wanneer u een contract aanmaakt.",
     "sections": {
       "basics": "Sjabloonbasis",
       "fixedFeeServices": "Vaste-vergoedingsservices",
       "products": "Producten",
       "hourlyServices": "Uurservices",
-      "usageBasedServices": "Verbruiksgebaseerde services"
+      "usageBasedServices": "Verbruiksgebaseerde services",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "templateName": "Sjabloonnaam",
       "billingFrequency": "Factureerfrequentie",
-      "internalNotes": "Interne notities"
+      "internalNotes": "Interne notities",
+      "baseCurrency": "Basisvaluta"
     },
     "fallback": {
       "none": "—",
@@ -2247,8 +2292,7 @@
       "serviceLabel": "Service:",
       "invoiceWindowLabel": "Factuurvenster:",
       "unitRateLabel": "Eenheidstarief:",
-      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
-      "unitRateNeutral": "{{rate}} in de valuta van de klant"
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum factureerbare tijd:",
@@ -2262,11 +2306,14 @@
       "hoursIncluded": "{{value}} uren inbegrepen",
       "unitsIncluded": "{{value}} {{unit}} inbegrepen",
       "unitsFallback": "eenheden",
-      "overage": "Overschrijding ${{amount}}/{{unit}}",
+      "overage": "Overschrijding {{amount}}/{{unit}}",
       "hourSingular": "uur",
       "unitSingular": "eenheid",
       "rolloverEnabled": "Overloop ingeschakeld",
       "period": "Periode: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} uur voor {{price}} (in de valuta van de klant)"
     }
   },
   "templatePreview": {
@@ -2376,6 +2423,22 @@
       "description": "Dit contract heeft geen contractregels. Voeg eerst contractregels toe en kom dan terug om te simuleren.",
       "title": "Nog niets te simuleren"
     },
+    "errors": {
+      "title": "De simulatie kan niet worden uitgevoerd",
+      "baselineTitle": "Het huidige contract kan niet worden gesimuleerd, dus er is niets om mee te vergelijken",
+      "unsupportedLineType": "Contractregel \"{{lineName}}\" heeft het regeltype \"{{lineType}}\", dat de simulator niet kan berekenen. Wijzig de regel naar Vast, Per uur of Gebruik en simuleer opnieuw.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" op contractregel \"{{lineName}}\" heeft het configuratietype \"{{configurationType}}\", dat de simulator niet kan berekenen. Stel de dienst in op Vast, Per uur, Gebruik of Bundel en simuleer opnieuw.",
+      "serviceNotInCatalog": "Contractregel \"{{lineName}}\" gebruikt een dienst die niet meer in de dienstencatalogus staat ({{serviceId}}). Verwijder de dienst van de regel of herstel de dienst en simuleer opnieuw.",
+      "poolMissing": "\"{{serviceName}}\" op contractregel \"{{lineName}}\" is ingesteld als bundel, maar heeft geen pool met inbegrepen uren. Voeg de inbegrepen uren van de pool toe aan de contractregel en simuleer opnieuw.",
+      "contractNotFound": "Dit contract is niet beschikbaar. Het is mogelijk verwijderd; laad de pagina opnieuw.",
+      "clientNotAvailable": "De klant voor deze simulatie is niet beschikbaar. Deze is mogelijk verwijderd; kies een andere klant.",
+      "clientRequired": "Selecteer een klant voordat u simuleert.",
+      "historyRequiresClient": "Historische aannames vereisen een scenario dat aan een echte klant is gekoppeld. Kies een klant voor deze simulatie en probeer het opnieuw.",
+      "invalidReplayRange": "Het afspeelbereik is ongeldig. Kies een bereik dat eindigt na het begin en niet meer dan 120 factureringsperiodes beslaat.",
+      "scenarioInvalid": "Dit scenario kan niet worden gesimuleerd omdat de opzet onvolledig is. Laad de pagina opnieuw en probeer het opnieuw.",
+      "scenarioReferenceInvalid": "Dit scenario verwijst naar iets dat niet meer beschikbaar is, zoals een contractregel, dienst, belastingtarief of klantlocatie. Laad de pagina opnieuw om met het huidige contract te beginnen.",
+      "unexpected": "De simulator kon niet worden uitgevoerd vanwege een onverwachte fout. Probeer het opnieuw; neem contact op met support als het blijft gebeuren."
+    },
     "explanation": {
       "amount": "Bedrag",
       "close": "Sluiten",
@@ -2422,6 +2485,7 @@
       "simulatedDelta": "gesimuleerd verschil"
     },
     "runBar": {
+      "blocked": "Simulatie niet mogelijk",
       "compareToggle": "Wijzigingen ten opzichte van het huidige contract tonen",
       "horizonOption": "{{count}} factureringsperioden van de klant",
       "lastRun": "Simulatie actueel · {{count}} factureringsperioden van de klant",
@@ -2430,6 +2494,7 @@
       "simulating": "Simuleren…",
       "stale": "Wijzigingen niet gesimuleerd",
       "staleBanner": "Deze bedragen komen uit de vorige simulatie. Werk de simulatie bij om uw laatste wijzigingen mee te nemen.",
+      "staleBlockedBanner": "Deze melding komt uit de vorige simulatie. Werk de simulatie bij om uw laatste wijzigingen mee te nemen.",
       "updateSimulation": "Simulatie bijwerken"
     },
     "scenario": {
@@ -2464,7 +2529,7 @@
       "editDetails": "Regels bewerken",
       "editDetailsFor": "Details van {{line}} bewerken",
       "fields": {
-        "adjustmentAmount": "Correctiebedrag in dollars",
+        "adjustmentAmount": "Correctiebedrag",
         "adjustmentDescription": "Omschrijving van de correctie",
         "adjustmentPeriod": "Correctieperiode",
         "billingFrequency": "Factureringsfrequentie",
@@ -2482,16 +2547,16 @@
         "lineType": "Lijntype",
         "minimumBillableMinutes": "Minimaal factureerbare minuten",
         "minimumUsage": "Minimaal verbruik",
-        "overtimeRate": "Overurentarief ($/uur)",
+        "overtimeRate": "Overurentarief per uur",
         "overtimeThreshold": "Overurendrempel (uren)",
         "roundUpMinutes": "Afronden naar minuten",
         "scheduleEffectiveDate": "Ingangsdatum van het schema",
         "scheduleEndDate": "Einddatum van het schema",
-        "scheduleRate": "Schematarief in dollars",
+        "scheduleRate": "Schematarief",
         "serviceQuantity": "Aantal licenties of producten",
         "tierMaximum": "Staffelmaximum",
         "tierMinimum": "Staffelminimum",
-        "tierRate": "Staffeltarief in dollars",
+        "tierRate": "Staffeltarief",
         "usageUnit": "Verbruikseenheid"
       },
       "frequencies": {
@@ -2516,7 +2581,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimale minuten",
-        "overtimeRate": "overuren $/uur",
+        "overtimeRate": "overurentarief per uur",
         "roundMinutes": "afronding in minuten",
         "thresholdHours": "drempeluren"
       },
@@ -2556,7 +2621,8 @@
         "value": "Waarde",
         "appliesTo": "Van toepassing op",
         "description": "Beschrijving",
-        "amount": "Bedrag ($)",
+        "amount": "Bedrag",
+        "rate": "Tarief",
         "billingPeriod": "Factureringsperiode",
         "timing": "Moment"
       }
@@ -2656,6 +2722,10 @@
       "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
       "resumeUnsupportedShape": "Dit concept kan niet in de wizard worden hervat zonder de prijzen te wijzigen: {{lines}}",
       "fixedLineNoService": "Vaste regel \"{{lineName}}\" heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt.",
+      "templateAmountsMissing": "Het contract kan niet in {{currency}} worden aangemaakt. De volgende bedragen hebben geen waarde in {{currency}}: {{amounts}}. Voer voor elk een bedrag in of voeg {{currency}}-tarieven toe aan de sjabloon.",
+      "currencyPricingMissing": "Het contract kan niet in {{currency}} worden aangemaakt. Er is geen {{currency}}-prijs ingesteld voor: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" is geen geldige ISO 4217-valutacode",
+      "templateCurrencyHasPriceSet": "Deze sjabloon heeft al een prijslijst in {{currency}}. Verwijder die voordat u {{currency}} als basisvaluta instelt.",
       "standingTerms": "Dit concept bevat terugkerende kortingsvoorwaarden. Bewerk de tabbladen Regels en Kortingen om deze te behouden."
     },
     "pricingSchedule": {
@@ -2696,7 +2766,8 @@
       "advance": "Vooraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar vanaf {{date}}, de startdatum van het contract."
     },
     "client": {
-      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de huidige factureringsperiode van de klant eindigt.",
+      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de factureringsperiode van de klant die de startdatum bevat eindigt.",
+      "arrearsPartial": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de factureringsperiode van de klant die de startdatum bevat eindigt. Omdat de startdatum midden in die periode valt, dekt deze {{periodStart}} – {{periodEnd}}.",
       "advance": "Vooraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar vanaf {{date}}, het begin van de factureringsperiode van de klant waarin de contractstartdatum valt."
     }
   },
@@ -2707,7 +2778,12 @@
     "done": "Klaar"
   },
   "sellHourBlockNote": {
-    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, voeg dan een regel Vooruitbetaald blok toe aan dit contract."
+  },
+  "review": {
+    "saveTemplateRates": "Deze {{currency}}-tarieven opslaan in de sjabloon",
+    "saveMissingTemplateRates": "De ontbrekende {{currency}}-tarieven aan de sjabloon toevoegen",
+    "updateTemplateRates": "De {{currency}}-tarieven van het sjabloon bijwerken met deze bedragen"
   },
   "billingTimingField": {
     "arrears": "Achteraf",
@@ -2789,5 +2865,129 @@
       "loadFailed": "Kortingen laden mislukt.",
       "saveFailed": "Korting opslaan mislukt."
     }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Voer een blokgrootte groter dan nul in (delen van een uur zijn toegestaan).",
+      "priceInvalid": "Voer een blokprijs van nul of meer in.",
+      "expiryInvalid": "De vervaldatum moet een geheel aantal maanden van 1 tot 120 zijn, of leeg.",
+      "thresholdInvalid": "De gebruiksdrempel moet een geheel percentage van 1 tot 99 zijn, of leeg.",
+      "serviceRequired": "De regel heeft minimaal één uurdienst nodig."
+    },
+    "hoursValue": "{{hours}} u",
+    "trigger": {
+      "initial": "Eerste blok",
+      "exhaustion": "Blok opgebruikt",
+      "threshold": "Gebruiksdrempel",
+      "expiry": "Blok verlopen",
+      "renewal": "Contractverlenging",
+      "manual": "Handmatig uitgegeven"
+    },
+    "loading": "Details van het prepaid blok laden...",
+    "heading": "Prepaid blok",
+    "actions": {
+      "edit": "Bewerken",
+      "remove": "Blokconfiguratie verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "issueNext": "Volgend blok uitgeven"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} staat ook op een andere actieve regel ({{line}}). De tijd kan daar worden gefactureerd in plaats van van dit blok af te gaan."
+    },
+    "summary": {
+      "block": "Blok",
+      "expiry": "Vervaldatum",
+      "neverExpires": "Verloopt nooit",
+      "expiresAfterMonths": "{{months}} maanden",
+      "soldAs": "Verkocht als",
+      "triggers": "Het volgende blok wordt gefactureerd wanneer",
+      "onExhaustion": "het blok opgebruikt is",
+      "onThreshold": "{{percent}}% gebruikt",
+      "onExpiry": "het blok verloopt",
+      "onRenewal": "het contract wordt verlengd",
+      "tierAutoIssue": "Automatisch afgerond",
+      "tierDraft": "Concept ter controle"
+    },
+    "balance": {
+      "label": "Actief saldo",
+      "value": "{{remaining}} van {{total}} resterend",
+      "none": "Nog geen actief blok. Een blok wordt actief zodra de factuur is afgerond.",
+      "contractEnded": "Contract beëindigd; de resterende uren zijn vervallen."
+    },
+    "pending": {
+      "heading": "Openstaand blok wacht op afronding van de factuur",
+      "draftInvoice": "Conceptfactuur",
+      "noInvoice": "Geen factuur gekoppeld",
+      "ageDays": "{{days}} dagen oud",
+      "held": "{{hours}} geregistreerde tijd wordt vastgehouden tot dit blok actief wordt."
+    },
+    "next": {
+      "label": "Volgende geplande uitgifte",
+      "none": "Geen"
+    },
+    "history": {
+      "heading": "Blokgeschiedenis",
+      "empty": "Er zijn nog geen blokken uitgegeven.",
+      "columns": {
+        "issued": "Uitgegeven",
+        "reason": "Reden",
+        "status": "Status",
+        "hours": "Resterend",
+        "amount": "Bedrag",
+        "invoice": "Factuur"
+      }
+    },
+    "fields": {
+      "blockHours": "Blokgrootte (uren)",
+      "blockHoursHelp": "Breuken zijn toegestaan, bijvoorbeeld 1,5 voor 90 minuten.",
+      "blockPrice": "Blokprijs ({{currency}})",
+      "blockPriceManualHelp": "Expliciet ingesteld. Wordt opgeslagen zoals ingevoerd en volgt het uurtarief niet.",
+      "blockPriceDefaultHelp": "Standaard uren x tarief van de dienst. Wordt opgeslagen als expliciete prijs.",
+      "useRateTimesHours": "Uren x tarief gebruiken",
+      "soldAs": "Factuurregel wordt verkocht als",
+      "soldAsHelp": "Bepaalt de btw, het grootboek en de koppeling voor de boekhoudexport van de blokfactuurregel.",
+      "expiryMonths": "Verloopt na (maanden)",
+      "neverExpires": "Verloopt nooit",
+      "expiryMonthsHelp": "Laat leeg voor uren die nooit verlopen. Ongebruikte uren vervallen bij het verlopen.",
+      "thresholdPercent": "Volgend blok uitgeven bij gebruik (%)",
+      "noThreshold": "Geen drempel",
+      "triggersHeading": "Volgend blok factureren wanneer",
+      "triggerExhaustion": "Het blok opgebruikt is",
+      "triggerExpiry": "Het blok verloopt",
+      "triggerRenewal": "Het contract wordt verlengd",
+      "triggerRenewalHint": "Factureert bij elke verlenging een nieuw blok (verjaardag van een doorlopend contract of geactiveerd verlengingscontract). Bestaande blokken behouden hun eigen vervaldatum.",
+      "tier": "Vervolgfactuur",
+      "tierDraft": "Een concept ter controle aanmaken",
+      "tierAutoIssue": "Automatisch afronden en verzenden",
+      "blockPriceNeutral": "Blokprijs (in de valuta van de klant)"
+    },
+    "status": {
+      "pending": "In behandeling",
+      "active": "Actief",
+      "expired": "Verlopen",
+      "voided": "Geannuleerd"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Regels met prepaid blokken",
+    "description": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok; uren boven het blok worden gefactureerd tegen het uurtarief.",
+    "templateDescription": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok. De prijs neemt de valuta van de klant over wanneer er een contract van deze sjabloon wordt gemaakt.",
+    "lineName": "Regelnaam (optioneel)",
+    "lineNamePlaceholder": "Prepaid blok",
+    "removeLine": "Prepaid blokregel verwijderen",
+    "serviceItem": "Dienst {{index}}",
+    "overageRate": "Uurtarief",
+    "removeService": "Dienst verwijderen",
+    "addService": "Dienst aan deze regel toevoegen",
+    "addLine": "Prepaid blokregel toevoegen",
+    "validation": {
+      "invalidBlock": "Vul de blokgrootte, prijs en triggers van elke prepaid blokregel in voordat u afrondt.",
+      "rateRequired": "De prepaid blokdienst \"{{serviceName}}\" heeft een uurtarief boven nul nodig (uren boven het blok worden tegen dat tarief gefactureerd)."
+    }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Eerste factuur: de factuur van {{invoiceDate}} dekt {{periodStart}} – {{periodEnd}} (achteraf gefactureerd). Kies Vooraf om het te factureren op de factuur voor de periode die begint op {{advanceInvoiceDate}}.",
+    "billInAdvance": "Vooraf factureren"
   }
 }

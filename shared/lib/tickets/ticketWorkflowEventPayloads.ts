@@ -100,15 +100,17 @@ export type TicketCreatedExternalLink = {
 };
 
 /** REST API creation (TicketService.create / createFromAsset). */
-export function buildApiTicketCreatedPayload(input: {
-  ticketId: string;
-  userId?: string;
-  createdAt: string;
-  boardId: string;
-  priorityId?: string | null;
-  clientId?: string | null;
-  externalLinks?: readonly TicketCreatedExternalLink[];
-}) {
+export function buildApiTicketCreatedPayload(
+  input: TicketNotificationSuppression & {
+    ticketId: string;
+    userId?: string;
+    createdAt: string;
+    boardId: string;
+    priorityId?: string | null;
+    clientId?: string | null;
+    externalLinks?: readonly TicketCreatedExternalLink[];
+  }
+) {
   return builtWorkflowPayload('TICKET_CREATED', {
     ticketId: input.ticketId,
     userId: input.userId,
@@ -133,6 +135,7 @@ export function buildApiTicketCreatedPayload(input: {
           })),
         }
       : {}),
+    ...suppressionFields(input),
   });
 }
 

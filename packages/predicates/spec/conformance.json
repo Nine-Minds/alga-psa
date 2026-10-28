@@ -1,0 +1,1158 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "scalar-equals",
+      "description": "equals matches the same value; a missing value never matches",
+      "covers": {
+        "operators": [
+          "equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "equals",
+        "value": "x"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "x"
+          },
+          "expected": true
+        },
+        {
+          "id": "other",
+          "record": {
+            "s": "y"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "s": "X"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-equals",
+      "description": "not_equals needs a present, different value; a missing value never satisfies it",
+      "covers": {
+        "operators": [
+          "not_equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_equals",
+        "value": "x"
+      },
+      "rows": [
+        {
+          "id": "same",
+          "record": {
+            "s": "x"
+          },
+          "expected": false
+        },
+        {
+          "id": "other",
+          "record": {
+            "s": "y"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-in",
+      "description": "in matches any listed value; a missing value never matches",
+      "covers": {
+        "operators": [
+          "in"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "in",
+        "value": [
+          "x",
+          "z"
+        ]
+      },
+      "rows": [
+        {
+          "id": "x",
+          "record": {
+            "s": "x"
+          },
+          "expected": true
+        },
+        {
+          "id": "z",
+          "record": {
+            "s": "z"
+          },
+          "expected": true
+        },
+        {
+          "id": "y",
+          "record": {
+            "s": "y"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-in",
+      "description": "not_in is the complement of in: a missing value satisfies it",
+      "covers": {
+        "operators": [
+          "not_in"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_in",
+        "value": [
+          "x",
+          "z"
+        ]
+      },
+      "rows": [
+        {
+          "id": "x",
+          "record": {
+            "s": "x"
+          },
+          "expected": false
+        },
+        {
+          "id": "y",
+          "record": {
+            "s": "y"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-gt",
+      "description": "gt is strict and never satisfied by a missing value",
+      "covers": {
+        "operators": [
+          "gt"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "n",
+        "operator": "gt",
+        "value": 5
+      },
+      "rows": [
+        {
+          "id": "below",
+          "record": {
+            "n": 4
+          },
+          "expected": false
+        },
+        {
+          "id": "equal",
+          "record": {
+            "n": 5
+          },
+          "expected": false
+        },
+        {
+          "id": "above",
+          "record": {
+            "n": 6
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-gte",
+      "description": "gte includes equality",
+      "covers": {
+        "operators": [
+          "gte"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "n",
+        "operator": "gte",
+        "value": 5
+      },
+      "rows": [
+        {
+          "id": "below",
+          "record": {
+            "n": 4
+          },
+          "expected": false
+        },
+        {
+          "id": "equal",
+          "record": {
+            "n": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "above",
+          "record": {
+            "n": 6
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-lt",
+      "description": "lt is strict",
+      "covers": {
+        "operators": [
+          "lt"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "n",
+        "operator": "lt",
+        "value": 5
+      },
+      "rows": [
+        {
+          "id": "below",
+          "record": {
+            "n": 4
+          },
+          "expected": true
+        },
+        {
+          "id": "equal",
+          "record": {
+            "n": 5
+          },
+          "expected": false
+        },
+        {
+          "id": "above",
+          "record": {
+            "n": 6
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-lte",
+      "description": "lte includes equality",
+      "covers": {
+        "operators": [
+          "lte"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "n",
+        "operator": "lte",
+        "value": 5
+      },
+      "rows": [
+        {
+          "id": "below",
+          "record": {
+            "n": 4
+          },
+          "expected": true
+        },
+        {
+          "id": "equal",
+          "record": {
+            "n": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "above",
+          "record": {
+            "n": 6
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-contains",
+      "description": "contains is a case-sensitive substring test",
+      "covers": {
+        "operators": [
+          "contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains",
+        "value": "ell"
+      },
+      "rows": [
+        {
+          "id": "hit",
+          "record": {
+            "s": "hello"
+          },
+          "expected": true
+        },
+        {
+          "id": "miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": false
+        },
+        {
+          "id": "case",
+          "record": {
+            "s": "HELLO"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-contains-wildcards",
+      "description": "contains treats % and _ literally",
+      "covers": {
+        "operators": [
+          "contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains",
+        "value": "%"
+      },
+      "rows": [
+        {
+          "id": "percent",
+          "record": {
+            "s": "a%b"
+          },
+          "expected": true
+        },
+        {
+          "id": "plain",
+          "record": {
+            "s": "ab"
+          },
+          "expected": false
+        },
+        {
+          "id": "underscore-only",
+          "record": {
+            "s": "a_b"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-starts-with",
+      "description": "starts_with is a case-sensitive prefix test",
+      "covers": {
+        "operators": [
+          "starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "starts_with",
+        "value": "he"
+      },
+      "rows": [
+        {
+          "id": "hit",
+          "record": {
+            "s": "hello"
+          },
+          "expected": true
+        },
+        {
+          "id": "inner",
+          "record": {
+            "s": "ahello"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-ends-with",
+      "description": "ends_with is a case-sensitive suffix test",
+      "covers": {
+        "operators": [
+          "ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "ends_with",
+        "value": "lo"
+      },
+      "rows": [
+        {
+          "id": "hit",
+          "record": {
+            "s": "hello"
+          },
+          "expected": true
+        },
+        {
+          "id": "inner",
+          "record": {
+            "s": "lop"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-is-empty-string",
+      "description": "is_empty is true for a missing or empty string",
+      "covers": {
+        "operators": [
+          "is_empty"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "is_empty"
+      },
+      "rows": [
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty",
+          "record": {
+            "s": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "value",
+          "record": {
+            "s": "x"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-is-not-empty-string",
+      "description": "is_not_empty is true for a non-empty string only",
+      "covers": {
+        "operators": [
+          "is_not_empty"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "is_not_empty"
+      },
+      "rows": [
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        },
+        {
+          "id": "empty",
+          "record": {
+            "s": ""
+          },
+          "expected": false
+        },
+        {
+          "id": "value",
+          "record": {
+            "s": "x"
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-is-empty-number",
+      "description": "is_empty on a number is true only when missing (zero is a value)",
+      "covers": {
+        "operators": [
+          "is_empty",
+          "is_not_empty"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "n",
+        "operator": "is_empty"
+      },
+      "rows": [
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "zero",
+          "record": {
+            "n": 0
+          },
+          "expected": false
+        },
+        {
+          "id": "value",
+          "record": {
+            "n": 5
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-boolean-equals",
+      "description": "equals on booleans; false is a value, a missing value never matches",
+      "covers": {
+        "operators": [
+          "equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "b",
+        "operator": "equals",
+        "value": false
+      },
+      "rows": [
+        {
+          "id": "false",
+          "record": {
+            "b": false
+          },
+          "expected": true
+        },
+        {
+          "id": "true",
+          "record": {
+            "b": true
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-boolean-not-equals",
+      "description": "not_equals on booleans needs a present value",
+      "covers": {
+        "operators": [
+          "not_equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "b",
+        "operator": "not_equals",
+        "value": true
+      },
+      "rows": [
+        {
+          "id": "false",
+          "record": {
+            "b": false
+          },
+          "expected": true
+        },
+        {
+          "id": "true",
+          "record": {
+            "b": true
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-equals-null",
+      "description": "equals null asks whether there is no value; the JSONata path distinguishes JSON null from missing",
+      "covers": {
+        "operators": [
+          "equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "equals",
+        "value": null
+      },
+      "rows": [
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "value",
+          "record": {
+            "s": "x"
+          },
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "JSONata compares a missing value with null as false"
+      }
+    },
+    {
+      "id": "scalar-not-equals-null",
+      "description": "not_equals null asks whether there is a value",
+      "covers": {
+        "operators": [
+          "not_equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_equals",
+        "value": null
+      },
+      "rows": [
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        },
+        {
+          "id": "value",
+          "record": {
+            "s": "x"
+          },
+          "expected": true
+        }
+      ],
+      "skip": {
+        "jsonata": "JSONata compares a missing value with null as false"
+      }
+    },
+    {
+      "id": "set-in",
+      "description": "in on a set means has-any-of",
+      "covers": {
+        "operators": [
+          "in"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "tags",
+        "operator": "in",
+        "value": [
+          "t1",
+          "t2"
+        ]
+      },
+      "rows": [
+        {
+          "id": "one",
+          "record": {
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "other",
+          "record": {
+            "tags": [
+              "t3"
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "empty",
+          "record": {
+            "tags": []
+          },
+          "expected": false
+        },
+        {
+          "id": "mixed",
+          "record": {
+            "tags": [
+              "t1",
+              "t3"
+            ]
+          },
+          "expected": true
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "set-not-in",
+      "description": "not_in on a set means has-none-of; an empty set satisfies it",
+      "covers": {
+        "operators": [
+          "not_in"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "tags",
+        "operator": "not_in",
+        "value": [
+          "t1",
+          "t2"
+        ]
+      },
+      "rows": [
+        {
+          "id": "one",
+          "record": {
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "other",
+          "record": {
+            "tags": [
+              "t3"
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "empty",
+          "record": {
+            "tags": []
+          },
+          "expected": true
+        },
+        {
+          "id": "mixed",
+          "record": {
+            "tags": [
+              "t1",
+              "t3"
+            ]
+          },
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "set-is-empty",
+      "description": "is_empty on a set means no elements",
+      "covers": {
+        "operators": [
+          "is_empty"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "tags",
+        "operator": "is_empty"
+      },
+      "rows": [
+        {
+          "id": "empty",
+          "record": {
+            "tags": []
+          },
+          "expected": true
+        },
+        {
+          "id": "one",
+          "record": {
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "set-is-not-empty",
+      "description": "is_not_empty on a set means some element",
+      "covers": {
+        "operators": [
+          "is_not_empty"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "tags",
+        "operator": "is_not_empty"
+      },
+      "rows": [
+        {
+          "id": "empty",
+          "record": {
+            "tags": []
+          },
+          "expected": false
+        },
+        {
+          "id": "one",
+          "record": {
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": true
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "group-and",
+      "description": "and requires every clause",
+      "covers": {
+        "operators": [],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "and",
+        "clauses": [
+          {
+            "path": "s",
+            "operator": "equals",
+            "value": "x"
+          },
+          {
+            "path": "n",
+            "operator": "gt",
+            "value": 1
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "both",
+          "record": {
+            "s": "x",
+            "n": 2
+          },
+          "expected": true
+        },
+        {
+          "id": "first-only",
+          "record": {
+            "s": "x",
+            "n": 1
+          },
+          "expected": false
+        },
+        {
+          "id": "second-only",
+          "record": {
+            "s": "y",
+            "n": 2
+          },
+          "expected": false
+        },
+        {
+          "id": "missing-second",
+          "record": {
+            "s": "x"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "group-or",
+      "description": "or requires any clause; a missing value fails only its own clause",
+      "covers": {
+        "operators": [],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "or",
+        "clauses": [
+          {
+            "path": "s",
+            "operator": "equals",
+            "value": "x"
+          },
+          {
+            "path": "n",
+            "operator": "gt",
+            "value": 1
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "first",
+          "record": {
+            "s": "x"
+          },
+          "expected": true
+        },
+        {
+          "id": "second",
+          "record": {
+            "n": 2
+          },
+          "expected": true
+        },
+        {
+          "id": "neither",
+          "record": {
+            "s": "y",
+            "n": 1
+          },
+          "expected": false
+        },
+        {
+          "id": "empty",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "group-nested",
+      "description": "groups nest: (s = x or s = y) and n not_in [1]",
+      "covers": {
+        "operators": [],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "and",
+        "clauses": [
+          {
+            "join": "or",
+            "clauses": [
+              {
+                "path": "s",
+                "operator": "equals",
+                "value": "x"
+              },
+              {
+                "path": "s",
+                "operator": "equals",
+                "value": "y"
+              }
+            ]
+          },
+          {
+            "path": "n",
+            "operator": "not_in",
+            "value": [
+              1
+            ]
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "x-2",
+          "record": {
+            "s": "x",
+            "n": 2
+          },
+          "expected": true
+        },
+        {
+          "id": "y-missing-n",
+          "record": {
+            "s": "y"
+          },
+          "expected": true
+        },
+        {
+          "id": "x-1",
+          "record": {
+            "s": "x",
+            "n": 1
+          },
+          "expected": false
+        },
+        {
+          "id": "z-2",
+          "record": {
+            "s": "z",
+            "n": 2
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "group-set-and-scalar",
+      "description": "set and scalar clauses combine in one group",
+      "covers": {
+        "operators": [],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "and",
+        "clauses": [
+          {
+            "path": "tags",
+            "operator": "in",
+            "value": [
+              "t1"
+            ]
+          },
+          {
+            "path": "s",
+            "operator": "not_in",
+            "value": [
+              "bad"
+            ]
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "ok",
+          "record": {
+            "s": "x",
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "bad",
+          "record": {
+            "s": "bad",
+            "tags": [
+              "t1"
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "no-tag",
+          "record": {
+            "s": "x",
+            "tags": []
+          },
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    }
+  ]
+}

@@ -98,6 +98,20 @@
         "assignedContractLine": "Assigned contract line",
         "assignedWorkItem": "Assigned work item",
         "unresolvedWork": "Unresolved work"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · due {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid block: contract start",
+          "exhaustion": "Prepaid block: exhausted",
+          "threshold": "Prepaid block: usage threshold",
+          "expiry": "Prepaid block: expiry",
+          "renewal": "Prepaid block: renewal",
+          "manual": "Prepaid block: issued manually"
+        },
+        "stalePendingWarning": "{{count}} pending prepaid blocks have been awaiting finalization for more than 14 days while holding time entries. Finalize or delete their draft invoices so the held time can bill.",
+        "stalePendingWarning_one": "{{count}} pending prepaid block has been awaiting finalization for more than 14 days while holding time entries. Finalize or delete its draft invoice so the held time can bill.",
+        "stalePendingWarning_other": "{{count}} pending prepaid blocks have been awaiting finalization for more than 14 days while holding time entries. Finalize or delete their draft invoices so the held time can bill."
       }
     },
     "actions": {
@@ -273,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} selected",
@@ -308,6 +323,21 @@
       "any": "any",
       "clear": "Clear",
       "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "lateTime": {
+      "title": "Late approved hourly time",
+      "description": "This time was approved after the invoice for its service period was issued. Entries waiting to bill are added to the next invoice, once, marked as late time. Entries outside the lookback are not billed.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technician",
+        "service": "Service",
+        "workDate": "Work date",
+        "hours": "Hours",
+        "closedPeriod": "Closed service period",
+        "status": "Status"
+      },
+      "nextInvoice": "Bills on next invoice",
+      "outsideLookback": "Outside lookback — not billed"
     }
   },
   "manualInvoices": {
@@ -541,6 +571,17 @@
       "actionBar": {
         "selectedCount": "{{count}} selected",
         "clear": "Clear"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Invoice finalized, but a follow-up step did not complete: {{steps}}. The invoice is finalized; you can retry that step.",
+      "steps": {
+        "credit_auto_apply": "automatic credit application",
+        "project_deposit_credits": "project deposit credits",
+        "workflow_events": "workflow events",
+        "accounting_export": "accounting export",
+        "replenishment_status": "prepaid replenishment status",
+        "autopay": "auto-pay"
       }
     }
   },
@@ -842,6 +883,19 @@
       "cancel": "Cancel",
       "confirm": "Void Invoice",
       "voiding": "Voiding..."
+    },
+    "history": {
+      "title": "History",
+      "empty": "No lifecycle history recorded.",
+      "loadFailed": "Failed to load invoice history.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Finalized",
+        "invoice_unfinalized": "Unfinalized",
+        "invoice_deleted": "Deleted"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "none"
     }
   },
   "templateEditor": {
@@ -1362,7 +1416,7 @@
       "mediaSource": "Image source",
       "mediaSourceLogo": "Company logo",
       "mediaSourceCustom": "Custom image",
-      "mediaSourceLogoHint": "Shows the logo from your company branding settings on every document.",
+      "mediaSourceLogoHint": "Shows the logo from your own company's client record on every document.",
       "mediaSourceUrl": "Source URL",
       "renameInner": "Rename {{count}} inner layers too ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rename",
@@ -1412,7 +1466,14 @@
           "widthTooltip": "Use the exact width typed below",
           "heightTooltip": "Use the exact height typed below"
         }
-      }
+      },
+      "barcode": "Barcode",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "QR code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Value",
+      "barcodeHintWorkTag": "Text, or a field such as {{example}} (the record link). Keep the code at least about 20 mm wide so it scans.",
+      "barcodeHint": "The text to encode. Keep the code at least about 20 mm wide so it scans."
     },
     "shell": {
       "selectedLabel": "Selected:",
@@ -1425,7 +1486,11 @@
       "title": "Page Setup",
       "description": "Choose a paper preset and page margin without selecting the hidden page node.",
       "paperPreset": "Paper Preset",
-      "marginMm": "Margin (mm)"
+      "marginMm": "Margin (mm)",
+      "customSize": "Custom size…",
+      "customWidth": "Width",
+      "customHeight": "Height",
+      "customUnit": "Unit"
     },
     "breadcrumbs": {
       "emptyHelp": "Select a component on the canvas to view its hierarchy.",
@@ -1456,7 +1521,13 @@
         "noQuotesFound": "No quotes found.",
         "selectQuote": "Select quote",
         "loadingQuoteDetails": "Loading quote details...",
-        "loadingDocumentDetails": "Loading document details..."
+        "loadingDocumentDetails": "Loading document details...",
+        "zoom": {
+          "fit": "Fit",
+          "actual": "100%",
+          "label": "Preview zoom",
+          "fitWithScale": "Fit ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Design",
@@ -2350,7 +2421,7 @@
     },
     "imagePicker": {
       "browse": "Browse Documents",
-      "hiddenFromClients": "{{document}} is hidden from clients. It will not appear on quotes or invoices viewed through the client portal.",
+      "hiddenFromClients": "{{document}} is hidden from clients, so they cannot open it in the client portal. It still appears on invoices and quote PDFs that use it.",
       "updating": "Updating...",
       "markVisible": "Mark as visible to clients",
       "visibleInPortal": "Visible in client portal",
@@ -2399,11 +2470,13 @@
     "description": "Design the layouts used to render {{type}} PDFs and previews.",
     "availableLayouts": "Available Layouts",
     "actions": {
-      "newLayout": "New Layout"
+      "newLayout": "New Layout",
+      "setDefaultForClass": "Set as Default for {{class}}"
     },
     "columns": {
       "name": "Name",
-      "source": "Source"
+      "source": "Source",
+      "labelClass": "Class"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standard)",
@@ -2435,7 +2508,10 @@
         "details": "Layout Details"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Label class",
+        "labelFields": "Fields shown on the label",
+        "labelFieldsHint": "The record link (QR code) and the identifier are always shown."
       },
       "placeholders": {
         "templateName": "{{type}} Template"
@@ -2472,7 +2548,9 @@
     "types": {
       "salesOrder": "Sales Order",
       "packingSlip": "Packing Slip",
-      "pickList": "Pick List"
+      "pickList": "Pick List",
+      "workTag": "Work Tag / Label",
+      "stagingManifest": "Packing Manifest"
     }
   },
   "errors": {
@@ -2480,7 +2558,8 @@
       "invoiceUpdate": "Permission denied: invoice update required",
       "invoiceDelete": "Permission denied: invoice delete required",
       "invoiceAccess": "Permission denied: invoice access denied",
-      "otherClientInvoices": "Permission denied: cannot access invoices for another client"
+      "otherClientInvoices": "Permission denied: cannot access invoices for another client",
+      "invoiceRead": "Permission denied: invoice read required"
     },
     "invoice": {
       "notFound": "Invoice not found",
@@ -2502,7 +2581,9 @@
       "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
       "missingField": "Missing required invoice field.",
       "missingFieldNamed": "Missing required invoice field: {{field}}.",
-      "billingProfileUnavailable": "The selected billing profile is not available for this client."
+      "billingProfileUnavailable": "The selected billing profile is not available for this client.",
+      "deleteNotDraft": "Only draft invoices can be deleted; void the invoice instead.",
+      "deleteHasPayments": "Invoices with recorded payments cannot be deleted."
     },
     "billingCycle": {
       "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",

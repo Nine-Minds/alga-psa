@@ -1,4 +1,4 @@
-import { createQuickBooksDesktopMappingModule } from '../accounting-mappings/quickBooksDesktopMappingModule';
+import { paymentTermOptions } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -41,11 +41,7 @@ type PaymentTermOption = {
   name: string;
 };
 
-const PAYMENT_TERMS: PaymentTermOption[] = [
-  { id: 'net_30', name: 'Net 30' },
-  { id: 'net_15', name: 'Net 15' },
-  { id: 'due_on_receipt', name: 'Due on receipt' }
-];
+export const PAYMENT_TERMS: PaymentTermOption[] = paymentTermOptions();
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -72,10 +68,7 @@ export function createCsvMappingModules(t?: TFn): AccountingMappingModule[] {
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
     createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
-    createDiscountModule(tab('discounts', 'Discounts')),
-    createQuickBooksDesktopMappingModule(DISCOUNT_MAPPING_ENTITY_TYPE, t),
-    createQuickBooksDesktopMappingModule('service', t),
-    createQuickBooksDesktopMappingModule('tax_code', t)
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 

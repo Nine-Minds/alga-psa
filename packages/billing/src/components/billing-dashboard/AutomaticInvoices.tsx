@@ -20,6 +20,7 @@ import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
   IRecurringDueWorkMaterializationGap,
+  ILateHourlyTimeNotice,
 } from '@alga-psa/types';
 import {
   getPurchaseOrderOverageForSelectionInput,
@@ -43,8 +44,10 @@ import {
 } from '@alga-psa/billing/actions/billingCycleActions';
 import {
   getAvailableRecurringDueWork,
+  getLateApprovedHourlyTime,
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
+import { LateHourlyTimeNotices } from './LateHourlyTimeNotices';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -535,7 +538,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
 // brand palette (primary = purple, secondary = cyan, accent = orange) plus the
 // semantic warning token; the family also tells the user whether the dollar
 // figure is known up front (Fixed) or only finalized at generation.
-type RecurringChargeTypeKey = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+type RecurringChargeTypeKey = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | 'PrepaidBlock';
 
 const CHARGE_TAG_META: Record<RecurringChargeTypeKey, {
   labelKey: string;
@@ -568,6 +571,13 @@ const CHARGE_TAG_META: Record<RecurringChargeTypeKey, {
     className: 'border-warning/40 bg-warning/10 text-warning',
     knownUpFront: false,
   },
+  PrepaidBlock: {
+    labelKey: 'automaticInvoices.chargeTags.prepaidBlock',
+    default: 'PRE',
+    className: 'border-success/30 bg-success/10 text-success',
+    // block_price is stored on the line config, so the amount is known before generation.
+    knownUpFront: true,
+  },
 };
 
 // Full names for the charge-tag tooltips (terse codes show in the column).
@@ -576,10 +586,11 @@ const CHARGE_TAG_FULL_NAME: Record<RecurringChargeTypeKey, string> = {
   Hourly: 'Time & materials',
   Usage: 'Usage-based',
   Bucket: 'Bucket / retainer',
+  PrepaidBlock: 'Prepaid block',
 };
 
 const isRecurringChargeTypeKey = (value: unknown): value is RecurringChargeTypeKey =>
-  value === 'Fixed' || value === 'Hourly' || value === 'Usage' || value === 'Bucket';
+  value === 'Fixed' || value === 'Hourly' || value === 'Usage' || value === 'Bucket' || value === 'PrepaidBlock';
 
 // Status of a parent group, derived from its combinability summary plus the
 // not-yet-due / blocked flags. Drives the colored pill in the Status column.
@@ -905,6 +916,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
   const [materializationGaps, setMaterializationGaps] = useState<IRecurringDueWorkMaterializationGap[]>([]);
+  const [lateHourlyTime, setLateHourlyTime] = useState<ILateHourlyTimeNotice[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -1041,6 +1053,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [currentReadyPage, pageSize, appliedDateRange, debouncedClientFilter, refreshTrigger]);
 
+  // Late-time notices are tenant-wide and independent of paging and filters: load on mount and
+  // after a generation refreshes the list (refreshTrigger), so the panel clears once the time has billed.
+  // Advisory: a failure here must not block the ready list.
+  useEffect(() => {
+    let isMounted = true;
+    getLateApprovedHourlyTime({})
+      .then((late) => { if (isMounted) setLateHourlyTime(Array.isArray(late) ? late : []); })
+      .catch(() => { if (isMounted) setLateHourlyTime([]); });
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshTrigger]);
+
   // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
   // the user does not have to repair each one by hand. Refreshes on success so
   // the gap panel reflects the healed state.
@@ -1123,13 +1148,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       return null;
     }
 
+    // Prepaid Block issuances never carry a billing cycle (see prepaidBlockDueWork.ts);
+    // they must not veto the cycle shared by the window's other members.
+    const cycleMembers = members.filter(
+      (member) => (member as { chargeType?: string | null }).chargeType !== 'PrepaidBlock',
+    );
     const billingCycleIds = new Set(
-      members
+      cycleMembers
         .map((member) => member.billingCycleId)
         .filter((billingCycleId): billingCycleId is string => Boolean(billingCycleId)),
     );
 
-    if (billingCycleIds.size !== 1 || members.some((member) => !member.billingCycleId)) {
+    if (billingCycleIds.size !== 1 || cycleMembers.some((member) => !member.billingCycleId)) {
       return null;
     }
 
@@ -1256,7 +1286,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         .filter((code): code is string => Boolean(code)),
     ),
   ).sort();
-  const availableChargeTypes = (['Fixed', 'Hourly', 'Usage', 'Bucket'] as RecurringChargeTypeKey[]).filter((type) =>
+  const availableChargeTypes = (['Fixed', 'Hourly', 'Usage', 'Bucket', 'PrepaidBlock'] as RecurringChargeTypeKey[]).filter((type) =>
     readyParentGroups.some((group) =>
       group.childExecutionRows.some((member) => (member as { chargeType?: string | null }).chargeType === type),
     ),
@@ -1393,7 +1423,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         counts.set(type, (counts.get(type) ?? 0) + 1);
       }
     }
-    const order: RecurringChargeTypeKey[] = ['Fixed', 'Hourly', 'Usage', 'Bucket'];
+    const order: RecurringChargeTypeKey[] = ['Fixed', 'Hourly', 'Usage', 'Bucket', 'PrepaidBlock'];
     return order
       .filter((type) => counts.has(type))
       .map((type) => ({ type, count: counts.get(type) ?? 0 }));
@@ -2613,6 +2643,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </Alert>
           )}
 
+          <LateHourlyTimeNotices notices={lateHourlyTime} />
+
           {materializationGaps.length > 0 ? (
             <Alert className="mb-4 border-warning/40 bg-warning/5" data-testid="recurring-materialization-gap-panel">
               <AlertDescription>
@@ -2909,6 +2941,32 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         {member.contractLineName?.trim() && member.contractLineName.trim() !== childTitle ? (
                           <div className="text-xs text-muted-foreground">{member.contractLineName.trim()}</div>
                         ) : null}
+                        {(member as { blockDueDate?: string | null }).blockDueDate ? (
+                          <div className="text-xs text-muted-foreground" data-testid={`prepaid-block-due-${member.executionIdentityKey}`}>
+                            {t('automaticInvoices.executionRows.prepaidBlock.due', {
+                              defaultValue: '{{trigger}} · due {{date}}',
+                              trigger: t(
+                                `automaticInvoices.executionRows.prepaidBlock.trigger.${(member as { blockTriggerKind?: string | null }).blockTriggerKind ?? 'manual'}`,
+                                { defaultValue: 'Prepaid block' },
+                              ),
+                              date: (member as { blockDueDate?: string | null }).blockDueDate,
+                            })}
+                          </div>
+                        ) : null}
+                        {(member.warnings ?? [])
+                          .filter((warning) => warning.code === 'stale_pending_prepaid_block')
+                          .map((warning) => (
+                            <div
+                              key={warning.code}
+                              className="text-xs text-warning"
+                              data-testid={`stale-pending-prepaid-block-warning-${member.executionIdentityKey}`}
+                            >
+                              {t('automaticInvoices.executionRows.prepaidBlock.stalePendingWarning', {
+                                count: warning.entryCount,
+                                defaultValue: warning.message,
+                              })}
+                            </div>
+                          ))}
                         {nonContractSelection ? (
                           <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
                             {t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', { defaultValue: 'Unresolved work' })}

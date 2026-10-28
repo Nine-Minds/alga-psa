@@ -9,7 +9,7 @@ export const ASSET_STATUS_KINDS: readonly AssetStatusKind[] = [
 ];
 
 /**
- * The five statuses every tenant starts with (FR-B2). Mirrors
+ * The six statuses every tenant starts with (FR-B2). Mirrors
  * server/migrations/20261009121000_create_asset_statuses.cjs and
  * ee/server/seeds/onboarding/psa/11_asset_statuses.cjs.
  */
@@ -24,6 +24,7 @@ export const BUILTIN_ASSET_STATUSES: ReadonlyArray<{
   { slug: 'maintenance', label: 'In maintenance', kind: 'pending', display_order: 2 },
   { slug: 'inactive', label: 'Inactive', kind: 'undeployable', display_order: 3 },
   { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
+  { slug: 'held_by_msp', label: 'Held by MSP', kind: 'pending', display_order: 5 },
 ];
 
 export const BUILTIN_ASSET_STATUS_SLUGS = BUILTIN_ASSET_STATUSES.map((status) => status.slug);

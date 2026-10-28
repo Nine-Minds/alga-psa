@@ -93,6 +93,36 @@
         "checkbox": "casella di controllo",
         "date": "data",
         "file-upload": "caricamento file"
+      },
+      "visibility": {
+        "title": "Mostra quando…",
+        "none": "Sempre visibile",
+        "addRule": "Aggiungi condizione",
+        "removeRule": "Rimuovi condizione",
+        "source": "Campo",
+        "selectSource": "Seleziona un campo",
+        "operator": "Condizione",
+        "value": "Valore",
+        "valueTrue": "Selezionato",
+        "valueFalse": "Non selezionato",
+        "selectValue": "Seleziona un valore",
+        "legacyBooleanWarning": "Questa regola confronta con del testo, ma una casella contiene vero/falso e non corrisponderà mai. Riseleziona il valore per correggere.",
+        "saveFailed": "Impossibile salvare le regole di visibilità.",
+        "contextSources": {
+          "requesterUserId": "Utente richiedente",
+          "clientId": "Cliente richiedente",
+          "contactId": "Contatto richiedente"
+        },
+        "operators": {
+          "equals": "è uguale a",
+          "not-equals": "non è uguale a",
+          "is-true": "è selezionato / vero",
+          "is-false": "non è selezionato / falso",
+          "has-value": "ha un valore",
+          "is-empty": "è vuoto"
+        },
+        "advancedJson": "Avanzate (JSON)",
+        "advancedJsonHelp": "La configurazione salvata completa, inclusi i valori predefiniti di contesto. Le regole di visibilità si modificano più facilmente con «Mostra quando…» su ogni campo. Le modifiche non salvate qui vengono scartate se lì si modifica una regola."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Configurazione della visibilità",
         "config": "Configurazione della visibilità (oggetto JSON)",
-        "save": "Salva configurazione della visibilità"
+        "save": "Salva configurazione della visibilità",
+        "audience": {
+          "removedReferences": "Le selezioni del pubblico non disponibili sono state rimosse. Controlla e salva il pubblico.",
+          "reference_client_id": "Cliente",
+          "reference_client_tags": "Etichetta cliente",
+          "reference_contact_id": "Contatto",
+          "reference_contact_tags": "Etichetta contatto",
+          "reference_contact_group_id": "Gruppo cliente",
+          "chooseTags": "Scegli etichette",
+          "loadError": "Impossibile caricare le opzioni del pubblico.",
+          "saveError": "Impossibile salvare il pubblico.",
+          "saved": "Pubblico salvato",
+          "convertedReadOnly": "Questo pubblico migrato è di sola lettura.",
+          "replace": "Sostituisci con un nuovo pubblico",
+          "clientTags": "Etichette cliente",
+          "contactTags": "Etichette contatto",
+          "allUsers": "Tutti gli utenti di questo cliente",
+          "missingClient": "Cliente non disponibile",
+          "missingContact": "Contatto non disponibile",
+          "narrowTags": "Solo contatti con etichetta",
+          "remove": "Rimuovi",
+          "allPortalUsers": "Tutti gli utenti del portale clienti",
+          "reach": "Visibile a {{count}} contatti di {{clients}} clienti",
+          "reachUnavailable": "Copertura non disponibile",
+          "title": "Chi può vedere questo modulo",
+          "everyone": "Tutti",
+          "everyoneHelp": "Tutti gli utenti cliente autenticati possono vedere e inviare questo modulo.",
+          "scoped": "Clienti e contatti selezionati",
+          "scopedHelp": "Solo gli utenti dei clienti selezionati, o i membri dei gruppi selezionati, possono vedere e inviare questo modulo.",
+          "addClient": "Aggiungi un cliente",
+          "clientPlaceholder": "Cerca clienti...",
+          "noClients": "Nessun cliente selezionato.",
+          "selectedClients": "Clienti selezionati",
+          "removeClient": "Rimuovi {{name}}",
+          "groupsOf": "Gruppi di utenti di {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Caricamento dei gruppi...",
+          "noGroups": "Questo cliente non ha gruppi di utenti.",
+          "groupsHelp": "Ogni cliente corrisponde a tutti i suoi utenti oppure solo ai membri dei gruppi selezionati. Un gruppo concede l'accesso solo ai membri del proprio cliente. Un cliente non può essere impostato su tutti gli utenti e avere anche gruppi selezionati.",
+          "emptyWarning": "Nessuno può vedere il modulo finché non aggiungi un pubblico.",
+          "save": "Salva destinatari",
+          "allUsersOf": "Tutti gli utenti di {{name}}",
+          "onlyGroups": "Solo i membri dei gruppi selezionati"
+        }
       },
       "fields": {
         "executionProvider": "Provider di esecuzione",
@@ -387,7 +460,8 @@
       "ticketRoutingUpdated": "Configurazione dell'instradamento dei ticket aggiornata",
       "workflowConfigurationUpdated": "Configurazione del workflow aggiornata",
       "formBehaviorConfigUpdated": "Configurazione del comportamento del modulo aggiornata",
-      "visibilityConfigUpdated": "Configurazione della visibilità aggiornata"
+      "visibilityConfigUpdated": "Configurazione della visibilità aggiornata",
+      "audienceUpdated": "Destinatari aggiornati"
     },
     "error": {
       "loadFailed": "Impossibile caricare le richieste di servizio",
@@ -410,7 +484,8 @@
       "formBehaviorInvalid": "JSON del comportamento del modulo non valido",
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
       "visibilityInvalid": "JSON della visibilità non valido",
-      "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}"
+      "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
+      "audienceSaveFailed": "Impossibile aggiornare i destinatari"
     }
   }
 }

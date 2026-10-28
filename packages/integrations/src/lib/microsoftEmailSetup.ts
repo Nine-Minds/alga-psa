@@ -26,6 +26,9 @@ export const MICROSOFT_EMAIL_SETUP_BOOTSTRAP_SCOPES = [
 export const MICROSOFT_EMAIL_ADMIN_CONSENT_SCOPE = 'https://graph.microsoft.com/.default';
 
 export const MICROSOFT_EMAIL_SETUP_STATE_TTL_SECONDS = 10 * 60;
+// A copied approval link has to reach another admin, so it outlives the
+// interactive create_application flow.
+export const MICROSOFT_EMAIL_ADMIN_CONSENT_STATE_TTL_SECONDS = 24 * 60 * 60;
 
 export interface MicrosoftEmailApplicationManifest {
   displayName: string;
@@ -150,7 +153,10 @@ export function createMicrosoftEmailSetupState(input: {
     ...(input.clientId ? { clientId: input.clientId } : {}),
     ...(input.profileId ? { profileId: input.profileId } : {}),
     issuedAt,
-    expiresAt: issuedAt + (input.ttlSeconds ?? MICROSOFT_EMAIL_SETUP_STATE_TTL_SECONDS),
+    expiresAt: issuedAt + (input.ttlSeconds ??
+        (input.purpose === 'admin_consent'
+          ? MICROSOFT_EMAIL_ADMIN_CONSENT_STATE_TTL_SECONDS
+          : MICROSOFT_EMAIL_SETUP_STATE_TTL_SECONDS)),
   };
   const payloadEncoded = toBase64Url(JSON.stringify(payload));
   return {

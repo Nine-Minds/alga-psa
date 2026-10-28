@@ -46,7 +46,22 @@ const ENTITY_REQUIRED_TEXT: Record<AmpEntityType, readonly string[]> = {
   tickets: ['title'],
   ticket_comments: ['ticket_package_record_id', 'body'],
   assets: ['name'],
+  products: ['name'],
+  vendor_products: ['vendor_name'],
 };
+
+/** Integer columns: value must be a safe integer within [min, max] (or null). */
+const ENTITY_INTEGER_COLUMNS: Record<string, { min: number; max: number }> = {
+  price_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
+  cost_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
+  unit_cost_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
+  lead_time_days: { min: 0, max: 3650 },
+  is_active: { min: 0, max: 1 },
+  is_preferred: { min: 0, max: 1 },
+  is_internal: { min: 0, max: 1 },
+};
+const ENTITY_CURRENCY_COLUMNS = ['price_currency', 'cost_currency'];
+const CURRENCY_CODE = /^[A-Z]{3}$/;
 
 function readHeader(path: string): string {
   const fd = openSync(path, 'r');
@@ -368,6 +383,55 @@ function validateEntityRow(
         table,
         recordId,
         field,
+      });
+    }
+  }
+
+  for (const [field, range] of Object.entries(ENTITY_INTEGER_COLUMNS)) {
+    if (!(field in row)) {
+      continue;
+    }
+    const value = row[field];
+    if (value === null || value === undefined) {
+      continue;
+    }
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < range.min || value > range.max) {
+      diagnostics.push({
+        code: 'AMP_INVALID_VALUE',
+        message: `"${field}" must be an integer between ${range.min} and ${range.max}.`,
+        table,
+        recordId,
+        field,
+      });
+    }
+  }
+
+  for (const field of ENTITY_CURRENCY_COLUMNS) {
+    if (!(field in row)) {
+      continue;
+    }
+    const value = row[field];
+    if (value !== null && value !== undefined && (typeof value !== 'string' || !CURRENCY_CODE.test(value))) {
+      diagnostics.push({
+        code: 'AMP_INVALID_VALUE',
+        message: `"${field}" must be an upper-case ISO 4217 currency code (e.g. EUR).`,
+        table,
+        recordId,
+        field,
+      });
+    }
+  }
+
+  if (table === 'vendor_products') {
+    const hasRef = typeof row.product_package_record_id === 'string' && row.product_package_record_id.length > 0;
+    const hasSku = typeof row.product_sku === 'string' && row.product_sku.trim().length > 0;
+    if (!hasRef && !hasSku) {
+      diagnostics.push({
+        code: 'AMP_INVALID_VALUE',
+        message: 'vendor_products records require "product_package_record_id" or "product_sku".',
+        table,
+        recordId,
+        field: 'product_package_record_id',
       });
     }
   }

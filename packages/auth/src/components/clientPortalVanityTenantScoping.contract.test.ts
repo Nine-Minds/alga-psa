@@ -19,7 +19,7 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
     // Unresolvable vanity host falls into the same branch as "no tenant at all":
     // the login-links discovery form, not a credentials form without a tenant.
     expect(source).toContain('if (!tenantSlug) {');
-    expect(source).toContain('<ClientPortalTenantDiscovery callbackUrl={callbackUrl}');
+    expect(source).toContain('<ClientPortalTenantDiscovery requestLoginLinks={requestClientPortalLoginLinksAction} callbackUrl={callbackUrl}');
     expect(source).toContain('tenantSlug={tenantSlug}');
   });
 
@@ -65,14 +65,14 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
     expect(tenantRequiredBranch).not.toContain('captcha.refreshChallenge()');
   });
 
-  it('both credentials providers accept and forward the portalDomain hint', () => {
+  it('the credentials provider accepts and forwards the portalDomain hint', () => {
     const source = read('packages/auth/src/lib/nextAuthOptions.ts');
 
     const credentialDeclarations = source.split('portalDomain: { label: "Portal Domain", type: "text" },').length - 1;
     const forwardedHints = source.split('portalDomain: portalDomainHint,').length - 1;
 
-    expect(credentialDeclarations).toBe(2);
-    expect(forwardedHints).toBe(2);
+    expect(credentialDeclarations).toBe(1);
+    expect(forwardedHints).toBe(1);
   });
 
   it('TENANT_REQUIRED is a CredentialsSignin code alongside the other login gates', () => {
@@ -85,9 +85,17 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
   it('unscoped client discovery reads every match instead of an arbitrary first row', () => {
     const modelSource = read('packages/db/src/models/user.ts');
     const authSource = read('packages/auth/src/actions/auth.tsx');
+    const resolutionSource = read('packages/auth/src/lib/signInUserResolution.ts');
 
     expect(modelSource).toContain('findUsersByEmailAndType');
-    expect(authSource).toContain('User.findUsersByEmailAndType(normalizedEmail, \'client\')');
+    expect(authSource).toContain("userType: 'client' | 'internal'");
+    // The lookup lives in the shared engine, which password and SSO both use.
+    expect(resolutionSource).toContain('User.findUsersByEmailAndType(email, userType)');
+    expect(authSource).toContain('resolveSignInUser(');
+    expect(authSource).toContain('resolveUnscopedUser(normalizedEmail, password, userType)');
+    expect(authSource).not.toContain('User.findUserByEmailAndType(normalizedEmail, userType)');
+    expect(resolutionSource).not.toContain('User.findUserByEmailAndType(');
     expect(authSource).toContain('new TenantRequiredError()');
+    expect(resolutionSource).toContain('new TenantRequiredResolutionError()');
   });
 });

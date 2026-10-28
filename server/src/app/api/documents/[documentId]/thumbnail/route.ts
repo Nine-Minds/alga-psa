@@ -10,7 +10,7 @@ import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentA
  * GET /api/documents/[documentId]/thumbnail
  *
  * Serves the cached thumbnail for a document
- * Returns 200x200 JPEG thumbnail with aggressive caching
+ * Returns a private 200x200 JPEG thumbnail
  */
 export async function GET(
   request: NextRequest,
@@ -66,13 +66,12 @@ export async function GET(
     const provider = await StorageProviderFactory.createProvider();
     const buffer = await provider.download(fileRecord.storage_path);
 
-    // Set aggressive caching headers
+    // Do not cache protected bytes across permission changes.
     const headers = new Headers();
     headers.set('Content-Type', fileRecord.mime_type || 'image/jpeg');
     headers.set('Content-Length', buffer.length.toString());
 
-    // Cache for 1 year - thumbnails are immutable (file_id changes if regenerated)
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    headers.set('Cache-Control', 'private, no-store');
 
     // ETag based on file ID for cache validation
     headers.set('ETag', `"${document.thumbnail_file_id}"`);
