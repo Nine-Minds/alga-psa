@@ -206,6 +206,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereNull: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (
@@ -243,6 +244,7 @@ describe('search ACL SQL predicate', () => {
     const commentQuery = {
       select: vi.fn(() => commentQuery),
       where: vi.fn(() => commentQuery),
+      whereNull: vi.fn(() => commentQuery),
       first: vi.fn(() => commentQuery),
       andWhere: vi.fn(() => commentQuery),
       then: (
@@ -268,6 +270,82 @@ describe('search ACL SQL predicate', () => {
 
     expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
     expect(knex).not.toHaveBeenCalledWith('tickets');
+  });
+
+  /**
+   * Minimal fake of a filtered single-row lookup: it applies where/whereNull/andWhere
+   * equality filters to the stored row, so the verifier only sees it if its filters match.
+   */
+  function fakeRowQuery(row: Record<string, unknown>) {
+    const conditions: Array<(r: Record<string, unknown>) => boolean> = [];
+    const strip = (column: string) => column.split('.').pop() as string;
+    const query: any = {
+      select: () => query,
+      first: () => query,
+      where: (column: unknown, value?: unknown) => {
+        // Columns the fixture row does not carry (tenant, ids of joined tables) are not under test.
+        const add = (col: string, val: unknown) =>
+          conditions.push((r) => !(strip(col) in r) || r[strip(col)] === val);
+        if (typeof column === 'string') add(column, value);
+        else if (column && typeof column === 'object') {
+          for (const [k, v] of Object.entries(column as Record<string, unknown>)) add(k, v);
+        }
+        return query;
+      },
+      andWhere: (column: string, value: unknown) => query.where(column, value),
+      whereNull: (column: string) => {
+        conditions.push((r) => r[strip(column)] == null);
+        return query;
+      },
+      join: () => query,
+      then: (resolve: (v: unknown) => unknown, reject: (e?: unknown) => unknown) =>
+        Promise.resolve(conditions.every((c) => c(row)) ? row : undefined).then(resolve, reject),
+    };
+    return query;
+  }
+
+  const internalUser = {
+    userId: '00000000-0000-0000-0000-000000000001',
+    tenant: 'tenant-1',
+    permissions: ['ticket:read'],
+    isInternal: true,
+  };
+
+  it('C7 ticket_comment verifier denies soft-deleted and unpublished comments, allows published live ones', async () => {
+    const ticketQuery = fakeRowQuery({ ticket_id: 'ticket-1' });
+    const run = (comment: Record<string, unknown>) => {
+      const knex = vi.fn((table: string) => {
+        if (table === 'comments') return fakeRowQuery({ comment_id: 'comment-1', ticket_id: 'ticket-1', is_internal: false, ...comment });
+        if (table === 'tickets') return ticketQuery;
+        throw new Error(`Unexpected table ${table}`);
+      });
+      return verifyResultVisibility(knex as never, internalUser, [{ type: 'ticket_comment' as const, id: 'comment-1' }]);
+    };
+
+    expect(await run({ deleted_at: null, publish_state: 'published' })).toHaveLength(1);
+    expect(await run({ deleted_at: new Date(), publish_state: 'published' })).toEqual([]);
+    expect(await run({ deleted_at: null, publish_state: 'scheduled' })).toEqual([]);
+    expect(await run({ deleted_at: null, publish_state: 'canceled' })).toEqual([]);
+  });
+
+  it('C7 project_task_comment verifier denies soft-deleted comments, allows live ones', async () => {
+    const run = (deletedAt: Date | null) => {
+      const knex = vi.fn((table: string) => {
+        if (table.startsWith('project_task_comments')) {
+          return fakeRowQuery({ task_comment_id: 'tc-1', project_id: 'project-1', deleted_at: deletedAt });
+        }
+        if (table.startsWith('projects')) return fakeRowQuery({ project_id: 'project-1', client_id: 'client-a' });
+        return fakeRowQuery({});
+      });
+      return verifyResultVisibility(
+        knex as never,
+        { ...internalUser, permissions: ['project:read'] },
+        [{ type: 'project_task_comment' as const, id: 'tc-1' }],
+      );
+    };
+
+    expect(await run(new Date())).toEqual([]);
+    expect(await run(null)).toHaveLength(1);
   });
 
   it('T167 drops project hits outside the user accessible client scope', async () => {
