@@ -1,5 +1,5 @@
 /**
- * Prepaid hours on contracts (alga-2026-0002684), migration 3 of 3: allow
+ * Prepaid hours on contracts (alga-2026-0002684), migration 3 of 4: allow
  * charge_family = 'prepaid_block' on recurring_service_periods (cadence prepaid
  * block fee periods; due_position is always 'advance'). 'prepaid_block' is
  * 13 chars and fits the existing varchar(20).
@@ -17,7 +17,7 @@ const inList = (values) => values.map((v) => `'${v}'`).join(', ');
 
 async function replaceCheck(knex, values) {
   await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [TABLE, CHECK]);
-  await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (charge_family IN (' + inList(values) + '))', [TABLE, CHECK]);
+  await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (charge_family IN (' + inList(values) + ')) NOT VALID', [TABLE, CHECK]);
 }
 
 exports.up = async function up(knex) {
@@ -33,4 +33,5 @@ exports.down = async function down(knex) {
     );
   }
   await replaceCheck(knex, BASE);
+  await knex.raw('ALTER TABLE ?? VALIDATE CONSTRAINT ??', [TABLE, CHECK]);
 };

@@ -1,5 +1,5 @@
 /**
- * Prepaid hours on contracts (alga-2026-0002684), migration 2 of 3: block
+ * Prepaid hours on contracts (alga-2026-0002684), migration 2 of 4: block
  * validity window and the link from a block to the service period that issued it.
  *
  *   hour_blocks + valid_from              date NULL   (null = no lower bound; every existing row)
@@ -28,7 +28,7 @@ async function setIssuanceFk(knex, onDelete) {
   await knex.raw(
     'ALTER TABLE hour_blocks ADD CONSTRAINT hour_blocks_issuance_fkey ' +
       'FOREIGN KEY (tenant, issuance_id) REFERENCES contract_line_block_issuances (tenant, issuance_id)' +
-      (onDelete ? ` ON DELETE ${onDelete}` : ''),
+      (onDelete ? ` ON DELETE ${onDelete}` : '') + ' NOT VALID',
   );
 }
 
@@ -45,19 +45,14 @@ exports.up = async function up(knex) {
 
   await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [VALIDITY_CK]);
   await knex.raw(
-    'ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (valid_from IS NULL OR expiration_date IS NULL OR valid_from <= expiration_date)',
+    'ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (valid_from IS NULL OR expiration_date IS NULL OR valid_from <= expiration_date) NOT VALID',
     [VALIDITY_CK],
   );
 
-  // Existing contract blocks are all issuance-issued; guard anyway so an odd
-  // legacy row cannot fail the deploy (NOT VALID still enforces new writes).
-  const orphan = await knex.raw(
-    "SELECT 1 FROM hour_blocks WHERE source_type = 'contract' AND issuance_id IS NULL AND service_period_record_id IS NULL LIMIT 1",
-  );
+  // Enforce new writes immediately; the follow-up migration validates old rows.
   await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [SOURCE_CK]);
   await knex.raw(
-    "ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (source_type <> 'contract' OR issuance_id IS NOT NULL OR service_period_record_id IS NOT NULL)" +
-      (orphan.rows.length > 0 ? ' NOT VALID' : ''),
+    "ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (source_type <> 'contract' OR issuance_id IS NOT NULL OR service_period_record_id IS NOT NULL) NOT VALID",
     [SOURCE_CK],
   );
 
@@ -66,10 +61,10 @@ exports.up = async function up(knex) {
   }
 
   await knex.raw(
-    'CREATE INDEX IF NOT EXISTS hour_blocks_contract_line_valid_from_idx ON hour_blocks (tenant, contract_line_id, valid_from)',
+    'CREATE INDEX CONCURRENTLY IF NOT EXISTS hour_blocks_contract_line_valid_from_idx ON hour_blocks (tenant, contract_line_id, valid_from)',
   );
   await knex.raw(
-    'CREATE INDEX IF NOT EXISTS hour_blocks_service_period_record_idx ON hour_blocks (tenant, service_period_record_id) WHERE service_period_record_id IS NOT NULL',
+    'CREATE INDEX CONCURRENTLY IF NOT EXISTS hour_blocks_service_period_record_idx ON hour_blocks (tenant, service_period_record_id) WHERE service_period_record_id IS NOT NULL',
   );
 };
 
@@ -87,6 +82,7 @@ exports.down = async function down(knex) {
   }
   if (!(await isDistributedHourBlocks(knex))) {
     await setIssuanceFk(knex, 'SET NULL (issuance_id)');
+    await knex.raw('ALTER TABLE hour_blocks VALIDATE CONSTRAINT hour_blocks_issuance_fkey');
   }
   await knex.raw('DROP INDEX IF EXISTS hour_blocks_service_period_record_idx');
   await knex.raw('DROP INDEX IF EXISTS hour_blocks_contract_line_valid_from_idx');

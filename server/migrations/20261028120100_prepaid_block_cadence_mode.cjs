@@ -1,5 +1,5 @@
 /**
- * Prepaid hours on contracts (alga-2026-0002684), migration 1 of 3: block
+ * Prepaid hours on contracts (alga-2026-0002684), migration 1 of 4: block
  * issue mode and rollover on the Prepaid Block config tables.
  *
  *   contract_line_prepaid_blocks, contract_template_line_prepaid_blocks,
@@ -21,21 +21,12 @@ const TABLES = [
   'contract_line_preset_prepaid_blocks',
 ];
 
-const CHECKS = (table) => [
-  [`${table}_issue_mode_ck`, "issue_mode IN ('consumption', 'cadence')"],
-  [`${table}_rollover_periods_ck`, 'rollover_periods BETWEEN 0 AND 12'],
-  [
-    `${table}_cadence_triggers_ck`,
-    "issue_mode <> 'cadence' OR (trigger_on_exhaustion = false AND trigger_threshold_percent IS NULL " +
-      'AND trigger_on_expiry = false AND trigger_on_renewal = false AND expiry_months IS NULL)',
-  ],
-  [`${table}_rollover_mode_ck`, "rollover_periods = 0 OR issue_mode = 'cadence'"],
-];
+const CHECK_SUFFIXES = ['issue_mode', 'rollover_periods', 'cadence_triggers', 'rollover_mode'];
 
 async function addCheck(knex, table, name, expression) {
   const r = await knex.raw('SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass', [name, table]);
   if (r.rows.length === 0) {
-    await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' + expression + ')', [table, name]);
+    await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' + expression + ') NOT VALID', [table, name]);
   }
 }
 
@@ -43,9 +34,13 @@ exports.up = async function up(knex) {
   for (const table of TABLES) {
     await knex.raw("ALTER TABLE ?? ADD COLUMN IF NOT EXISTS issue_mode text NOT NULL DEFAULT 'consumption'", [table]);
     await knex.raw('ALTER TABLE ?? ADD COLUMN IF NOT EXISTS rollover_periods smallint NOT NULL DEFAULT 0', [table]);
-    for (const [name, expression] of CHECKS(table)) {
-      await addCheck(knex, table, name, expression);
-    }
+    // Validation runs separately so the scan does not hold the DDL lock.
+    await addCheck(knex, table, `${table}_issue_mode_ck`, "issue_mode IN ('consumption', 'cadence')");
+    await addCheck(knex, table, `${table}_rollover_periods_ck`, 'rollover_periods BETWEEN 0 AND 12');
+    await addCheck(knex, table, `${table}_cadence_triggers_ck`,
+      "issue_mode <> 'cadence' OR (trigger_on_exhaustion = false AND trigger_threshold_percent IS NULL " +
+      'AND trigger_on_expiry = false AND trigger_on_renewal = false AND expiry_months IS NULL)');
+    await addCheck(knex, table, `${table}_rollover_mode_ck`, "rollover_periods = 0 OR issue_mode = 'cadence'");
   }
 };
 
@@ -60,8 +55,8 @@ exports.down = async function down(knex) {
     }
   }
   for (const table of TABLES) {
-    for (const [name] of CHECKS(table)) {
-      await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [table, name]);
+    for (const suffix of CHECK_SUFFIXES) {
+      await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [table, `${table}_${suffix}_ck`]);
     }
     await knex.raw('ALTER TABLE ?? DROP COLUMN IF EXISTS rollover_periods', [table]);
     await knex.raw('ALTER TABLE ?? DROP COLUMN IF EXISTS issue_mode', [table]);

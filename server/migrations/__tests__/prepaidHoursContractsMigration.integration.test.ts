@@ -9,9 +9,10 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 // validity window / period link, prepaid_block charge family.
 const require = createRequire(import.meta.url);
 const dir = (name: string) => path.resolve(__dirname, '..', name);
-const cadenceMode = require(dir('20261025090748_prepaid_block_cadence_mode.cjs'));
-const validity = require(dir('20261025090751_hour_blocks_validity_and_period_link.cjs'));
-const family = require(dir('20261025090753_recurring_service_periods_prepaid_block_family.cjs'));
+const cadenceMode = require(dir('20261028120100_prepaid_block_cadence_mode.cjs'));
+const validity = require(dir('20261028120200_hour_blocks_validity_and_period_link.cjs'));
+const family = require(dir('20261028120300_recurring_service_periods_prepaid_block_family.cjs'));
+const validate = require(dir('20261028120400_validate_prepaid_block_constraints.cjs'));
 
 const CONFIG_TABLES = [
   'contract_line_prepaid_blocks',
@@ -195,6 +196,34 @@ describe('prepaid hours on contracts migrations (DB-backed)', () => {
     }
   });
 
+  it('keeps legacy blocks without a source while rejecting new ones, and validates after cleanup', async () => {
+    await inRolledBackTrx(async (trx) => {
+      // Recreate the pre-migration state with a legacy contract block.
+      await trx.raw('ALTER TABLE hour_blocks DROP CONSTRAINT hour_blocks_contract_source_check');
+      const orphan = {
+        tenant: randomUUID(), block_id: randomUUID(), client_id: randomUUID(), service_id: randomUUID(),
+        total_minutes: 60, remaining_minutes: 60, hourly_rate: 100,
+        source_type: 'contract', contract_line_id: randomUUID(),
+      };
+      await trx('hour_blocks').insert(orphan);
+      await trx.raw(`ALTER TABLE hour_blocks ADD CONSTRAINT hour_blocks_contract_source_check
+        CHECK (source_type <> 'contract' OR issuance_id IS NOT NULL OR service_period_record_id IS NOT NULL) NOT VALID`);
+
+      await validate.up(trx);
+      const sourceCheck = () => trx('pg_constraint')
+        .where({ conname: 'hour_blocks_contract_source_check' }).first('convalidated');
+      expect((await sourceCheck()).convalidated).toBe(false);
+      await trx.raw('SAVEPOINT new_orphan');
+      await expect(trx('hour_blocks').insert({ ...orphan, block_id: randomUUID() }))
+        .rejects.toMatchObject({ code: '23514' });
+      await trx.raw('ROLLBACK TO SAVEPOINT new_orphan');
+
+      await trx('hour_blocks').where({ tenant: orphan.tenant, block_id: orphan.block_id }).del();
+      await validate.up(trx);
+      expect((await sourceCheck()).convalidated).toBe(true);
+    });
+  });
+
   it('down() refuses while cadence data exists, succeeds without it, and up() restores everything', async () => {
     await inRolledBackTrx(async (trx) => {
       const tenant = randomUUID();
@@ -237,38 +266,65 @@ describe('prepaid hours on contracts migrations (DB-backed)', () => {
       await expect(family.down(trx)).rejects.toThrow(/prepaid_block/);
       await trx.raw('ROLLBACK TO SAVEPOINT s3');
       await trx('recurring_service_periods').where({ tenant, record_id: periodId }).del();
+    });
 
-      // --- no cadence data: full down then up round trip ---
-      await family.down(trx);
-      await validity.down(trx);
-      await cadenceMode.down(trx);
+    // Concurrent indexes require the same transaction-free execution as production.
+    // Fabricated data above was rolled back; this suite owns its disposable DB.
+    try {
+      await family.down(admin);
+      await validity.down(admin);
+      await cadenceMode.down(admin);
       for (const table of CONFIG_TABLES) {
-        expect(await trx.schema.hasColumn(table, 'issue_mode')).toBe(false);
-        expect(await trx.schema.hasColumn(table, 'rollover_periods')).toBe(false);
+        expect(await admin.schema.hasColumn(table, 'issue_mode')).toBe(false);
+        expect(await admin.schema.hasColumn(table, 'rollover_periods')).toBe(false);
       }
-      expect(await trx.schema.hasColumn('hour_blocks', 'valid_from')).toBe(false);
-      expect(await trx.schema.hasColumn('hour_blocks', 'service_period_record_id')).toBe(false);
-      const downDef = await trx.raw(
+      expect(await admin.schema.hasColumn('hour_blocks', 'valid_from')).toBe(false);
+      expect(await admin.schema.hasColumn('hour_blocks', 'service_period_record_id')).toBe(false);
+      const downDef = await admin.raw(
         "SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'recurring_service_periods_charge_family_check'",
       );
       expect(downDef.rows[0].def).not.toContain('prepaid_block');
 
-      await cadenceMode.up(trx);
-      await validity.up(trx);
-      await family.up(trx);
+      await cadenceMode.up(admin);
+      await validity.up(admin);
+      await family.up(admin);
+      const pending = await admin('pg_constraint')
+        .whereIn('conname', ['hour_blocks_issuance_fkey', 'hour_blocks_valid_from_expiration_check',
+          'hour_blocks_contract_source_check', 'recurring_service_periods_charge_family_check'])
+        .select('convalidated');
+      expect(pending).toHaveLength(4);
+      expect(pending.every((row) => row.convalidated === false)).toBe(true);
+      // NOT VALID protects new writes before the separate validation scan.
+      expect(await sqlState(`INSERT INTO hour_blocks
+        (tenant, block_id, client_id, service_id, total_minutes, remaining_minutes, hourly_rate, valid_from, expiration_date)
+        VALUES ('${randomUUID()}', '${randomUUID()}', '${randomUUID()}', '${randomUUID()}', 60, 60, 100, '2026-12-01', '2026-11-30')`))
+        .toBe('23514');
+      await validate.up(admin);
+      const validated = await admin('pg_constraint')
+        .whereIn('conname', ['hour_blocks_issuance_fkey', 'hour_blocks_valid_from_expiration_check',
+          'hour_blocks_contract_source_check', 'recurring_service_periods_charge_family_check'])
+        .select('convalidated');
+      expect(validated.every((row) => row.convalidated === true)).toBe(true);
       // up() is idempotent.
-      await cadenceMode.up(trx);
-      await validity.up(trx);
-      await family.up(trx);
+      await cadenceMode.up(admin);
+      await validity.up(admin);
+      await family.up(admin);
+      await validate.up(admin);
+      await validate.up(admin);
       for (const table of CONFIG_TABLES) {
-        expect(await trx.schema.hasColumn(table, 'issue_mode')).toBe(true);
-        expect(await trx.schema.hasColumn(table, 'rollover_periods')).toBe(true);
+        expect(await admin.schema.hasColumn(table, 'issue_mode')).toBe(true);
+        expect(await admin.schema.hasColumn(table, 'rollover_periods')).toBe(true);
       }
-      expect(await trx.schema.hasColumn('hour_blocks', 'valid_from')).toBe(true);
-      const upDef = await trx.raw(
+      expect(await admin.schema.hasColumn('hour_blocks', 'valid_from')).toBe(true);
+      const upDef = await admin.raw(
         "SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'recurring_service_periods_charge_family_check'",
       );
       expect(upDef.rows[0].def).toContain('prepaid_block');
-    });
+    } finally {
+      await cadenceMode.up(admin);
+      await validity.up(admin);
+      await family.up(admin);
+      await validate.up(admin);
+    }
   });
 });
