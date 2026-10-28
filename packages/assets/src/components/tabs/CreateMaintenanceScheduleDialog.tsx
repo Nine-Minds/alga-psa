@@ -128,6 +128,14 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
     })
   }));
 
+  const dayOfMonthOptions = [
+    { value: '', label: t('createMaintenanceScheduleDialog.dayOfMonthOptions.any', { defaultValue: 'Any day' }) },
+    // A rule written through the API may name several days; keep it selectable so
+    // editing an unrelated field does not quietly drop the extra ones.
+    ...(daysOfMonth.length > 1 ? [{ value: daysOfMonth.join(','), label: [...daysOfMonth].sort((a, b) => a - b).join(', ') }] : []),
+    ...DAYS_OF_MONTH.map((day) => ({ value: String(day), label: String(day) }))
+  ];
+
   const cadencePreview = frequency
     ? describeMaintenanceCadence(
         t,
@@ -407,27 +415,19 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
               {recurrenceUnit === 'months' && (
                 <div>
-                  <Label>
-                    {t('createMaintenanceScheduleDialog.fields.onDaysOfMonth', { defaultValue: 'On days of the month (optional)' })}
+                  <Label htmlFor="recurrence-day-of-month">
+                    {t('createMaintenanceScheduleDialog.fields.onDayOfMonth', { defaultValue: 'On day of the month (optional)' })}
                   </Label>
-                  <div id="recurrence-days-of-month" role="group" className="mt-1 grid grid-cols-7 gap-1">
-                    {DAYS_OF_MONTH.map((day) => {
-                      const selected = daysOfMonth.includes(day);
-                      return (
-                        <Button
-                          key={day}
-                          id={`recurrence-day-${day}`}
-                          type="button"
-                          size="xs"
-                          variant={selected ? 'default' : 'outline'}
-                          aria-pressed={selected}
-                          onClick={() => setDaysOfMonth(toggle(daysOfMonth, day))}
-                        >
-                          {day}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                  <CustomSelect
+                    id="recurrence-day-of-month"
+                    options={dayOfMonthOptions}
+                    value={daysOfMonth.join(',')}
+                    onValueChange={(value) => setDaysOfMonth(value ? value.split(',').map((day) => parseInt(day, 10)) : [])}
+                    className="mt-1"
+                    // "Any day" already stands for an empty rule; a disabled
+                    // "Select..." row above it would just read as a second one.
+                    showPlaceholderInDropdown={false}
+                  />
                   <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                     {t('createMaintenanceScheduleDialog.hints.selectors', {
                       defaultValue: 'Leave unselected to repeat from the completion date.'

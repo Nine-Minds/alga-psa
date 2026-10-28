@@ -1294,7 +1294,7 @@
       "active": "Attivo",
       "recurrenceUnit": "Unità *",
       "onWeekdays": "Nei giorni della settimana (facoltativo)",
-      "onDaysOfMonth": "Nei giorni del mese (facoltativo)"
+      "onDayOfMonth": "Nel giorno del mese (facoltativo)"
     },
     "placeholders": {
       "scheduleName": "ad esempio, manutenzione mensile del server",
@@ -1325,6 +1325,9 @@
       "weeks": "Settimane",
       "months": "Mesi",
       "years": "Anni"
+    },
+    "dayOfMonthOptions": {
+      "any": "Qualsiasi giorno"
     },
     "hints": {
       "selectors": "Se non selezioni nulla, la ripetizione parte dalla data di completamento."

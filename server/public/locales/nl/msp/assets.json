@@ -1294,7 +1294,7 @@
       "active": "Actief",
       "recurrenceUnit": "Eenheid *",
       "onWeekdays": "Op weekdagen (optioneel)",
-      "onDaysOfMonth": "Op dagen van de maand (optioneel)"
+      "onDayOfMonth": "Op dag van de maand (optioneel)"
     },
     "placeholders": {
       "scheduleName": "bijvoorbeeld maandelijks serveronderhoud",
@@ -1325,6 +1325,9 @@
       "weeks": "Weken",
       "months": "Maanden",
       "years": "Jaren"
+    },
+    "dayOfMonthOptions": {
+      "any": "Elke dag"
     },
     "hints": {
       "selectors": "Zonder selectie wordt herhaald vanaf de voltooiingsdatum."

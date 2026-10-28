@@ -1294,7 +1294,7 @@
       "active": "Aktywny",
       "recurrenceUnit": "Jednostka *",
       "onWeekdays": "W dni tygodnia (opcjonalnie)",
-      "onDaysOfMonth": "W dni miesiąca (opcjonalnie)"
+      "onDayOfMonth": "W dniu miesiąca (opcjonalnie)"
     },
     "placeholders": {
       "scheduleName": "np. comiesięczna konserwacja serwera",
@@ -1325,6 +1325,9 @@
       "weeks": "Tygodnie",
       "months": "Miesiące",
       "years": "Lata"
+    },
+    "dayOfMonthOptions": {
+      "any": "Dowolny dzień"
     },
     "hints": {
       "selectors": "Bez zaznaczenia powtarzanie liczy się od daty wykonania."

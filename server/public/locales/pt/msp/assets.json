@@ -1294,7 +1294,7 @@
       "active": "Ativo",
       "recurrenceUnit": "Unidade *",
       "onWeekdays": "Nos dias da semana (opcional)",
-      "onDaysOfMonth": "Nos dias do mês (opcional)"
+      "onDayOfMonth": "No dia do mês (opcional)"
     },
     "placeholders": {
       "scheduleName": "por exemplo, manutenção mensal do servidor",
@@ -1325,6 +1325,9 @@
       "weeks": "Semanas",
       "months": "Meses",
       "years": "Anos"
+    },
+    "dayOfMonthOptions": {
+      "any": "Qualquer dia"
     },
     "hints": {
       "selectors": "Sem seleção, a repetição parte da data de conclusão."

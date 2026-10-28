@@ -1294,7 +1294,7 @@
       "active": "Aktivt",
       "recurrenceUnit": "Enhet *",
       "onWeekdays": "På veckodagar (valfritt)",
-      "onDaysOfMonth": "På dagar i månaden (valfritt)"
+      "onDayOfMonth": "På dag i månaden (valfritt)"
     },
     "placeholders": {
       "scheduleName": "t.ex. Månatligt serverunderhåll",
@@ -1325,6 +1325,9 @@
       "weeks": "Veckor",
       "months": "Månader",
       "years": "År"
+    },
+    "dayOfMonthOptions": {
+      "any": "Valfri dag"
     },
     "hints": {
       "selectors": "Utan val upprepas från slutförandedatumet."

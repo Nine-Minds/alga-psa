@@ -1294,7 +1294,7 @@
       "active": "Aktiv",
       "recurrenceUnit": "Einheit *",
       "onWeekdays": "An Wochentagen (optional)",
-      "onDaysOfMonth": "An Monatstagen (optional)"
+      "onDayOfMonth": "Am Monatstag (optional)"
     },
     "placeholders": {
       "scheduleName": "z. B. monatliche Serverwartung",
@@ -1325,6 +1325,9 @@
       "weeks": "Wochen",
       "months": "Monate",
       "years": "Jahre"
+    },
+    "dayOfMonthOptions": {
+      "any": "Beliebiger Tag"
     },
     "hints": {
       "selectors": "Ohne Auswahl wird ab dem Abschlussdatum wiederholt."
