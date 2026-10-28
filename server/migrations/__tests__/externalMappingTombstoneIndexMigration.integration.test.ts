@@ -7,8 +7,8 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 // Behavioral DB test for the tombstone partial-index migration (ticket
 // alga-2026-0002886). `up` is called on a DB that may already be migrated; it
-// is idempotent and preserves uniqueness during replacement. The suite leaves the index in its
-// migrated (partial) state.
+// is idempotent and preserves uniqueness during concurrent replacement. The
+// suite leaves the index in its migrated (partial) state.
 
 const require = createRequire(import.meta.url);
 const MIGRATION_PATH = path.resolve(

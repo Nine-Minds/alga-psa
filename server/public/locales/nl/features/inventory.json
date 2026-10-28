@@ -1577,6 +1577,10 @@
       "inProgress": "Opnieuw opbouwen…"
     },
     "receive": {
+      "searchProducts": "Producten of SKU zoeken...",
+      "noProductsFound": "Geen producten gevonden",
+      "searchLocations": "Locaties zoeken...",
+      "noLocationsFound": "Geen locaties gevonden",
       "costNonNegative": "Kostprijs per eenheid kan niet negatief zijn.",
       "failed": "Kon voorraad niet ontvangen.",
       "inProgress": "Ontvangen…",

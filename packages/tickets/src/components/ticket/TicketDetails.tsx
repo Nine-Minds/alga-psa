@@ -727,6 +727,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
+    const [defaultReplyInternal, setDefaultReplyInternal] = useState(bootstrap?.displaySettings?.defaultReplyInternal ?? false);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -1585,6 +1586,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 const settings = await getTicketingDisplaySettings();
                 setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
+                setDefaultReplyInternal(settings?.defaultReplyInternal ?? false);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }
@@ -4467,6 +4469,7 @@ const handleClose = () => {
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
+                    defaultReplyInternal={defaultReplyInternal}
                     hideSlaStatus={effectiveHideSlaStatus}
                     hideBilling={effectiveHideBilling}
                     hideScheduling={effectiveHideScheduling}
@@ -4675,6 +4678,7 @@ const handleClose = () => {
                                     onContentChange={handleContentChange}
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
+                                    defaultReplyInternal={defaultReplyInternal}
                                     readOnly={dataSource.screen.readOnly}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}

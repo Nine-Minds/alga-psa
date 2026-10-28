@@ -31,10 +31,23 @@
  * Tombstone semantics are unchanged: the rows stay, nothing is purged, and the
  * invoice export path still reads them.
  *
+ * Lock profile (migration-lint rule 1): the replacement is built CONCURRENTLY
+ * under a staging name while the old index keeps enforcing uniqueness, the old
+ * index is then dropped CONCURRENTLY, and the staging index is renamed to the
+ * original name so every existing reference (23505 handling, comments, tests)
+ * stays valid. Neither step blocks writes on tenant_external_entity_mappings.
+ * A CONCURRENTLY build that fails leaves an INVALID index behind, which a
+ * rerun would otherwise keep (IF NOT EXISTS); dropInvalidStagingIndex clears it first.
+ * The new index is strictly looser than the old one, so the build cannot fail
+ * on duplicates and `up` needs no dedupe.
+ *
  * Citus: a plain partial index on a distributed table keyed on the
- * distribution column (tenant), so there is no colocation change. The new
- * index is strictly looser than the old one, so `up` needs no dedupe.
+ * distribution column (tenant), so there is no colocation change.
  */
+
+const TABLE = 'tenant_external_entity_mappings';
+const INDEX_NAME = 'idx_unique_external_mapping';
+const STAGING_INDEX_NAME = 'idx_unique_external_mapping_swap';
 
 const INDEX_KEY =
   "tenant, integration_type, alga_entity_type, external_entity_id, COALESCE(external_realm_id, '')";
@@ -47,38 +60,60 @@ const DESKTOP_PREDICATE =
 
 const LIVE_PREDICATE = 'deleted_at IS NULL';
 
+/**
+ * Drop a leftover INVALID build of the staging index from an interrupted run,
+ * so the CONCURRENTLY + IF NOT EXISTS create below cannot silently keep it.
+ * @param {import('knex').Knex} knex
+ */
+async function dropInvalidStagingIndex(knex) {
+  const invalid = await knex.raw(
+    `
+    SELECT 1
+    FROM pg_index i
+    JOIN pg_class c ON c.oid = i.indexrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = ? AND n.nspname = current_schema() AND NOT i.indisvalid
+    `,
+    [STAGING_INDEX_NAME]
+  );
+  if (invalid.rows.length > 0) {
+    await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${STAGING_INDEX_NAME}`);
+  }
+}
+
+/**
+ * Replace idx_unique_external_mapping with a definition using `predicate`,
+ * without ever taking a write-blocking lock on the mappings table.
+ * @param {import('knex').Knex} knex
+ * @param {string} predicate
+ */
+async function swapExternalMappingIndex(knex, predicate) {
+  await dropInvalidStagingIndex(knex);
+  await knex.raw(`
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${STAGING_INDEX_NAME}
+    ON ${TABLE} (${INDEX_KEY})
+    WHERE ${predicate}
+  `);
+  await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX_NAME}`);
+  await knex.raw(`ALTER INDEX ${STAGING_INDEX_NAME} RENAME TO ${INDEX_NAME}`);
+}
+
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
-  // A cancelled concurrent build can leave an invalid index. IF NOT EXISTS
-  // alone would reuse it and remove the only working uniqueness check.
-  const replacement = await knex.raw(`
-    SELECT indisvalid FROM pg_index
-    WHERE indexrelid = to_regclass('idx_unique_external_mapping_live')
-  `);
-  if (replacement.rows[0]?.indisvalid === false) {
-    await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping_live');
-  }
-
-  // Keep the old index enforcing uniqueness until the new one is valid.
+  // Keep the old index enforcing uniqueness until the replacement is valid.
   // A retry after DROP but before RENAME reuses the completed replacement.
-  await knex.raw(`
-    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_external_mapping_live
-    ON tenant_external_entity_mappings (${INDEX_KEY})
-    WHERE ${XERO_PREDICATE} AND ${DESKTOP_PREDICATE} AND ${LIVE_PREDICATE}
-  `);
-  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping');
-  await knex.raw('ALTER INDEX idx_unique_external_mapping_live RENAME TO idx_unique_external_mapping');
+  await swapExternalMappingIndex(knex, `${XERO_PREDICATE} AND ${DESKTOP_PREDICATE} AND ${LIVE_PREDICATE}`);
 };
 
 /** @param {import('knex').Knex} knex */
 exports.down = async function down(knex) {
   // The old index counted tombstones, so restoring it fails on any tombstone
   // that shares a target with another row. Count those groups first and refuse
-  // as a whole rather than drop the index and fail mid-way.
+  // as a whole rather than leave an INVALID index behind.
   const dupes = await knex.raw(`
     SELECT COUNT(*)::int AS groups FROM (
       SELECT 1
-      FROM tenant_external_entity_mappings
+      FROM ${TABLE}
       WHERE ${XERO_PREDICATE} AND ${DESKTOP_PREDICATE}
       GROUP BY ${INDEX_KEY}
       HAVING COUNT(*) > 1
@@ -87,19 +122,15 @@ exports.down = async function down(knex) {
   const groups = dupes.rows[0].groups;
   if (groups > 0) {
     throw new Error(
-      `Cannot restore the tombstone-including idx_unique_external_mapping: ${groups} duplicate ` +
+      `Cannot restore the tombstone-including ${INDEX_NAME}: ${groups} duplicate ` +
         'target group(s) exist (unlinked mapping tombstones sharing a target with another ' +
         'mapping). Resolve those tombstone duplicates first, then re-run the rollback. ' +
         'No mappings were deleted.'
     );
   }
 
-  await knex.raw('DROP INDEX IF EXISTS idx_unique_external_mapping');
-  await knex.raw(`
-    CREATE UNIQUE INDEX idx_unique_external_mapping
-    ON tenant_external_entity_mappings (${INDEX_KEY})
-    WHERE ${XERO_PREDICATE} AND ${DESKTOP_PREDICATE}
-  `);
+  await swapExternalMappingIndex(knex, `${XERO_PREDICATE} AND ${DESKTOP_PREDICATE}`);
 };
 
+// CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
 exports.config = { transaction: false };
