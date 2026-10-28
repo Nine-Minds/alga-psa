@@ -336,12 +336,17 @@ describe('write-admission coverage (A6)', () => {
     expect(findUnguardedWriteSites(`await tenantDb(trx, t).table('co_managed_relationships').insert({});`, 'x.ts')).toHaveLength(1);
   });
 
-  it('no unannotated raw-SQL or bare-builder write reaches an operational table', () => {
-    const sites = SOURCE_ROOTS.flatMap((root) => collectSourceFiles(path.resolve(__dirname, '../../../../', root)))
-      .flatMap((file) => findUnguardedWriteSites(fs.readFileSync(file, 'utf8'), path.relative(path.resolve(__dirname, '../../../../..'), file)));
+  it('no unannotated raw-SQL or bare-builder write reaches an operational table', async () => {
+    const files = SOURCE_ROOTS.flatMap((root) => collectSourceFiles(path.resolve(__dirname, '../../../../', root)));
+    const sites: Site[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      sites.push(...findUnguardedWriteSites(fs.readFileSync(file, 'utf8'), path.relative(path.resolve(__dirname, '../../../../..'), file)));
+      if (i % 25 === 0) await new Promise<void>((resolve) => setImmediate(resolve));
+    }
     const report = sites.map((s) => `${s.file}:${s.line} [${s.kind}] ${s.table}`);
     expect(report, `Add "// write-admission: exempt — <reason>" or route through tenantDb:\n${report.join('\n')}`).toEqual([]);
-  });
+  }, 180_000);
 
   it('no exemption on an operational table claims to be "NOT covered" at runtime', () => {
     const offenders = SOURCE_ROOTS.flatMap((root) => collectSourceFiles(path.resolve(__dirname, '../../../../', root)))

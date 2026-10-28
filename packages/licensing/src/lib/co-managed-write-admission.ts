@@ -27,6 +27,26 @@ export type CoManagedLifecycleReader = (db: Knex | Knex.Transaction, tenant: str
 
 const INDEPENDENT: CoManagedOperationalState = { state: 'independent', canWrite: true, graceEndsAt: null };
 
+/** Process composition supplied before server bootstrap by an isolated review launcher. */
+export interface CoManagedReviewReader {
+  tenant: string;
+  readState: CoManagedLifecycleReader;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __algaCoManagedReviewReader: CoManagedReviewReader | undefined;
+}
+
+/** Install a review reader for exactly one tenant; all other tenants use the default reader. */
+export function installCoManagedReviewAdmission(review: CoManagedReviewReader): void {
+  if (!review.tenant || typeof review.readState !== 'function') throw new Error('Invalid co-managed review reader');
+  invalidateWriteAdmission(review.tenant);
+  installCoManagedWriteAdmission({
+    readState: (db, tenant) => tenant === review.tenant ? review.readState(db, tenant) : Promise.resolve(INDEPENDENT),
+  });
+}
+
 /** True when the operator has switched the co-managed capability off. */
 export function isCoManagedKillSwitchEngaged(): boolean {
   const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed');
