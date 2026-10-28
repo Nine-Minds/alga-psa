@@ -243,6 +243,7 @@ export function CustodyCard({ id, assetId }: { id: string; assetId: string }) {
 
 function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; lang?: string }) {
   const { t } = useTranslation('msp/assets');
+  const { renderCustodyPhotos } = useAssetCrossFeature();
   const { data, isLoading } = useSWR(['asset', assetId, 'custody-events'], async ([, aid]) => {
     const outcome = custodyOutcome<IAssetCustodyEventDetail[]>(await listCustodyEvents(aid as string));
     return outcome.ok ? outcome.data : [];
@@ -257,7 +258,7 @@ function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; 
     }
     return events.map((e) => {
       const entry = custodyEventToHistoryEntry(e, e.event_type === 'received' && firstReceived.get(e.custody_id) !== e.event_id);
-      return { event: e, description: describeCustodyHistory(entry, t) };
+      return { event: e, description: describeCustodyHistory(entry, t), documentIds: entry.documentIds };
     });
   }, [data, t]);
 
@@ -271,13 +272,14 @@ function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; 
   }
   return (
     <ul id={id} className="mt-2 space-y-1.5">
-      {rows.map(({ event, description }) => (
+      {rows.map(({ event, description, documentIds }) => (
         <li key={event.event_id} className="text-xs">
           <div className="font-medium text-[rgb(var(--color-text-800))]">{description?.title ?? event.event_type}</div>
           <div className="text-[rgb(var(--color-text-400))]">
             {[new Date(event.occurred_at).toLocaleString(lang), event.actor_name].filter(Boolean).join(' · ')}
             {event.note ? ` · ${event.note}` : ''}
           </div>
+          {documentIds.length ? renderCustodyPhotos?.(documentIds, event.event_id) : null}
         </li>
       ))}
     </ul>

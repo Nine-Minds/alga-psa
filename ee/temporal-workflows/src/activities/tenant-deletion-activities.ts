@@ -481,6 +481,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'template_sections',
   'invoice_templates',
   'invoices',
+  'file_upload_session_files',
+  'file_upload_sessions',
   'external_files',
   'documents',
   'document_types',
