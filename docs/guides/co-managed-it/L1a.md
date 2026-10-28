@@ -269,3 +269,51 @@ After acceptance the same key validates. This exercises the key validator and
 the real lifecycle provider. The native-access suite additionally exercises
 the ticket controller, browser action guard and session-authenticated download
 refusal.
+
+
+## Isolated built-worker regression
+
+The same five native-access cases can run after an actual Temporal workflow
+creates the customer. Run the two integration configurations serially: their
+disposable database bootstrap also updates shared PostgreSQL roles. Build the worker and supply the seed assets copied by its
+Dockerfile before running this opt-in suite:
+
+```sh
+# From the repository root:
+npm -w ee/temporal-workflows run build
+cp -a ee/server/seeds/onboarding ee/temporal-workflows/dist/seeds/
+cp -a server/migrations/utils/permissions ee/temporal-workflows/dist/seeds/
+cp server/migrations/utils/tenantDb.cjs ee/temporal-workflows/dist/seeds/tenantDb.cjs
+cd ee/temporal-workflows
+npx vitest run --config vitest.co-managed-worker-access.config.ts
+```
+
+This local suite uses the worker `.env`, the disposable test database settings,
+Temporal at the configured address, Redis, and Mailpit at `127.0.0.1:39472`.
+It creates a new Temporal namespace and queues, starts the compiled worker,
+checks readiness and each queue's matching poller, and runs the provisioning
+workflow. It verifies the delivered invitation in Mailpit and that the worker's
+`OUTBOUND_EMAIL_SENT` event reached authenticated Redis. It reads the signup token from that delivered message, then runs signup,
+consent, ticket action/API, KB and attachment checks against that customer.
+The suite stops its worker, removes its schedules/running executions and drops
+its disposable database. It never starts the app server or changes Oz targeting.
+
+The isolated run at implementation commit `0570de61de` also retained receipts
+outside git under `/tmp/alga-smoke-evidence/cm-l1a-takeover-20261028`.
+This is worker and adapter validation. The managed application at port `3553`
+was unavailable during the mitigation. Actual PostHog targeting and the live
+browser chapters remain an operator handoff; keep Oz off until the deployed
+server and worker revisions match and all deployment prerequisites pass.
+
+Redis runtime configuration previously supplied a stale password for
+`127.0.0.1:6374`. The workspace `secrets/redis_password` authenticated successfully.
+The private server and worker env fallbacks were corrected to that value.
+No credential is stored in this guide or in the PR.
+
+
+The mitigation verification passed the five native-access cases with each
+provisioning transport, the 24-case provisioning suite, capability/resolver and
+query-budget checks, focused auth/document tests, the Temporal worker build,
+full server typecheck and enterprise webpack build. The build completed with
+existing dependency/export warnings. No tenant-wide permission reconciliation
+was run; the retained customer still requires a separately reviewed scoped repair.
