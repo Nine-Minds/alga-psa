@@ -126,7 +126,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       && !/(^|\/)(node_modules|dist)\//.test(file)
       && !/\.(integration|db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib)\//.test(file)
+  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib|scripts\/dev)\//.test(file)
     || !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
     || /(^|\/)(node_modules|dist)\//.test(file)) return false;
   const runtime = /\.integration\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
