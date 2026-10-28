@@ -1577,6 +1577,10 @@
       "inProgress": "Wird neu aufgebaut…"
     },
     "receive": {
+      "searchProducts": "Produkte oder SKU suchen...",
+      "noProductsFound": "Keine Produkte gefunden",
+      "searchLocations": "Lagerorte suchen...",
+      "noLocationsFound": "Keine Lagerorte gefunden",
       "costNonNegative": "Die Stückkosten dürfen nicht negativ sein.",
       "failed": "Bestand konnte nicht erfasst werden.",
       "inProgress": "Wird erfasst…",

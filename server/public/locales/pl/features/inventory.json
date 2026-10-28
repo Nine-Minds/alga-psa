@@ -1577,6 +1577,10 @@
       "inProgress": "Przebudowywanie…"
     },
     "receive": {
+      "searchProducts": "Szukaj produktów lub SKU...",
+      "noProductsFound": "Nie znaleziono produktów",
+      "searchLocations": "Szukaj lokalizacji...",
+      "noLocationsFound": "Nie znaleziono lokalizacji",
       "costNonNegative": "Koszt jednostkowy nie może być ujemny.",
       "failed": "Nie udało się przyjąć zapasu.",
       "inProgress": "Przyjmowanie…",
