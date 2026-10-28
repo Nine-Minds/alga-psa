@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Atajos de teclado",
     "opportunities": "Oportunidades",
     "mcpServer": "Servidor MCP",
-    "settingsFallback": "Configuración"
+    "settingsFallback": "Configuración",
+    "tags": "Etiquetas"
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",
@@ -3972,5 +3973,21 @@
       "empty": "No hay estados estándar disponibles para importar",
       "importSelected": "Importar seleccionados ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Mostrar en chips",
+    "subtitle": "Etiquetas que se muestran junto a contactos y clientes en listas de tickets, encabezados de tickets y selectores.",
+    "loading": "Cargando…",
+    "description": "Elija qué etiquetas se muestran como insignias junto a contactos y clientes, y en qué orden. Una lista sin etiquetas no muestra insignias para esa audiencia.",
+    "contacts": "Contactos",
+    "clients": "Clientes",
+    "audienceInternal": "Usuarios internos",
+    "audienceClient": "Portal del cliente",
+    "clientNote": "Comienza vacía. Las etiquetas de esta lista son visibles para los propios usuarios del cliente en el portal del cliente.",
+    "noneSelected": "No se muestran etiquetas.",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "remove": "Quitar",
+    "addTag": "Agregar una etiqueta…"
   }
 }

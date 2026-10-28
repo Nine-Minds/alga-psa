@@ -47,6 +47,7 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
+import { resolveTicketTagIdsByText, compileTicketTagIdsFilter } from '../lib/ticketTagFilter';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1936,6 +1937,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       tenantFacade.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
       tenantFacade.tenantJoin(query, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
 
+    // LEVERAGE: pattern ticket-filter-tag-text — the remaining legacy-key filters here (board, status, priority, category, client, search) are hand-built SQL; optimizedTicketActions compiles all of them through ticketFiltersToPredicates. Fold this list onto buildTicketListBaseQuery.
     // Apply filters
     if (validatedFilters.boardId) {
       query = query.where('t.board_id', validatedFilters.boardId);
@@ -1990,13 +1992,14 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       });
     }
 
+    // Tag filtering goes through the predicate compiler on tag definition ids (path `tags`), the same
+    // grammar the optimized list uses. Unknown texts resolve to nothing and match no tickets.
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-        .select('tm.tagged_id')
-        .where('tm.tagged_type', 'ticket')
-        .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      tenantFacade.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
-      query = query.whereIn('t.ticket_id', tagSubquery);
+      const idsByText = await resolveTicketTagIdsByText(trx, tenant, validatedFilters.tags);
+      const compiledTags = compileTicketTagIdsFilter(
+        (validatedFilters.tags as string[]).map((text) => idsByText[text]).filter((id): id is string => !!id)
+      );
+      query = query.whereRaw(compiledTags.sql, compiledTags.bindings as Knex.RawBinding[]);
     }
 
     if (validatedFilters.assignedToMe) {

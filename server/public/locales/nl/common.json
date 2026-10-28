@@ -2207,5 +2207,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Weergave wisselen"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} meer tags: {{names}}"
   }
 }

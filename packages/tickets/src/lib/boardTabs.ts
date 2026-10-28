@@ -186,6 +186,7 @@ export const TICKET_VIEW_URL_FILTER_PARAMS = [
   'excludeCategoryIds',
   'searchQuery',
   'tags',
+  'where',
   'assignedToIds',
   'assignedTeamIds',
   'includeUnassigned',

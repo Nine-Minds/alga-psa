@@ -471,6 +471,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'microsoft_calendar_provider_config', deletion: 'ordered', clientKeyed: true },
   { table: 'calendar_providers', deletion: 'ordered' },
   { table: 'tag_mappings', deletion: 'ordered', export: { rank: 46 } },
+  { table: 'tag_references', deletion: 'ordered' },
+  { table: 'tag_display_rules', deletion: 'ordered' },
   { table: 'ticket_resources', deletion: 'ordered', export: { rank: 5 } },
   { table: 'client_portal_visibility_group_boards', deletion: 'ordered' },
   { table: 'import_job_items', deletion: 'ordered' },

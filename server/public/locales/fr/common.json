@@ -2207,5 +2207,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Changer de vue"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} autres étiquettes : {{names}}"
   }
 }

@@ -111,7 +111,12 @@
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
     "board": "Filtruj według tablicy",
-    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania",
+    "requesterTags": "Tagi zgłaszającego",
+    "clientTags": "Tagi klienta",
+    "tagModeAny": "Dowolny z",
+    "tagModeNone": "Żaden z",
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -250,7 +255,8 @@
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
-    "printWorkTag": "Drukuj etykietę roboczą"
+    "printWorkTag": "Drukuj etykietę roboczą",
+    "retry": "Ponów"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -360,7 +366,8 @@
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
     "scheduleOpenFailed": "Nie udało się otworzyć planera",
-    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać.",
+    "loadPartyTagsFailed": "Nie udało się załadować tagów zgłaszającego i klienta"
   },
   "conversation": {
     "comments": "Komentarze",
