@@ -99,13 +99,13 @@ export async function activateHourBlocksForFinalizedInvoice(
 /**
  * Unfinalize hook for ad-hoc prepaid hour blocks. Runs inside the unfinalize
  * transaction so the invoice and its blocks move together or not at all:
- *   - an ACTIVE block that was never used (immutable `first_allocated_at`
+ *   - an ACTIVE or EXPIRED block that was never used (immutable `first_allocated_at`
  *     marker null, no live allocation rows) returns to `pending` so FIFO burn
  *     can no longer select it, with a `purchase_reversal` audit row;
- *   - an ACTIVE block that has been used blocks unfinalization with an
+ *   - an ACTIVE or EXPIRED block that has been used blocks unfinalization with an
  *     actionable error naming the block and its usage (v1 answer: reject, never
  *     half-reverse);
- *   - terminal states (expired/voided) and already-pending blocks are left as-is.
+ *   - voided and already-pending blocks are left as-is.
  */
 async function deactivateHourBlocksForUnfinalizedInvoice(
   trx: Knex.Transaction,
@@ -130,7 +130,7 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
     .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'contract_line_id');
 
   for (const block of linkedBlocks) {
-    if (block.status !== 'active') {
+    if (block.status !== 'active' && block.status !== 'expired') {
       continue;
     }
 
