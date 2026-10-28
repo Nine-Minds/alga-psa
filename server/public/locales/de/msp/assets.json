@@ -1297,7 +1297,10 @@
       "frequency": "Häufigkeit *",
       "interval": "Intervall *",
       "nextMaintenanceDate": "Nächster Wartungstermin *",
-      "active": "Aktiv"
+      "active": "Aktiv",
+      "recurrenceUnit": "Einheit *",
+      "onWeekdays": "An Wochentagen (optional)",
+      "onDaysOfMonth": "An Monatstagen (optional)"
     },
     "placeholders": {
       "scheduleName": "z. B. monatliche Serverwartung",
@@ -1312,7 +1315,8 @@
       "weekly": "Wöchentlich",
       "monthly": "Monatlich",
       "quarterly": "Vierteljährlich",
-      "yearly": "Jährlich"
+      "yearly": "Jährlich",
+      "custom": "Benutzerdefiniert"
     },
     "errors": {
       "scheduleNameRequired": "Zeitplanname ist erforderlich",
@@ -1321,6 +1325,15 @@
       "nextMaintenanceRequired": "Der nächste Wartungstermin ist erforderlich",
       "frequencyIntervalMin": "Das Frequenzintervall muss mindestens 1 betragen",
       "saveFailed": "Fehler beim Erstellen des Wartungsplans"
+    },
+    "recurrenceUnits": {
+      "days": "Tage",
+      "weeks": "Wochen",
+      "months": "Monate",
+      "years": "Jahre"
+    },
+    "hints": {
+      "selectors": "Ohne Auswahl wird ab dem Abschlussdatum wiederholt."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1385,36 @@
         "yearly_other": "Jahre",
         "yearly_few": "Jahre",
         "yearly_many": "Jahre"
+      },
+      "customUnconfigured": "Benutzerdefiniert (nicht konfiguriert)",
+      "onWeekdays": "{{cadence}} am {{days}}",
+      "onDaysOfMonth": "{{cadence}} am Tag {{days}}",
+      "weekdays": {
+        "sun": "So",
+        "mon": "Mo",
+        "tue": "Di",
+        "wed": "Mi",
+        "thu": "Do",
+        "fri": "Fr",
+        "sat": "Sa"
+      },
+      "customUnits": {
+        "days_one": "Tag",
+        "days_other": "Tage",
+        "days_few": "Tage",
+        "days_many": "Tage",
+        "weeks_one": "Woche",
+        "weeks_other": "Wochen",
+        "weeks_few": "Wochen",
+        "weeks_many": "Wochen",
+        "months_one": "Monat",
+        "months_other": "Monate",
+        "months_few": "Monate",
+        "months_many": "Monate",
+        "years_one": "Jahr",
+        "years_other": "Jahre",
+        "years_few": "Jahre",
+        "years_many": "Jahre"
       }
     },
     "status": {

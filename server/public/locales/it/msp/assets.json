@@ -1297,7 +1297,10 @@
       "frequency": "Frequenza *",
       "interval": "Intervallo *",
       "nextMaintenanceDate": "Data della prossima manutenzione *",
-      "active": "Attivo"
+      "active": "Attivo",
+      "recurrenceUnit": "Unità *",
+      "onWeekdays": "Nei giorni della settimana (facoltativo)",
+      "onDaysOfMonth": "Nei giorni del mese (facoltativo)"
     },
     "placeholders": {
       "scheduleName": "ad esempio, manutenzione mensile del server",
@@ -1312,7 +1315,8 @@
       "weekly": "Settimanale",
       "monthly": "Mensile",
       "quarterly": "Trimestrale",
-      "yearly": "Annuale"
+      "yearly": "Annuale",
+      "custom": "Personalizzata"
     },
     "errors": {
       "scheduleNameRequired": "Il nome della pianificazione è obbligatorio",
@@ -1321,6 +1325,15 @@
       "nextMaintenanceRequired": "È richiesta la prossima data di manutenzione",
       "frequencyIntervalMin": "L'intervallo di frequenza deve essere almeno 1",
       "saveFailed": "Impossibile creare il programma di manutenzione"
+    },
+    "recurrenceUnits": {
+      "days": "Giorni",
+      "weeks": "Settimane",
+      "months": "Mesi",
+      "years": "Anni"
+    },
+    "hints": {
+      "selectors": "Se non selezioni nulla, la ripetizione parte dalla data di completamento."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1385,36 @@
         "yearly_other": "anni",
         "yearly_few": "anni",
         "yearly_many": "anni"
+      },
+      "customUnconfigured": "Personalizzata (non configurata)",
+      "onWeekdays": "{{cadence}} di {{days}}",
+      "onDaysOfMonth": "{{cadence}} il giorno {{days}}",
+      "weekdays": {
+        "sun": "dom",
+        "mon": "lun",
+        "tue": "mar",
+        "wed": "mer",
+        "thu": "gio",
+        "fri": "ven",
+        "sat": "sab"
+      },
+      "customUnits": {
+        "days_one": "giorno",
+        "days_other": "giorni",
+        "days_few": "giorni",
+        "days_many": "giorni",
+        "weeks_one": "settimana",
+        "weeks_other": "settimane",
+        "weeks_few": "settimane",
+        "weeks_many": "settimane",
+        "months_one": "mese",
+        "months_other": "mesi",
+        "months_few": "mesi",
+        "months_many": "mesi",
+        "years_one": "anno",
+        "years_other": "anni",
+        "years_few": "anni",
+        "years_many": "anni"
       }
     },
     "status": {

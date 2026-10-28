@@ -1297,7 +1297,10 @@
       "frequency": "Frequency *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Next Maintenance Date *",
-      "active": "Active"
+      "active": "Active",
+      "recurrenceUnit": "Unit *",
+      "onWeekdays": "On weekdays (optional)",
+      "onDaysOfMonth": "On days of the month (optional)"
     },
     "placeholders": {
       "scheduleName": "e.g., Monthly Server Maintenance",
@@ -1312,7 +1315,8 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "quarterly": "Quarterly",
-      "yearly": "Yearly"
+      "yearly": "Yearly",
+      "custom": "Custom"
     },
     "errors": {
       "scheduleNameRequired": "Schedule name is required",
@@ -1321,6 +1325,15 @@
       "nextMaintenanceRequired": "Next maintenance date is required",
       "frequencyIntervalMin": "Frequency interval must be at least 1",
       "saveFailed": "Failed to create maintenance schedule"
+    },
+    "recurrenceUnits": {
+      "days": "Days",
+      "weeks": "Weeks",
+      "months": "Months",
+      "years": "Years"
+    },
+    "hints": {
+      "selectors": "Leave unselected to repeat from the completion date."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1385,36 @@
         "yearly_other": "years",
         "yearly_few": "years",
         "yearly_many": "years"
+      },
+      "customUnconfigured": "Custom (not configured)",
+      "onWeekdays": "{{cadence}} on {{days}}",
+      "onDaysOfMonth": "{{cadence}} on day {{days}}",
+      "weekdays": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      },
+      "customUnits": {
+        "days_one": "day",
+        "days_other": "days",
+        "days_few": "days",
+        "days_many": "days",
+        "weeks_one": "week",
+        "weeks_other": "weeks",
+        "weeks_few": "weeks",
+        "weeks_many": "weeks",
+        "months_one": "month",
+        "months_other": "months",
+        "months_few": "months",
+        "months_many": "months",
+        "years_one": "year",
+        "years_other": "years",
+        "years_few": "years",
+        "years_many": "years"
       }
     },
     "status": {
