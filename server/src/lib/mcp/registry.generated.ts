@@ -5923,6 +5923,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "description": "Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { \"unit\": \"weeks\", \"weekdays\": [1, 4] } is every other week on Monday and Thursday."
             }
           },
+          "additionalProperties": {},
           "description": "Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is."
         }
       },
@@ -7639,6 +7640,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "description": "Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { \"unit\": \"weeks\", \"weekdays\": [1, 4] } is every other week on Monday and Thursday."
             }
           },
+          "additionalProperties": {},
           "description": "Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is."
         }
       },

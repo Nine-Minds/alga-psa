@@ -413,7 +413,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         weekdays: zOpenApi.array(zOpenApi.number().int().min(0).max(6)).min(1).optional().describe('Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the next listed weekday in the current week (weeks start on Sunday); after the last one it jumps frequency_interval weeks to the first listed weekday.'),
         days_of_month: zOpenApi.array(zOpenApi.number().int().min(1).max(31)).min(1).optional().describe('Months only. The next due date is the next listed day in the current month; after the last one it jumps frequency_interval months to the first listed day. Days are clamped to the month length (31 in February becomes 28/29).'),
       }).strict().optional().describe('Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { "unit": "weeks", "weekdays": [1, 4] } is every other week on Monday and Thursday.'),
-    }).passthrough().describe('Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is.'),
+    }).catchall(zOpenApi.unknown()).describe('Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is.'),
   }).strict();
 
   const MaintenanceScheduleUpdateRequest = registry.registerSchema(

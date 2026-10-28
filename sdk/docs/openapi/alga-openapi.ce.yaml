@@ -2355,6 +2355,7 @@ components:
                 frequencies. Example: frequency_interval 2 with { "unit":
                 "weeks", "weekdays": [1, 4] } is every other week on Monday and
                 Thursday.'
+          additionalProperties: {}
           description: Scheduling configuration. Use {} for the fixed frequencies.
             `recurrence` is required for `custom`; other keys such as
             `checklist` are stored as-is.
@@ -2563,6 +2564,7 @@ components:
                 frequencies. Example: frequency_interval 2 with { "unit":
                 "weeks", "weekdays": [1, 4] } is every other week on Monday and
                 Thursday.'
+          additionalProperties: {}
           description: Scheduling configuration. Use {} for the fixed frequencies.
             `recurrence` is required for `custom`; other keys such as
             `checklist` are stored as-is.
@@ -18977,7 +18979,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}$
+          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
         next_action:
           type: string
           minLength: 1
@@ -19064,7 +19066,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}$
+          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
         generator_key:
           type:
             - string
@@ -19148,7 +19150,7 @@ components:
           format: uuid
         project_start_date:
           type: string
-          pattern: ^\d{4}-\d{2}-\d{2}$
+          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
       additionalProperties: false
     LoseOpportunityBodyV1:
       type: object
@@ -19281,7 +19283,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}$
+          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
         next_action:
           type: string
           minLength: 1
