@@ -69,6 +69,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
   {
+    // Sponsor-side co-managed management. Only a PSA sponsor has these screens;
+    // the capability gate in each page decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_sponsor',
+    staticPrefixes: ['/msp/co-management', '/msp/co-managed'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     group: 'msp_internal_not_found',
     staticPrefixes: ['/msp/test'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },

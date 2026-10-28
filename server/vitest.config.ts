@@ -227,7 +227,8 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/context/$1') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/admin(\.js)?$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/tenantTableManifest$/, replacement: path.resolve(__dirname, "../packages/db/src/lib/tenantTableManifest.ts") },
       { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },

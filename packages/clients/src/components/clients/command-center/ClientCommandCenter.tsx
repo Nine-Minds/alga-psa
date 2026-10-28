@@ -42,6 +42,8 @@ interface ClientCommandCenterProps {
   getSoftwareSummary?: GetClientSoftwareSummary | null;
   /** ?tab= value present when the page loaded (deep link, D3). */
   initialTabId?: string | null;
+  /** Open a registered tab in place (e.g. a header summary action) without a server navigation. */
+  openTabRequest?: { tabId: string; nonce: number } | null;
   /** Sync the focus-view state back into the URL (?tab=). */
   onTabUrlChange: (tabId: string | null) => void;
   /** Dirty state of the shared client-record edit buffer (Details / Additional Info). */
@@ -82,6 +84,7 @@ export default function ClientCommandCenter({
   tabs,
   getSoftwareSummary = null,
   initialTabId,
+  openTabRequest,
   onTabUrlChange,
   hasUnsavedRecordChanges,
   onDiscardRecordChanges,
@@ -142,6 +145,15 @@ export default function ClientCommandCenter({
     setFocusTabId(tabId);
     onTabUrlChange(tabId);
   }, [tabIds, onTabUrlChange]);
+
+  // Header summary actions ask for a tab by nonce, keeping the focus view open
+  // in place instead of navigating (which would re-render the server tree).
+  const lastOpenTabRequestRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openTabRequest || lastOpenTabRequestRef.current === openTabRequest.nonce) return;
+    lastOpenTabRequestRef.current = openTabRequest.nonce;
+    if (tabIds.has(openTabRequest.tabId)) openFocus(openTabRequest.tabId);
+  }, [openTabRequest, tabIds, openFocus]);
 
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 

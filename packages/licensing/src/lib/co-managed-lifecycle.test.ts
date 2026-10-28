@@ -41,6 +41,7 @@ import {
   getCoManagedOperationalState,
   invalidateCoManagedAwaitingAcceptance,
   isCoManagedAwaitingAcceptance,
+  isCoManagedAwaitingAcceptanceLazily,
   registerCoManagedLifecycleProvider,
   resetCoManagedAwaitingAcceptanceCache,
   resetCoManagedLifecycleProvider,
@@ -126,6 +127,20 @@ describe('awaiting-acceptance cache', () => {
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(false);
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(false);
     expect(sql.log.filter(entry => entry === 'co_management_relationships')).toHaveLength(2);
+  });
+
+  it('the lazy form never requests a connection once the answer is cached', async () => {
+    seed('psa');
+    const getDb = vi.fn(async () => db);
+    expect(await isCoManagedAwaitingAcceptanceLazily(getDb, customer)).toBe(false);
+    expect(getDb).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 5; i += 1) expect(await isCoManagedAwaitingAcceptanceLazily(getDb, customer)).toBe(false);
+    expect(getDb).toHaveBeenCalledTimes(1);
+    expect(sql.log).toEqual(['tenants']);
+    resetCoManagedLifecycleProvider();
+    const untouched = vi.fn(async () => db);
+    expect(await isCoManagedAwaitingAcceptanceLazily(untouched, 'other')).toBe(false);
+    expect(untouched).not.toHaveBeenCalled();
   });
 
   it('a terminated relationship is final', async () => {

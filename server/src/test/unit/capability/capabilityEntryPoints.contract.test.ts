@@ -16,7 +16,7 @@ import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 // Registry
 // ---------------------------------------------------------------------------
 
-export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows'] as const;
+export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows', 'ee/server/src'] as const;
 
 /**
  * The registry later cards extend. One entry per surface family in plan 2.7 / 4.
@@ -39,6 +39,11 @@ export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
   { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', ruleA: true },
   { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
   { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
+  // The Temporal files are kebab-case; the camelCase globs above do not match them.
+  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed*', ruleA: true },
+  // A workflow sandbox cannot import the adapter: its activities carry the gate.
+  { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', ruleA: false },
+  { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', ruleA: true },
   { id: 'shared-services', glob: 'shared/services/**/coManaged*', ruleA: true },
   // Co-managed UI mounts (plan 4). DO-NOT-PORT 24's raw-flag boundary lived at
   // server/src/components/co-managed/CoManagedFeatureBoundary.tsx.
@@ -56,16 +61,19 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 0 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 2 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 0 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 2 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
   subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
+  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
+  'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 1 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 0 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 13 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -746,7 +754,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 
     const withFile = [...repoFiles, file('server/src/lib/actions/coManagedProviders.ts', 'export {}')];
     expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
-      'capabilityEntryPoints: family server-actions matches 1 production files, expected 0',
+      `capabilityEntryPoints: family server-actions matches ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files + 1} production files, expected ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files}`,
     ]);
   });
 

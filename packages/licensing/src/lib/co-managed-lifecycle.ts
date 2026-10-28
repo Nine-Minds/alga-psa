@@ -43,6 +43,8 @@ export interface CoManagedLifecycleProvider {
   readState(trx: Knex.Transaction, tenant: string): Promise<CoManagedOperationalState>;
   /** Lock-free request gate: has the customer not yet accepted co-management? */
   isAwaitingAcceptance?(db: Knex, tenant: string): Promise<boolean>;
+  /** The answer if this process already knows it (no I/O), else undefined. */
+  peekAwaitingAcceptance?(tenant: string): boolean | undefined;
 }
 
 declare global {
@@ -66,6 +68,22 @@ export async function isCoManagedAwaitingAcceptance(db: Knex, tenant: string): P
   const provider = globalThis.__algaCoManagedLifecycleProvider;
   if (!provider?.isAwaitingAcceptance || !tenant) return false;
   return provider.isAwaitingAcceptance(db, tenant);
+}
+
+/**
+ * Same question for request gates that must not touch the database when the
+ * answer is cached: the connection is requested lazily, only on a cache miss.
+ * (Acquiring the admin connection runs a writability probe, so a caller that
+ * resolved it up front would pay a statement on every request.)
+ */
+export async function isCoManagedAwaitingAcceptanceLazily(
+  getDb: () => Promise<Knex>, tenant: string,
+): Promise<boolean> {
+  const provider = globalThis.__algaCoManagedLifecycleProvider;
+  if (!provider?.isAwaitingAcceptance || !tenant) return false;
+  const known = provider.peekAwaitingAcceptance?.(tenant);
+  if (known !== undefined) return known;
+  return provider.isAwaitingAcceptance(await getDb(), tenant);
 }
 
 /** The refusal a request gate raises for isCoManagedAwaitingAcceptance. */
@@ -160,6 +178,12 @@ export function resetCoManagedAwaitingAcceptanceCache(): void {
   awaitingAcceptance.clear();
 }
 
+function peekAwaitingAcceptance(tenant: string): boolean | undefined {
+  const cached = awaitingAcceptance.get(tenant);
+  if (cached && (!cached.awaiting || cached.expiresAt > Date.now())) return cached.awaiting;
+  return undefined;
+}
+
 async function isAwaitingAcceptance(db: Knex, tenant: string): Promise<boolean> {
   const cached = awaitingAcceptance.get(tenant);
   if (cached && (!cached.awaiting || cached.expiresAt > Date.now())) return cached.awaiting;
@@ -181,4 +205,4 @@ async function isAwaitingAcceptance(db: Knex, tenant: string): Promise<boolean> 
 }
 
 /** The relationship-backed provider. Register with `registerCoManagedLifecycleProvider`. */
-export const coManagedLifecycleProvider: CoManagedLifecycleProvider = { readState, isAwaitingAcceptance };
+export const coManagedLifecycleProvider: CoManagedLifecycleProvider = { readState, isAwaitingAcceptance, peekAwaitingAcceptance };
