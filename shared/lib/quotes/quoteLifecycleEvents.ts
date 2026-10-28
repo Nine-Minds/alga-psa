@@ -1,4 +1,5 @@
 import type { QuoteStatus } from '@alga-psa/types';
+import { registerAfterCommit } from '@alga-psa/db';
 
 /** Events correspond to real transitions, not repeated writes of the same status. */
 export type QuoteLifecycleEventType =
@@ -37,4 +38,59 @@ export function quoteLifecycleEventFor(
     return details.system ? 'QUOTE_CONVERSION_REVERTED' : null;
   }
   return eventForStatus[after] ?? null;
+}
+
+/** Workflow event types include the first portal view, which is not a status change. */
+export type QuoteWorkflowEventType = QuoteLifecycleEventType | 'QUOTE_VIEWED';
+
+export type QuoteWorkflowEvent = {
+  [T in QuoteWorkflowEventType]: {
+    eventType: T;
+    payload: import('@alga-psa/event-schemas').BuiltWorkflowPayload<T>;
+  };
+}[QuoteWorkflowEventType];
+
+/** Queue a built event on its owning transaction. Callers must use an after-commit-aware owner. */
+export function queueQuoteLifecycleEvent(
+  trx: import('knex').Knex.Transaction,
+  event: QuoteWorkflowEvent,
+  params: {
+    tenant: string;
+    quoteId: string;
+    activityId?: string;
+    occurredAt: string;
+    actor: import('@alga-psa/types').WorkflowActor;
+  },
+): void {
+  if (!params.tenant || !params.quoteId) throw new Error('Quote event requires tenant and quote IDs');
+  if (event.eventType !== 'QUOTE_VIEWED' && !params.activityId) throw new Error('Quote transition event requires an activity ID');
+  const idempotencyKey = event.eventType === 'QUOTE_VIEWED'
+    ? `quote_viewed:${params.quoteId}`
+    : `${event.eventType.toLowerCase()}:${params.quoteId}:${params.activityId}`;
+  registerQuoteAfterCommit(trx, event, params, idempotencyKey);
+}
+
+function registerQuoteAfterCommit(
+  trx: import('knex').Knex.Transaction,
+  event: QuoteWorkflowEvent,
+  params: { tenant: string; quoteId: string; occurredAt: string; actor: import('@alga-psa/types').WorkflowActor },
+  idempotencyKey: string,
+): void {
+  registerAfterCommit(trx, async () => {
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    const ctx = { tenantId: params.tenant, occurredAt: params.occurredAt, actor: params.actor };
+    // LEVERAGE: friction brand-union-dispatch — each branded event needs its own generic publish call.
+    switch (event.eventType) {
+      case 'QUOTE_SENT': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_VIEWED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_APPROVED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_ACCEPTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_REJECTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_EXPIRED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_CONVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_CONVERSION_REVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_SUPERSEDED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_CANCELLED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+    }
+  }, `${event.eventType} quote=${params.quoteId}`);
 }

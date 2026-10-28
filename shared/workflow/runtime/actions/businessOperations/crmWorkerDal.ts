@@ -13,7 +13,7 @@ import type {
   QuoteStatus,
   TaggedEntityType,
 } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import {
   allocatedOneTimeAmountFor,
@@ -592,6 +592,7 @@ function isExpiredOnAccess(quote: Pick<IQuote, 'status' | 'valid_until'>): boole
   return new Date(quote.valid_until) < getTodayStartUTC();
 }
 
+// LEVERAGE: pattern quote-expire-on-read — billing and worker duplicate the same transition.
 async function expireQuoteIfNeeded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -601,24 +602,31 @@ async function expireQuoteIfNeeded(
     return quote;
   }
 
-  const [expiredQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
-    .where('quote_id', quote.quote_id)
-    .update({
-      status: 'expired',
-      expired_at: knexOrTrx.fn.now(),
-      updated_at: knexOrTrx.fn.now(),
-    })
-    .returning('*');
+  const candidate = quote;
+  return withTransaction(knexOrTrx, async (trx) => {
+    const [expiredQuote] = await tenantScopedTable(trx, tenant, 'quotes')
+      .where({ quote_id: candidate.quote_id, status: 'sent' })
+      .update({
+        status: 'expired',
+        expired_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      })
+      .returning('*');
 
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quote.quote_id,
-    activity_type: 'expired',
-    description: 'Quote automatically expired on access',
-    performed_by: null,
-    metadata: { previous_status: quote.status },
+    if (!expiredQuote) {
+      return (await tenantScopedTable(trx, tenant, 'quotes').where({ quote_id: candidate.quote_id }).first() as IQuote | undefined) ?? null;
+    }
+
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: candidate.quote_id,
+      activity_type: 'expired',
+      description: 'Quote automatically expired on access',
+      performed_by: null,
+      metadata: { previous_status: candidate.status },
+    });
+
+    return expiredQuote as IQuote;
   });
-
-  return expiredQuote as IQuote;
 }
 
 async function mapQuoteRecord(

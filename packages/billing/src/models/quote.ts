@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteItem, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import QuoteItem from './quoteItem';
@@ -49,6 +49,7 @@ function quoteTable<Row extends object = Record<string, unknown>>(
 
 type QuoteWithClientRow = IQuoteWithClient;
 
+// LEVERAGE: pattern quote-expire-on-read — billing and worker duplicate the same transition.
 async function expireQuoteIfNeeded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -58,24 +59,31 @@ async function expireQuoteIfNeeded(
     return quote;
   }
 
-  const [expiredQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-    .where({ quote_id: quote.quote_id })
-    .update({
-      status: 'expired',
-      expired_at: knexOrTrx.fn.now(),
-      updated_at: knexOrTrx.fn.now()
-    })
-    .returning('*');
+  const candidate = quote;
+  return withTransaction(knexOrTrx, async (trx) => {
+    const [expiredQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes')
+      .where({ quote_id: candidate.quote_id, status: 'sent' })
+      .update({
+        status: 'expired',
+        expired_at: trx.fn.now(),
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
 
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quote.quote_id,
-    activity_type: 'expired',
-    description: 'Quote automatically expired on access',
-    performed_by: null,
-    metadata: { previous_status: quote.status }
+    if (!expiredQuote) {
+      return (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: candidate.quote_id }).first()) ?? null;
+    }
+
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: candidate.quote_id,
+      activity_type: 'expired',
+      description: 'Quote automatically expired on access',
+      performed_by: null,
+      metadata: { previous_status: candidate.status }
+    });
+
+    return expiredQuote;
   });
-
-  return expiredQuote;
 }
 
 async function mapQuoteRecord(

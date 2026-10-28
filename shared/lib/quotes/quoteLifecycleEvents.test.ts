@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => {}) }));
 import { QUOTE_ALLOWED_STATUS_TRANSITIONS } from '../../../packages/billing/src/schemas/quoteSchemas';
 import { quoteLifecycleEventFor } from './quoteLifecycleEvents';
 
@@ -23,5 +25,49 @@ describe('quote lifecycle transition classification', () => {
     expect(quoteLifecycleEventFor('converted', 'accepted', { system: true })).toBe('QUOTE_CONVERSION_REVERTED');
     expect(quoteLifecycleEventFor('accepted', 'superseded')).toBe('QUOTE_SUPERSEDED');
     expect(quoteLifecycleEventFor(null, 'sent')).toBeNull();
+  });
+});
+
+describe('after-commit quote event queue', () => {
+  it('uses a stable view key and a distinct activity key for each conversion', async () => {
+    const { withTransaction } = await import('@alga-psa/db');
+    const { queueQuoteLifecycleEvent } = await import('./quoteLifecycleEvents');
+    const { builtWorkflowPayload } = await import('@alga-psa/event-schemas');
+    const published = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishWorkflowEvent);
+    published.mockClear();
+    const trx = { commit: vi.fn(async () => {}), rollback: vi.fn(async () => {}) } as any;
+    const knex = { transaction: async (callback: any) => { const result = await callback(trx); await trx.commit(); return result; } } as any;
+    const params = { tenant: 'tenant-a', quoteId: 'quote-a', occurredAt: '2026-10-27T12:00:00.000Z', actor: { actorType: 'SYSTEM' as const } };
+    await withTransaction(knex, async (t) => {
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_VIEWED', payload: builtWorkflowPayload('QUOTE_VIEWED', {}) }, params);
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_CONVERTED', payload: builtWorkflowPayload('QUOTE_CONVERTED', {}) }, { ...params, activityId: 'first' });
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_CONVERTED', payload: builtWorkflowPayload('QUOTE_CONVERTED', {}) }, { ...params, activityId: 'second' });
+    });
+    expect(published.mock.calls.map(([event]) => event.idempotencyKey)).toEqual(['quote_viewed:quote-a', 'quote_converted:quote-a:first', 'quote_converted:quote-a:second']);
+  });
+
+  it('publishes after the owner commits and drops events on rollback', async () => {
+    const { withTransaction } = await import('@alga-psa/db');
+    const { queueQuoteLifecycleEvent } = await import('./quoteLifecycleEvents');
+    const { builtWorkflowPayload } = await import('@alga-psa/event-schemas');
+    const published = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishWorkflowEvent);
+    published.mockClear();
+    const trx = { commit: vi.fn(async () => {}), rollback: vi.fn(async () => {}) } as any;
+    const knex = { transaction: vi.fn(async (callback: any) => {
+      try { const result = await callback(trx); await trx.commit(); return result; }
+      catch (error) { await trx.rollback(); throw error; }
+    }) } as any;
+    const params = { tenant: 'tenant-a', quoteId: 'quote-a', activityId: 'activity-a', occurredAt: '2026-10-27T12:00:00.000Z', actor: { actorType: 'SYSTEM' as const } };
+    const event = { eventType: 'QUOTE_SENT' as const, payload: builtWorkflowPayload('QUOTE_SENT', { quoteId: 'quote-a' }) };
+    await withTransaction(knex, async (t) => {
+      queueQuoteLifecycleEvent(t, event, params);
+      expect(published).not.toHaveBeenCalled();
+    });
+    expect(trx.commit).toHaveBeenCalledOnce();
+    expect(published).toHaveBeenCalledOnce();
+    expect(published).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: 'quote_sent:quote-a:activity-a', ctx: expect.objectContaining({ tenantId: 'tenant-a', actor: params.actor }) }));
+    published.mockClear();
+    await expect(withTransaction(knex, async (t) => { queueQuoteLifecycleEvent(t, event, params); throw new Error('rollback'); })).rejects.toThrow('rollback');
+    expect(published).not.toHaveBeenCalled();
   });
 });

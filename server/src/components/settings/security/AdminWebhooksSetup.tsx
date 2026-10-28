@@ -2865,7 +2865,7 @@ function PayloadFieldSelector(props: {
           <div key={entity} className="mb-4 last:mb-0">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                {entity}
+                {entity === 'quote' ? t('security.webhooks.quotePayload.entity', { defaultValue: 'Quote' }) : entity}
               </div>
               <div className="flex gap-3 text-xs">
                 <button
@@ -2891,7 +2891,7 @@ function PayloadFieldSelector(props: {
                 <Checkbox
                   key={`${entity}-${field}`}
                   id={`webhook-field-${entity}-${field}`}
-                  label={field}
+                  label={entity === 'quote' ? t(`security.webhooks.quotePayload.fields.${field}`, { defaultValue: field }) : field}
                   checked={selected.has(field)}
                   onChange={(event) => toggleField(entity, field, event.target.checked)}
                 />

@@ -3,7 +3,7 @@ import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import { countryDateFormat, SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -111,7 +111,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       .then((country) => countryDateFormat(country?.code ?? null))
       .catch(() => SYSTEM_DATE_FORMAT);
 
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
       await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
       await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
@@ -126,13 +126,14 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       const expirableQuotes = await expirableQuotesQuery;
 
       for (const quote of expirableQuotes) {
-        await db.table('quotes')
-          .where({ quote_id: quote.quote_id })
+        const changed = await db.table('quotes')
+          .where({ quote_id: quote.quote_id, status: 'sent' })
           .update({
             status: 'expired',
             expired_at: trx.fn.now(),
             updated_at: trx.fn.now(),
           });
+        if (!changed) continue;
 
         await db.table('quote_activities').insert({
           tenant: tenantId,
@@ -158,7 +159,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
 
       logger.info('[expireQuotesHandler] Processed expired quotes', {
         tenantId,
-        expiredCount: expirableQuotes.length,
+        expiredCount: notifications.length,
       });
     });
 

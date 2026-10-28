@@ -96,7 +96,7 @@ Today's status writers on `origin/main`:
    - `quoteActions.ts`: submit, approve, request changes, `markQuoteAccepted`, `sendQuote`, generic `updateQuote` (incl. cancel)
    - `QuoteService.ts` (REST): same set
    - `client-billing.ts`: client-portal accept and reject
-2. `crmWorkerDal.update` (`shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts:885`). It is a copy of `Quote.update` for the workflow worker, used by the `crm.*` quote actions (send, submit for approval, convert).
+2. `crmWorkerDal.update` (`shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts:885`). It is a copy of `Quote.update` for the workflow worker, used by the `crm.*` quote actions (send, submit for approval, convert). The worker DAL also has independent expire-on-read and combined contract/invoice conversion writes; both must emit via the same seam.
 3. Direct writes outside the model:
    - expire-on-read (`models/quote.ts:52`)
    - supersede on revision (`models/quote.ts:~456`)
@@ -112,7 +112,9 @@ Today's status writers on `origin/main`:
 - **Emitter:** `queueQuoteLifecycleEvent(trx, tenant, descriptor, ctx)`. It calls `registerAfterCommit` and then `publishWorkflowEvent`, so a rollback never emits. Lives at `shared/lib/quotes/quoteLifecycleEvents.ts` (see §9.5 — decided; mirrors `shared/lib/tickets/ticketLifecycleEvents.ts`).
 - **Billing transition seam:** `Quote.update` calls the mapper and emitter whenever status changes. The direct writers in item 3 are moved onto a `Quote.transitionStatus(trx, tenant, quoteId, to, { actor, reason, details, system? })` seam where possible. Where a direct write stays (for performance or row-lock shape), it calls the emitter itself and gets a ledger entry.
 - **Worker path:** `crmWorkerDal.update` calls the same mapper and emitter. Add a `// LEVERAGE: pattern quote-update-dal` marker; the worker DAL duplicating `Quote.update` is the missing layer.
-- **Expiry race:** expire-on-read and the job must both use a conditional update (`where status = 'sent'`) and emit only when a row actually changed. The idempotency key backs this up.
+- **Transaction ownership:** wrap root Knex callers in an owning `withTransaction` frame, audit callers passing raw transactions, and replace the expiry job raw transaction with an owning frame that flushes after-commit hooks. Keep transition and activity writes atomic.
+- **First view race:** set `viewed_at` conditionally and emit only when the update changed a row.
+- **Expiry race:** both expire-on-read implementations and the job must use a conditional update (`where status = 'sent'`) and emit only when a row actually changed. The idempotency key backs this up.
 - **Ledger test:** `quoteStatusWritePaths.contract.test.ts`, modelled on `packages/clients/src/lib/clientLocationWritePaths.contract.test.ts`. Every file that writes `quotes.status` either emits (or delegates to the seam) or is listed as intentionally silent with a reason.
 
 ### 6.3 One system-only transition
