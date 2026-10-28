@@ -1353,7 +1353,9 @@
         "phoneLabel": "Telefoon",
         "setDefault": "Als standaard instellen",
         "shippingTag": "Verzending",
-        "unnamed": "Naamloze locatie"
+        "unnamed": "Naamloze locatie",
+        "contactCount": "{{count}} contactpersonen",
+        "contactPrimary": "Primair"
       },
       "dialog": {
         "addTitle": "Nieuwe locatie toevoegen",

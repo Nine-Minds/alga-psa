@@ -2034,7 +2034,9 @@
       "changeLocation": "Standort ändern",
       "addDescriptionPrompt": "Beschreibung hinzufügen – worum geht es, und was braucht der Kunde?",
       "projectTasks": "Projektaufgaben",
-      "timeAndBilling": "Zeit & Abrechnung"
+      "timeAndBilling": "Zeit & Abrechnung",
+      "useContactLocation": "Standort des Kontakts übernehmen",
+      "remote": "Im Homeoffice"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",

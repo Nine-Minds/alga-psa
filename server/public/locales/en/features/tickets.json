@@ -2042,7 +2042,9 @@
       "changeLocation": "Change location",
       "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
       "projectTasks": "Project tasks",
-      "timeAndBilling": "Time & billing"
+      "timeAndBilling": "Time & billing",
+      "useContactLocation": "Use contact's location",
+      "remote": "Remote"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",

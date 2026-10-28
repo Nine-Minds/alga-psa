@@ -2034,7 +2034,9 @@
       "openScheduleEntry": "Otwórz wpis harmonogramu",
       "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
       "projectTasks": "Zadania projektu",
-      "timeAndBilling": "Czas i rozliczenia"
+      "timeAndBilling": "Czas i rozliczenia",
+      "useContactLocation": "Użyj lokalizacji kontaktu",
+      "remote": "Zdalny"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import type { IContactLocation } from '@alga-psa/types';
-import { getContactLocationsForContacts } from '../models/contactLocation';
+import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
 
 export type WithContactLocations<T> = T & {
   locations: IContactLocation[];

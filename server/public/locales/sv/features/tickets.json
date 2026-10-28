@@ -2042,7 +2042,9 @@
       "changeLocation": "Ändra plats",
       "addDescriptionPrompt": "Lägg till en beskrivning – vad är problemet och vad behöver kunden?",
       "projectTasks": "Projektuppgifter",
-      "timeAndBilling": "Tid och fakturering"
+      "timeAndBilling": "Tid och fakturering",
+      "useContactLocation": "Använd kontaktens plats",
+      "remote": "Distans"
     },
     "timeline": {
       "subtitle": "Svar, tid och systemändringar på ett ställe",

@@ -2034,7 +2034,9 @@
       "changeLocation": "Locatie wijzigen",
       "addDescriptionPrompt": "Voeg een beschrijving toe — wat is het probleem en wat heeft de klant nodig?",
       "projectTasks": "Projecttaken",
-      "timeAndBilling": "Tijd en facturatie"
+      "timeAndBilling": "Tijd en facturatie",
+      "useContactLocation": "Locatie van contactpersoon gebruiken",
+      "remote": "Op afstand"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",

@@ -152,6 +152,64 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   }
 });
 
+export interface ClientLocationContact {
+  contact_name_id: string;
+  full_name: string;
+  is_primary: boolean;
+}
+
+/**
+ * Who works at each of a client's locations, in one batched read for the whole Locations tab, so
+ * the count chip on every card costs a single query rather than one per card.
+ */
+export const getClientLocationContacts = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<Record<string, ClientLocationContact[]> | ClientLocationActionError> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertMspOrClientPortalOwnClientPermission(
+        user,
+        tenant,
+        clientId,
+        'client',
+        'read',
+        'Permission denied: Cannot read client locations',
+        trx
+      );
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('contact_locations as cl');
+      db.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'cl.contact_name_id');
+      db.tenantJoin(query, 'client_locations as loc', 'loc.location_id', 'cl.location_id');
+
+      const rows = await query
+        .where('loc.client_id', clientId)
+        .select('cl.location_id', 'c.contact_name_id', 'c.full_name', 'cl.is_primary')
+        .orderBy('c.full_name', 'asc') as Array<ClientLocationContact & { location_id: string }>;
+
+      const byLocation: Record<string, ClientLocationContact[]> = {};
+      for (const row of rows) {
+        (byLocation[row.location_id] ??= []).push({
+          contact_name_id: row.contact_name_id,
+          full_name: row.full_name,
+          is_primary: Boolean(row.is_primary),
+        });
+      }
+      return byLocation;
+    });
+  } catch (error) {
+    const expected = clientLocationActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
 export const getClientLocation = withAuth(async (user, { tenant }, locationId: string): Promise<IClientLocation | null | ClientLocationActionError> => {
   const { knex } = await createTenantKnex();
 

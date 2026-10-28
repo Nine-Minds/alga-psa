@@ -1380,7 +1380,9 @@
         "phoneLabel": "Phone",
         "setDefault": "Set as default",
         "shippingTag": "Shipping",
-        "unnamed": "Unnamed Location"
+        "unnamed": "Unnamed Location",
+        "contactCount": "{{count}} contacts",
+        "contactPrimary": "Primary"
       },
       "dialog": {
         "addTitle": "Add New Location",

@@ -1353,7 +1353,9 @@
         "phoneLabel": "Telefono",
         "setDefault": "Imposta come predefinito",
         "shippingTag": "Spedizione",
-        "unnamed": "Posizione senza nome"
+        "unnamed": "Posizione senza nome",
+        "contactCount": "{{count}} contatti",
+        "contactPrimary": "Principale"
       },
       "dialog": {
         "addTitle": "Aggiungi nuova posizione",

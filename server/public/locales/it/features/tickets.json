@@ -2034,7 +2034,9 @@
       "changeLocation": "Cambia sede",
       "addDescriptionPrompt": "Aggiungi una descrizione: qual è il problema e di cosa ha bisogno il cliente?",
       "projectTasks": "Attività di progetto",
-      "timeAndBilling": "Tempo e fatturazione"
+      "timeAndBilling": "Tempo e fatturazione",
+      "useContactLocation": "Usa la sede del contatto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",

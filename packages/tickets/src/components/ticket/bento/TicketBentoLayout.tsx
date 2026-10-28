@@ -377,6 +377,34 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
+
+  // Where the requester works, under the tag chips.
+  const requesterLocations = props.contactInfo?.locations ?? [];
+  const requesterLocation = (() => {
+    const primary = requesterLocations.find((location) => location.is_primary)
+      ?? (requesterLocations.length === 1 ? requesterLocations[0] : null)
+      ?? (props.contactInfo?.primaryLocation
+        ? { location_id: props.contactInfo.primaryLocation.location_id, location_name: props.contactInfo.primaryLocation.location_name }
+        : null);
+    const name = primary?.location_name?.trim();
+    if (name) {
+      return {
+        locationId: primary!.location_id,
+        name: requesterLocations.length > 1 ? `${name} +${requesterLocations.length - 1}` : name,
+      };
+    }
+    return props.contactInfo?.work_arrangement === 'remote'
+      ? { locationId: null as string | null, name: t('bento.tiles.remote', 'Remote') }
+      : null;
+  })();
+
+  const useContactLocationHint = (() => {
+    if (!props.onChangeLocation || requesterLocations.length === 0) return null;
+    const ticketLocationId = (ticket as { location_id?: string | null }).location_id ?? null;
+    if (ticketLocationId && requesterLocations.some((location) => location.location_id === ticketLocationId)) return null;
+    const suggested = requesterLocations.find((location) => location.is_primary) ?? requesterLocations[0];
+    return suggested ? { locationId: suggested.location_id } : null;
+  })();
   const handleInteractionClick = React.useCallback((interactionId: string) => {
     void openInteractionDetails(interactionId, () => {
       setInteractionRefreshKey((key) => key + 1);
@@ -689,6 +717,23 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             )}
             {props.contactInfo?.email ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
+            ) : null}
+            {requesterLocation ? (
+              <div className="text-[rgb(var(--color-text-600))] truncate" id={`${id}-contact-location`}>
+                {requesterLocation.name}
+              </div>
+            ) : null}
+            {/* The ticket is somewhere the requester does not work. Never re-pointed on its own:
+                the one click is the operator saying the person's site is the right answer. */}
+            {useContactLocationHint ? (
+              <button
+                id={`${id}-contact-use-location`}
+                type="button"
+                className="text-xs text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={() => props.onChangeLocation?.(useContactLocationHint.locationId)}
+              >
+                {t('bento.tiles.useContactLocation', 'Use contact\'s location')}
+              </button>
             ) : null}
             {contactPhone ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">

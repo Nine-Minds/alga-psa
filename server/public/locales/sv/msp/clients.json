@@ -1371,7 +1371,9 @@
         "phoneLabel": "Telefon",
         "setDefault": "Ange som standard",
         "shippingTag": "Leverans",
-        "unnamed": "Plats utan namn"
+        "unnamed": "Plats utan namn",
+        "contactCount": "{{count}} kontakter",
+        "contactPrimary": "Primär"
       },
       "dialog": {
         "addTitle": "Lägg till ny plats",

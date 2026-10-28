@@ -213,7 +213,7 @@
     "prdRefs": [
       "UX client locations"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ClientLocations cards show a contact count chip (id client-location-contact-count-<id>) expanding to contact names linking to each contact; count loaded in one batched action per client"
   },
   {
@@ -222,7 +222,7 @@
     "prdRefs": [
       "FR-B6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ClientLocations delete surfaces the contact dependency error text unchanged (no silent failure, no cascade)"
   },
   {
@@ -231,7 +231,7 @@
     "prdRefs": [
       "FR-D1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactPicker row type gains primaryLocation and work_arrangement; option rows and the selected row render the location name as secondary text after EntityTagBadges"
   },
   {
@@ -240,7 +240,7 @@
     "prdRefs": [
       "FR-D1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every action feeding ContactPicker (getContactsByClient, getAllContacts, picker search) attaches primaryLocation in the same batched pass as displayTags"
   },
   {
@@ -249,7 +249,7 @@
     "prdRefs": [
       "UX pickers"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket contact tile (TicketBentoLayout, TicketProperties) shows the requester's primary location under the tag chips"
   },
   {
