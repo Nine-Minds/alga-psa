@@ -95,15 +95,6 @@ export interface ChecklistRuleTicketInput {
 }
 
 /**
- * Explicit service-request context for a ticket that is being created from one.
- * At create time service_request_submissions.created_ticket_id is still NULL
- * (it is written after the ticket exists), so the lookup cannot see it.
- */
-export interface TicketServiceRequestContext {
-  definitionId: string;
-}
-
-/**
  * Reduce a ticket description to the text the user can see. Rich-text
  * descriptions are BlockNote JSON (string, or already-parsed array/object in
  * jsonb); keyword matching must never run against that raw JSON. Plain /
@@ -305,10 +296,6 @@ export async function applyChecklistTemplateToTicket(
  * template. Safe to re-run — application is idempotent — so callers invoke it
  * on ticket creation AND whenever board/category change.
  *
- * `serviceRequest`: pass it explicitly when creating a ticket from a service
- * request (the submission row cannot link to the ticket yet). When omitted the
- * link is looked up ONCE per call from service_request_submissions, and only
- * if some enabled rule actually constrains on service requests.
  */
 export async function applyMatchingChecklistTemplates(
   trx: Knex.Transaction,
@@ -323,7 +310,6 @@ export async function applyMatchingChecklistTemplates(
     ticket_origin?: string | null;
     title?: string | null;
     description?: string | null;
-    serviceRequest?: TicketServiceRequestContext | null;
   },
   auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
 ): Promise<number> {
@@ -340,8 +326,8 @@ export async function applyMatchingChecklistTemplates(
   const needsServiceRequest = rules.some(
     (rule) => rule.from_service_request || rule.service_request_definition_id
   );
-  let serviceRequestDefinitionId: string | null = ticket.serviceRequest?.definitionId ?? null;
-  if (needsServiceRequest && ticket.serviceRequest === undefined) {
+  let serviceRequestDefinitionId: string | null = null;
+  if (needsServiceRequest) {
     const submission = await tenantScopedTable(trx, 'service_request_submissions', tenant)
       .where({ created_ticket_id: ticket.ticket_id })
       .first('definition_id');
