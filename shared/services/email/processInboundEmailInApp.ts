@@ -1,3 +1,4 @@
+import type { TenantDb } from '@alga-psa/db';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -583,7 +584,7 @@ async function applyInboundReplyReopenTransition(params: {
 
   await withTenantAdminTransaction(
     params.tenantId,
-    async (trx: any, db: any) => {
+    async (trx: any, db: TenantDb) => {
     const previous = await db.table('tickets')
       .select('status_id')
       .where({ ticket_id: params.ticketId })

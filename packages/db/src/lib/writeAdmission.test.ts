@@ -1,7 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { admitWrite, registerWriteAdmissionProvider, resetWriteAdmissionProvider } from './writeAdmission';
+import {
+  admitWrite,
+  registerWriteAdmissionProvider,
+  registerWriteAdmissionResolver,
+  resetWriteAdmissionCache,
+  resetWriteAdmissionProvider,
+  resetWriteAdmissionResolver,
+} from './writeAdmission';
 
-afterEach(() => resetWriteAdmissionProvider());
+afterEach(() => {
+  resetWriteAdmissionProvider();
+  resetWriteAdmissionResolver();
+  resetWriteAdmissionCache();
+});
 
 describe('writeAdmission', () => {
   it('with no provider resolves without touching trx', async () => {
@@ -29,5 +40,34 @@ describe('writeAdmission', () => {
     resetWriteAdmissionProvider();
     await admitWrite({} as any, { tenant: 't', operation: 'op' });
     expect(provider).not.toHaveBeenCalled();
+  });
+});
+
+describe('writeAdmission: resolver backs admitWrite (one decision source)', () => {
+  const coManagedTrx = () => {
+    const query: any = { where: () => query, first: async () => ({ product_code: 'co_managed' }) };
+    const trx: any = (_table: string) => query;
+    trx.isTransaction = true;
+    return trx;
+  };
+
+  it('a refusing resolver refuses admitWrite and the provider is not reached', async () => {
+    const provider = vi.fn(async () => {});
+    registerWriteAdmissionProvider(provider);
+    registerWriteAdmissionResolver(async () => ({ canWrite: false, denial: new Error('refused') }));
+    await expect(admitWrite(coManagedTrx(), { tenant: 't', operation: 'op' })).rejects.toThrow('refused');
+    expect(provider).not.toHaveBeenCalled();
+  });
+
+  it('an admitting resolver still lets the exact provider decide', async () => {
+    const provider = vi.fn(async () => { throw new Error('provider says no'); });
+    registerWriteAdmissionProvider(provider);
+    registerWriteAdmissionResolver(async () => ({ canWrite: true }));
+    await expect(admitWrite(coManagedTrx(), { tenant: 't', operation: 'op' })).rejects.toThrow('provider says no');
+  });
+
+  it('with only a resolver, a transaction is still required', async () => {
+    registerWriteAdmissionResolver(async () => ({ canWrite: true }));
+    await expect(admitWrite({} as any, { tenant: 't', operation: 'op' })).rejects.toThrow();
   });
 });

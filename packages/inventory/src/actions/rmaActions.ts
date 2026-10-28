@@ -2,7 +2,7 @@
 
 import { buildInventoryRmaCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, admitOperationalWrite } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
@@ -633,6 +633,7 @@ export const deployReplacement = withAuth(
 
       // Relink the existing asset to the replacement unit (carry live serial + MAC).
       if (rma.asset_id) {
+        await admitOperationalWrite(trx, tenant, 'assets', 'rma-relink-asset');
         await trx('assets')
           .where({ tenant, asset_id: rma.asset_id })
           .update({

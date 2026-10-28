@@ -57,6 +57,7 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../packages/db/src/$1'),
       },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/capability$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/capability.ts') },
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts'),
