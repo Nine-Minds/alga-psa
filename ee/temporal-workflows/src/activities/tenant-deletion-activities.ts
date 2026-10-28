@@ -441,16 +441,19 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_tasks',
   'workflow_form_definitions',
   'workflow_task_definitions',
-  'service_request_submission_application_results',
-  'service_request_submission_applications',
-  'service_request_answer_mapping_versions',
-  'service_request_answer_mappings',
-  'service_request_submission_attachments',
-  'service_request_submissions',
-  'service_request_definition_versions',
-  'service_request_definitions',
-  'document_share_access_log',
-  'document_share_links',
+
+  // Service request runtime and published snapshots
+  // Applications restrict deletion of mapping versions; remove their results first.
+  'service_request_submission_application_results', 'service_request_submission_applications',
+  'service_request_answer_mapping_versions', 'service_request_answer_mappings',
+  'service_request_submission_attachments', 'service_request_submissions',
+  'service_request_definition_versions', 'service_request_definitions',
+
+  // === LEVEL 3: Mid-level entities ===
+  // Document-related leaf tables (must come before documents)
+  'document_share_access_log', 'document_share_links',
+  // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
+  // it only has to precede tenants. Kept next to kb_articles for readability.
   'kb_import_files',
   'kb_article_relations',
   'kb_article_reviewers',
