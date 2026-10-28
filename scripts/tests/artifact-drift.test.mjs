@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import YAML from 'yaml';
 
 import { applyAllow, nonAdditiveChanges } from '../ci/artifact-drift.mjs';
+import { writeDocument } from '../../sdk/scripts/write-openapi-document.mjs';
 
 const doc = (over = {}) => ({
   paths: {
@@ -20,6 +25,29 @@ const doc = (over = {}) => ({
 });
 const clone = (d) => JSON.parse(JSON.stringify(d));
 const kinds = (b, a) => nonAdditiveChanges(b, a).map((c) => c.kind);
+
+test('OpenAPI artifacts are identical for shared and copied schema values', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'openapi-artifacts-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const maintenanceType = { type: 'string', enum: ['preventive', 'corrective'] };
+  const shared = {
+    openapi: '3.0.3',
+    components: { schemas: {
+      CreateSchedule: { type: 'object', properties: { maintenance_type: maintenanceType } },
+      UpdateSchedule: { type: 'object', properties: { maintenance_type: maintenanceType } },
+    } },
+  };
+
+  for (const [name, document] of [['shared', shared], ['copied', clone(shared)]]) {
+    const files = writeDocument(directory, name, ['json', 'yaml'], document);
+    assert.deepEqual(files, ['json', 'yaml'].map((format) => path.join(directory, `${name}.${format}`)));
+    assert.deepEqual(YAML.parse(fs.readFileSync(files[1], 'utf8')), JSON.parse(fs.readFileSync(files[0], 'utf8')));
+  }
+  for (const format of ['json', 'yaml']) {
+    assert.equal(fs.readFileSync(path.join(directory, `shared.${format}`), 'utf8'),
+      fs.readFileSync(path.join(directory, `copied.${format}`), 'utf8'));
+  }
+});
 
 test('identical documents are additive', () => assert.deepEqual(nonAdditiveChanges(doc(), doc()), []));
 
