@@ -177,7 +177,8 @@ export function withAuth<TArgs extends unknown[], TResult>(
  * ```
  */
 export function withOptionalAuth<TArgs extends unknown[], TResult>(
-  action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>
+  action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>,
+  options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
     const user = await getCurrentUserWithRevocationCheck();
@@ -191,6 +192,8 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
     const ctx: AuthContext = {
       tenant: user.tenant,
     };
+
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
 
     return runWithTenant(user.tenant, async () =>
       localizeActionError(await action(user, ctx, ...args)),
@@ -213,7 +216,8 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
  * ```
  */
 export function withAuthCheck<TArgs extends unknown[], TResult>(
-  action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>
+  action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>,
+  options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
     const user = await getCurrentUserWithRevocationCheck();
@@ -221,6 +225,8 @@ export function withAuthCheck<TArgs extends unknown[], TResult>(
     if (!user) {
       throw new AuthenticationError();
     }
+
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
 
     return action(user, ...args);
   };

@@ -44,7 +44,7 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/licensing/lifecycle-error', async () => await import('../../../licensing/src/lib/co-managed-lifecycle-error'));
 vi.mock('../../../licensing/src/lib/co-managed-entitlements', () => ({ getCoManagedEntitlementState: vi.fn() }));
 
-import { withAuth } from './withAuth';
+import { withAuth, withAuthCheck, withOptionalAuth } from './withAuth';
 import {
   coManagedLifecycleProvider,
   invalidateCoManagedAwaitingAcceptance,
@@ -149,5 +149,51 @@ describe('withAuth before co-managed acceptance', () => {
     await expect(ordinary()).resolves.toBe('done');
     expect(mocks.getAdminConnection).not.toHaveBeenCalled();
     expect(mocks.statements).toEqual([]);
+  });
+});
+
+describe.each([
+  ['withOptionalAuth', () => withOptionalAuth(action), () => withOptionalAuth(action, { allowBeforeCoManagedAcceptance: true })],
+  ['withAuthCheck', () => withAuthCheck(action), () => withAuthCheck(action, { allowBeforeCoManagedAcceptance: true })],
+])('%s before co-managed acceptance', (_name, make, makeExempt) => {
+  it('refuses a browser-invoked server action', async () => {
+    mocks.headers.set('next-action', 'abc');
+    await expect(make()()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('refuses an API request and a multipart submission', async () => {
+    mocks.headers.set('x-pathname', '/api/v1/clients/c/notes');
+    await expect(make()()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    mocks.headers.clear();
+    multipart();
+    await expect(make()()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('passes on an RSC render', async () => {
+    mocks.headers.set('x-pathname', '/msp/dashboard');
+    await expect(make()()).resolves.toBe('done');
+  });
+
+  it('passes when allowBeforeCoManagedAcceptance is set', async () => {
+    mocks.headers.set('next-action', 'abc');
+    await expect(makeExempt()()).resolves.toBe('done');
+    expect(mocks.getAdminConnection).not.toHaveBeenCalled();
+  });
+
+  it('passes for a non-pending tenant', async () => {
+    mocks.user = { user_id: 'admin', tenant: 'ordinary-psa', user_type: 'internal' };
+    mocks.headers.set('next-action', 'abc');
+    await expect(make()()).resolves.toBe('done');
+  });
+});
+
+describe('withOptionalAuth without a user', () => {
+  it('runs unguarded', async () => {
+    mocks.user = null;
+    mocks.headers.set('next-action', 'abc');
+    await expect(withOptionalAuth(action)()).resolves.toBe('done');
+    expect(mocks.getAdminConnection).not.toHaveBeenCalled();
   });
 });

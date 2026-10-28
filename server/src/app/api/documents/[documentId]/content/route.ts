@@ -6,6 +6,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
+import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 
@@ -75,6 +76,11 @@ export async function GET(
     if (!tenantId || !currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Session and API-key callers alike: refuse before any permission or
+    // document read while the workspace awaits co-managed acceptance.
+    const denial = await coManagedWorkspaceDenial(tenantId);
+    if (denial) return denial;
 
     return await runWithTenant(tenantId, async () => {
       const canReadDocuments = await hasPermission(currentUser as any, 'document', 'read');
