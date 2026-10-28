@@ -1583,6 +1583,8 @@
     "printColumns": "Afdrukkolommen",
     "dialog": {
       "assetTitle": "Assetlabels afdrukken",
+      "batch_one": "Eén label voor het vastgehouden onderdeel ({{count}})",
+      "batch_other": "Eén label per vastgehouden onderdeel ({{count}})",
       "count_one": "{{count}} geselecteerd",
       "count_other": "{{count}} geselecteerd",
       "failed": "De labels konden niet worden afgedrukt.",
@@ -1592,6 +1594,14 @@
       "noAsset": "Geen asset",
       "notFound": "Deze records konden niet worden geopend.",
       "openPdf": "PDF openen",
+      "previewBatch_one": "{{count}} label afdrukken voor het vastgehouden onderdeel.",
+      "previewBatch_other": "{{count}} labels afdrukken, één per vastgehouden onderdeel.",
+      "previewPicked": "Het label toont de locatie en de volgende actie van dit onderdeel.",
+      "previewPickedNotHeld": "Dit onderdeel wordt niet vastgehouden, dus het label toont geen locatie.",
+      "previewSingle": "Het label toont {{location}}.",
+      "previewSingleNoLocation": "Het label toont de volgende actie van dit onderdeel.",
+      "previewSummary_one": "{{count}} onderdeel vastgehouden.",
+      "previewSummary_other": "{{count}} onderdelen vastgehouden.",
       "printed_one": "{{count}} label afgedrukt.",
       "printed_other": "{{count}} labels afgedrukt.",
       "printing": "Voorbereiden…",
@@ -1603,6 +1613,7 @@
       "template": "Sjabloon",
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
+      "unnamedAsset": "Naamloze asset",
       "useTemplate": "{{template}} gebruiken"
     }
   },

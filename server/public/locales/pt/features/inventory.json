@@ -1577,6 +1577,10 @@
       "inProgress": "Reconstruindo…"
     },
     "receive": {
+      "searchProducts": "Pesquisar produtos ou SKU...",
+      "noProductsFound": "Nenhum produto encontrado",
+      "searchLocations": "Pesquisar locais...",
+      "noLocationsFound": "Nenhum local encontrado",
       "costNonNegative": "O custo unitário não pode ser negativo.",
       "failed": "Não foi possível receber o estoque.",
       "inProgress": "Recebendo…",
@@ -1713,7 +1717,11 @@
       "submit": "Repor no estoque"
     },
     "printLabel": "Imprimir etiqueta",
-    "printWithTemplate": "Imprimir com {{code}}"
+    "printWithTemplate": "Imprimir com {{code}}",
+    "claimant": {
+      "project": "Projeto {{number}}",
+      "salesOrder": "Pedido de venda {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Adicionar Linha",

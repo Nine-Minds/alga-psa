@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    },
-    "advanceSuggestion": {
-      "message": "Com faturamento em atraso, esta linha só pode ser faturada depois que seu primeiro período de serviço terminar. Com faturamento antecipado pelo ciclo do contrato, ela é faturada na data de início.",
-      "action": "Faturar antecipadamente pelo ciclo do contrato"
     }
   },
   "wizardProducts": {
@@ -2427,6 +2423,22 @@
       "description": "Este contrato não tem linhas de contrato. Adicione primeiro linhas de contrato e depois volte para simular.",
       "title": "Ainda nada para simular"
     },
+    "errors": {
+      "title": "Não é possível executar a simulação",
+      "baselineTitle": "O contrato atual não pode ser simulado, então não há nada para comparar",
+      "unsupportedLineType": "A linha de contrato \"{{lineName}}\" tem o tipo de linha \"{{lineType}}\", que o simulador não consegue calcular. Altere a linha para Fixa, Por hora ou Uso e simule novamente.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" tem o tipo de configuração \"{{configurationType}}\", que o simulador não consegue calcular. Defina o serviço como Fixo, Por hora, Uso ou Pacote e simule novamente.",
+      "serviceNotInCatalog": "A linha de contrato \"{{lineName}}\" usa um serviço que não está mais no catálogo de serviços ({{serviceId}}). Remova-o da linha ou restaure o serviço e simule novamente.",
+      "poolMissing": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" está configurado como pacote, mas não tem um pool de horas incluídas. Adicione as horas incluídas do pool na linha de contrato e simule novamente.",
+      "contractNotFound": "Este contrato não está disponível. Ele pode ter sido excluído; recarregue a página.",
+      "clientNotAvailable": "O cliente desta simulação não está disponível. Ele pode ter sido excluído; escolha outro cliente.",
+      "clientRequired": "Selecione um cliente antes de simular.",
+      "historyRequiresClient": "As premissas históricas exigem um cenário vinculado a um cliente real. Escolha um cliente para esta simulação e tente novamente.",
+      "invalidReplayRange": "O intervalo de reprodução não é válido. Escolha um intervalo que termine depois de começar e abranja no máximo 120 períodos de faturamento.",
+      "scenarioInvalid": "Este cenário não pode ser simulado porque sua configuração está incompleta. Recarregue a página e tente novamente.",
+      "scenarioReferenceInvalid": "Este cenário se refere a algo que não está mais disponível, como uma linha de contrato, um serviço, uma alíquota de imposto ou um local do cliente. Recarregue a página para começar do contrato atual.",
+      "unexpected": "O simulador não pôde ser executado devido a um erro inesperado. Tente novamente; se o problema continuar, entre em contato com o suporte."
+    },
     "explanation": {
       "amount": "Valor",
       "close": "Fechar",
@@ -2473,6 +2485,7 @@
       "simulatedDelta": "diferença simulada"
     },
     "runBar": {
+      "blocked": "Simulação indisponível",
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
       "horizonOption": "{{count}} períodos de faturamento do cliente",
       "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
@@ -2481,6 +2494,7 @@
       "simulating": "Simulando…",
       "stale": "Alterações não simuladas",
       "staleBanner": "Estes valores vêm da simulação anterior. Atualize a simulação para incluir as suas alterações mais recentes.",
+      "staleBlockedBanner": "Esta mensagem é da simulação anterior. Atualize a simulação para incluir suas alterações mais recentes.",
       "updateSimulation": "Atualizar simulação"
     },
     "scenario": {
@@ -2752,7 +2766,8 @@
       "advance": "Faturada antecipadamente pelo ciclo do contrato: a primeira fatura está disponível a partir de {{date}}, a data de início do contrato."
     },
     "client": {
-      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando o período de faturamento atual do cliente termina.",
+      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início.",
+      "arrearsPartial": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início. Como a data de início cai no meio desse período, ela cobre {{periodStart}} – {{periodEnd}}.",
       "advance": "Faturada antecipadamente pelo calendário de faturamento do cliente: a primeira fatura está disponível a partir de {{date}}, o início do período de faturamento do cliente que contém a data de início do contrato."
     }
   },
@@ -2970,5 +2985,9 @@
       "invalidBlock": "Preencha o tamanho, o preço e os gatilhos de cada linha de bloco pré-pago antes de concluir.",
       "rateRequired": "O serviço de bloco pré-pago \"{{serviceName}}\" precisa de uma tarifa horária superior a zero (as horas além do bloco são faturadas a essa tarifa)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Primeira fatura: a fatura de {{invoiceDate}} cobre {{periodStart}} – {{periodEnd}} (faturada em atraso). Escolha Antecipado para faturá-la na fatura do período que começa em {{advanceInvoiceDate}}.",
+    "billInAdvance": "Faturar antecipadamente"
   }
 }

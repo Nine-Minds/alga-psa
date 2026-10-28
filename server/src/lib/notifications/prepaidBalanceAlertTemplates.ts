@@ -8,6 +8,9 @@
  * formatted by the caller before rendering.
  */
 
+import type { Knex } from 'knex';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
+
 export const CREDIT_LOW_BALANCE_TEMPLATE = 'prepaid-credit-low-balance';
 export const BUCKET_THRESHOLD_REACHED_TEMPLATE = 'prepaid-bucket-threshold-reached';
 export const PREPAID_REPLENISHMENT_TEMPLATE = 'prepaid-replenishment-created';
@@ -15,18 +18,32 @@ export const CREDIT_LOW_BALANCE_SUBTYPE = 'prepaid-credit-low-balance';
 export const BUCKET_THRESHOLD_REACHED_SUBTYPE = 'prepaid-bucket-threshold-reached';
 export const PREPAID_REPLENISHMENT_SUBTYPE = 'prepaid-replenishment-created';
 
+// LEVERAGE: pattern tenant-link-context — hand-built canonical base URL (NEXTAUTH_URL || localhost) repeated across notification builders.
 function baseUrl(): string {
   return (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
 }
 
+/**
+ * Origin for a tenant's alert recipients: the tenant's custom domain when it serves the
+ * recipient's app, otherwise the canonical base (unchanged behaviour).
+ */
+export async function resolveAlertBaseUrl(
+  tenantId: string,
+  surface: 'msp' | 'client_portal',
+  knex?: Knex
+): Promise<string> {
+  const resolved = await resolveTenantAppBase(tenantId, surface, knex ? { knex } : {});
+  return resolved.source === 'vanity' ? resolved.baseUrl : baseUrl();
+}
+
 /** MSP navigation link for the account manager. */
-export function managerAlertLink(clientId: string): string {
-  return `${baseUrl()}/msp/clients/${clientId}?tab=billing`;
+export function managerAlertLink(clientId: string, base: string = baseUrl()): string {
+  return `${base}/msp/clients/${clientId}?tab=billing`;
 }
 
 /** Client portal navigation link for the client billing recipient. */
-export function clientAlertLink(): string {
-  return `${baseUrl()}/client-portal/billing`;
+export function clientAlertLink(base: string = baseUrl()): string {
+  return `${base}/client-portal/billing`;
 }
 
 export interface CreditAlertTemplateValues {

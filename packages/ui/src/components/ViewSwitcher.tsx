@@ -31,7 +31,11 @@ const ViewSwitcher = <T extends string>({
   const isCompact = size === 'sm';
   return (
     <div
-      className={cn('flex items-center border rounded-md overflow-hidden', isCompact ? 'h-7' : 'h-9', className)}
+      className={cn(
+        'flex items-center border border-[rgb(var(--color-border-200))] rounded-md overflow-hidden',
+        isCompact ? 'h-7' : 'h-9',
+        className
+      )}
       role="group"
       aria-label={ariaLabel}
     >
@@ -42,7 +46,9 @@ const ViewSwitcher = <T extends string>({
           <Button
             key={option.value}
             id={option.id ?? `${option.value}-view-btn`}
-            variant={isActive ? 'default' : 'outline'}
+            // Inline (sm) switchers sit inside record bodies, so they stay quiet:
+            // a filled primary there competes with the screen's real primary action.
+            variant={isActive ? (isCompact ? 'soft' : 'default') : (isCompact ? 'ghost' : 'outline')}
             size={isCompact ? 'xs' : 'sm'}
             onClick={() => onChange(option.value)}
             className="rounded-none border-0 h-full"

@@ -16,11 +16,11 @@ const {
   checkPortalDomainDeploymentStatus,
   deletePortalDomainRecord,
 } = proxyActivities<{
-  loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
-  markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
+  loadPortalDomain: (args: { portalDomainId: string; tenantId: string }) => Promise<PortalDomainActivityRecord | null>;
+  markPortalDomainStatus: (args: { portalDomainId: string; tenantId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
   applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
-  checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
+  checkPortalDomainDeploymentStatus: (args: { portalDomainId: string; tenantId: string }) => Promise<PortalDomainStatusSnapshot | null>;
   deletePortalDomainRecord: (args: { portalDomainId: string; tenantId: string }) => Promise<void>;
 }>(
   {
@@ -46,7 +46,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   });
 
   async function runOnce(triggerReason: PortalDomainWorkflowTrigger | undefined): Promise<void> {
-    const record = await loadPortalDomain({ portalDomainId: input.portalDomainId });
+    const record = await loadPortalDomain({ portalDomainId: input.portalDomainId, tenantId: input.tenantId });
 
     if (!record) {
       log.warn('Portal domain not found; exiting workflow', { portalDomainId: input.portalDomainId });
@@ -62,6 +62,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     if (record.status === 'disabled') {
       log.info('Domain disabled, ensuring resource cleanup');
       await markPortalDomainStatus({
+        tenantId: input.tenantId,
         portalDomainId: record.id,
         status: 'disabled',
         statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
@@ -77,6 +78,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     }
 
     await markPortalDomainStatus({
+      tenantId: input.tenantId,
       portalDomainId: record.id,
       status: 'verifying_dns',
       statusMessage: `Verifying that ${record.domain} points to ${expectedCname}`,
@@ -91,6 +93,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
 
     if (!dns.matched) {
       await markPortalDomainStatus({
+        tenantId: input.tenantId,
         portalDomainId: record.id,
         status: 'dns_failed',
         statusMessage: `Detected ${dns.observed.join(', ') || 'no CNAME record'}; expected ${expectedCname}. ${dns.message}`,
@@ -111,6 +114,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     };
 
     await markPortalDomainStatus({
+      tenantId: input.tenantId,
       portalDomainId: record.id,
       status: 'pending_certificate',
       statusMessage: 'DNS verified. Preparing Kubernetes resources for certificate issuance.',
@@ -121,6 +125,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
 
     if (!applyResult.success) {
       await markPortalDomainStatus({
+        tenantId: input.tenantId,
         portalDomainId: record.id,
         status: 'certificate_failed',
         statusMessage: `Failed to apply Kubernetes resources: ${applyResult.errors?.join('; ') ?? 'Unknown error'}`,
@@ -129,6 +134,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     }
 
     await markPortalDomainStatus({
+      tenantId: input.tenantId,
       portalDomainId: record.id,
       status: 'deploying',
       statusMessage: 'Resources applied. Waiting for certificate issuance.',
@@ -139,7 +145,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   pendingTrigger = undefined;
   await runOnce(initialTrigger);
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'pending_redirect_uri']);
 
   while (true) {
     const timeoutPromise = sleep('1 minute');
@@ -153,7 +159,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       continue;
     }
 
-    const deploymentStatus = await checkPortalDomainDeploymentStatus({ portalDomainId: input.portalDomainId });
+    const deploymentStatus = await checkPortalDomainDeploymentStatus({ portalDomainId: input.portalDomainId, tenantId: input.tenantId });
 
     if (!deploymentStatus) {
       log.warn('Portal domain record missing during deployment check; ending workflow.', {

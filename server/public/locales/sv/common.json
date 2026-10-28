@@ -1583,6 +1583,8 @@
     "printColumns": "Kolumner att skriva ut",
     "dialog": {
       "assetTitle": "Skriv ut tillgångsetiketter",
+      "batch_one": "En etikett för det kvarhållna objektet ({{count}})",
+      "batch_other": "En etikett per kvarhållet objekt ({{count}})",
       "count_one": "{{count}} markerad",
       "count_other": "{{count}} markerade",
       "failed": "Etiketterna kunde inte skrivas ut.",
@@ -1592,6 +1594,14 @@
       "noAsset": "Ingen tillgång",
       "notFound": "De här posterna kunde inte öppnas.",
       "openPdf": "Öppna PDF",
+      "previewBatch_one": "Skriv ut {{count}} etikett för det kvarhållna objektet.",
+      "previewBatch_other": "Skriv ut {{count}} etiketter, en per kvarhållet objekt.",
+      "previewPicked": "Etiketten visar det här objektets plats och nästa åtgärd.",
+      "previewPickedNotHeld": "Det här objektet är inte kvarhållet, så etiketten visar ingen plats.",
+      "previewSingle": "Etiketten visar {{location}}.",
+      "previewSingleNoLocation": "Etiketten visar det här objektets nästa åtgärd.",
+      "previewSummary_one": "{{count}} objekt kvarhållet.",
+      "previewSummary_other": "{{count}} objekt kvarhållna.",
       "printed_one": "{{count}} etikett utskriven.",
       "printed_other": "{{count}} etiketter utskrivna.",
       "printing": "Förbereder…",
@@ -1603,6 +1613,7 @@
       "template": "Mall",
       "ticketTitle": "Skriv ut arbetsetiketter",
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
+      "unnamedAsset": "Namnlös tillgång",
       "useTemplate": "Använd {{template}}"
     }
   },

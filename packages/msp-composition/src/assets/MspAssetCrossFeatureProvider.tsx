@@ -6,6 +6,7 @@ import type { AssetCrossFeatureCallbacks, AssetQuickAddTicketRenderProps, AssetT
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
@@ -87,6 +88,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
       openTicketDetailsDrawer,
       createTicketFromAsset,
       getAllBoards,
+      listInternalUsers: () => getAllUsersBasic(false, 'internal'),
       rmm: { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl },
     }),
     [renderQuickAddTicket, openTicketDetailsDrawer]

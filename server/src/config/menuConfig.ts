@@ -32,6 +32,7 @@ import {
   Layers3,
   LayoutDashboard,
   LayoutTemplate,
+  MessageSquareText,
   ListTodo,
   ListChecks,
   ListTree,
@@ -62,7 +63,8 @@ import {
   Ticket,
   Tags,
   BadgeCheck,
-  Wrench
+  Wrench,
+  PackageOpen
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -118,7 +120,8 @@ export const navigationSections: NavigationSection[] = [
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
           { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
-          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' },
+          { name: 'Canned Responses', translationKey: 'nav.ticketsCannedResponses', icon: MessageSquareText, href: '/msp/tickets/canned-responses', requiredPermission: 'canned_response:read' }
         ]
       },
       {
@@ -195,7 +198,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Monitor,
         subItems: [
           { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
-          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
+          { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
         ]
       },
       {

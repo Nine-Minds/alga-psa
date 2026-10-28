@@ -1577,6 +1577,10 @@
       "inProgress": "Rebuilding…"
     },
     "receive": {
+      "searchProducts": "Search products or SKU...",
+      "noProductsFound": "No products found",
+      "searchLocations": "Search locations...",
+      "noLocationsFound": "No locations found",
       "costNonNegative": "Unit cost can't be negative.",
       "failed": "Couldn't receive stock.",
       "inProgress": "Receiving…",
@@ -1713,7 +1717,11 @@
       "submit": "Restock"
     },
     "printLabel": "Print label",
-    "printWithTemplate": "Print with {{code}}"
+    "printWithTemplate": "Print with {{code}}",
+    "claimant": {
+      "project": "Project {{number}}",
+      "salesOrder": "Sales order {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Add Line",

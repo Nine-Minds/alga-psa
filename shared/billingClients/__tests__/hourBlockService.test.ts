@@ -122,19 +122,41 @@ describe('classifyContractLineCoverage', () => {
     expect(result[0].assignment).toBe('automatic');
   });
 
-  it('drops the excluded line so it is never named as a covering line', () => {
+  it('omits a service whose only line is the excluded one', () => {
     const result = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, 'line-a');
     expect(result).toHaveLength(0);
   });
 
-  it('reclassifies to automatic once the block\'s own overlapping line is excluded', () => {
+  it('stays when_assigned when the excluded issuing line overlaps another line, listing only the other', () => {
+    // Un-assigned time on the service splits between line-a and the issuing
+    // line-b, and time on line-b DOES draw the block: 'automatic' here would
+    // claim all the service's time bills through line-a.
     const result = classifyContractLineCoverage(
       [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
       window,
       'line-b',
     );
+    expect(result[0].assignment).toBe('when_assigned');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
+  });
+
+  it('stays automatic when the excluded issuing line only follows the other line in time', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', '2026-12-31'), row('b', '2027-01-01', null)],
+      window,
+      'line-b',
+    );
     expect(result[0].assignment).toBe('automatic');
     expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
+  });
+
+  it('leaves the classification untouched when nothing is excluded', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+    );
+    expect(result[0].assignment).toBe('when_assigned');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a', 'line-b']);
   });
 
   it('treats a null exclusion as no exclusion', () => {

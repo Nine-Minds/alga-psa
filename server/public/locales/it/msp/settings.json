@@ -711,7 +711,8 @@
         "importNewName": "Importa con un nome diverso:",
         "importWithResolutions": "Importa con risoluzioni",
         "orderConflict": "L'ordine {{order}} è già in uso",
-        "importWithOrder": "Importa con ordine {{order}}"
+        "importWithOrder": "Importa con ordine {{order}}",
+        "removesIntro": "L’eliminazione di questa bacheca rimuoverà anche:"
       },
       "importTable": {
         "active": "Attivo"
@@ -780,7 +781,9 @@
           "deleteFailed": "Impossibile eliminare la bacheca",
           "importFailed": "Impossibile importare le bacheche",
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
-          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
+          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita",
+          "hasEmailSenderRoute": "Impossibile eliminare la bacheca: ha una regola mittente in uscita dedicata. Rimuovi prima il mittente dei ticket nell’editor della bacheca.",
+          "referencedByAutomations": "Impossibile eliminare la bacheca: altre impostazioni la utilizzano ancora. Spostale su un’altra bacheca o rimuovile prima."
         }
       },
       "closeRules": {
@@ -894,6 +897,48 @@
         "displayName": "Nome visualizzato",
         "save": "Salva mittente",
         "saved": "Mittente salvato"
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorie",
+        "categories_few": "categorie",
+        "categories_many": "categorie",
+        "statuses_one": "stato ticket",
+        "statuses_other": "stati ticket",
+        "statuses_few": "stati ticket",
+        "statuses_many": "stati ticket",
+        "autoCloseRules_one": "regola di chiusura automatica",
+        "autoCloseRules_other": "regole di chiusura automatica",
+        "autoCloseRules_few": "regole di chiusura automatica",
+        "autoCloseRules_many": "regole di chiusura automatica",
+        "notificationRules_one": "regola di notifica",
+        "notificationRules_other": "regole di notifica",
+        "notificationRules_few": "regole di notifica",
+        "notificationRules_many": "regole di notifica",
+        "portalVisibility_one": "assegnazione di visibilità del portale clienti",
+        "portalVisibility_other": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_few": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_many": "assegnazioni di visibilità del portale clienti",
+        "emailSenderRoutes_one": "regola mittente in uscita",
+        "emailSenderRoutes_other": "regole mittente in uscita",
+        "emailSenderRoutes_few": "regole mittente in uscita",
+        "emailSenderRoutes_many": "regole mittente in uscita",
+        "ticketTemplates_one": "modello di ticket",
+        "ticketTemplates_other": "modelli di ticket",
+        "ticketTemplates_few": "modelli di ticket",
+        "ticketTemplates_many": "modelli di ticket",
+        "recurringTickets_one": "pianificazione di ticket ricorrenti",
+        "recurringTickets_other": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_few": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_many": "pianificazioni di ticket ricorrenti",
+        "checklistRules_one": "regola di applicazione della lista di controllo",
+        "checklistRules_other": "regole di applicazione della lista di controllo",
+        "checklistRules_few": "regole di applicazione della lista di controllo",
+        "checklistRules_many": "regole di applicazione della lista di controllo",
+        "cannedResponses_one": "risposta predefinita della bacheca",
+        "cannedResponses_other": "risposte predefinite della bacheca",
+        "cannedResponses_few": "risposte predefinite della bacheca",
+        "cannedResponses_many": "risposte predefinite della bacheca"
       }
     },
     "priorities": {
@@ -985,7 +1030,8 @@
         "description": "Descrizione",
         "items": "Elementi",
         "status": "Stato",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "scope": "Disponibile per"
       },
       "statusLabels": {
         "active": "Attivo",
@@ -1003,7 +1049,9 @@
         "down": "Giù",
         "remove": "Rimuovi",
         "addItem": "Aggiungi elemento",
-        "addRule": "Aggiungi regola"
+        "addRule": "Aggiungi regola",
+        "duplicateToClient": "Duplica per cliente…",
+        "duplicate": "Duplica"
       },
       "fields": {
         "name": {
@@ -1033,8 +1081,10 @@
           "priority": "Priorità",
           "any": "Qualsiasi",
           "appliesToAll": "Si applica a tutti i ticket",
+          "appliesToAllClientTickets": "Si applica a tutti i ticket di {{client}}",
           "clients": "Clienti",
           "clientsAny": "Qualsiasi cliente",
+          "clientsFixedByTemplate": "Solo {{client}} (definito dal cliente del modello)",
           "clientsAddAnother": "Aggiungi un altro cliente",
           "removeClient": "Rimuovi {{name}}",
           "origins": "Origine del ticket",
@@ -1058,7 +1108,13 @@
             "inbound_email": "E-mail in arrivo",
             "api": "API",
             "recurring": "Pianificazione ricorrente"
-          }
+          },
+          "clientScopedWarning": "Questo modello è limitato a {{client}}: queste regole si applicano solo ai ticket di {{client}}."
+        },
+        "availableTo": {
+          "label": "Disponibile per",
+          "clear": "Tutti i clienti",
+          "help": "Lascia «Tutti i clienti» per offrire il modello su ogni ticket, oppure scegli un cliente per limitarlo ai suoi ticket."
         }
       },
       "dialog": {
@@ -1066,13 +1122,17 @@
         "editTemplate": "Modifica modello di checklist",
         "createFirstHelp": "Crea prima il modello, poi aggiungi gli elementi della checklist e le regole di applicazione automatica.",
         "deleteTitle": "Elimina modello di checklist",
-        "deleteMessage": "Eliminare davvero \"{{name}}\"? Le checklist già aggiunte ai ticket non saranno interessate."
+        "deleteMessage": "Eliminare davvero \"{{name}}\"? Le checklist già aggiunte ai ticket non saranno interessate.",
+        "duplicateTitle": "Duplica per cliente",
+        "duplicateHelp": "Copia «{{name}}» e i suoi elementi in un nuovo modello limitato a un cliente. La copia è indipendente: le modifiche successive all'uno o all'altro non influiscono sull'altro.",
+        "duplicateClientPlaceholder": "Seleziona un cliente"
       },
       "messages": {
         "success": {
           "created": "Modello di checklist creato con successo",
           "updated": "Modello di checklist aggiornato con successo",
-          "deleted": "Modello di checklist eliminato con successo"
+          "deleted": "Modello di checklist eliminato con successo",
+          "duplicated": "Modello di checklist duplicato per il cliente"
         },
         "error": {
           "fetchFailed": "Impossibile recuperare i modelli di checklist",
@@ -1082,8 +1142,18 @@
           "deleteFailed": "Impossibile eliminare il modello di checklist",
           "updateStatusFailed": "Impossibile aggiornare lo stato del modello",
           "itemSaveFailed": "Impossibile salvare l'elemento della checklist",
-          "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica"
+          "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica",
+          "duplicateFailed": "Impossibile duplicare il modello di checklist"
         }
+      },
+      "scope": {
+        "allClients": "Tutti i clienti",
+        "unknownClient": "Cliente sconosciuto"
+      },
+      "filter": {
+        "client": "Cliente",
+        "allClients": "Tutti i clienti",
+        "clear": "Cancella filtro"
       }
     },
     "externalSystems": {
@@ -1424,7 +1494,9 @@
         "saveDomain": "Salva dominio",
         "updateDomain": "Aggiorna dominio",
         "submitting": "Invio in corso…",
-        "cancelEdit": "Annulla modifica"
+        "cancelEdit": "Annulla modifica",
+        "confirmUris": "Li ho registrati — conferma",
+        "confirmingUris": "Conferma in corso…"
       },
       "form": {
         "label": "Dominio personalizzato",
@@ -1462,7 +1534,8 @@
         "deploying": "Distribuzione in corso",
         "active": "Attivo",
         "disabled": "Disattivato",
-        "unknown": "Sconosciuto"
+        "unknown": "Sconosciuto",
+        "pending_redirect_uri": "URI di reindirizzamento in sospeso"
       },
       "messages": {
         "requestSubmitted": "Richiesta di dominio personalizzato inviata.",
@@ -1474,9 +1547,32 @@
         "registerFailed": "Impossibile registrare il dominio personalizzato.",
         "refreshFailed": "Impossibile aggiornare lo stato del dominio.",
         "retryFailed": "Nuovo tentativo non riuscito.",
-        "disableFailed": "Impossibile disattivare il dominio personalizzato."
+        "disableFailed": "Impossibile disattivare il dominio personalizzato.",
+        "confirmUrisFailed": "Impossibile confermare gli URI di reindirizzamento.",
+        "urisConfirmed": "URI di reindirizzamento confermati."
       },
-      "hostedTlsNote": "Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS."
+      "hostedTlsNote": "Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
+      "surface": {
+        "label": "Serve",
+        "current": "Serve: {{value}}",
+        "updatingSurface": "Salvando cambierà l'app servita da questo dominio e il provisioning ripartirà.",
+        "options": {
+          "client_portal": "Portale clienti",
+          "msp": "App MSP",
+          "both": "Entrambe"
+        },
+        "descriptions": {
+          "client_portal": "Il dominio apre il portale clienti. È l'impostazione predefinita.",
+          "msp": "Il dominio apre l'app MSP (tecnici). Gli URI di reindirizzamento del single sign-on devono essere registrati prima.",
+          "both": "Un dominio serve entrambe le app. I percorsi sotto /msp aprono l'app MSP e quelli sotto /client-portal aprono il portale clienti."
+        }
+      },
+      "redirectUris": {
+        "title": "Gli URI di reindirizzamento SSO devono essere registrati",
+        "description": "Questo dominio serve l'app MSP, quindi il single sign-on funzionerà solo dopo la registrazione degli URI di reindirizzamento qui sotto presso il provider SSO. Il dominio resta in sospeso fino alla conferma.",
+        "listLabel": "Registra questi URI di reindirizzamento:",
+        "contactSupport": "Chiedi all'amministratore o contatta l'assistenza per registrare e confermare questi URI di reindirizzamento."
+      }
     },
     "yourCompanyName": "Nome della tua azienda",
     "brandingPreviewMode": "Modalità tema anteprima branding",
@@ -3687,7 +3783,12 @@
       "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
       "notApplianceHost": "Scegli un dominio diverso dall'host principale di questo server. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
-      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
+      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita.",
+      "alreadyInUse": "Questo dominio è già in uso. Scegli un dominio diverso.",
+      "usedByOtherSurface": "Questo dominio è già usato da un altro dei tuoi domini personalizzati. Per servire il portale clienti e l’app MSP da un unico dominio, scegli «Entrambi».",
+      "invalidSurface": "Scegli cosa serve il dominio personalizzato: portale clienti, app MSP o entrambi.",
+      "redirectUrisHosted": "Gli URI di reindirizzamento per i domini ospitati vengono registrati dal supporto della piattaforma.",
+      "nothingToConfirm": "Nessuna conferma di URI di reindirizzamento SSO in sospeso per questo dominio."
     }
   },
   "common": {

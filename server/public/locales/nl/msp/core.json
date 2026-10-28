@@ -105,7 +105,9 @@
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
     "ticketsRecurring": "Terugkerende tickets",
-    "ticketsTemplates": "Ticketsjablonen"
+    "ticketsTemplates": "Ticketsjablonen",
+    "assetsCustody": "Apparatuur in bewaring",
+    "ticketsCannedResponses": "Standaardantwoorden"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

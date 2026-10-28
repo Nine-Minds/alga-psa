@@ -24,6 +24,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../core/src/server.ts'),
       },
       {
+        find: /^@alga-psa\/core\/capability\/server$/,
+        replacement: path.resolve(__dirname, '../core/src/capability/server.ts'),
+      },
+      {
         find: /^@alga-psa\/core\/(context|config)\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../core/src')}/$1/$2`,
       },

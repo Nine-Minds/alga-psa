@@ -74,7 +74,7 @@ export function UnitHistoryDialog({
       try {
         const result = await requestLabelPdf({
           labelClass: 'stock-unit-identity',
-          ids: [detail.unit.unit_id],
+          labels: [{ recordId: detail.unit.unit_id }],
           ...(templateCode ? { templateCode } : {}),
         });
         if (result.ok) {

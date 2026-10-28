@@ -327,7 +327,8 @@
       "missing_email": "Uw identiteitsprovider heeft geen e-mailadres geretourneerd, waardoor er geen account van het klantenportaal kon worden gevonden. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
       "inactive_user": "Het account van het klantenportaal voor {{providerEmail}} is inactief. Neem contact op met uw dienstverlener om het te heractiveren.",
       "user_type_mismatch": "{{providerEmail}} is geen account van het klantenportaal. Neem contact op met uw dienstverlener.",
-      "tenant_mismatch": "{{providerEmail}} hoort bij het portaal van een andere organisatie. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener."
+      "tenant_mismatch": "{{providerEmail}} hoort bij het portaal van een andere organisatie. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
+      "tenant_required": "{{providerEmail}} wordt in meer dan één organisatie gebruikt. Neem contact op met uw serviceprovider."
     },
     "configurationTitle": "Aanmelden mislukt",
     "configurationMessage": "Aanmelden is mislukt. Probeer het opnieuw of neem contact op met uw dienstverlener.",

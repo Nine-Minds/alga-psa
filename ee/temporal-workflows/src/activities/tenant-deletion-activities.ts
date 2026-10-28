@@ -13,6 +13,8 @@ import { Client, Connection } from '@temporalio/client';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
+// Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
+import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -53,11 +55,14 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Outbound sender routes reference sender addresses and boards; addresses
   // also reference email providers. Delete the route rows first, then senders,
   // before any of those parent tables.
   'email_sender_routes', 'email_sender_addresses',
+  // Equipment custody: events FK to custody; custody FKs to assets, tickets,
+  // users and stock_locations (all deleted below), so both go first.
+  'asset_custody_events', 'asset_custody',
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -66,11 +71,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // top-level parent: 20261009120000 added assets.vendor_id -> vendors
   // (NO ACTION), and assets sits far below in the Asset details block, so
   // vendors has to move down with it (see the comment near the assets entry). ===
+  'staging_container_members', 'staging_containers',
   'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
   'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
   'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
   'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
-  'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
+  // project_staging_lines before stock_units: lines.unit_id -> stock_units is NO ACTION; the
+  // opposite stock_units.allocated_staging_line_id FK is NULL'd in breakCircularDependencies.
+  'project_staging_lines', 'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
   'stock_transfers', 'purchase_orders', 'document_templates',
   'stock_locations',
 
@@ -284,6 +292,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // so items go first. Neither references tickets or clients. Must come AFTER
   // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
+
+  // Canned ticket responses. Favorites FK to responses (ON DELETE CASCADE), so favorites go first.
+  'canned_response_favorites', 'canned_responses',
 
   // Asset details
   'asset_remote_access_links',
@@ -519,7 +530,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // BEFORE those (tickets at LEVEL 5 below, boards at LEVEL 7, statuses at LEVEL 8).
   // Internal order follows the FKs among them: ticket_auto_close_state →
   // board_auto_close_rules, and checklist_template_items / _apply_rules →
-  // checklist_templates. ticket_checklist_items.template_id is a soft ref (no FK),
+  // checklist_templates. checklist_templates.client_id FKs to clients (2026-10-18), which is already
+  // satisfied because this group is deleted before clients. ticket_checklist_items.template_id is a soft ref (no FK),
   // and board_close_rules only FKs to boards.
   'ticket_auto_close_state', 'board_auto_close_rules',
   'ticket_checklist_items',
@@ -732,7 +744,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_settings', 'tax_rates', 'tax_regions',
 ];
 
-const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+// The manifest (packages/db tenantTableManifest) owns membership and order; the array above is its
+// golden projection, asserted element-for-element by tenantTableManifest.golden.test.ts.
+const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';
@@ -1740,6 +1754,26 @@ async function breakCircularDependencies(
     });
   }
 
+  // Step 6b: NULL out stock_units.allocated_staging_line_id so project_staging_lines
+  // can be deleted. project_staging_lines.unit_id -> stock_units (project_staging_lines_unit_fk)
+  // and stock_units.allocated_staging_line_id -> project_staging_lines
+  // (fk_stock_units_allocated_staging_line) are both NO ACTION and form a restrictive
+  // cycle; the inventory block deletes project_staging_lines before stock_units, which is
+  // only legal once units no longer point at lines (exempted in validate-tenant-management).
+  try {
+    const result6b = await tenantScopedDb.table('stock_units')
+      .whereNotNull('allocated_staging_line_id')
+      .update({ allocated_staging_line_id: null });
+    if (result6b > 0) {
+      log.info('Cleared allocated_staging_line_id references in stock_units', { count: result6b });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas or CE without project staging)
+    log.debug('Could not clear allocated_staging_line_id in stock_units (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
   // Step 7: NULL out opportunities.suggestion_id so opportunity_suggestions
   // can be deleted before opportunities. The reverse created_opportunity_id FK
   // is then naturally satisfied by the child-first deletion order.
@@ -1862,6 +1896,10 @@ export async function deleteTenantData(
     );
 
     // Step 2: Delete from each table in order
+    // The loop runs the manifest order. The local binding keeps the established loop
+    // shape that source-text contract tests assert; the exported literal above is the
+    // golden copy `tenantTableManifest.golden.test.ts` compares against.
+    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder();
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
         const tableBoundary = await resolveTenantDeletionTableBoundary(

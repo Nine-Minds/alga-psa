@@ -316,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
     "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
     "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente.",
-    "recurringTickets": "Tickets recorrentes"
+    "recurringTickets": "Tickets recorrentes",
+    "software": "Software",
+    "checklistsTab": "Listas de verificação",
+    "checklists": {
+      "name": "Nome",
+      "items": "Itens",
+      "status": "Status",
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "description": "Modelos de checklist oferecidos apenas nos tickets deste cliente. Edite-os em Configurações > Tickets > Modelos de checklist.",
+      "empty": "Nenhum modelo de checklist específico do cliente.",
+      "loadFailed": "Falha ao carregar os modelos de checklist",
+      "retry": "Tentar novamente"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +342,8 @@
       "people": "Pessoas",
       "record": "Ficha do cliente",
       "service": "Serviço",
-      "timeline": "Tudo, por ordem"
+      "timeline": "Tudo, por ordem",
+      "software": "Software"
     },
     "csatEmpty": "Ainda não há respostas de inquéritos.",
     "discardCancel": "Continuar a editar",
@@ -406,6 +420,12 @@
       "primary": "Principal"
     },
     "pulseError": "Não foi possível carregar o resumo do cliente.",
+    "quickLinks": {
+      "assets": "Ativos",
+      "contacts": "Contatos",
+      "label": "Links rápidos",
+      "software": "Software"
+    },
     "rail": {
       "close": "Fechar",
       "installBase": "Base instalada",
@@ -440,6 +460,13 @@
       "onTrack": "SLA dentro do prazo",
       "onTrackLeft": "SLA: faltam {{left}}",
       "paused": "SLA em pausa"
+    },
+    "software": {
+      "assetsMeta_one": "1 ativo",
+      "assetsMeta_other": "{{count}} ativos",
+      "loadError": "Não foi possível carregar o inventário de software.",
+      "titles": "títulos",
+      "viewAll": "Todo o software"
     },
     "timeline": {
       "daysAgo": "há {{count}} d",
@@ -2022,5 +2049,21 @@
     "manager": "Responsável",
     "seesTickets": "Vê os chamados do perfil",
     "editHint": "Estes itens são editados no perfil de faturamento, nas configurações de faturamento do cliente."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Ativos",
+      "lastSeen": "Visto pela última vez",
+      "title": "Título",
+      "versions": "Versões"
+    },
+    "empty": "Ainda não há inventário de software — o inventário é coletado por dispositivo",
+    "emptyAssetsLink": "Ver ativos",
+    "exportCsv": "Exportar CSV",
+    "exportError": "Não foi possível exportar o inventário de software.",
+    "installedOn": "Instalado em",
+    "loadError": "Não foi possível carregar o inventário de software.",
+    "moreAssets": "e mais {{count}} (mostrando os primeiros {{limit}} por nome)",
+    "searchPlaceholder": "Pesquisar software..."
   }
 }

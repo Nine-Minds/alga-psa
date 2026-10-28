@@ -106,7 +106,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
   default: { updateLastLogin: (...args: unknown[]) => updateLastLoginMock(...args) },
 }));
 
-const { getAuthOptions } = await import('./nextAuthOptions');
+const { getAuthOptions, isClientPortalHandoffDomain } = await import('./nextAuthOptions');
 
 const LINK_STATE_COOKIE_NAME = 'sso-link-state';
 
@@ -261,5 +261,20 @@ describe('NextAuth OAuth mapping-failure redirects', () => {
 
     expect(result).toBe(true);
     expect(applyOAuthAccountHintsMock).toHaveBeenCalled();
+  });
+});
+
+describe('client-portal handoff target (alga-2026-0002799)', () => {
+  it('hands client users off only to active domains that serve the client portal', () => {
+    expect(isClientPortalHandoffDomain({ status: 'active', surface: 'client_portal' })).toBe(true);
+    expect(isClientPortalHandoffDomain({ status: 'active', surface: 'both' })).toBe(true);
+    // Legacy rows without a surface behave as client_portal.
+    expect(isClientPortalHandoffDomain({ status: 'active' })).toBe(true);
+  });
+
+  it('never hands off to an MSP-only or inactive domain', () => {
+    expect(isClientPortalHandoffDomain({ status: 'active', surface: 'msp' })).toBe(false);
+    expect(isClientPortalHandoffDomain({ status: 'pending_redirect_uri', surface: 'both' })).toBe(false);
+    expect(isClientPortalHandoffDomain({ status: 'pending_dns', surface: 'client_portal' })).toBe(false);
   });
 });

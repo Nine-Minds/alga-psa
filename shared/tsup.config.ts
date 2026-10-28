@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
@@ -9,6 +10,7 @@ export default defineConfig({
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
     'core/deploymentProfile': 'core/deploymentProfile.ts',
+    'core/portalDomainSurface': 'core/portalDomainSurface.ts',
     'db/index': 'db/index.ts',
     'db/admin': 'db/admin.ts',
     'db/connection': 'db/connection.ts',
@@ -83,6 +85,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
@@ -124,6 +127,7 @@ export default defineConfig({
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',
     'lib/ticketActivity/readTicketActivity': 'lib/ticketActivity/readTicketActivity.ts',
     'lib/ticketActivity/curatedTicketDiff': 'lib/ticketActivity/curatedTicketDiff.ts',
+    'lib/ticketChecklists/scope': 'lib/ticketChecklists/scope.ts',
     'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
     'lib/businessHours/businessDayCalendar': 'lib/businessHours/businessDayCalendar.ts',
     'lib/businessHours/loadBusinessDayCalendar': 'lib/businessHours/loadBusinessDayCalendar.ts',
@@ -160,5 +164,6 @@ export default defineConfig({
     /^@shared\//,
     // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
     /^@alga-psa\/predicates/,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

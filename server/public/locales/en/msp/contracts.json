@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Recurring quantity",
       "allocationQuantityLabel": "Allocation quantity",
       "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
-    },
-    "advanceSuggestion": {
-      "message": "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
-      "action": "Bill in advance on the contract's cadence"
     }
   },
   "wizardProducts": {
@@ -2424,6 +2420,22 @@
       "description": "This contract has no contract lines. Add contract lines first, then come back to simulate.",
       "title": "Nothing to simulate yet"
     },
+    "errors": {
+      "title": "The simulation can't run",
+      "baselineTitle": "The current contract can't be simulated, so there is nothing to compare with",
+      "unsupportedLineType": "Contract line \"{{lineName}}\" has the line type \"{{lineType}}\", which the simulator can't price. Change the line to Fixed, Hourly or Usage, then simulate again.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" on contract line \"{{lineName}}\" has the configuration type \"{{configurationType}}\", which the simulator can't price. Set the service to Fixed, Hourly, Usage or Bucket, then simulate again.",
+      "serviceNotInCatalog": "Contract line \"{{lineName}}\" uses a service that is no longer in the service catalog ({{serviceId}}). Remove it from the line or restore the service, then simulate again.",
+      "poolMissing": "\"{{serviceName}}\" on contract line \"{{lineName}}\" is set up as a bucket but has no included-hours pool. Add the pool's included hours on the contract line, then simulate again.",
+      "contractNotFound": "This contract is not available. It may have been deleted; reload the page.",
+      "clientNotAvailable": "The client for this simulation is not available. It may have been deleted; choose another client.",
+      "clientRequired": "Select a client before simulating.",
+      "historyRequiresClient": "Historical assumptions need a scenario bound to a real client. Choose a client for this simulation, then try again.",
+      "invalidReplayRange": "The replay range is not valid. Choose a range that ends after it starts and covers no more than 120 billing periods.",
+      "scenarioInvalid": "This scenario can't be simulated because its setup is incomplete. Reload the page and try again.",
+      "scenarioReferenceInvalid": "This scenario refers to something that is no longer available, such as a contract line, service, tax rate or client location. Reload the page to start from the current contract.",
+      "unexpected": "The simulator couldn't run because of an unexpected error. Try again; if it keeps happening, contact support."
+    },
     "diagnostics": {
       "title": "Simulation notes"
     },
@@ -2473,6 +2485,7 @@
       "simulatedDelta": "simulated difference"
     },
     "runBar": {
+      "blocked": "Simulation can't run",
       "compareToggle": "Show changes from current contract",
       "horizonOption": "{{count}} client billing periods",
       "lastRun": "Simulation current · {{count}} client billing periods",
@@ -2481,6 +2494,7 @@
       "simulating": "Simulating…",
       "stale": "Changes not simulated",
       "staleBanner": "These amounts are from the previous simulation. Update the simulation to include your latest changes.",
+      "staleBlockedBanner": "This message is from the previous simulation. Update the simulation to include your latest changes.",
       "updateSimulation": "Update simulation"
     },
     "scenario": {
@@ -2752,7 +2766,8 @@
       "advance": "Billed in advance on the contract's cadence: the first invoice is available from {{date}}, the contract start date."
     },
     "client": {
-      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's current billing period ends.",
+      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends.",
+      "arrearsPartial": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends. Because the start date falls partway through that period, it covers {{periodStart}} – {{periodEnd}}.",
       "advance": "Billed in advance on the client's billing schedule: the first invoice is available from {{date}}, the start of the client's billing period that contains the contract start date."
     }
   },
@@ -2970,5 +2985,9 @@
       "invalidBlock": "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
       "rateRequired": "Prepaid block service \"{{serviceName}}\" needs an hourly rate above zero (hours beyond the block bill at that rate)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "First invoice: the {{invoiceDate}} invoice covers {{periodStart}} – {{periodEnd}} (billed in arrears). Choose In Advance to bill it on the invoice for the period starting {{advanceInvoiceDate}}.",
+    "billInAdvance": "Bill in advance"
   }
 }

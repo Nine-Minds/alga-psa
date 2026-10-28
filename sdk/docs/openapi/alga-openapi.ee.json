@@ -3272,15 +3272,29 @@
       "AssetMaintenanceScheduleUpdateRequest": {
         "type": "object",
         "properties": {
-          "schedule_type": {
+          "schedule_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Name displayed in the asset maintenance UI."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional maintenance instructions."
+          },
+          "maintenance_type": {
             "type": "string",
             "enum": [
               "preventive",
+              "corrective",
               "inspection",
               "calibration",
               "replacement"
             ],
-            "description": "Type of maintenance schedule."
+            "description": "Maintenance type stored by the UI and database."
           },
           "frequency": {
             "type": "string",
@@ -3292,31 +3306,17 @@
               "yearly",
               "custom"
             ],
-            "description": "Recurrence frequency. Changing this triggers next_maintenance recalculation."
+            "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
           },
           "frequency_interval": {
-            "type": "number",
+            "type": "integer",
             "minimum": 1,
-            "description": "Frequency multiplier used when calculating the next maintenance date."
+            "description": "Positive integer frequency multiplier; monthly with 6 means every six months."
           },
-          "start_date": {
+          "next_maintenance": {
             "type": "string",
             "format": "date-time",
-            "description": "Schedule start date/time. Changing this triggers next_maintenance recalculation."
-          },
-          "end_date": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Optional schedule end date/time."
-          },
-          "notes": {
-            "type": "string",
-            "description": "Free-text schedule notes."
-          },
-          "assigned_to": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Assigned user UUID from users.user_id."
+            "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
           },
           "is_active": {
             "type": "boolean",
@@ -3325,9 +3325,10 @@
           "schedule_config": {
             "type": "object",
             "additionalProperties": {},
-            "description": "Custom scheduling configuration."
+            "description": "Scheduling configuration; use {} when no custom configuration is needed."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "AssetMaintenanceScheduleResource": {
         "type": "object",
@@ -3342,34 +3343,34 @@
             "format": "uuid",
             "description": "Asset UUID from asset_maintenance_schedules.asset_id."
           },
-          "schedule_type": {
+          "schedule_name": {
             "type": "string",
-            "description": "Maintenance schedule type as used by ApiAssetController."
+            "description": "Maintenance schedule name."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Maintenance instructions."
+          },
+          "maintenance_type": {
+            "type": "string",
+            "enum": [
+              "preventive",
+              "corrective",
+              "inspection",
+              "calibration",
+              "replacement"
+            ]
           },
           "frequency": {
             "type": "string",
             "description": "Recurrence frequency."
           },
           "frequency_interval": {
-            "type": [
-              "number",
-              "null"
-            ],
+            "type": "integer",
             "description": "Frequency multiplier."
-          },
-          "start_date": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Schedule start date/time."
-          },
-          "end_date": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Schedule end date/time."
           },
           "last_maintenance": {
             "type": [
@@ -3379,36 +3380,32 @@
             "description": "Last recorded maintenance date/time."
           },
           "next_maintenance": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Next calculated maintenance date/time."
+            "type": "string",
+            "format": "date-time",
+            "description": "Next due date/time."
           },
-          "notes": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Free-text schedule notes."
-          },
-          "assigned_to": {
-            "type": [
-              "string",
-              "null"
-            ],
+          "created_by": {
+            "type": "string",
             "format": "uuid",
-            "description": "Assigned user UUID."
+            "description": "Authenticated caller who created the schedule; not a writable assignee."
+          },
+          "created_by_name": {
+            "type": "string",
+            "description": "Creator display name included in list results."
+          },
+          "archived_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Archive timestamp."
           },
           "is_active": {
             "type": "boolean",
             "description": "Whether the schedule is active."
           },
           "schedule_config": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "additionalProperties": {},
             "description": "Custom scheduling configuration."
           },
@@ -3431,6 +3428,15 @@
         "required": [
           "schedule_id",
           "asset_id",
+          "schedule_name",
+          "description",
+          "maintenance_type",
+          "frequency",
+          "frequency_interval",
+          "next_maintenance",
+          "created_by",
+          "is_active",
+          "schedule_config",
           "tenant"
         ]
       },
@@ -3443,11 +3449,14 @@
                 "$ref": "#/components/schemas/AssetMaintenanceScheduleResource"
               },
               {
-                "description": "Updated schedule row. Undefined when the schedule ID does not exist or belongs to another tenant."
+                "description": "Created or updated schedule row."
               }
             ]
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "AssetMaintenanceScheduleResponse": {
         "type": "object",
@@ -3474,15 +3483,29 @@
       "AssetMaintenanceScheduleCreateRequest": {
         "type": "object",
         "properties": {
-          "schedule_type": {
+          "schedule_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Name displayed in the asset maintenance UI."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional maintenance instructions."
+          },
+          "maintenance_type": {
             "type": "string",
             "enum": [
               "preventive",
+              "corrective",
               "inspection",
               "calibration",
               "replacement"
             ],
-            "description": "Required type of maintenance schedule."
+            "description": "Maintenance type stored by the UI and database."
           },
           "frequency": {
             "type": "string",
@@ -3494,46 +3517,38 @@
               "yearly",
               "custom"
             ],
-            "description": "Required recurrence frequency used to calculate next_maintenance."
+            "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
           },
           "frequency_interval": {
-            "type": "number",
+            "type": "integer",
             "minimum": 1,
-            "description": "Frequency multiplier. Defaults to service logic when absent."
+            "description": "Positive integer frequency multiplier; monthly with 6 means every six months."
           },
-          "start_date": {
+          "next_maintenance": {
             "type": "string",
             "format": "date-time",
-            "description": "Schedule start date/time. The current schema makes this optional; the service falls back to now when absent."
-          },
-          "end_date": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Optional schedule end date/time."
-          },
-          "notes": {
-            "type": "string",
-            "description": "Free-text schedule notes."
-          },
-          "assigned_to": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Assigned user UUID from users.user_id."
+            "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
           },
           "is_active": {
             "type": "boolean",
-            "description": "Whether the schedule is active. Defaults to true in validation."
+            "default": true,
+            "description": "Whether the schedule is active; defaults to true."
           },
           "schedule_config": {
             "type": "object",
             "additionalProperties": {},
-            "description": "Custom scheduling configuration."
+            "description": "Scheduling configuration; use {} when no custom configuration is needed."
           }
         },
         "required": [
-          "schedule_type",
-          "frequency"
-        ]
+          "schedule_name",
+          "maintenance_type",
+          "frequency",
+          "frequency_interval",
+          "next_maintenance",
+          "schedule_config"
+        ],
+        "additionalProperties": false
       },
       "AssetMaintenanceScheduleListPayload": {
         "type": "object",
@@ -5083,6 +5098,157 @@
           }
         }
       },
+      "AssetCustodyEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "description": "Custody data wrapped in the standard envelope."
+      },
+      "OpenAssetCustodyRequest": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Ticket the equipment was received for; its client must match the asset."
+          },
+          "location_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Active stock location the item is shelved at."
+          },
+          "bin": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Free-text bin or shelf label."
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "repair",
+              "warranty_evaluation",
+              "loaner_prep",
+              "staging"
+            ]
+          },
+          "next_action_party": {
+            "type": "string",
+            "enum": [
+              "msp",
+              "client",
+              "vendor"
+            ]
+          },
+          "next_action_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "follow_up_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Date only, YYYY-MM-DD."
+          },
+          "condition_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "location_id",
+          "bin",
+          "purpose"
+        ]
+      },
+      "AssetCustodyEventRequest": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "moved",
+              "handed_off",
+              "shipped",
+              "received",
+              "returned"
+            ]
+          }
+        },
+        "required": [
+          "event_type"
+        ],
+        "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
+      },
+      "AssetCustodyQueueQuery": {
+        "type": "object",
+        "properties": {
+          "tab": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holder_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "repair",
+              "warranty_evaluation",
+              "loaner_prep",
+              "staging"
+            ]
+          },
+          "next_action_party": {
+            "type": "string",
+            "enum": [
+              "msp",
+              "client",
+              "vendor"
+            ]
+          },
+          "mine": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "page": {
+            "type": "string"
+          },
+          "pageSize": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose"
+        ]
+      },
       "AssetGroupListQuery": {
         "type": "object",
         "properties": {
@@ -6029,7 +6195,8 @@
               "prospect",
               "active",
               "former"
-            ]
+            ],
+            "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
           },
           "tags": {
             "type": "array",
@@ -38191,7 +38358,7 @@
       },
       "put": {
         "summary": "Update asset maintenance schedule",
-        "description": "Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.",
+        "description": "Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.",
         "tags": [
           "Assets"
         ],
@@ -38206,8 +38373,8 @@
           "x-current-auth-wiring-missing": true,
           "x-rbac-resource": "asset",
           "x-rbac-action": "update",
-          "x-recalculates-next-maintenance": true,
-          "x-no-not-found-on-missing-id": true
+          "x-recalculates-next-maintenance": false,
+          "x-no-not-found-on-missing-id": false
         },
         "x-alga-products": [
           "psa"
@@ -38239,7 +38406,7 @@
         },
         "responses": {
           "200": {
-            "description": "Maintenance schedule updated successfully. If the ID is not found, the nested data field may be absent.",
+            "description": "Maintenance schedule updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -38270,6 +38437,16 @@
           },
           "403": {
             "description": "Authenticated request context lacks permission to update asset maintenance schedules when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule not found in the authenticated tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -39283,6 +39460,506 @@
         }
       }
     },
+    "/api/v1/assets/{id}/custody": {
+      "get": {
+        "summary": "Get asset custody",
+        "description": "Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Custody returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCustodyEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found or not readable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Receive an asset into custody",
+        "description": "Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Where the item is shelved and who acts next.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAssetCustodyRequest"
+              },
+              "description": "Where the item is shelved and who acts next."
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Custody episode opened.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCustodyEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (inactive location, client mismatch, invalid date).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found or not readable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An episode is already open for this asset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/custody/events": {
+      "post": {
+        "summary": "Record a custody step",
+        "description": "Appends a moved, handed_off, shipped, received or returned step to the asset’s open episode. Invalid transitions answer 409.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "The step to record.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCustodyEventRequest"
+              },
+              "description": "The step to record."
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Step recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCustodyEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found or not readable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The asset is not in custody, or the step is not allowed from the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-custody": {
+      "get": {
+        "summary": "List equipment in custody",
+        "description": "The custody queue. Rows and tab counts exclude assets the caller cannot read.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "tab",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "holder_user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "repair",
+                "warranty_evaluation",
+                "loaner_prep",
+                "staging"
+              ]
+            },
+            "required": true,
+            "name": "purpose",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "msp",
+                "client",
+                "vendor"
+              ]
+            },
+            "required": false,
+            "name": "next_action_party",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "mine",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queue returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCustodyEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/asset-groups": {
       "get": {
         "summary": "List asset groups for a client",
@@ -40224,7 +40901,7 @@
     "/api/v1/assets/{id}/maintenance": {
       "get": {
         "summary": "List asset maintenance schedules",
-        "description": "Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+        "description": "Returns maintenance schedule rows using the existing UI/database columns for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add created_by_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
         "tags": [
           "Assets"
         ],
@@ -40303,7 +40980,7 @@
       },
       "post": {
         "summary": "Create asset maintenance schedule",
-        "description": "Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.",
+        "description": "Creates a maintenance schedule using the existing UI/database columns: schedule_name, description, maintenance_type, frequency, frequency_interval, schedule_config, next_maintenance, and is_active. The asset must belong to the authenticated tenant. asset_id comes from the path; tenant and created_by come from authentication. next_maintenance is stored unchanged. The schedule, upcoming notification, and initial open occurrence (if active) are created in one transaction. Legacy schedule_type, notes, start_date, end_date, and assigned_to fields are rejected. No database migration is required.",
         "tags": [
           "Assets"
         ],
@@ -40318,9 +40995,9 @@
           "x-current-auth-wiring-missing": true,
           "x-rbac-resource": "asset",
           "x-rbac-action": "update",
-          "x-no-asset-existence-check": true,
-          "x-calculates-next-maintenance": true,
-          "x-created-by-set": false,
+          "x-no-asset-existence-check": false,
+          "x-calculates-next-maintenance": false,
+          "x-created-by-set": true,
           "x-no-event-published": true
         },
         "x-alga-products": [
@@ -40384,6 +41061,16 @@
           },
           "403": {
             "description": "Authenticated request context lacks permission to create or update asset maintenance schedules when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found in the authenticated tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -43556,7 +44243,8 @@
                       "prospect",
                       "active",
                       "former"
-                    ]
+                    ],
+                    "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
                   },
                   "tags": {
                     "type": "array",

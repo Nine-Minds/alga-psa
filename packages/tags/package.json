@@ -55,6 +55,11 @@
       "types": "./dist/lib/loadDisplayTags.d.ts",
       "import": "./dist/lib/loadDisplayTags.js",
       "require": "./dist/lib/loadDisplayTags.js"
+    },
+    "./lib/tagTextValidation": {
+      "types": "./dist/lib/tagTextValidation.d.ts",
+      "import": "./dist/lib/tagTextValidation.js",
+      "require": "./dist/lib/tagTextValidation.js"
     }
   },
   "scripts": {
@@ -79,6 +84,7 @@
   },
   "devDependencies": {
     "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }

@@ -5808,7 +5808,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/maintenance/{scheduleId}",
     "displayName": "Update asset maintenance schedule",
     "summary": "Update asset maintenance schedule",
-    "description": "Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.",
+    "description": "Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.",
     "tags": [
       "Assets"
     ],
@@ -5829,15 +5829,29 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "schedule_type": {
+        "schedule_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Name displayed in the asset maintenance UI."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional maintenance instructions."
+        },
+        "maintenance_type": {
           "type": "string",
           "enum": [
             "preventive",
+            "corrective",
             "inspection",
             "calibration",
             "replacement"
           ],
-          "description": "Type of maintenance schedule."
+          "description": "Maintenance type stored by the UI and database."
         },
         "frequency": {
           "type": "string",
@@ -5849,31 +5863,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "yearly",
             "custom"
           ],
-          "description": "Recurrence frequency. Changing this triggers next_maintenance recalculation."
+          "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
         },
         "frequency_interval": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
-          "description": "Frequency multiplier used when calculating the next maintenance date."
+          "description": "Positive integer frequency multiplier; monthly with 6 means every six months."
         },
-        "start_date": {
+        "next_maintenance": {
           "type": "string",
           "format": "date-time",
-          "description": "Schedule start date/time. Changing this triggers next_maintenance recalculation."
-        },
-        "end_date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional schedule end date/time."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Free-text schedule notes."
-        },
-        "assigned_to": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Assigned user UUID from users.user_id."
+          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
         },
         "is_active": {
           "type": "boolean",
@@ -5882,9 +5882,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schedule_config": {
           "type": "object",
           "additionalProperties": {},
-          "description": "Custom scheduling configuration."
+          "description": "Scheduling configuration; use {} when no custom configuration is needed."
         }
-      }
+      },
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -6604,6 +6605,322 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_assets_id_custody",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Get asset custody",
+    "summary": "Get asset custody",
+    "description": "Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody",
+    "displayName": "Receive an asset into custody",
+    "summary": "Receive an asset into custody",
+    "description": "Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Ticket the equipment was received for; its client must match the asset."
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Active stock location the item is shelved at."
+        },
+        "bin": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Free-text bin or shelf label."
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        },
+        "next_action_party": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        },
+        "next_action_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "follow_up_on": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Date only, YYYY-MM-DD."
+        },
+        "condition_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "location_id",
+        "bin",
+        "purpose"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_custody_events",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/custody/events",
+    "displayName": "Record a custody step",
+    "summary": "Record a custody step",
+    "description": "Appends a moved, handed_off, shipped, received or returned step to the asset’s open episode. Invalid transitions answer 409.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "moved",
+            "handed_off",
+            "shipped",
+            "received",
+            "returned"
+          ]
+        }
+      },
+      "required": [
+        "event_type"
+      ],
+      "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
+    "id": "get-_api_v1_assetcustody",
+    "method": "get",
+    "path": "/api/v1/asset-custody",
+    "displayName": "List equipment in custody",
+    "summary": "List equipment in custody",
+    "description": "The custody queue. Rows and tab counts exclude assets the caller cannot read.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tab",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "holder_user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "purpose",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "repair",
+            "warranty_evaluation",
+            "loaner_prep",
+            "staging"
+          ]
+        }
+      },
+      {
+        "name": "next_action_party",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "msp",
+            "client",
+            "vendor"
+          ]
+        }
+      },
+      {
+        "name": "mine",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "description": "Custody data wrapped in the standard envelope."
+    }
+  },
+  {
     "id": "get-_api_v1_assetgroups",
     "method": "get",
     "path": "/api/v1/asset-groups",
@@ -7118,7 +7435,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance",
     "displayName": "List asset maintenance schedules",
     "summary": "List asset maintenance schedules",
-    "description": "Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+    "description": "Returns maintenance schedule rows using the existing UI/database columns for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add created_by_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -7165,7 +7482,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance",
     "displayName": "Create asset maintenance schedule",
     "summary": "Create asset maintenance schedule",
-    "description": "Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.",
+    "description": "Creates a maintenance schedule using the existing UI/database columns: schedule_name, description, maintenance_type, frequency, frequency_interval, schedule_config, next_maintenance, and is_active. The asset must belong to the authenticated tenant. asset_id comes from the path; tenant and created_by come from authentication. next_maintenance is stored unchanged. The schedule, upcoming notification, and initial open occurrence (if active) are created in one transaction. Legacy schedule_type, notes, start_date, end_date, and assigned_to fields are rejected. No database migration is required.",
     "tags": [
       "Assets"
     ],
@@ -7186,15 +7503,29 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "schedule_type": {
+        "schedule_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Name displayed in the asset maintenance UI."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional maintenance instructions."
+        },
+        "maintenance_type": {
           "type": "string",
           "enum": [
             "preventive",
+            "corrective",
             "inspection",
             "calibration",
             "replacement"
           ],
-          "description": "Required type of maintenance schedule."
+          "description": "Maintenance type stored by the UI and database."
         },
         "frequency": {
           "type": "string",
@@ -7206,46 +7537,38 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "yearly",
             "custom"
           ],
-          "description": "Required recurrence frequency used to calculate next_maintenance."
+          "description": "Recurrence frequency. Does not change the explicit next_maintenance timestamp."
         },
         "frequency_interval": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
-          "description": "Frequency multiplier. Defaults to service logic when absent."
+          "description": "Positive integer frequency multiplier; monthly with 6 means every six months."
         },
-        "start_date": {
+        "next_maintenance": {
           "type": "string",
           "format": "date-time",
-          "description": "Schedule start date/time. The current schema makes this optional; the service falls back to now when absent."
-        },
-        "end_date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional schedule end date/time."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Free-text schedule notes."
-        },
-        "assigned_to": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Assigned user UUID from users.user_id."
+          "description": "Explicit next due timestamp, used unchanged for the initial open occurrence."
         },
         "is_active": {
           "type": "boolean",
-          "description": "Whether the schedule is active. Defaults to true in validation."
+          "default": true,
+          "description": "Whether the schedule is active; defaults to true."
         },
         "schedule_config": {
           "type": "object",
           "additionalProperties": {},
-          "description": "Custom scheduling configuration."
+          "description": "Scheduling configuration; use {} when no custom configuration is needed."
         }
       },
       "required": [
-        "schedule_type",
-        "frequency"
-      ]
+        "schedule_name",
+        "maintenance_type",
+        "frequency",
+        "frequency_interval",
+        "next_maintenance",
+        "schedule_config"
+      ],
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -9450,7 +9773,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prospect",
             "active",
             "former"
-          ]
+          ],
+          "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
         },
         "tags": {
           "type": "array",
@@ -10206,7 +10530,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prospect",
             "active",
             "former"
-          ]
+          ],
+          "description": "Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status."
         },
         "tags": {
           "type": "array",

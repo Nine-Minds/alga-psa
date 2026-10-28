@@ -423,39 +423,6 @@ export const createCommentFromEmail = withAuth(async (
 });
 
 /**
- * Create client from email data - wrapper for email workflows
- */
-export const createClientFromEmail = withAuth(async (
-  _user,
-  { tenant },
-  clientData: {
-    client_name: string;
-    email?: string;
-    source?: string;
-  }
-): Promise<{ client_id: string; client_name: string }> => {
-  const { knex: db } = await createTenantKnex();
-
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [client] = await tenantDb(trx, tenant).table('clients')
-      .insert({
-        tenant,
-        client_name: clientData.client_name,
-        email: clientData.email,
-        source: clientData.source || 'email',
-        created_at: new Date(),
-        updated_at: new Date()
-      })
-      .returning(['client_id', 'client_name']);
-
-    return {
-      client_id: client.client_id,
-      client_name: client.client_name
-    };
-  });
-});
-
-/**
  * Get client by ID - wrapper for email workflows
  */
 export const getClientByIdForEmail = withAuth(async (

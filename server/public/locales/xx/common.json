@@ -1583,6 +1583,8 @@
     "printColumns": "⟦Ƥřīƞŧ ƈȯŀŭḿƞş⟧",
     "dialog": {
       "assetTitle": "⟦Ƥřīƞŧ ȧşşḗŧ ŀȧƀḗŀş⟧",
+      "batch_one": "⟦Ȯƞḗ ŧȧɠ ƒȯř ŧħḗ ħḗŀḓ īŧḗḿ ({{count}})⟧",
+      "batch_other": "⟦Ȯƞḗ ŧȧɠ ƥḗř ħḗŀḓ īŧḗḿ ({{count}})⟧",
       "count_one": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
       "count_other": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
       "failed": "⟦Ŧħḗ ŀȧƀḗŀş ƈȯŭŀḓ ƞȯŧ ƀḗ ƥřīƞŧḗḓ.⟧",
@@ -1592,6 +1594,14 @@
       "noAsset": "⟦Ƞȯ ȧşşḗŧ⟧",
       "notFound": "⟦Ŧħḗşḗ řḗƈȯřḓş ƈȯŭŀḓ ƞȯŧ ƀḗ ȯƥḗƞḗḓ.⟧",
       "openPdf": "⟦Ȯƥḗƞ ƤḒƑ⟧",
+      "previewBatch_one": "⟦Ƥřīƞŧ {{count}} ŧȧɠ ƒȯř ŧħḗ ħḗŀḓ īŧḗḿ.⟧",
+      "previewBatch_other": "⟦Ƥřīƞŧ {{count}} ŧȧɠş, ȯƞḗ ƥḗř ħḗŀḓ īŧḗḿ.⟧",
+      "previewPicked": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ ŧħīş īŧḗḿ'ş ŀȯƈȧŧīȯƞ ȧƞḓ ƞḗẋŧ ȧƈŧīȯƞ.⟧",
+      "previewPickedNotHeld": "⟦Ŧħīş īŧḗḿ īş ƞȯŧ ħḗŀḓ, şȯ ŧħḗ ŧȧɠ şħȯẇş ƞȯ ŀȯƈȧŧīȯƞ.⟧",
+      "previewSingle": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ {{location}}.⟧",
+      "previewSingleNoLocation": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ ŧħīş īŧḗḿ'ş ƞḗẋŧ ȧƈŧīȯƞ.⟧",
+      "previewSummary_one": "⟦{{count}} īŧḗḿ ħḗŀḓ.⟧",
+      "previewSummary_other": "⟦{{count}} īŧḗḿş ħḗŀḓ.⟧",
       "printed_one": "⟦Ƥřīƞŧḗḓ {{count}} ŀȧƀḗŀ.⟧",
       "printed_other": "⟦Ƥřīƞŧḗḓ {{count}} ŀȧƀḗŀş.⟧",
       "printing": "⟦Ƥřḗƥȧřīƞɠ…⟧",
@@ -1603,6 +1613,7 @@
       "template": "⟦Ŧḗḿƥŀȧŧḗ⟧",
       "ticketTitle": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠş⟧",
       "tooMany": "⟦Ẏȯŭ ƈȧƞ ƥřīƞŧ ȧŧ ḿȯşŧ {{max}} ŀȧƀḗŀş ȧŧ ȧ ŧīḿḗ.⟧",
+      "unnamedAsset": "⟦Ŭƞƞȧḿḗḓ ȧşşḗŧ⟧",
       "useTemplate": "⟦Ŭşḗ {{template}}⟧"
     }
   },

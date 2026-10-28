@@ -147,6 +147,8 @@ interface CreateTicketColumnsOptions {
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
   tagSize?: TagSize;
   showTags?: boolean;
+  /** Show the inline tags without add, remove or edit (the viewer cannot update tickets). */
+  tagsReadOnly?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
   onContactClick?: (contactNameId: string) => void;
@@ -186,6 +188,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onTagsChange,
     tagSize = 'md',
     showTags = true,
+    tagsReadOnly = false,
     showClient = true,
     onClientClick,
     onContactClick,
@@ -328,6 +331,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                     entityType="ticket"
                     initialTags={ticketTagsRef.current[record.ticket_id] || []}
                     onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                    readOnly={tagsReadOnly}
                     size={tagSize}
                   />
                 </div>

@@ -195,6 +195,8 @@ interface TicketingDashboardContainerProps {
   useAlgaDeskQuickAddForm?: boolean;
   /** Decided by the page's server component: every smart search gate passed for this caller. */
   smartSearchAvailable?: boolean;
+  /** App-owned slot rendered between the board tabs and the list. */
+  listCallout?: React.ReactNode;
 }
 
 export default function TicketingDashboardContainer({
@@ -212,6 +214,7 @@ export default function TicketingDashboardContainer({
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
   smartSearchAvailable = false,
+  listCallout,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -1171,6 +1174,7 @@ export default function TicketingDashboardContainer({
         listViewPicker={<ListViewPicker id="tickets-view-picker" controller={listViews} />}
         columnSizing={columnSizing}
         onColumnSizingChange={setColumnSizing}
+        listCallout={listCallout}
       />
   );
 }

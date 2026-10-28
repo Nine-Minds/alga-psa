@@ -84,6 +84,7 @@
     "button": "Filtros",
     "unassigned": "Sin asignar",
     "category": "Filtrar por categoría",
+    "removeFilterChip": "Quitar filtro: {{label}}",
     "assignee": "Asignado",
     "allAssignees": "Todos los asignados",
     "responseState": "Estado de respuesta",
@@ -1281,6 +1282,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",
+      "defaultReplyInternalTitle": "Visibilidad predeterminada de las respuestas",
+      "defaultReplyInternalDescription": "Iniciar las nuevas respuestas a tickets como internas para todos los miembros del equipo. Los usuarios pueden cambiar una respuesta a Cliente. Las respuestas del portal del cliente y de los hilos existentes no cambian.",
+      "defaultReplyInternalLabel": "Usar respuestas internas de forma predeterminada",
       "responseStateTrackingDescription": "Cuando está habilitado, los tickets rastrean automáticamente quién necesita responder a continuación (en espera del cliente o en espera de respuesta interna). Al deshabilitar esto, se ocultan las insignias de estado de respuesta, los filtros y las opciones de pausa de SLA relacionadas.",
       "responseStateTrackingEnabled": "Seguimiento del estado de respuesta habilitado",
       "responseStateTrackingDisabled": "Seguimiento del estado de respuesta deshabilitado",
@@ -1419,10 +1423,10 @@
     "availableBadge": "Disponible: {{available}}",
     "availableByLocation": "Existencias libres por ubicación",
     "freeOfOnHand": "{{free}} libres de {{onHand}}",
-    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta y no se pueden usar aquí.",
+    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta o proyectos y no se pueden usar aquí.",
     "stockInsufficient": "Solo hay {{onHand}} en existencia y se solicitaron {{requested}}.",
-    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta",
-    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta y es posible que ese pedido quede incompleto.",
+    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta o un proyecto",
+    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta o proyectos y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta o un proyecto y es posible que quede incompleto.",
     "reservedStockConfirm": "Agregar de todos modos"
   },
   "watchList": {
@@ -1696,7 +1700,11 @@
       "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría.",
       "ruleTooManyKeywords": "Use como máximo {{max}} palabras clave por regla.",
       "ruleKeywordTooLong": "Cada palabra clave debe tener {{max}} caracteres o menos.",
-      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido."
+      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido.",
+      "templateClientMismatch": "Esta plantilla de lista de verificación está limitada a un cliente distinto del cliente del ticket.",
+      "templateClientInvalid": "No se encontró el cliente seleccionado.",
+      "ruleClientOutsideTemplateScope": "Esta plantilla pertenece a un cliente, por lo que sus reglas no pueden dirigirse a otros clientes.",
+      "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente."
     }
   },
   "ticketSection": {
@@ -1822,7 +1830,8 @@
     "remoteFieldUpdated": "{{name}} actualizó {{field}}",
     "connection": {
       "reconnecting": "Actualizaciones en vivo sin conexión - reconectando...",
-      "unavailable": "Actualizaciones en vivo no disponibles"
+      "unavailable": "Actualizaciones en vivo no disponibles",
+      "offlineShort": "Sin conexión"
     }
   },
   "delete": {
@@ -2004,7 +2013,10 @@
       "openScheduleEntry": "Abrir entrada de agenda",
       "acrossEntries_few": "en {{count}} entradas",
       "acrossEntries_many": "en {{count}} entradas",
-      "changeLocation": "Cambiar ubicación"
+      "changeLocation": "Cambiar ubicación",
+      "addDescriptionPrompt": "Añade una descripción: ¿cuál es el problema y qué necesita el cliente?",
+      "projectTasks": "Tareas del proyecto",
+      "timeAndBilling": "Tiempo y facturación"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2100,6 +2112,17 @@
       "collapseActivity": "Contraer actividad anterior",
       "replyingToComment": "Respondiendo a {{name}}",
       "createdFromTemplate": "{{actor}} creó este ticket desde la plantilla \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversación",
+      "details": "Detalles"
+    },
+    "groups": {
+      "customer": "Cliente",
+      "work": "Trabajo",
+      "who": "Personas",
+      "linked": "Elementos vinculados",
+      "empty": "Aún no hay nada"
     }
   },
   "notifications": {
@@ -2531,7 +2554,9 @@
     "discard": "Descartar cronómetro",
     "pausedHint": "En pausa. Reanude para seguir registrando o detenga para guardar el tiempo.",
     "workDescription": "Descripción del trabajo",
-    "whatAreYouWorkingOn": "¿En qué está trabajando?"
+    "whatAreYouWorkingOn": "¿En qué está trabajando?",
+    "chipElsewhere": "Cronómetro en {{label}}",
+    "title": "Cronómetro"
   },
   "templates": {
     "loading": "Cargando…",
@@ -2655,6 +2680,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Respuestas predefinidas",
+      "buttonTooltip": "Insertar una respuesta predefinida (Ctrl/Cmd+J, o escriba /)",
+      "title": "Insertar una respuesta predefinida",
+      "searchPlaceholder": "Buscar respuestas predefinidas…",
+      "searchLabel": "Buscar respuestas predefinidas",
+      "loading": "Cargando respuestas predefinidas…",
+      "empty": "Todavía no hay respuestas predefinidas.",
+      "noResults": "Ninguna respuesta predefinida coincide con su búsqueda.",
+      "loadFailed": "No se pudieron cargar las respuestas predefinidas.",
+      "insertFailed": "No se pudo insertar la respuesta predefinida.",
+      "favorites": "Favoritas",
+      "recent": "Usadas recientemente",
+      "uncategorized": "Sin categoría",
+      "slashGroup": "Respuestas predefinidas",
+      "slashBrowse": "Respuestas predefinidas…",
+      "slashBrowseHint": "Explorar e insertar una respuesta guardada"
+    },
+    "scope": {
+      "personal": "Personal",
+      "team": "Equipo",
+      "board": "Tablero",
+      "clientPortal": "Portal del cliente",
+      "personalHelp": "Solo usted puede usar esta respuesta.",
+      "teamHelp": "Los miembros del equipo elegido pueden usar esta respuesta.",
+      "boardHelp": "Cualquiera que responda tickets del tablero elegido puede usar esta respuesta.",
+      "clientPortalHelp": "Reservada para respuestas del portal del cliente. No se ofrece al responder desde el portal MSP."
+    },
+    "list": {
+      "title": "Respuestas predefinidas",
+      "new": "Nueva respuesta predefinida",
+      "showInactive": "Mostrar inactivas",
+      "searchPlaceholder": "Buscar por nombre, categoría o texto…",
+      "searchLabel": "Buscar respuestas predefinidas",
+      "allCategories": "Todas las categorías",
+      "noResults": "Ninguna respuesta predefinida coincide con sus filtros.",
+      "empty": "Aún no hay respuestas predefinidas. Cree una para reutilizarla en las respuestas de tickets.",
+      "deleteTitle": "Eliminar respuesta predefinida",
+      "deleteMessage": "¿Eliminar «{{name}}»? Las respuestas que ya la usaron no se modifican.",
+      "deleted": "Respuesta predefinida eliminada",
+      "favorite": "Favorita",
+      "columns": {
+        "name": "Nombre",
+        "category": "Categoría",
+        "scope": "Disponible para",
+        "preview": "Vista previa",
+        "status": "Estado"
+      }
+    },
+    "status": {
+      "active": "Activa",
+      "inactive": "Inactiva"
+    },
+    "actions": {
+      "favorite": "Añadir a favoritas",
+      "unfavorite": "Quitar de favoritas",
+      "edit": "Editar",
+      "activate": "Activar",
+      "deactivate": "Desactivar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "loading": "Cargando…",
+    "editor": {
+      "back": "Respuestas predefinidas",
+      "newTitle": "Nueva respuesta predefinida",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Respuesta predefinida guardada",
+      "created": "Respuesta predefinida creada",
+      "viewOnly": "Puede ver esta respuesta predefinida, pero no modificarla."
+    },
+    "sections": {
+      "details": "Detalles",
+      "body": "Respuesta"
+    },
+    "fields": {
+      "name": "Nombre",
+      "category": "Categoría",
+      "categoryHelp": "Agrupa las respuestas en el selector. Opcional.",
+      "scope": "Disponible para",
+      "team": "Equipo",
+      "teamPlaceholder": "Seleccione un equipo",
+      "board": "Tablero",
+      "boardPlaceholder": "Seleccione un tablero",
+      "body": "Texto de la respuesta",
+      "bodyPlaceholder": "Escriba la respuesta…"
+    },
+    "mergeFields": {
+      "title": "Campos de combinación",
+      "help": "Se rellenan al insertar la respuesta en una réplica. Un campo sin valor queda vacío; un campo no reconocido se deja tal como está.",
+      "descriptions": {
+        "contact_first_name": "Nombre del contacto",
+        "contact_last_name": "Apellido del contacto",
+        "contact_name": "Nombre completo del contacto",
+        "ticket_number": "El número del ticket",
+        "ticket_title": "El título del ticket",
+        "agent_name": "Su nombre (el agente que responde)",
+        "client_name": "El nombre del cliente"
+      }
+    },
+    "errors": {
+      "notFound": "No se encontró la respuesta predefinida.",
+      "duplicateName": "Ya existe aquí una respuesta predefinida llamada «{{name}}».",
+      "invalidReferences": "El equipo o tablero seleccionado ya no existe.",
+      "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
+      "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
   }
 }

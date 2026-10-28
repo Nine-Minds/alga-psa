@@ -18,6 +18,8 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
  * provider. Both now delegate here. Read-only; nothing here writes.
  */
 
+// LEVERAGE: pattern asset-read-authorization-wrappers — assetActions, the label seam, the custody services and the
+// REST guard each still wrap subject/record resolution + authorizeResource; one "readable assets" layer would absorb them.
 export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
@@ -162,4 +164,32 @@ export async function isAssetReadAllowed(
     knex: trx as Knex,
   });
   return decision.allowed;
+}
+
+/**
+ * Batch form of {@link isAssetReadAllowed}: the subset of `assets` the caller may read, resolved with ONE
+ * association query. Used by the custody queue and label enrichment, where an unreadable asset must be
+ * dropped, never leaked.
+ */
+export async function filterReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[]
+): Promise<T[]> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  const allowed = await Promise.all(
+    assets.map(async (asset) => {
+      const decision = await context.authorizationKernel.authorizeResource({
+        subject: context.subject,
+        resource: { type: 'asset', action: 'read', id: asset.asset_id },
+        record: records.get(asset.asset_id),
+        requestCache: context.requestCache,
+        knex: trx as Knex,
+      });
+      return decision.allowed;
+    })
+  );
+  return assets.filter((_, i) => allowed[i]);
 }

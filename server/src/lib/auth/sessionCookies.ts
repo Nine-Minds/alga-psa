@@ -5,6 +5,10 @@
 
 import { encode } from '@auth/core/jwt';
 import type { CookieOption } from '@auth/core/types';
+import {
+  getSessionCookieConfig as getSharedSessionCookieConfig,
+  getSessionCookieName as getSharedSessionCookieName,
+} from '@alga-psa/auth/session';
 
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 24 hours
 
@@ -25,33 +29,6 @@ function shouldRequireNextAuthSecret(): boolean {
   return Boolean(process.env.CI);
 }
 
-function getDevCookiePortSuffix(): string | null {
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
-
-  const urlCandidates = [
-    process.env.NEXTAUTH_URL,
-    process.env.APP_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-  ].filter(Boolean) as string[];
-
-  for (const candidate of urlCandidates) {
-    try {
-      const parsed = new URL(candidate);
-      if (parsed.port) {
-        return parsed.port;
-      }
-    } catch {
-      // Ignore invalid URLs and fall through to other candidates.
-    }
-  }
-
-  const portCandidate =
-    process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
-  return portCandidate && portCandidate.length > 0 ? portCandidate : null;
-}
-
 export function getSessionMaxAge(): number {
   const raw = process.env.NEXTAUTH_SESSION_EXPIRES;
   if (!raw) {
@@ -63,36 +40,13 @@ export function getSessionMaxAge(): number {
 }
 
 export function getSessionCookieName(): string {
-  const baseName = process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-
-  const portSuffix = getDevCookiePortSuffix();
-  if (!portSuffix) {
-    return baseName;
-  }
-
-  return `${baseName}.${portSuffix}`;
+  // Keep Express, Edge middleware and portal-token issuers on the same cookie
+  // name (and therefore the same Auth.js JWT salt) as NextAuth consumers.
+  return getSharedSessionCookieName();
 }
 
 export function getSessionCookieConfig(): CookieOption {
-  const environment = process.env.NODE_ENV ?? 'development';
-  const secure = environment === 'production';
-  // See packages/auth/src/lib/session.ts for the reasoning — opt-in
-  // SameSite=None is required for Microsoft Teams iframe hosting.
-  const crossSiteAllowed = process.env.TEAMS_IFRAME_SESSION_COOKIE === 'true';
-  const sameSite: CookieOption['options']['sameSite'] =
-    crossSiteAllowed && secure ? 'none' : 'lax';
-
-  return {
-    name: getSessionCookieName(),
-    options: {
-      httpOnly: true,
-      sameSite,
-      path: '/',
-      secure,
-    },
-  };
+  return getSharedSessionCookieConfig();
 }
 
 export async function getNextAuthSecret(): Promise<string> {

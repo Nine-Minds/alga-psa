@@ -105,7 +105,9 @@
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
     "ticketsRecurring": "Wiederkehrende Tickets",
-    "ticketsTemplates": "Ticket-Vorlagen"
+    "ticketsTemplates": "Ticket-Vorlagen",
+    "assetsCustody": "Equipment in Verwahrung",
+    "ticketsCannedResponses": "Textbausteine"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

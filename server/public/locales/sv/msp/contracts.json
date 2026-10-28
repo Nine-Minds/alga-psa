@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Återkommande antal",
       "allocationQuantityLabel": "Tilldelningsantal",
       "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
-    },
-    "advanceSuggestion": {
-      "message": "Vid efterskottsfakturering kan den här raden inte faktureras förrän dess första tjänsteperiod har avslutats. Vid förskottsfakturering enligt avtalets intervall faktureras den i stället på startdatumet.",
-      "action": "Fakturera i förskott enligt avtalets intervall"
     }
   },
   "wizardProducts": {
@@ -2424,6 +2420,22 @@
       "description": "Avtalet saknar avtalsrader. Lägg till avtalsrader först och återkom sedan för att simulera.",
       "title": "Inget att simulera ännu"
     },
+    "errors": {
+      "title": "Simuleringen kan inte köras",
+      "baselineTitle": "Det nuvarande avtalet kan inte simuleras, så det finns inget att jämföra med",
+      "unsupportedLineType": "Avtalsraden \"{{lineName}}\" har radtypen \"{{lineType}}\", som simulatorn inte kan prissätta. Ändra raden till Fast, Timbaserad eller Användning och simulera igen.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" på avtalsraden \"{{lineName}}\" har konfigurationstypen \"{{configurationType}}\", som simulatorn inte kan prissätta. Ställ in tjänsten på Fast, Timbaserad, Användning eller Paket och simulera igen.",
+      "serviceNotInCatalog": "Avtalsraden \"{{lineName}}\" använder en tjänst som inte längre finns i tjänstekatalogen ({{serviceId}}). Ta bort den från raden eller återställ tjänsten och simulera igen.",
+      "poolMissing": "\"{{serviceName}}\" på avtalsraden \"{{lineName}}\" är inställd som paket men saknar en pool med inkluderade timmar. Lägg till poolens inkluderade timmar på avtalsraden och simulera igen.",
+      "contractNotFound": "Det här avtalet är inte tillgängligt. Det kan ha tagits bort; ladda om sidan.",
+      "clientNotAvailable": "Kunden för den här simuleringen är inte tillgänglig. Den kan ha tagits bort; välj en annan kund.",
+      "clientRequired": "Välj en kund innan du simulerar.",
+      "historyRequiresClient": "Historiska antaganden kräver ett scenario som är knutet till en riktig kund. Välj en kund för den här simuleringen och försök igen.",
+      "invalidReplayRange": "Uppspelningsintervallet är ogiltigt. Välj ett intervall som slutar efter att det börjar och omfattar högst 120 faktureringsperioder.",
+      "scenarioInvalid": "Det här scenariot kan inte simuleras eftersom dess uppsättning är ofullständig. Ladda om sidan och försök igen.",
+      "scenarioReferenceInvalid": "Det här scenariot hänvisar till något som inte längre är tillgängligt, till exempel en avtalsrad, tjänst, skattesats eller kundplats. Ladda om sidan för att utgå från det nuvarande avtalet.",
+      "unexpected": "Simulatorn kunde inte köras på grund av ett oväntat fel. Försök igen. Kontakta supporten om det fortsätter."
+    },
     "diagnostics": {
       "title": "Simuleringsanteckningar"
     },
@@ -2473,6 +2485,7 @@
       "simulatedDelta": "simulerad skillnad"
     },
     "runBar": {
+      "blocked": "Simuleringen kan inte köras",
       "compareToggle": "Visa ändringar jämfört med nuvarande avtal",
       "horizonOption": "{{count}} faktureringsperioder (kundens schema)",
       "lastRun": "Simuleringen är aktuell · {{count}} faktureringsperioder (kundens schema)",
@@ -2481,6 +2494,7 @@
       "simulating": "Simulerar…",
       "stale": "Ändringarna har inte simulerats",
       "staleBanner": "Beloppen kommer från föregående simulering. Uppdatera simuleringen för att ta med dina senaste ändringar.",
+      "staleBlockedBanner": "Det här meddelandet kommer från den tidigare simuleringen. Uppdatera simuleringen för att få med dina senaste ändringar.",
       "updateSimulation": "Uppdatera simulering"
     },
     "scenario": {
@@ -2752,7 +2766,8 @@
       "advance": "Faktureras i förskott enligt avtalets intervall: den första fakturan är tillgänglig från {{date}}, avtalets startdatum."
     },
     "client": {
-      "arrears": "Faktureras i efterskott enligt kundens faktureringsschema: den första fakturan blir tillgänglig {{date}}, när kundens aktuella faktureringsperiod avslutas.",
+      "arrears": "Faktureras i efterskott enligt kundens faktureringsschema: den första fakturan blir tillgänglig {{date}}, när kundens faktureringsperiod som innehåller startdatumet avslutas.",
+      "arrearsPartial": "Faktureras i efterskott enligt kundens faktureringsschema: den första fakturan blir tillgänglig {{date}}, när kundens faktureringsperiod som innehåller startdatumet avslutas. Eftersom startdatumet infaller mitt i den perioden omfattar den {{periodStart}} – {{periodEnd}}.",
       "advance": "Faktureras i förskott enligt kundens faktureringsschema: den första fakturan är tillgänglig från {{date}}, början av den faktureringsperiod hos kunden som omfattar avtalets startdatum."
     }
   },
@@ -2970,5 +2985,9 @@
       "invalidBlock": "Fyll i blockstorlek, pris och utlösare för varje rad för förbetalt block innan du slutför.",
       "rateRequired": "Tjänsten \"{{serviceName}}\" för förbetalt block behöver ett timpris över noll (timmar utöver blocket faktureras till det priset)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Första faktura: fakturan den {{invoiceDate}} omfattar {{periodStart}} – {{periodEnd}} (faktureras i efterskott). Välj I förskott för att fakturera den på fakturan för perioden som börjar {{advanceInvoiceDate}}.",
+    "billInAdvance": "Fakturera i förskott"
   }
 }

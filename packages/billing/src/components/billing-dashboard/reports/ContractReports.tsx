@@ -21,6 +21,7 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -95,6 +96,8 @@ type BucketUsageRow = Omit<BucketUsage, 'contract_name' | 'overage_hours'> & Par
 // User preference: per-column visibility the user chose in the Bucket Hours
 // Utilization table. Only columns listed here override the content defaults.
 const BUCKET_USAGE_COLUMNS_PREF_KEY = 'billing.reports.bucketUsage.columnVisibility';
+
+type BucketUsageStatusFilter = 'all' | 'active' | 'expired' | 'voided';
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
@@ -305,6 +308,27 @@ const ContractReports: React.FC = () => {
 
   const hasPoolRows = bucketUsageData.length > 0;
   const hasBlockRows = hourBlockUsageData.length > 0;
+
+  // Block-status filter for the table. Bucket pools are live by definition, so
+  // they show under 'all' and 'active' and drop out of the expired/voided views.
+  const [bucketUsageStatusFilter, setBucketUsageStatusFilter] = useState<BucketUsageStatusFilter>('all');
+
+  const bucketUsageStatusOptions = useMemo(() => [
+    { value: 'all', label: t('contractReports.statusValues.all', { defaultValue: 'All statuses' }) },
+    { value: 'active', label: t('contractReports.statusValues.active', { defaultValue: 'Active' }) },
+    { value: 'expired', label: t('contractReports.statusValues.expired', { defaultValue: 'Expired' }) },
+    { value: 'voided', label: t('contractReports.statusValues.voided', { defaultValue: 'Voided' }) },
+  ], [t]);
+
+  const visibleBucketUsageRows = useMemo(() => (
+    bucketUsageStatusFilter === 'all'
+      ? bucketUsageRows
+      : bucketUsageRows.filter((row) => (
+        row.row_kind === 'block'
+          ? row.status === bucketUsageStatusFilter
+          : bucketUsageStatusFilter === 'active'
+      ))
+  ), [bucketUsageRows, bucketUsageStatusFilter]);
 
   // Per-column visibility the user chose, persisted server-side per user (like
   // the client list view preferences). A column the user never touched follows
@@ -833,7 +857,18 @@ const ContractReports: React.FC = () => {
               <h3 className="text-lg font-semibold">
                 {t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' })}
               </h3>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <CustomSelect
+                  id="bucket-usage-status-filter"
+                  value={bucketUsageStatusFilter}
+                  options={bucketUsageStatusOptions}
+                  placeholder={t('contractReports.statusValues.all', { defaultValue: 'All statuses' })}
+                  onValueChange={(value) => {
+                    setBucketUsageStatusFilter(value as BucketUsageStatusFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="min-w-[150px]"
+                />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -894,14 +929,14 @@ const ContractReports: React.FC = () => {
                 defaultValue: 'Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.',
               })}
             </p>
-            {bucketUsageRows.length === 0 ? (
+            {visibleBucketUsageRows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 {t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
               </p>
             ) : (
               <DataTable
                 id="bucket-usage-table"
-                data={bucketUsageRows}
+                data={visibleBucketUsageRows}
                 columns={bucketUsageColumns}
                 columnVisibility={bucketUsageVisibility}
                 pagination={true}
@@ -916,10 +951,10 @@ const ContractReports: React.FC = () => {
             'bucket-usage-print',
             t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' }),
             t('contractReports.sections.bucketUsage.description', {
-              defaultValue: 'Monitor bucket hours usage and identify overage situations',
+              defaultValue: 'Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.',
             }),
             <PrintableTable
-              rows={bucketUsageRows}
+              rows={visibleBucketUsageRows}
               columns={visibleBucketUsagePrintColumns}
               getRowKey={(row) => row.id}
               emptyMessage={t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}

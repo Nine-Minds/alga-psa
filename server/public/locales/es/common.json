@@ -1583,6 +1583,8 @@
     "printColumns": "Columnas de impresión",
     "dialog": {
       "assetTitle": "Imprimir etiquetas de activos",
+      "batch_one": "Una etiqueta para el elemento retenido ({{count}})",
+      "batch_other": "Una etiqueta por elemento retenido ({{count}})",
       "count_one": "{{count}} seleccionado",
       "count_other": "{{count}} seleccionados",
       "failed": "No se pudieron imprimir las etiquetas.",
@@ -1592,6 +1594,14 @@
       "noAsset": "Sin activo",
       "notFound": "No se pudieron abrir estos registros.",
       "openPdf": "Abrir PDF",
+      "previewBatch_one": "Imprimir {{count}} etiqueta para el elemento retenido.",
+      "previewBatch_other": "Imprimir {{count}} etiquetas, una por elemento retenido.",
+      "previewPicked": "La etiqueta mostrará la ubicación y la siguiente acción de este elemento.",
+      "previewPickedNotHeld": "Este elemento no está retenido, por lo que la etiqueta no muestra ubicación.",
+      "previewSingle": "La etiqueta mostrará {{location}}.",
+      "previewSingleNoLocation": "La etiqueta mostrará la siguiente acción de este elemento.",
+      "previewSummary_one": "{{count}} elemento retenido.",
+      "previewSummary_other": "{{count}} elementos retenidos.",
       "printed_one": "Se imprimió {{count}} etiqueta.",
       "printed_other": "Se imprimieron {{count}} etiquetas.",
       "printing": "Preparando…",
@@ -1603,6 +1613,7 @@
       "template": "Plantilla",
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
+      "unnamedAsset": "Activo sin nombre",
       "useTemplate": "Usar {{template}}"
     }
   },
