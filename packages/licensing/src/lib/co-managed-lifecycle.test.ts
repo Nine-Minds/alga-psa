@@ -39,7 +39,6 @@ vi.mock('./co-managed-entitlements', () => ({
 import {
   coManagedLifecycleProvider,
   getCoManagedOperationalState,
-  invalidateCoManagedAwaitingAcceptance,
   isCoManagedAwaitingAcceptance,
   isCoManagedAwaitingAcceptanceLazily,
   registerCoManagedLifecycleProvider,
@@ -91,31 +90,16 @@ describe('awaiting-acceptance cache', () => {
     expect(sql.log).toEqual(['tenants']);
   });
 
-  it('a pending co-managed tenant is cached for 60s, then re-probed', async () => {
-    vi.useFakeTimers();
+  it('rechecks pending state and observes acceptance without invalidation', async () => {
     seed('co_managed', 'pending_acceptance');
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(true);
-    expect(sql.log).toEqual(['tenants', 'co_management_relationships']);
-    vi.advanceTimersByTime(59_000);
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(true);
-    expect(sql.log).toHaveLength(2);
-    vi.advanceTimersByTime(2_000);
-    expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(true);
-    expect(sql.log).toHaveLength(4);
-  });
-
-  it('invalidation drops a positive entry so an accept is seen immediately', async () => {
-    seed('co_managed', 'pending_acceptance');
-    expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(true);
+    expect(sql.log).toEqual(['tenants', 'co_management_relationships', 'tenants', 'co_management_relationships']);
     sql.tables.co_management_relationships[0].state = 'active';
-    expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(true); // stale until invalidated
-    invalidateCoManagedAwaitingAcceptance(customer);
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(false);
     const probes = sql.log.length;
-    vi.useFakeTimers();
-    vi.advanceTimersByTime(3_600_000);
     expect(await isCoManagedAwaitingAcceptance(db, customer)).toBe(false);
-    expect(sql.log).toHaveLength(probes); // active is final
+    expect(sql.log).toHaveLength(probes);
   });
 
   it('does not cache an absent workspace or a missing relationship', async () => {

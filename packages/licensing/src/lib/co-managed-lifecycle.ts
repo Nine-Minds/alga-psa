@@ -158,49 +158,40 @@ async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManag
   return { state: entitlement.graceEndsAt ? 'grace' : 'active', canWrite: true, graceEndsAt: entitlement.graceEndsAt };
 }
 
-// Per-process awaiting-acceptance cache. A negative entry is final and never expires: a
-// tenant's product only ever leaves `co_managed`, and an active or terminated relationship
-// never returns to pending. A positive entry expires after 60s so a missed invalidation (an
-// accept in another process) heals. A probe that finds no workspace row or no live
-// relationship is not final (the row can appear next) and is not cached.
-const AWAITING_POSITIVE_TTL_MS = 60_000;
-const awaitingAcceptance = new Map<string, { awaiting: boolean; expiresAt: number }>();
+// Only stable negative answers can be cached across requests. Pending state can
+// become active in another process at any time; never retain it, including when
+// a read started before acceptance and finishes after the commit.
+const notAwaitingAcceptance = new Set<string>();
 
-/** Call after a transition that changes whether the customer awaits acceptance (accept,
- * decline, cleanup completion), once it has committed. Drops this process's entry only;
- * other processes converge through the positive-entry TTL. */
+/** Forget this process's answer after a lifecycle transition commits. */
 export function invalidateCoManagedAwaitingAcceptance(tenant: string): void {
-  awaitingAcceptance.delete(tenant);
+  notAwaitingAcceptance.delete(tenant);
 }
 
 /** Test seam: forget every cached awaiting-acceptance answer. */
 export function resetCoManagedAwaitingAcceptanceCache(): void {
-  awaitingAcceptance.clear();
+  notAwaitingAcceptance.clear();
 }
 
 function peekAwaitingAcceptance(tenant: string): boolean | undefined {
-  const cached = awaitingAcceptance.get(tenant);
-  if (cached && (!cached.awaiting || cached.expiresAt > Date.now())) return cached.awaiting;
-  return undefined;
+  return notAwaitingAcceptance.has(tenant) ? false : undefined;
 }
 
 async function isAwaitingAcceptance(db: Knex, tenant: string): Promise<boolean> {
-  const cached = awaitingAcceptance.get(tenant);
-  if (cached && (!cached.awaiting || cached.expiresAt > Date.now())) return cached.awaiting;
+  if (notAwaitingAcceptance.has(tenant)) return false;
   const customer = tenantDb(db, tenant);
   const workspace = await customer.table('tenants').first('product_code');
   if (!workspace) return false;
   if (workspace.product_code !== 'co_managed') {
-    awaitingAcceptance.set(tenant, { awaiting: false, expiresAt: Infinity });
+    notAwaitingAcceptance.add(tenant);
     return false;
   }
   const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('state');
   if (!relationship) return false;
   if (relationship.state === 'active' || relationship.state === 'terminated') {
-    awaitingAcceptance.set(tenant, { awaiting: false, expiresAt: Infinity });
+    notAwaitingAcceptance.add(tenant);
     return false;
   }
-  awaitingAcceptance.set(tenant, { awaiting: true, expiresAt: Date.now() + AWAITING_POSITIVE_TTL_MS });
   return true;
 }
 

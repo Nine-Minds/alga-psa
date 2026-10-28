@@ -115,13 +115,11 @@ describe('withAuth before co-managed acceptance', () => {
     await expect(ordinary()).resolves.toBe('done');
   });
 
-  it('sees accept, decline and terminate immediately after invalidation', async () => {
+  it('sees acceptance and termination immediately after pending requests', async () => {
     multipart();
     await expect(ordinary()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
-    // Accepted in this process: stale until the accept path invalidates.
+    // Acceptance committed in another process, without local invalidation.
     mocks.tenants.set('workspace', { product: 'co_managed', state: 'active' });
-    await expect(ordinary()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
-    invalidateCoManagedAwaitingAcceptance('workspace');
     await expect(ordinary()).resolves.toBe('done');
 
     for (const next of ['terminated'] as const) {

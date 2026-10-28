@@ -152,6 +152,7 @@ export function registerNativeAccessTests(provision: (
     const signup = await completeUserInvitationSetup(delivered.token, 'ValidPassword!2026');
     expect(signup).toMatchObject({ success: true });
     actor = { tenant: operation.customer_tenant, userId: signup.userId! };
+    expect(await customer.table('user_preferences').where({ user_id: actor.userId, setting_name: 'has_reset_password' }).first()).toMatchObject({ setting_value: true });
     const sessionId = randomUUID();
     await customer.table('sessions').insert({ tenant: actor.tenant, session_id: sessionId, user_id: actor.userId, expires_at: new Date(Date.now() + 3600000) });
     runtime.session = { user: { id: actor.userId, tenant: actor.tenant, user_type: 'internal', email: invitation.email },
@@ -172,6 +173,11 @@ export function registerNativeAccessTests(provision: (
   describe.sequential('fresh customer native access through real authentication', () => {
     it('refuses ticket actions and controller reads until acceptance, then reads only customer tickets', async () => {
       const { getTicketById } = await import('../../../../../../packages/tickets/src/actions/ticketActions');
+      const { acceptCustomerCoManagedRelationship, getCoManagedPasswordStatus } = await import('../../../../../../server/src/lib/actions/coManagedAcceptanceActions');
+      // Simulate a request handler loaded independently of the acceptance bundle.
+      vi.resetModules();
+      const requestLifecycle = await import('../../../../../../packages/licensing/src/lib/co-managed-lifecycle');
+      requestLifecycle.registerCoManagedLifecycleProvider(requestLifecycle.coManagedLifecycleProvider);
       const { ApiTicketController } = await import('../../../../../../server/src/lib/api/controllers/ApiTicketController');
       const controller = new ApiTicketController();
       const { ApiKeyService } = await import('@alga-psa/auth');
@@ -192,7 +198,8 @@ export function registerNativeAccessTests(provision: (
       expect(await tenantDb(db, actor.tenant).table('api_keys')).toEqual(keysBefore);
       const proposal = await getCoManagedAcceptanceState(db, actor);
       if (proposal.state !== 'pending_acceptance') throw new Error('Missing acceptance proposal');
-      await acceptCoManagedRelationship(db, actor, { relationshipId: proposal.relationshipId, revision: proposal.revision, scopeFingerprint: proposal.scopeFingerprint });
+      await acceptCustomerCoManagedRelationship({ relationshipId: proposal.relationshipId, revision: proposal.revision, scopeFingerprint: proposal.scopeFingerprint });
+      expect(await getCoManagedPasswordStatus()).toEqual({ hasResetPassword: true });
       expect(await runWithTenant(actor.tenant, () => ApiKeyService.validateApiKey(apiKey))).toMatchObject({ user_id: actor.userId });
       expect(await getTicketById(ticketId)).toMatchObject({ ticket_id: ticketId, title: 'Customer native ticket' });
       const response = await controller.getById()(request(`/api/v1/tickets/${ticketId}`));
