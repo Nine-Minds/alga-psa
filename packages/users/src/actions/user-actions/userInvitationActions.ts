@@ -286,8 +286,11 @@ export async function completeUserInvitationSetup(
       return { success: false, error: passwordPolicyError, errorCode: 'PASSWORD_POLICY', messageKey: passwordPolicyKey };
     }
 
-    const verificationResult = await UserInvitationService.verifyToken(token, { deferCoManagedCleanup: true });
+    const verificationResult = await UserInvitationService.verifyToken(token);
     if (!verificationResult.valid || !verificationResult.invitee || !verificationResult.tenant) {
+      if (verificationResult.errorCode === 'CAPABILITY_UNAVAILABLE') {
+        return { success: false, error: verificationResult.error, errorCode: verificationResult.errorCode };
+      }
       return { success: false, error: 'Invalid or expired invitation token', errorCode: 'INVALID_OR_EXPIRED_TOKEN' };
     }
 

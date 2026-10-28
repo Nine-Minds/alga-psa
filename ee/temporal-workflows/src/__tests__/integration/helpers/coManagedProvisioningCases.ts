@@ -84,19 +84,55 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       }
     });
 
+    it('keeps PSA token verification and cleanup at the existing query budget with the co-managed switch off', async () => {
+      const db = getDb(), operation = await prepare(), token = randomUUID(), expiredToken = randomUUID();
+      const sponsor = tenantDb(db, operation.tenant);
+      await sponsor.table('user_invitations').insert([
+        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'PSA', last_name: 'Invite',
+          token, expires_at: new Date(Date.now() + 3600000) },
+        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'Expired', last_name: 'Invite',
+          token: expiredToken, expires_at: new Date(Date.now() - 60000) },
+      ]);
+      const { verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const captured: string[] = [];
+      const record = (query: { sql: string }) => captured.push(query.sql);
+      db.on('query', record);
+      try {
+        const ordinary = await verifyUserInvitationToken(token);
+        expect(ordinary.success).toBe(true);
+        // Discovery, expired-token cleanup and invitation details; BEGIN/COMMIT are not queries.
+        expect(captured.filter(sql => !/^(BEGIN|COMMIT);?$/.test(sql))).toHaveLength(3);
+        const ordinaryCount = captured.length;
+        captured.length = 0;
+        process.env.FORCE_CAPABILITIES = 'co-managed:off';
+        expect(await verifyUserInvitationToken(token)).toEqual(ordinary);
+        expect(captured).toHaveLength(ordinaryCount);
+        expect(captured.some(sql => /co_manag/i.test(sql))).toBe(false);
+      } finally {
+        db.removeListener('query', record);
+      }
+      expect(await sponsor.table('user_invitations').where('token', expiredToken)).toHaveLength(0);
+    });
+
     it('completes the initial invitation through the public signup adapter and consumes it atomically', async () => {
       const db = getDb(), operation = await prepare();
       await bootstrapCoManagedCustomer(input(operation));
       const customer = tenantDb(db, operation.customer_tenant);
       const invitation = await customer.table('user_invitations').first();
-      const { completeUserInvitationSetup, sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const { completeUserInvitationSetup, sendUserInvitation, verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
       const expiredToken = randomUUID();
       await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: `${randomUUID()}@example.test`,
         first_name: 'Expired', last_name: 'Invite', token: expiredToken, expires_at: new Date(Date.now() - 60000) });
       const rolesBefore = await customer.table('user_roles');
+      const invitationsBefore = await customer.table('user_invitations').orderBy('invitation_id');
       process.env.FORCE_CAPABILITIES = 'co-managed:off';
+      // The browser verifies the token before submitting a password. Neither
+      // step may reveal invitation details or clean up rows while serving is off.
+      expect(await verifyUserInvitationToken(invitation.token))
+        .toEqual({ success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' });
       expect(await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026'))
         .toMatchObject({ success: false, errorCode: 'CAPABILITY_UNAVAILABLE' });
+      expect(await customer.table('user_invitations').orderBy('invitation_id')).toEqual(invitationsBefore);
       expect(await customer.table('users')).toHaveLength(0);
       expect(await customer.table('user_roles')).toEqual(rolesBefore);
       expect((await customer.table('user_invitations').where('token', invitation.token).first()).used_at).toBeNull();
@@ -104,6 +140,8 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       delete process.env.FORCE_CAPABILITIES;
       const rolloutFlag = vi.fn(async () => false);
       registerFeatureFlagChecker(rolloutFlag);
+      expect(await verifyUserInvitationToken(invitation.token)).toMatchObject({ success: true, invitee: { email: invitation.email } });
+      expect(await customer.table('user_invitations').where('token', expiredToken)).toHaveLength(0);
       const result = await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026');
       expect(result).toMatchObject({ success: true });
       expect(await customer.table('users').where({ email: invitation.email })).toHaveLength(1);
