@@ -34,4 +34,6 @@ Fixed-fee service entries also follow the existing scheduled billing path. Quick
 
 The database migration for ticket fixed-fee service entries is required before using this feature; deploy the migration with the application changes. Deploy the updated Temporal workflows as well so tenant deletion includes these entries.
 
+The tenant table manifest registers fixed-fee service entries for deletion, tenant export, and client-merge classification. Its generated foreign-key snapshot includes the new table's constraints; regenerate and validate the snapshot against a fully migrated CE + EE database when changing those constraints.
+
 The PR will be integrated into the rolling-release branch for testing. Testing on that branch has not yet been completed.

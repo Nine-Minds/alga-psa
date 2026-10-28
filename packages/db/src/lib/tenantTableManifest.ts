@@ -356,6 +356,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'project_task_comments', deletion: 'ordered', export: { rank: 14 } },
   { table: 'project_materials', deletion: 'ordered', export: { rank: 15 }, clientKeyed: true },
   { table: 'ticket_materials', deletion: 'ordered', export: { rank: 6 }, clientKeyed: true },
+  { table: 'ticket_fixed_fee_services', deletion: 'ordered', export: { rank: 6.5 }, clientKeyed: true },
   { table: 'project_template_checklist_items', deletion: 'ordered' },
   { table: 'project_template_dependencies', deletion: 'ordered' },
   { table: 'project_template_task_resources', deletion: 'ordered' },

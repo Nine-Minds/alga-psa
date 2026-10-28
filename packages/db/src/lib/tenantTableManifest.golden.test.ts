@@ -9,7 +9,7 @@ import {
   tenantDeletionOrder,
   type TenantTableEntry,
 } from './tenantTableManifest';
-import type { TenantTableForeignKey } from './tenantTableForeignKeys';
+import { TENANT_TABLE_FOREIGN_KEYS, type TenantTableForeignKey } from './tenantTableForeignKeys';
 
 const ACTIVITY = path.resolve(__dirname, '../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
 
@@ -29,10 +29,23 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder()).toEqual(literal);
   });
 
-  it('has 549 unique ordered names', () => {
+  it('has 550 unique ordered names', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(549);
-    expect(new Set(order).size).toBe(549);
+    expect(order).toHaveLength(550);
+    expect(new Set(order).size).toBe(550);
+  });
+
+  it('deletes client-keyed fixed-fee entries before their ordered foreign-key parents', () => {
+    const table = 'ticket_fixed_fee_services';
+    const entry = TENANT_TABLE_MANIFEST.find(entry => entry.table === table);
+    expect(entry).toMatchObject({ deletion: 'ordered', clientKeyed: true });
+    const order = tenantDeletionOrder();
+    const foreignKeys = TENANT_TABLE_FOREIGN_KEYS.filter(fk => fk.child === table);
+    expect(foreignKeys.map(fk => fk.parent).sort()).toEqual(['clients', 'service_catalog', 'tenants', 'tickets']);
+    expect(order.indexOf(table)).toBeGreaterThan(-1);
+    for (const fk of foreignKeys.filter(fk => fk.parent !== 'tenants')) {
+      expect(order.indexOf(table), fk.name).toBeLessThan(order.indexOf(fk.parent));
+    }
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {

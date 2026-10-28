@@ -26,21 +26,27 @@ exports.up = async function up(knex) {
   }
   const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
   await ensureTenantDistribution(knex, 'ticket_fixed_fee_services');
-  const foreignKeys = [
-    ['ticket_fixed_fee_tenant_fk', 'FOREIGN KEY (tenant) REFERENCES tenants(tenant)'],
-    ['ticket_fixed_fee_ticket_fk', 'FOREIGN KEY (tenant, ticket_id) REFERENCES tickets(tenant, ticket_id) ON DELETE CASCADE'],
-    ['ticket_fixed_fee_client_fk', 'FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id) ON DELETE RESTRICT'],
-    ['ticket_fixed_fee_service_fk', 'FOREIGN KEY (tenant, service_id) REFERENCES service_catalog(tenant, service_id) ON DELETE RESTRICT'],
-  ];
-  for (const [name, definition] of foreignKeys) {
+  async function ensureForeignKey(name, create) {
     const result = await knex.raw(
       'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass',
       [name, 'ticket_fixed_fee_services'],
     );
     if (result.rows.length === 0) {
-      await knex.raw(`ALTER TABLE ticket_fixed_fee_services ADD CONSTRAINT ${name} ${definition}`);
+      await create();
     }
   }
+  await ensureForeignKey('ticket_fixed_fee_tenant_fk', () => knex.raw(
+    'ALTER TABLE ticket_fixed_fee_services ADD CONSTRAINT ticket_fixed_fee_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant)',
+  ));
+  await ensureForeignKey('ticket_fixed_fee_ticket_fk', () => knex.raw(
+    'ALTER TABLE ticket_fixed_fee_services ADD CONSTRAINT ticket_fixed_fee_ticket_fk FOREIGN KEY (tenant, ticket_id) REFERENCES tickets(tenant, ticket_id) ON DELETE CASCADE',
+  ));
+  await ensureForeignKey('ticket_fixed_fee_client_fk', () => knex.raw(
+    'ALTER TABLE ticket_fixed_fee_services ADD CONSTRAINT ticket_fixed_fee_client_fk FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id) ON DELETE RESTRICT',
+  ));
+  await ensureForeignKey('ticket_fixed_fee_service_fk', () => knex.raw(
+    'ALTER TABLE ticket_fixed_fee_services ADD CONSTRAINT ticket_fixed_fee_service_fk FOREIGN KEY (tenant, service_id) REFERENCES service_catalog(tenant, service_id) ON DELETE RESTRICT',
+  ));
 };
 
 exports.config = { transaction: false };
