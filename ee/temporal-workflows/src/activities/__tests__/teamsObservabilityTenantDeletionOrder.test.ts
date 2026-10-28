@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { expectTenantDeletion } from '../../../../../ee/temporal-workflows/src/test-utils/tenant-deletion-harness';
+import { expectTenantDeletion } from '../../test-utils/tenant-deletion-harness';
 
 describe('teams observability tenant deletion ordering', () => {
   it('deletes Teams observability and profile bindings before their parents, preserving another tenant', async () => {

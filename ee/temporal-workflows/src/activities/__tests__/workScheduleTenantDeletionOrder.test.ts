@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectTenantDeletion } from '../../../../../ee/temporal-workflows/src/test-utils/tenant-deletion-harness';
+import { expectTenantDeletion } from '../../test-utils/tenant-deletion-harness';
 import { getTenantTableScope } from '../../../../../packages/db/src/lib/tenantTableMetadata';
 
 describe('work schedule tenant deletion ordering', () => {

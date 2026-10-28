@@ -229,7 +229,7 @@ describeDb('tag display rules (DB)', () => {
         def(t, 'VIP', 'ticket', tenant),
         def(n, 'Gold', 'contact', tenant),
       ]);
-      const migration = require(path.join(root, 'server/migrations/20261028020000_create_tag_display_rules.cjs'));
+      const migration = require(path.join(root, 'server/migrations/20261028020200_create_tag_display_rules.cjs'));
       await migration.up(db);
       await migration.up(db); // idempotent
 

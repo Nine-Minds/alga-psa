@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectTenantDeletion } from '../../../../../ee/temporal-workflows/src/test-utils/tenant-deletion-harness';
+import { expectTenantDeletion } from '../../test-utils/tenant-deletion-harness';
 
 describe('tenant default tax rate tenant deletion ordering', () => {
   it('clears default-rate references before cleanup, then deletes settings before rates, preserving other tenants', async () => {
