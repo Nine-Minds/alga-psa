@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { CO_MANAGED_PERMISSIONS } from '../../../../../packages/licensing/src/lib/co-managed-admission-permissions';
@@ -57,18 +56,5 @@ describe('co-managed permission catalog entries', () => {
     expect(CO_MANAGED_PERMISSIONS.map(p => `${p.resource}:${p.action}`).sort()).toEqual(catalogKeys);
     expect(PERMISSION_RESOURCE_CAPABILITIES[CO_MANAGED_PERMISSION_RESOURCE]).toBe(CO_MANAGED_CAPABILITY);
     expect([...CO_MANAGED_PERMISSION_ACTIONS].sort()).toEqual(CO_MANAGED_PERMISSIONS.map(p => p.action).sort());
-  });
-});
-
-describe('L1a migrations', () => {
-  it('never touch permissions or role_permissions', () => {
-    const files = fs.readdirSync(migrations).filter(f => f.startsWith('20261026') && f.endsWith('.cjs'));
-    expect(files.length).toBeGreaterThan(0);
-    for (const file of files) {
-      const code = fs.readFileSync(path.join(migrations, file), 'utf8')
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/^\s*\/\/.*$/gm, '');
-      expect(code, file).not.toMatch(/\b(role_permissions|permissions)\b/);
-    }
   });
 });

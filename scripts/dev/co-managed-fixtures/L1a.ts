@@ -14,6 +14,7 @@ import { EMERALD, KANSAS, OZ } from './base';
 
 export const L1A_ENTITLEMENT_REFERENCE = 'fixture:l1a';
 export const L1A_CAPACITY = 5;
+export const OZ_ESCALATION_BOARD = id('board/oz/escalations');
 export const DISPOSABLE_CLIENTS = [
   { slug: 'disposable-enable', name: 'Disposable Enable Co' },
   { slug: 'disposable-cancel', name: 'Disposable Cancel Co' },
@@ -29,6 +30,9 @@ export const l1aModule: FixtureModule = {
   name: 'L1a',
   requires: ['base'],
   async apply(trx) {
+    await put(trx, 'boards', ['tenant', 'board_id'], {
+      tenant: OZ, board_id: OZ_ESCALATION_BOARD, board_name: 'Escalations', is_inactive: false,
+    });
     await put(trx, 'co_managed_entitlements', ['tenant'], {
       tenant: OZ, source: 'admin_grant', source_reference: L1A_ENTITLEMENT_REFERENCE, capacity: L1A_CAPACITY,
       signed_license: null, verified_at: CREATED, valid_until: VALID_UNTIL,
@@ -46,6 +50,8 @@ export const l1aModule: FixtureModule = {
   },
   async verify(db) {
     const reports: VerifyReport[] = [];
+    const board = await db('boards').where({ tenant: OZ, board_id: OZ_ESCALATION_BOARD, is_inactive: false }).first('board_id');
+    reports.push({ ok: !!board, area: 'L1a', detail: 'Oz has an active escalation board' });
     const entitlements = await db('co_managed_entitlements').where({ tenant: OZ });
     const grant = entitlements[0];
     reports.push({
@@ -80,6 +86,7 @@ export const l1aModule: FixtureModule = {
     return reports;
   },
   async reset(trx) {
+    await trx('boards').where({ tenant: OZ, board_id: OZ_ESCALATION_BOARD }).delete();
     await trx('co_managed_entitlements')
       .where({ tenant: OZ, source: 'admin_grant', source_reference: L1A_ENTITLEMENT_REFERENCE }).delete();
     for (const client of DISPOSABLE_CLIENTS) {

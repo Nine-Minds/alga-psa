@@ -46,12 +46,11 @@ async function assertInvitationCapacity(trx: Knex.Transaction, context: NonNulla
  * request sees the renewed token and never rotates it again or resets a login. */
 export const CO_MANAGED_MAX_INVITATION_RESENDS = 1;
 
-/** `resend` marks a user-initiated re-send of an invitation that was already
- * delivered. At most CO_MANAGED_MAX_INVITATION_RESENDS are allowed, counted on the
+/** A retry of an already delivered invitation is a resend. At most
+ * CO_MANAGED_MAX_INVITATION_RESENDS are allowed, counted on the
  * customer invitation inside the same locked transaction. A retry after a failed
  * delivery (no receipt) is recovery, not a resend, and is never counted. */
-export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inputActor: CoManagedSessionActor, operationId: string,
-  options: { resend?: boolean } = {}): Promise<void> {
+export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inputActor: CoManagedSessionActor, operationId: string): Promise<void> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(operationId)) unavailable();
   await db.transaction(async trx => {
@@ -61,7 +60,7 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
     if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) unavailable();
     await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'client', 'read',
       { id: context.operation.request.clientId, clientId: context.operation.request.clientId });
-    if (options.resend && context.operation.invitation_sent_at) {
+    if (context.operation.invitation_sent_at) {
       const resends = Number(context.invitation.metadata?.co_managed_resend_count ?? 0);
       if (resends >= CO_MANAGED_MAX_INVITATION_RESENDS) throw new CoManagedProvisioningError('RESEND_LIMIT_REACHED');
       await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id).update({

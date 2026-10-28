@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { hasCoManagedLocalPermission } from './localPermission';
-import { getCoManagedEntitlementState, invalidateCoManagedAwaitingAcceptance } from '@alga-psa/licensing';
+import { countCoManagedCommittedSeats, getCoManagedEntitlementState, invalidateCoManagedAwaitingAcceptance } from '@alga-psa/licensing';
 import { CoManagedAcceptanceError, readCoManagedAcceptanceScope, coManagedScopeFingerprint,
   type CoManagedAcceptanceScope } from './acceptanceScope';
 import { requestCoManagedProvisioningCleanup } from './provisioning';
@@ -107,9 +107,12 @@ export async function acceptCoManagedRelationship(db: Knex, actor: CoManagedCust
     const capacity = await getCoManagedEntitlementState(trx, found.sponsor_tenant);
     const allocation = await sponsor.table('co_managed_allocations').where({ allocation_id: operation.allocation_id,
       customer_tenant: actor.tenant, relationship_id: input.relationshipId, state: 'reserved' }).first();
+    // Serialize with invitation/account admission before measuring committed seats.
+    await customer.table('tenants').forNoKeyUpdate().first();
     if (owner?.product_code !== 'psa' || (entitlement?.source === 'hosted' && owner.plan !== 'pro') || !allocation ||
         capacity.isReadOnly || capacity.graceEndsAt || capacity.capacity < capacity.allocated ||
-        await sponsor.table('co_management_relationships').whereNull('ended_at').first()) {
+        await sponsor.table('co_management_relationships').whereNull('ended_at').first() ||
+        await countCoManagedCommittedSeats(trx, actor.tenant) > Number(allocation.seats)) {
       throw new CoManagedAcceptanceError('CAPACITY_UNAVAILABLE');
     }
     await customer.table('co_management_relationships').where('relationship_id', input.relationshipId)

@@ -1,19 +1,27 @@
 import type { Knex } from 'knex';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
-import { getCoManagedEntitlementState } from '@alga-psa/licensing';
-import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoManagedProvisioningFailure,
+import { runWithTenant, tenantDb } from '@alga-psa/db';
+import { getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
+import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../../packages/co-managed/src/acceptance';
+import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoManagedProvisioningFailure, requestCoManagedProvisioningCleanup,
   type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
 import { retryCoManagedInitialAdministratorInvitation } from '../../../../../../packages/co-managed/src/provisioningInvitation';
 import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
 import { bootstrapCoManagedCustomer, deliverCoManagedAdministratorInvitation } from '../../../activities/co-managed-provisioning-activities';
 import { admitCoManagedSponsor } from '../../../../../../server/src/lib/co-managed/admitSponsor';
+import { run as runFixtures } from '../../../../../../scripts/dev/co-managed-fixtures/index';
+import { OZ, USERS } from '../../../../../../scripts/dev/co-managed-fixtures/base';
+import { DISPOSABLE_CLIENTS, OZ_ESCALATION_BOARD } from '../../../../../../scripts/dev/co-managed-fixtures/L1a';
+import { runOnboardingSeeds } from '../../../db/onboarding-seeds-operations';
+import { getCoManagedManagementOptions } from '../../../../../../packages/co-managed/src/managementPolicy';
 
 interface Harness {
   getDb: () => Knex;
   prepare: (overrides?: { seats?: number; email?: string; capacity?: number }) => Promise<CoManagedProvisioningOperation>;
   delivery: { send: ReturnType<typeof vi.fn> };
+  actorState: { user: any };
+  appliance: { check: ReturnType<typeof vi.fn> };
 }
 
 const messages: string[] = [];
@@ -35,7 +43,7 @@ async function sponsorActor(db: Knex, operation: CoManagedProvisioningOperation)
   return { kind: 'session' as const, tenant, userId: operation.requested_by, sessionId };
 }
 
-export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }: Harness) {
+export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, actorState, appliance }: Harness) {
   const input = (operation: CoManagedProvisioningOperation) => ({ sponsorTenant: operation.tenant, operationId: operation.operation_id });
   const stored = (operation: CoManagedProvisioningOperation) =>
     tenantDb(getDb(), operation.tenant).table('co_managed_provisioning_operations').where('operation_id', operation.operation_id).first();
@@ -47,6 +55,123 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }:
     process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.test'; });
 
   describe('co-managed provisioning', () => {
+    it('completes the initial invitation through the public signup adapter and consumes it atomically', async () => {
+      const db = getDb(), operation = await prepare();
+      await bootstrapCoManagedCustomer(input(operation));
+      const customer = tenantDb(db, operation.customer_tenant);
+      const invitation = await customer.table('user_invitations').first();
+      const { completeUserInvitationSetup, sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      const result = await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026');
+      expect(result).toMatchObject({ success: true });
+      expect(await customer.table('users').where({ email: invitation.email })).toHaveLength(1);
+      expect((await customer.table('user_invitations').first()).used_at).not.toBeNull();
+      expect(await customer.table('user_roles').where('user_id', result.userId)).toHaveLength(1);
+      expect((await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026')).success).toBe(false);
+      const actor = { tenant: operation.customer_tenant, userId: result.userId! };
+      const review = await getCoManagedAcceptanceState(db, actor);
+      if (review.state !== 'pending_acceptance') throw new Error('No acceptance proposal');
+      await acceptCoManagedRelationship(db, actor, { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint });
+      actorState.user = { tenant: actor.tenant, user_id: actor.userId, user_type: 'internal', username: invitation.email };
+      appliance.check.mockClear();
+      const invite = (email: string) => runWithTenant(actor.tenant, () => sendUserInvitation({ email, firstName: 'Next', lastName: 'User', roleId: invitation.role_id }));
+      const attempts = await Promise.all([invite(`next-${randomUUID()}@example.test`), invite(`excess-${randomUUID()}@example.test`)]);
+      const next = attempts.find(result => result.success)!;
+      expect(attempts.filter(result => result.success)).toHaveLength(1);
+      expect(attempts.find(result => !result.success)).toMatchObject({ errorCode: 'CO_MANAGED_SEAT_LIMIT' });
+      const pending = await customer.table('user_invitations').where('invitation_id', next.invitationId).first();
+      expect((await completeUserInvitationSetup(pending.token, 'ValidPassword!2026')).success).toBe(true);
+      expect(await customer.table('users').where({ user_type: 'internal', is_inactive: false })).toHaveLength(2);
+      expect(appliance.check).not.toHaveBeenCalled();
+    });
+
+    it('cannot consume the initial invitation while cancellation wins the shared lock', async () => {
+      const db = getDb(), operation = await prepare();
+      await bootstrapCoManagedCustomer(input(operation));
+      const customer = tenantDb(db, operation.customer_tenant);
+      const invitation = await customer.table('user_invitations').first();
+      const { completeUserInvitationSetup } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+      let release!: () => void, locked!: () => void;
+      const held = new Promise<void>(resolve => { locked = resolve; });
+      const proceed = new Promise<void>(resolve => { release = resolve; });
+      const cancellation = db.transaction(async trx => {
+        await requestCoManagedProvisioningCleanup(trx, operation.tenant, operation.operation_id);
+        locked(); await proceed;
+      });
+      await held;
+      const signup = completeUserInvitationSetup(invitation.token, 'ValidPassword!2026');
+      release(); await cancellation;
+      expect((await signup).success).toBe(false);
+      expect(await customer.table('users')).toHaveLength(0);
+      expect((await customer.table('user_invitations').first()).used_at).toBeNull();
+    });
+    it('applies the L1a fixture twice and exposes an active escalation board in setup choices', async () => {
+      const db = getDb();
+      const engines = async () => ({ runOnboardingSeeds, verifyPassword: async () => true, secret: 'fixture-test-secret' });
+      await runFixtures(db, { through: 'L1a', mode: 'apply' }, engines);
+      await runFixtures(db, { through: 'L1a', mode: 'apply' }, engines);
+      const oz = tenantDb(db, OZ), sessionId = randomUUID();
+      expect(await oz.table('boards').where({ board_id: OZ_ESCALATION_BOARD, is_inactive: false })).toHaveLength(1);
+      await admitCoManagedSponsor(OZ, db);
+      const admin = USERS.find(u => u.slug === 'user/oz/admin')!;
+      await oz.table('sessions').insert({ tenant: OZ, session_id: sessionId, user_id: admin.userId, expires_at: new Date(Date.now() + 3600000) });
+      const choices = await getCoManagedManagementOptions(db, { kind: 'session', tenant: OZ, userId: admin.userId, sessionId }, '', DISPOSABLE_CLIENTS[0].clientId);
+      expect(choices.boards).toEqual(expect.arrayContaining([expect.objectContaining({ id: OZ_ESCALATION_BOARD })]));
+      expect(choices.clients).toEqual(expect.arrayContaining([expect.objectContaining({ id: DISPOSABLE_CLIENTS[0].clientId })]));
+    });
+    async function pendingCustomer() {
+      const db = getDb(), operation = await prepare({ seats: 2 });
+      await bootstrapCoManagedCustomer(input(operation));
+      const customer = tenantDb(db, operation.customer_tenant), adminId = randomUUID();
+      const invitation = await customer.table('user_invitations').where('invitation_id', operation.administrator_invitation_id).first();
+      await customer.table('users').insert({ tenant: operation.customer_tenant, user_id: adminId, username: invitation.email,
+        email: invitation.email, first_name: 'Customer', last_name: 'Admin', hashed_password: 'test', user_type: 'internal', is_inactive: false });
+      await customer.table('user_roles').insert({ tenant: operation.customer_tenant, user_id: adminId, role_id: invitation.role_id });
+      await customer.table('user_invitations').where('invitation_id', invitation.invitation_id).update({ used_at: db.fn.now() });
+      const actor = { tenant: operation.customer_tenant, userId: adminId };
+      const review = await getCoManagedAcceptanceState(db, actor);
+      if (review.state !== 'pending_acceptance') throw new Error('No acceptance proposal');
+      return { db, operation, customer, actor, input: { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint } };
+    }
+
+    it('rejects customer seat overflow without changing the relationship, allocation or receipts; exact capacity succeeds', async () => {
+      const { db, operation, customer, actor, input: acceptance } = await pendingCustomer();
+      const other = randomUUID();
+      await customer.table('users').insert({ tenant: actor.tenant, user_id: other, username: `${other}@example.test`,
+        email: `${other}@example.test`, user_type: 'internal', is_inactive: false, hashed_password: 'test' });
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `pending-${other}@example.test`,
+        first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+      const before = await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id);
+      await expect(acceptCoManagedRelationship(db, actor, acceptance)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+      expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'pending_acceptance', revision: 1 });
+      expect(await tenantDb(db, operation.tenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+      expect(await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id)).toEqual(before);
+      await customer.table('users').where('user_id', other).delete();
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `PENDING-${other}@EXAMPLE.TEST`,
+        first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+      await acceptCoManagedRelationship(db, actor, acceptance);
+      expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', revision: 2 });
+    });
+
+    it('acceptance waits for concurrent seat admission and observes the committed seats', async () => {
+      const { db, operation, customer, actor, input: acceptance } = await pendingCustomer();
+      let release!: () => void, locked!: () => void;
+      const lockedPromise = new Promise<void>(resolve => { locked = resolve; });
+      const releasePromise = new Promise<void>(resolve => { release = resolve; });
+      const writer = db.transaction(async trx => {
+        await lockCoManagedSeatScope(trx, actor.tenant);
+        const scoped = tenantDb(trx, actor.tenant);
+        for (let i = 0; i < 2; i++) await scoped.table('user_invitations').insert({ tenant: actor.tenant,
+          email: `${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+        locked(); await releasePromise;
+      });
+      await lockedPromise;
+      const accepting = acceptCoManagedRelationship(db, actor, acceptance);
+      release(); await writer;
+      await expect(accepting).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+      expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'pending_acceptance', revision: 1 });
+      expect(await customer.table('co_management_relationship_events').where({ event_type: 'accepted' })).toHaveLength(0);
+      expect(await tenantDb(db, operation.tenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+    });
     it('admits a first-time entitled sponsor before provisioning without restoring revoked grants', async () => {
       const db = getDb(), tenant = randomUUID(), roleId = randomUUID();
       const home = tenantDb(db, tenant);
@@ -190,6 +315,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }:
       delivery.send.mockResolvedValueOnce(false);
       await expect(deliverCoManagedAdministratorInvitation(input(operation))).rejects.toThrow();
       expect(await stored(operation)).toMatchObject({ invitation_delivery_error: 'INVITATION_DELIVERY_FAILED', invitation_sent_at: null });
+      await retryCoManagedInitialAdministratorInvitation(getDb(), await sponsorActor(getDb(), operation), operation.operation_id);
       await deliverCoManagedAdministratorInvitation(input(operation));
       expect(await stored(operation)).toMatchObject({ invitation_delivery_error: null });
       expect((await stored(operation)).invitation_sent_at).not.toBeNull();
@@ -200,11 +326,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }:
       await bootstrapCoManagedCustomer(input(operation));
       await deliverCoManagedAdministratorInvitation(input(operation));
       const actor = await sponsorActor(db, operation);
-      await retryCoManagedInitialAdministratorInvitation(db, actor, operation.operation_id, { resend: true });
+      await retryCoManagedInitialAdministratorInvitation(db, actor, operation.operation_id);
       expect((await stored(operation)).invitation_sent_at).toBeNull();
       await deliverCoManagedAdministratorInvitation(input(operation));
       expect(delivery.send).toHaveBeenCalledTimes(2);
-      await expect(retryCoManagedInitialAdministratorInvitation(db, actor, operation.operation_id, { resend: true }))
+      await expect(retryCoManagedInitialAdministratorInvitation(db, actor, operation.operation_id))
         .rejects.toMatchObject({ code: 'RESEND_LIMIT_REACHED' });
       expect((await stored(operation)).invitation_sent_at).not.toBeNull(); // rejected resend changed nothing
       expect(delivery.send).toHaveBeenCalledTimes(2);

@@ -9,6 +9,7 @@ import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -30,7 +31,9 @@ export type UserInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
-  | 'LICENSE_LIMIT_REACHED';
+  | 'LICENSE_LIMIT_REACHED'
+  | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
+  | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
 
 interface SendUserInvitationParams {
   email: string;
@@ -49,6 +52,9 @@ class UserInvitationError extends Error {
 function normalizeSendUserInvitationError(
   error: unknown
 ): { message?: string; errorCode: UserInvitationErrorCode } {
+  if (error instanceof CoManagedAdmissionError) {
+    return { message: error.message, errorCode: error.code };
+  }
   if (error instanceof UserInvitationError) {
     return { message: error.message.trim() || undefined, errorCode: error.errorCode };
   }
@@ -129,7 +135,7 @@ export const sendUserInvitation = withAuth(async (
     // resend never blocks itself.
     const reservedSeats = await countPendingInvitationSeats(knex, tenant, { excludeEmail: normalizedEmail });
 
-    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
+    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats, deferCoManaged: true });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
     }
@@ -151,6 +157,7 @@ export const sendUserInvitation = withAuth(async (
 
     const result = await knex.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
+      if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
 
       const invitationResult = await UserInvitationService.createInvitationWithTransaction(
         { email: normalizedEmail, firstName: params.firstName, lastName: params.lastName, roleId: params.roleId },
@@ -301,7 +308,7 @@ export async function completeUserInvitationSetup(
       // the account row actually gets created (via runAsSystem, bypassing the
       // permission-gated path addUser uses), and seats can have filled up
       // between the invite being sent and this acceptance.
-      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
+      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { deferCoManaged: true });
       if (isInternalUserLicenseLimitRejected(licenseCheck)) {
         return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
       }
@@ -333,7 +340,7 @@ export async function completeUserInvitationSetup(
           const userService = new UserService();
           const systemContext = createSystemContext(tenant);
 
-          const user = await userService.create({
+          const userData = {
             username: invitee.email,
             email: invitee.email,
             password,
@@ -346,7 +353,10 @@ export async function completeUserInvitationSetup(
             // Assigned inside UserService.create's own transaction, so the
             // account and its role land (or fail) together.
             role_ids: [invitationRole.role_id]
-          }, systemContext);
+          };
+          const user = licenseCheck.coManaged
+            ? await knex.transaction(trx => userService.createFromCoManagedInvitation(userData, systemContext, trx, token))
+            : await userService.create(userData, systemContext);
 
           if (!user || !user.user_id) {
             throw new UserInvitationError('Team member account could not be created. Please try again.', 'CREATE_USER_FAILED');
@@ -372,9 +382,9 @@ export async function completeUserInvitationSetup(
         console.warn('Failed to set password reset preference:', prefError);
       }
 
-      const tokenMarked = await UserInvitationService.markTokenAsUsed(token);
-      if (!tokenMarked) {
-        console.warn('Failed to mark team invitation token as used');
+      if (!licenseCheck.coManaged) {
+        const tokenMarked = await UserInvitationService.markTokenAsUsed(token);
+        if (!tokenMarked) console.warn('Failed to mark team invitation token as used');
       }
 
       await UserInvitationService.cleanupExpiredTokens();

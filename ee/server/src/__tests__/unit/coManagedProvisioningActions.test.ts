@@ -103,6 +103,12 @@ describe('retry ownership and acknowledged domain failures', () => {
     await expect(retryCoManagedProvisioningAction(operationId)).rejects.toThrow('Invitation already used');
     expect(mocks.schedule).not.toHaveBeenCalled();
   });
+  it('does not schedule another delivery when general retry reaches the resend limit', async () => {
+    mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'pending_acceptance' }];
+    mocks.invitation.mockRejectedValueOnce(new CoManagedProvisioningError('RESEND_LIMIT_REACHED' as any));
+    await expect(retryCoManagedProvisioningAction(operationId)).rejects.toMatchObject({ code: 'RESEND_LIMIT_REACHED' });
+    expect(mocks.schedule).not.toHaveBeenCalled();
+  });
   it('retries only an operation owned by the authenticated sponsor', async () => {
     mocks.rows['other-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'failed' }];
     await expect(retryCoManagedProvisioningAction(operationId)).rejects.toThrow('cannot be retried');
@@ -125,10 +131,10 @@ describe('retry ownership and acknowledged domain failures', () => {
 
 describe('invitation resend', () => {
   const operationId = 'a0000000-0000-4000-8000-000000000001';
-  it('resends with the resend flag, then schedules delivery of the same operation', async () => {
+  it('retains the invitation, then schedules delivery of the same operation', async () => {
     mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'pending_acceptance' }];
     expect(await resendCoManagedAdministratorInvitationAction(operationId)).toEqual({ enqueued: true });
-    expect(mocks.invitation).toHaveBeenCalledWith(mocks.db, await mocks.browser.mock.results[0].value, operationId, { resend: true });
+    expect(mocks.invitation).toHaveBeenCalledWith(mocks.db, await mocks.browser.mock.results[0].value, operationId);
     expect(mocks.schedule).toHaveBeenCalledWith({ sponsorTenant: 'home-sponsor', operationId });
   });
   it('reports the resend limit as a rejection and never schedules', async () => {

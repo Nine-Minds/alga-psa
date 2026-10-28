@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { prepareUpgradeSchema } from '../../../../../scripts/lib/upgrade-schema-source.mjs';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { prepareCoManagedProvisioning } from '../../../../../packages/co-managed/src/provisioning';
@@ -10,22 +15,44 @@ import { registerCoManagedProvisioningCleanupTests } from './helpers/coManagedPr
 // Activities run synchronously against a disposable database migrated from this
 // branch's migration set. Every worker connection resolves to it.
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
+const actorState = vi.hoisted(() => ({ user: null as any }));
+const appliance = vi.hoisted(() => ({ check: vi.fn(async () => ({ seats: 0 })) }));
+vi.mock('@alga-psa/db', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return { ...actual, createTenantKnex: async (tenant?: string) => ({ knex: db, tenant: tenant ?? actual.getTenantContext() }) };
+});
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),
+  checkPortalInvitationLimit: async () => ({ success: true }), formatRateLimitError: async () => 'Rate limited',
+  verifyAuthenticator: async () => false,
+}));
+vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => actorState.user }));
+vi.mock('@alga-psa/user-composition/lib/permissions', () => ({ hasPermission: async () => true }));
+vi.mock('@enterprise/lib/license/userSeatGuard', () => ({ checkApplianceLicenseSeatLimit: appliance.check }));
 vi.mock('@temporalio/activity', async importOriginal => ({
   ...(await importOriginal<typeof import('@temporalio/activity')>()),
   Context: { current: () => ({ log: { info() {}, warn() {}, error() {} } }) },
 }));
-vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send }));
+vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send,
+  TenantEmailService: { getInstance: () => ({ isConfigured: async () => true }) }, getSystemEmailService: async () => ({ isConfigured: async () => true }) }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => db,
   withAdminTransactionRetryReadOnly: (work: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(work),
 }));
 
 let db: Knex;
+let migrationWork: string;
 const databaseName = `co_managed_provisioning_${randomUUID().replaceAll('-', '')}`.slice(0, 60);
 
 beforeAll(async () => {
   wireLocalTestDbEnv();
-  db = await createTestDbConnection({ databaseName });
+  process.env.NEXTAUTH_SECRET = 'co-managed-integration-test-secret';
+  const root = path.resolve(process.cwd(), '../..');
+  migrationWork = mkdtempSync(path.join(tmpdir(), 'co-managed-schema-'));
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const schema = prepareUpgradeSchema({ repository: root, commit, destination: path.join(migrationWork, 'schema'), edition: 'ee' });
+  symlinkSync(path.join(root, 'node_modules'), path.join(migrationWork, 'schema', 'node_modules'));
+  db = await createTestDbConnection({ databaseName, migrationsDir: schema.directory });
 }, 600000);
 
 afterAll(async () => {
@@ -36,7 +63,7 @@ afterAll(async () => {
   try {
     await admin.raw('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()', [databaseName]);
     await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]);
-  } finally { await admin.destroy(); }
+  } finally { await admin.destroy(); if (migrationWork) rmSync(migrationWork, { recursive: true, force: true }); }
 });
 
 /** A sponsoring MSP with a Pro entitlement, one client, one internal user holding the
@@ -59,5 +86,5 @@ async function prepare(overrides: { seats?: number; email?: string; capacity?: n
   return operation;
 }
 
-registerCoManagedProvisioningTests({ getDb: () => db, prepare, delivery });
+registerCoManagedProvisioningTests({ getDb: () => db, prepare, delivery, actorState, appliance });
 registerCoManagedProvisioningCleanupTests(() => db, prepare);

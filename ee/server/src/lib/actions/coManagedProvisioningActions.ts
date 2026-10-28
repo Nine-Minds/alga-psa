@@ -90,7 +90,7 @@ export const resendCoManagedAdministratorInvitationAction = withAuth(async (user
   try {
     await withCoManagedManagementOperation(knex, actor, operationId, async (trx, operation) => {
       if (operation.state !== 'pending_acceptance') throw new Error('This provisioning operation cannot be retried.');
-      await retryCoManagedInitialAdministratorInvitation(trx, actor, operation.operation_id, { resend: true });
+      await retryCoManagedInitialAdministratorInvitation(trx, actor, operation.operation_id);
     });
   } catch (error) {
     if (error instanceof CoManagedProvisioningError && error.code === 'RESEND_LIMIT_REACHED') {

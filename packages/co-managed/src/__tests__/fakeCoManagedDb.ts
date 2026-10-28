@@ -58,6 +58,7 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
     whereNotNull(a: string) { filters.push(row => row[col(a)] != null); return builder; },
     whereIn(a: string, values: unknown[]) { filters.push(row => values.includes(row[col(a)])); return builder; },
     forUpdate() { store.locks.push(`${tenant}:${name}:update`); return builder; },
+    forNoKeyUpdate() { store.locks.push(`${tenant}:${name}:no-key-update`); return builder; },
     forShare() { store.locks.push(`${tenant}:${name}:share`); return builder; },
     /** Raw SQL predicates are not interpreted; tests seed no rows that rely on them. */
     whereRaw() { return builder; },

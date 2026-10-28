@@ -12,6 +12,7 @@ vi.mock('@alga-psa/db/models/user', () => ({ default: { findInternalEmailClaim: 
 vi.mock('../localPermission', () => ({ hasCoManagedLocalPermission: async () => state.permitted }));
 vi.mock('@alga-psa/licensing', () => ({
   getCoManagedEntitlementState: async () => ({ capacity: 5, allocated: 1, isReadOnly: false, graceEndsAt: null }),
+  countCoManagedCommittedSeats: async () => 1,
   invalidateCoManagedAwaitingAcceptance: (tenant: string) => { state.invalidated.push(tenant); },
   reserveCoManagedWorkspace: async () => { throw new Error('not used'); },
 }));
