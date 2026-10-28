@@ -163,7 +163,7 @@ describe('StockUnitsManager ?unitId=', () => {
     await waitFor(() => expect(open).toHaveBeenCalledWith('blob:pdf', '_blank', 'noopener'));
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/labels/pdf');
-    expect(JSON.parse(init.body as string)).toEqual({ labelClass: 'stock-unit-identity', ids: [UNIT_ID] });
+    expect(JSON.parse(init.body as string)).toEqual({ labelClass: 'stock-unit-identity', labels: [{ recordId: UNIT_ID }] });
     vi.unstubAllGlobals();
   });
 

@@ -225,6 +225,12 @@ const exactApiKeySkipPaths = [
   // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
   '/api/webhooks/datto',
   '/api/webhooks/datto/',
+  // The co-managed capability probe: a read-only GET that authenticates the
+  // session in-route (tenant from the session, never the request). Exact match
+  // only, so any future route under /api/v1/capabilities/ stays behind the
+  // API-key gate until it is exempted by name.
+  '/api/v1/capabilities/co-managed',
+  '/api/v1/capabilities/co-managed/',
   // Notification live-stream token: the MSP shell and the client portal both
   // mint a short-lived Hocuspocus token from their browser session (no
   // x-api-key). The route re-checks the session itself, and

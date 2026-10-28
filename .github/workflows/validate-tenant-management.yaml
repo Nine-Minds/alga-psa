@@ -39,10 +39,12 @@ jobs:
             BASE_SHA="${{ github.event.before }}"
           fi
 
-          # Check if any relevant files changed
+          # Check if any relevant files changed. The tenant table manifest (and its
+          # metadata/foreign-key inputs) is the source of the deletion order, so
+          # editing it must run the DB check too.
           CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || echo "")
 
-          if echo "$CHANGED_FILES" | grep -qE '^(server/migrations/|ee/server/migrations/|ee/temporal-workflows/src/activities/tenant-deletion-activities\.ts|\.github/workflows/validate-tenant-management\.yaml|scripts/validate-tenant-management\.ts)'; then
+          if echo "$CHANGED_FILES" | grep -qE '^(server/migrations/|ee/server/migrations/|ee/temporal-workflows/src/activities/tenant-deletion-activities\.ts|packages/db/src/lib/tenantTable[A-Za-z]*\.ts|\.github/workflows/validate-tenant-management\.yaml|scripts/validate-tenant-management\.ts)'; then
             echo "should_run=true" >> $GITHUB_OUTPUT
             echo "Relevant changes detected - will run validation"
           else

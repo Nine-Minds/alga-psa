@@ -102,6 +102,7 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="algadesk"
         needsOnboarding={false}
         initialSidebarCollapsed={false}
+        canRunOnboarding
       >
         <div>algadesk content</div>
       </MspLayoutClient>,
@@ -119,6 +120,7 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="psa"
         needsOnboarding={false}
         initialSidebarCollapsed={false}
+        canRunOnboarding
       >
         <div>psa content</div>
       </MspLayoutClient>,
@@ -135,6 +137,7 @@ describe('MspLayoutClient product shell behavior', () => {
         productCode="psa"
         needsOnboarding={true}
         initialSidebarCollapsed={false}
+        canRunOnboarding
       >
         <div>psa content</div>
       </MspLayoutClient>,
@@ -159,6 +162,7 @@ describe('MspLayoutClient product shell behavior', () => {
         session={{ user: { tenant: 'tenant-1' } } as any}
         productCode="algadesk"
         needsOnboarding={false}
+        canRunOnboarding
         initialSidebarCollapsed={false}
       >
         <div>algadesk content</div>
@@ -168,6 +172,35 @@ describe('MspLayoutClient product shell behavior', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/msp/onboarding');
     });
+  });
+
+  it.each([
+    { label: 'absent', props: {} },
+    { label: 'false', props: { canRunOnboarding: false } },
+  ])('does not send a user who cannot run setup to the wizard when canRunOnboarding is $label', async ({ props }) => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: false,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding
+        initialSidebarCollapsed={false}
+        {...props}
+      >
+        <div>technician content</div>
+      </MspLayoutClient>,
+    );
+
+    expect(await screen.findByText('technician content')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalledWith('/msp/onboarding');
+    expect(mockGetTenantSettings).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -189,6 +222,7 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
+        canRunOnboarding
       >
         <div>psa content</div>
       </MspLayoutClient>,
@@ -221,6 +255,7 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
+        canRunOnboarding
       >
         <div>psa content</div>
       </MspLayoutClient>
@@ -250,6 +285,7 @@ describe('MspLayoutClient product shell behavior', () => {
         onboardingResolvedServerSide={resolved}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
+        canRunOnboarding
       >
         <div>psa content</div>
       </MspLayoutClient>
@@ -291,6 +327,7 @@ describe('MspLayoutClient product shell behavior', () => {
         session={{ user: { tenant: 'tenant-1' } } as any}
         productCode="psa"
         needsOnboarding={false}
+        canRunOnboarding
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
       >
@@ -315,6 +352,7 @@ describe('MspLayoutClient product shell behavior', () => {
         needsOnboarding={false}
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
+        canRunOnboarding
       >
         <div>onboarding content</div>
       </MspLayoutClient>,

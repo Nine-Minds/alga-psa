@@ -40,6 +40,7 @@ exports.up = async function up(knex) {
   }
 
   // tenant is in the join and the SET, so the update is shard-local on Citus.
+  // migration-lint: allow 5 - retroactive: UPDATE is scoped to Level.io placeholder alerts only (tenant-joined, shard-local on Citus); merged before the lint existed
   await knex.raw(`
     UPDATE rmm_alerts AS a
     SET status = 'auto_resolved',
