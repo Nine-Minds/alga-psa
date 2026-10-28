@@ -49,9 +49,11 @@ const LIVE_PREDICATE = 'deleted_at IS NULL';
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
-  await knex.raw('DROP INDEX IF EXISTS idx_unique_external_mapping');
+  // Both operations must permit writes while waiting for existing readers.
+  // This migration runs outside a transaction to support CONCURRENTLY.
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping');
   await knex.raw(`
-    CREATE UNIQUE INDEX idx_unique_external_mapping
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_external_mapping
     ON tenant_external_entity_mappings (${INDEX_KEY})
     WHERE ${XERO_PREDICATE} AND ${DESKTOP_PREDICATE} AND ${LIVE_PREDICATE}
   `);
