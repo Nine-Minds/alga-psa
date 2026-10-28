@@ -75,6 +75,7 @@ export async function updateTeamsMeetingWithResult(
       `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'PATCH',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,

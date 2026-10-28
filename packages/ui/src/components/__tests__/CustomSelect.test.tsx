@@ -96,4 +96,56 @@ describe('CustomSelect', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('customStyles class merging', () => {
+    const getContent = async () => {
+      const viewport = await openSelect();
+      return viewport.parentElement as HTMLElement;
+    };
+
+    it('lets customStyles.content replace the conflicting base max-w', async () => {
+      render(
+        <CustomSelect
+          id="merge-select"
+          options={options}
+          value="option-0"
+          onValueChange={() => {}}
+          customStyles={{ content: 'max-w-[var(--radix-select-trigger-width)]' }}
+        />
+      );
+      const content = await getContent();
+      expect(content.className).toContain('max-w-[var(--radix-select-trigger-width)]');
+      expect(content.className.split(/\s+/)).not.toContain('max-w-full');
+      // Non-conflicting base classes survive the merge.
+      expect(content.className).toContain('min-w-[var(--radix-select-trigger-width)]');
+      expect(content.className).toContain('z-[10001]');
+    });
+
+    it('keeps the base content classes when no customStyles are passed', async () => {
+      render(<CustomSelect id="base-select" options={options} value="option-0" onValueChange={() => {}} />);
+      const classes = (await getContent()).className.split(/\s+/);
+      expect(classes).toContain('max-w-full');
+      expect(classes).toContain('min-w-[var(--radix-select-trigger-width)]');
+      expect(classes).toContain('mt-1');
+      expect(classes).toContain('z-[10001]');
+      expect(classes).toContain('[&[data-side=top]]:mb-2');
+      expect(classes).toContain('[&[data-side=bottom]]:mt-2');
+    });
+
+    it('lets customStyles.item override conflicting base item classes', async () => {
+      render(
+        <CustomSelect
+          id="item-select"
+          options={options}
+          value="option-0"
+          onValueChange={() => {}}
+          customStyles={{ item: 'whitespace-normal' }}
+        />
+      );
+      await openSelect();
+      const classes = screen.getByRole('option', { name: 'Option 3' }).className.split(/\s+/);
+      expect(classes).toContain('whitespace-normal');
+      expect(classes).not.toContain('whitespace-nowrap');
+    });
+  });
 });

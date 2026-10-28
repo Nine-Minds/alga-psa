@@ -1,3 +1,4 @@
+import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -400,7 +401,11 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
     emailData.body?.text ??
     '';
 
-  return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  if (String(candidateText).trim()) return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  // HTML-only mail has no sanitizedText in the reply parser. Use its existing
+  // HTML text projection, without reviving quoted HTML when a text part exists.
+  if (emailData.body?.text?.trim()) return false;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
