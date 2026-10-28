@@ -47,6 +47,8 @@ export const countLiveCoManagedWorkspacesForClient = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  if (!(await trx.schema.hasTable('co_managed_provisioning_operations')) ||
+      !(await trx.schema.hasTable('co_managed_allocations'))) return 0;
   const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
     .join('co_managed_allocations', function () {
       this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
@@ -67,6 +69,8 @@ export const countLiveCoManagedEscalationsForBoard = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  if (!(await trx.schema.hasTable('co_managed_provisioning_operations')) ||
+      !(await trx.schema.hasTable('co_managed_allocations'))) return 0;
   const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
     .join('co_managed_allocations', function () {
       this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
@@ -87,6 +91,8 @@ export const countCoManagedBoardScopes = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  if (!(await trx.schema.hasTable('co_management_relationships')) ||
+      !(await trx.schema.hasTable('co_management_board_scopes'))) return 0;
   const live = await tenantScopedTable(trx, options.tenant, 'co_management_relationships')
     .whereNull('ended_at')
     .pluck('relationship_id');

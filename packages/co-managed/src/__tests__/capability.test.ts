@@ -118,7 +118,7 @@ describe('admits = flag AND a durable entitlement row', () => {
 describe('serves = participation, with no flag term', () => {
   beforeEach(() => flag(false));
 
-  it.each([
+  it.each<{ name: string; tables: Record<string, Record<string, any>[]>; tenant: string }>([
     { name: 'customer relationship row', tables: { co_management_relationships: [{ tenant: A, sponsor_tenant: B }] }, tenant: A },
     { name: 'sponsor of a relationship', tables: { co_management_relationships: [{ tenant: A, sponsor_tenant: B }] }, tenant: B },
     { name: 'entitlement row', tables: { co_managed_entitlements: [{ tenant: A }] }, tenant: A },

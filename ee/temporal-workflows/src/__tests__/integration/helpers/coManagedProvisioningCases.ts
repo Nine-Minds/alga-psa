@@ -8,6 +8,7 @@ import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoMan
 import { retryCoManagedInitialAdministratorInvitation } from '../../../../../../packages/co-managed/src/provisioningInvitation';
 import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
 import { bootstrapCoManagedCustomer, deliverCoManagedAdministratorInvitation } from '../../../activities/co-managed-provisioning-activities';
+import { admitCoManagedSponsor } from '../../../../../../server/src/lib/co-managed/admitSponsor';
 
 interface Harness {
   getDb: () => Knex;
@@ -46,6 +47,21 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }:
     process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.test'; });
 
   describe('co-managed provisioning', () => {
+    it('admits a first-time entitled sponsor before provisioning without restoring revoked grants', async () => {
+      const db = getDb(), tenant = randomUUID(), roleId = randomUUID();
+      const home = tenantDb(db, tenant);
+      await home.table('tenants').insert({ tenant, client_name: 'First sponsor', email: `${tenant}@example.test`, product_code: 'psa', plan: 'pro' });
+      await home.table('roles').insert({ tenant, role_id: roleId, role_name: 'Admin', msp: true, client: false });
+      await home.table('co_managed_entitlements').insert({ tenant, source: 'admin_grant', source_reference: 'test', capacity: 2,
+        verified_at: new Date(), valid_until: new Date(Date.now() + 3600000) });
+      await Promise.all([admitCoManagedSponsor(tenant, db), admitCoManagedSponsor(tenant, db)]);
+      const permissions = await home.table('permissions').where({ resource: 'co_management' });
+      expect(permissions.map(p => p.action).sort()).toEqual(['manage', 'read']);
+      expect(await home.table('role_permissions').where('role_id', roleId)).toHaveLength(2);
+      await home.table('role_permissions').where({ role_id: roleId, permission_id: permissions[0].permission_id }).delete();
+      await admitCoManagedSponsor(tenant, db);
+      expect(await home.table('role_permissions').where('role_id', roleId)).toHaveLength(1);
+    });
     it('runs tenant, seeds, settings and invitation in order, then reaches pending_acceptance', async () => {
       const db = getDb(), operation = await prepare();
       const order: string[] = [];
@@ -91,8 +107,13 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery }:
       expect(await customer.table('user_invitations')).toHaveLength(1);
       expect(await home.table('co_managed_allocations').where('operation_id', operation.operation_id)).toHaveLength(1);
       expect(await home.table('co_managed_provisioning_operations').where('operation_id', operation.operation_id)).toHaveLength(1);
-      const events = await db('co_managed_events' as string).where({ tenant: operation.tenant }).catch(() => null);
-      if (events) expect(events.filter((e: { event_type?: string }) => /requested|prepared/.test(e.event_type ?? ''))).toHaveLength(1);
+      const events = await customer.table('co_management_relationship_events')
+        .where('relationship_id', operation.relationship_id).select('event_type', 'revision');
+      expect(events).toEqual(expect.arrayContaining([
+        expect.objectContaining({ event_type: 'requested', revision: 1 }),
+        expect.objectContaining({ event_type: 'prepared', revision: 1 }),
+      ]));
+      expect(events).toHaveLength(2);
       expect(await getCoManagedEntitlementState(db, operation.tenant)).toMatchObject({ allocated: 2 });
     });
 

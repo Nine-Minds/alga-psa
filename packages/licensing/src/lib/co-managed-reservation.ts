@@ -94,9 +94,11 @@ export async function reserveCoManagedWorkspace(
       throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
     }
 
-    // The sponsor now participates: seed the co-management permissions for it here, in the
-    // first successful reservation transaction, never as a global backfill.
-    await admitCoManagedPermissions(trx, input.sponsorTenant);
+    // A direct caller may bypass the server's admission step; retain a first-use
+    // fallback here, without restoring grants removed after admission.
+    if (!await sponsor.table('permissions').where({ resource: 'co_management' }).first('permission_id')) {
+      await admitCoManagedPermissions(trx, input.sponsorTenant);
+    }
 
     const customerTenant = randomUUID();
     const relationshipId = randomUUID();

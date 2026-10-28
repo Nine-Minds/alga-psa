@@ -333,6 +333,7 @@ describe('deletion configs', () => {
   it('blocks client deletion while a co-managed setup still holds an unreleased allocation', async () => {
     const dep = DELETION_CONFIGS.client.dependencies.find((d) => d.type === 'co_managed_workspace');
     const { trx, builder, joinClause } = makeJoinTrx(2);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
     builder.whereRaw = vi.fn().mockReturnValue(builder);
     builder.whereNot = vi.fn().mockReturnValue(builder);
 
@@ -347,9 +348,21 @@ describe('deletion configs', () => {
 
     const dep = DELETION_CONFIGS.board.dependencies.find((d) => d.type === 'co_managed_escalation');
     const { trx, builder } = makeJoinTrx(1);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
     builder.whereNot = vi.fn().mockReturnValue(builder);
     expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-a' })).toBe(1);
     expect(builder.where).toHaveBeenCalledWith('co_managed_provisioning_operations.escalation_board_id', 'board-a');
+  });
+
+  it('allows deletion checks before the co-managed tables exist', async () => {
+    const { trx } = makeJoinTrx(0);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(false) };
+    for (const [entity, type] of [['client', 'co_managed_workspace'], ['board', 'co_managed_escalation'],
+      ['board', 'co_managed_board_scope']] as const) {
+      const dep = DELETION_CONFIGS[entity].dependencies.find(d => d.type === type);
+      expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'entity-1' })).toBe(0);
+    }
+    expect(trx).not.toHaveBeenCalled();
   });
 
   it('asset config has no blocking dependencies (cascaded by deleteAsset)', () => {

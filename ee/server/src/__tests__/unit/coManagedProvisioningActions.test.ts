@@ -17,6 +17,7 @@ vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: mocks.db
 vi.mock('@alga-psa/co-managed', () => ({ prepareCoManagedProvisioningForActor: mocks.prepare, withCoManagedManagementOperation: mocks.admission, requestCoManagedProvisioningCleanup: mocks.cancel, retryCoManagedInitialAdministratorInvitation: mocks.invitation, CoManagedProvisioningError: class extends Error { constructor(public code?: string) { super(code); } } }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedReservationError: class extends Error {} }));
 vi.mock('server/src/lib/co-managed/browserActor', () => ({ coManagedBrowserActor: mocks.browser }));
+vi.mock('server/src/lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
 vi.mock('../../lib/co-managed/workflowClient', () => ({ startCoManagedProvisioningWorkflow: mocks.schedule, startCoManagedProvisioningCleanupWorkflow: mocks.cleanup }));
 beforeEach(() => { vi.resetAllMocks(); mocks.capability.mockResolvedValue(undefined); mocks.user.user_type = 'internal'; mocks.permission.mockResolvedValue(true);
   mocks.prepare.mockResolvedValue({ operation_id: 'operation', state: 'queued' }); mocks.schedule.mockResolvedValue({ enqueued: true }); mocks.cleanup.mockResolvedValue({ enqueued: true });

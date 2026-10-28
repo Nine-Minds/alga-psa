@@ -119,6 +119,13 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
       customer_board_id: randomUUID(), customer_client_id: randomUUID(), administrator_invitation_id: randomUUID(),
       request_fingerprint: fingerprint, request, state: 'queued',
     }).returning('*');
+    const scope = { visibilityMode: request.visibilityMode, escalationBoardId: request.escalationBoardId,
+      customerBoardId: operation.customer_board_id };
+    await tenantDb(trx, reservation.customer_tenant).table('co_management_relationship_events').insert({
+      tenant: reservation.customer_tenant, event_id: randomUUID(), relationship_id: reservation.relationship_id,
+      actor_tenant: input.sponsorTenant, actor_user_id: input.requestedBy, event_type: 'requested', revision: 1,
+      scope, scope_fingerprint: createHash('sha256').update(JSON.stringify(scope)).digest('hex'),
+    });
     return operation;
   });
 }

@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 
 /**
  * The co-management permissions, written for a sponsor only when it is admitted to the
- * `co-managed` capability (its first successful reservation) and never by a fleet-wide
+ * `co-managed` capability and never by a fleet-wide
  * catalog synchronization: the catalog tags them `capabilities: ['co-managed']`, so a
  * plain PSA tenant never receives them. A unit test pins this list to catalog.cjs.
  */
@@ -21,8 +21,8 @@ const SPONSOR_ADMIN_ROLE = { role_name: 'Admin', msp: true, client: false } as c
 /**
  * Seeds the co-management permissions for one sponsor and grants them to its `msp:Admin`
  * role. Idempotent: existing rows and grants are left alone, and no other tenant is touched.
- * Call inside the caller's transaction (the sponsor reservation's), after the sponsor
- * entitlement lock, so concurrent first reservations cannot race the insert.
+ * Call inside a transaction after the sponsor entitlement lock, so concurrent
+ * first admissions and reservations cannot race the insert.
  */
 export async function admitCoManagedPermissions(trx: Knex.Transaction, sponsorTenant: string): Promise<void> {
   if (!trx.isTransaction) throw new Error('Co-managed permission admission requires an open transaction');

@@ -6,6 +6,7 @@ import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { createTenantKnex } from '@alga-psa/db';
 import { prepareCoManagedProvisioningForActor, withCoManagedManagementOperation, requestCoManagedProvisioningCleanup, retryCoManagedInitialAdministratorInvitation, CoManagedProvisioningError } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
+import { admitCoManagedSponsor } from 'server/src/lib/co-managed/admitSponsor';
 import { CoManagedReservationError } from '@alga-psa/licensing';
 import { startCoManagedProvisioningWorkflow, startCoManagedProvisioningCleanupWorkflow } from '../co-managed/workflowClient';
 
@@ -30,6 +31,7 @@ function splitAdministratorName(name: unknown): { firstName: string; lastName: s
 
 export const provisionCoManagedWorkspaceAction = withAuth(async (user, { tenant }, input: ProvisionCoManagedWorkspaceInput) => {
   await requireCapabilityForAction('co-managed', tenant, 'admits');
+  if (user.user_type === 'internal') await admitCoManagedSponsor(tenant);
   if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'manage') ||
       !await hasPermission(user, 'client', 'read') || !await hasPermission(user, 'ticket', 'read')) throw new Error('Permission denied');
   const administrator = splitAdministratorName(input?.administratorName);

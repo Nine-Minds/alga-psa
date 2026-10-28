@@ -28,9 +28,6 @@ vi.mock('@alga-psa/licensing', async () => {
       await fake.fakeTenantDb(trx, reservation.customer_tenant).table('co_management_relationships').insert({
         tenant: reservation.customer_tenant, relationship_id: reservation.relationship_id, sponsor_tenant: input.sponsorTenant,
         sponsor_client_id: input.clientId, state: 'provisioning', visibility_mode: input.visibilityMode, revision: 1, ended_at: null });
-      await fake.fakeTenantDb(trx, reservation.customer_tenant).table('co_management_relationship_events').insert({
-        tenant: reservation.customer_tenant, event_id: `e-${input.operationId}`, relationship_id: reservation.relationship_id,
-        actor_tenant: input.sponsorTenant, actor_user_id: input.requestedBy, event_type: 'requested', revision: 1, scope: {}, scope_fingerprint: 'f' });
       return { ...reservation, state: 'reserved' };
     },
   };
