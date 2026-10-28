@@ -414,17 +414,21 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "placeholder": "Nieuwe teamnaam invoeren",
+      "descriptionPlaceholder": "Optionele teambeschrijving invoeren",
       "selectManager": "Selecteer een manager"
     },
     "details": {
       "loading": "Teamgegevens laden...",
       "notFound": "Geen team gevonden",
+      "noDescription": "Geen beschrijving",
       "fields": {
         "teamLead": "Teamleider",
+        "description": "Beschrijving",
         "addMember": "Lid toevoegen"
       },
       "placeholders": {
         "teamName": "Teamnaam invoeren",
+        "description": "Teambeschrijving invoeren",
         "selectTeamLead": "Selecteer een teamleider",
         "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
         "noTeamLead": "Niet toegewezen"
@@ -436,8 +440,10 @@
         "discard": "Verwerpen",
         "saveChanges": "Wijzigingen opslaan",
         "saveName": "Naam opslaan",
+        "saveDescription": "Beschrijving opslaan",
         "cancel": "Annuleren",
         "editName": "Naam bewerken",
+        "editDescription": "Beschrijving bewerken",
         "remove": "Verwijderen"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
+        "updateDescription": "Kan teambeschrijving niet bijwerken",
         "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }

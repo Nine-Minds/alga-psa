@@ -414,17 +414,21 @@
       "cancel": "Annuler",
       "delete": "Supprimer",
       "placeholder": "Saisir le nom de la nouvelle équipe",
+      "descriptionPlaceholder": "Saisir une description d'équipe facultative",
       "selectManager": "Sélectionner un responsable"
     },
     "details": {
       "loading": "Chargement des détails de l'équipe...",
       "notFound": "Aucune équipe trouvée",
+      "noDescription": "Aucune description",
       "fields": {
         "teamLead": "Chef d'équipe",
+        "description": "Description",
         "addMember": "Ajouter un membre"
       },
       "placeholders": {
         "teamName": "Saisir le nom de l'équipe",
+        "description": "Saisir la description de l'équipe",
         "selectTeamLead": "Sélectionner un chef d'équipe",
         "selectUserToAdd": "Sélectionner un utilisateur à ajouter",
         "noTeamLead": "Non assigné"
@@ -436,8 +440,10 @@
         "discard": "Abandonner",
         "saveChanges": "Enregistrer les modifications",
         "saveName": "Enregistrer le nom",
+        "saveDescription": "Enregistrer la description",
         "cancel": "Annuler",
         "editName": "Modifier le nom",
+        "editDescription": "Modifier la description",
         "remove": "Supprimer"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Échec de la création de l'équipe : {{error}}",
         "deleteFailed": "Échec de la suppression de l'équipe",
         "updateName": "Échec de la mise à jour du nom de l'équipe",
+        "updateDescription": "Échec de la mise à jour de la description de l'équipe",
         "saveChanges": "Échec de l'enregistrement des modifications. Veuillez réessayer."
       }
     }

@@ -10,6 +10,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -34,6 +35,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   const { t } = useTranslation('msp/settings');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamDescription, setNewTeamDescription] = useState('');
   const [selectedManagerId, setSelectedManagerId] = useState<string>('');
   const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +83,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       try {
         const newTeam: ITeam = {
           team_name: newTeamName,
+          description: newTeamDescription.trim() || null,
           members: [],
           manager_id: selectedManagerId,
           team_id: '',
@@ -92,6 +95,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
         }
         onSelectTeam(createdTeam, false);
         setNewTeamName('');
+        setNewTeamDescription('');
         setSelectedManagerId('');
         setShowAddForm(false);
         setError(null);
@@ -173,6 +177,15 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             onChange={(e) => setNewTeamName(e.target.value)}
             placeholder={t('teams.list.placeholder')}
           />
+          <TextArea
+            id="new-team-description"
+            value={newTeamDescription}
+            onChange={(e) => setNewTeamDescription(e.target.value)}
+            placeholder={t('teams.list.descriptionPlaceholder')}
+            rows={2}
+            maxLength={1000}
+            wrapperClassName="mb-0 px-0"
+          />
           <UserPicker
             value={selectedManagerId}
             onValueChange={setSelectedManagerId}
@@ -197,6 +210,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
               onClick={() => {
                 setShowAddForm(false);
                 setNewTeamName('');
+                setNewTeamDescription('');
                 setSelectedManagerId('');
               }}
             >
