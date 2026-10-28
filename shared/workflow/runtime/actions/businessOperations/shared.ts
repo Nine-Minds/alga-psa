@@ -183,7 +183,7 @@ export type RunContext = {
 
 /**
  * Resolves who a run acts as and where it sits in a workflow-triggered chain.
- * The actor is the publisher (else the creator) of the run's workflow; the
+ * The actor is the publisher (else the creator) of the workflow version the run executed; the
  * lineage is `trigger_metadata_json.workflowLineage`, stamped by the event-stream
  * worker when an event published by another workflow launched this run.
  */
@@ -192,7 +192,10 @@ export async function resolveRunContext(trx: Knex.Transaction, tenantId: string,
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
     type: 'left',
-    rootTenantColumn: 'wr.tenant'
+    rootTenantColumn: 'wr.tenant',
+    // Pin to the version this run actually executed; without it every published
+    // version of the workflow matches and .first() picks an arbitrary publisher.
+    on: join => join.andOn('wr.workflow_version', '=', 'wdv.version')
   });
   db.tenantJoin(query, 'workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id', {
     type: 'left',
