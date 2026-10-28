@@ -583,12 +583,13 @@ async function selectEligibleBlocks(
   if (!workDate) return [];
   const timeZone = await resolveEffectiveTimeZone(trx, tenant);
 
-  // Lock the whole contract line before reading invoice and termination state.
+  // Lock the client's blocks on this line before reading invoice and termination state.
   // If an expiry or reversal owns a block lock, the following eligibility
   // statement then starts after it commits and sees its audit and invoice
   // changes as well as the new block status.
   if (target.kind === 'contract') {
-    await lockBlocks(trx, tenant, { contractLineId: target.contractLineId });
+    await db.table('hour_blocks').where({ client_id: clientId, contract_line_id: target.contractLineId })
+      .select('block_id').orderBy('block_id', 'asc').forUpdate();
   }
 
   const rows: any[] = await db.table('hour_blocks as hb')
