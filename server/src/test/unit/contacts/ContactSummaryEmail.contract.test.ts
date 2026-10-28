@@ -31,7 +31,9 @@ describe('Contact summary email compatibility', () => {
 
   it('T025: ContactPicker and related picker dialogs keep filtering and rendering the primary contact.email summary field', () => {
     expect(contactPickerSource).toContain("(contact.email ?? '').toLowerCase().includes(lowerSearchTerm)");
-    expect(contactPickerSource).toContain('{contact.email}</div>');
+    // The row's secondary line now carries the primary-location hint after the email, so the email
+    // is no longer the last node in that div — it is still the field rendered there.
+    expect(contactPickerSource).toMatch(/\{contact\.email\}\s+\{contactLocationHint\(contact\) \?/);
     expect(contactPickerDialogSource).toContain("(contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)");
   });
 });
