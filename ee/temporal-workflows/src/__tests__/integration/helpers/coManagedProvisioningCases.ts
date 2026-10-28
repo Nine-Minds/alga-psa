@@ -158,11 +158,24 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const signedUpAdmin = await customer.table('users').where('user_id', result.userId).first();
       expect(await hasPermission(signedUpAdmin, 'ticket', 'read', db)).toBe(true);
       expect(await hasPermission(signedUpAdmin, 'billing', 'read', db)).toBe(false);
+      expect(await hasPermission(signedUpAdmin, 'document', 'read', db)).toBe(false);
       expect(await hasPermission({ ...signedUpAdmin, tenant: operation.tenant }, 'ticket', 'read', db)).toBe(false);
       const grants = await customer.table('role_permissions').orderBy(['role_id', 'permission_id']);
       await bootstrapCoManagedCustomer(input(operation));
       expect(await customer.table('role_permissions').orderBy(['role_id', 'permission_id'])).toEqual(grants);
       actorState.user = { tenant: actor.tenant, user_id: actor.userId, user_type: 'internal', username: invitation.email };
+      const documentId = randomUUID(), typeId = randomUUID(), articleId = randomUUID();
+      await customer.table('document_types').insert({ tenant: actor.tenant, type_id: typeId, type_name: 'kb-test' });
+      await customer.table('documents').insert({ tenant: actor.tenant, document_id: documentId, document_name: 'Customer guide',
+        type_id: typeId, user_id: actor.userId, created_by: actor.userId });
+      await customer.table('kb_articles').insert({ tenant: actor.tenant, article_id: articleId, document_id: documentId, slug: 'customer-guide' });
+      const { getArticles } = await import('../../../../../../packages/documents/src/actions/kbArticleActions');
+      const articles = await runWithTenant(actor.tenant, () => getArticles());
+      expect(articles).toMatchObject({ articles: expect.arrayContaining([expect.objectContaining({ article_id: articleId })]), total: 1 });
+      const kbPermission = await customer.table('permissions').where({ resource: 'knowledge_base', action: 'read', msp: true }).first();
+      await customer.table('role_permissions').where({ role_id: invitation.role_id, permission_id: kbPermission.permission_id }).delete();
+      expect(await runWithTenant(actor.tenant, () => getArticles())).toMatchObject({ permissionError: expect.any(String) });
+      await customer.table('role_permissions').insert({ tenant: actor.tenant, role_id: invitation.role_id, permission_id: kbPermission.permission_id });
       appliance.check.mockClear();
       const invite = (email: string) => runWithTenant(actor.tenant, () => sendUserInvitation({ email, firstName: 'Next', lastName: 'User', roleId: invitation.role_id }));
       const pendingBefore = await customer.table('user_invitations');

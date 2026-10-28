@@ -227,9 +227,15 @@ permissions and custom roles; repeat the audit to verify idempotency. Do not run
 the unscoped onboarding seed or a fleet-wide reconciliation. The retained
 customer used in the previous smoke remains unchanged.
 
-Knowledge-base actions share `document` permissions with general document
-actions. Those permissions are not included here: the product denies document
-routes, while some document actions have no equivalent product check. This
-leaves knowledge-base authorization unresolved until that boundary is addressed
-and tested. The live ticket/API journey and commercial action denials remain to
-be verified as well.
+Knowledge-base reads accept a separate `knowledge_base:read` permission. The
+fresh-bootstrap suite exercises the article-list action with the seeded Admin,
+then removes that grant and verifies denial; the Admin has no general
+`document:read` permission. PSA and AlgaDesk can continue to use their existing
+`document:read` grant. The RBAC check resolves both permissions in one read.
+
+The remaining document boundary is incomplete. Ticket attachment reads,
+uploads and downloads still require general document permissions, and article
+content and editing paths also require further authorization work. The
+focused test mocks the action authentication facade, so it does not prove the
+pending-acceptance guard or the ticket API. The live ticket/API journey and
+commercial action denials remain to be verified as well.

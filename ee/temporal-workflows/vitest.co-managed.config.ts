@@ -7,6 +7,7 @@ export default {
   ...base,
   resolve: { ...base.resolve, alias: [
     { find: '@alga-psa/teams/models/team', replacement: path.resolve(__dirname, '../../packages/teams/src/models/team.ts') },
+    { find: '@alga-psa/ui/lib/errorHandling', replacement: path.resolve(__dirname, '../../packages/ui/src/lib/errorHandling.ts') },
     ...(base.resolve?.alias ?? []),
   ] },
   test: {

@@ -24,6 +24,10 @@ vi.mock('@alga-psa/db', async importOriginal => {
 });
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),
+  hasPermission: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').hasPermission>) =>
+    (await import('../../../../../packages/auth/src/lib/rbac')).hasPermission(...args),
+  checkMultiplePermissions: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').checkMultiplePermissions>) =>
+    (await import('../../../../../packages/auth/src/lib/rbac')).checkMultiplePermissions(...args),
   checkPortalInvitationLimit: async () => ({ success: true }), formatRateLimitError: async () => 'Rate limited',
   verifyAuthenticator: async () => false,
 }));
