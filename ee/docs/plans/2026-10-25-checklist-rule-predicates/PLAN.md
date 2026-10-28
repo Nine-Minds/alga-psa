@@ -52,18 +52,20 @@ the create-from-service-request call site: write `created_ticket_id` inside the 
 immediately after the ticket row is inserted, before auto-apply. Then the row is the truth, the
 overlay parameter and its conditional lookup disappear, and compiled evaluation needs no special case.
 
-### D4 — Storage: one `where` group + a version, migrated then the columns dropped
+### D4 — Storage: one `where` group + a version, with an additive migration
 
 `checklist_template_apply_rules.where jsonb not null default '{"join":"and","clauses":[]}'` and
 `where_version smallint not null default 1`, validated with `predicateGroupSchema`. The empty AND
 group matches everything — identical to today's "no matchers" rule.
 
-Column-by-column migration (exact mapping in design §3), then drop: `board_id`, `category_id`,
+Column-by-column migration (exact mapping in design §3) retains: `board_id`, `category_id`,
 `subcategory_id`, `priority_id`, `client_ids`, `ticket_origins`, `from_service_request`,
-`service_request_definition_id`, `keywords`, `keyword_mode`, `keyword_target`. One deploy: add +
-backfill in JS (needs the matcher's normalisation, e.g. keyword trimming) + drop old columns in the
-same migration set. `where_version` is the persisted-format version: readers reject a version they do
-not know rather than guessing.
+`service_request_definition_id`, `keywords`, `keyword_mode`, `keyword_target`. Add the predicate
+columns and backfill in JS (needs the matcher's normalisation, e.g. keyword trimming). The previous
+release still reads and writes the legacy columns during blue/green upgrades, so removal requires
+a later release whose baseline no longer uses them. Reinvoking the transactional migration preserves
+existing predicates rather than repeating the backfill. `where_version` is the persisted-format
+version: readers reject a version they do not know rather than guessing.
 
 ### D5 — New targeting: client tags and contact tags by tag definition id
 
@@ -94,7 +96,7 @@ card's model as the destination. Not this card's scope.
 ## Scope
 
 In: schema attributes (`ticket_origin`, `title_folded`, `description_folded`, `from_service_request`,
-`service_request_definition_id`), migration + column drops, rule CRUD (`checklistTemplateActions.ts`
+`service_request_definition_id`), additive migration + backfill, rule CRUD (`checklistTemplateActions.ts`
 and its zod input), evaluation (`applyTemplates.ts`: delete `ruleMatchesTicket` and the matcher types;
 one compiled evaluation), editor (`ChecklistRuleMatchers.tsx` + settings screen), tests,
 `tenantTableMetadata.ts`, docs/SCRATCHPAD decision.

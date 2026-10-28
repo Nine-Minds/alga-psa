@@ -134,6 +134,57 @@ describe('checklist persisted predicates', () => {
     await db?.destroy();
   });
 
+  it('keeps legacy rule reads and writes working after upgrade and preserves predicate edits on rerun', async () => {
+    const trx = await db.transaction();
+    try {
+      const schema = `checklist_upgrade_${uuid().replaceAll('-', '')}`;
+      await trx.raw('CREATE SCHEMA ??', [schema]);
+      await trx.raw('SET LOCAL search_path TO ??, public', [schema]);
+      await createLegacyRuleTable(trx);
+      const legacy = {
+        board_id: base.boardId,
+        category_id: uuid(),
+        subcategory_id: uuid(),
+        priority_id: base.priorityId,
+        client_ids: [base.clientId],
+        ticket_origins: ['api'],
+        from_service_request: true,
+        service_request_definition_id: uuid(),
+        keywords: ['Onboarding', 'Laptop'],
+        keyword_mode: 'all',
+        keyword_target: 'title_and_description',
+      };
+      const key = { tenant: base.tenantId, apply_rule_id: uuid() };
+      await trx('checklist_template_apply_rules').insert({ ...key, ...legacy });
+      await migration.up(trx);
+
+      // The previous release selects these fields explicitly in rule CRUD.
+      expect(await trx('checklist_template_apply_rules').where(key).first(...Object.keys(legacy)))
+        .toEqual(legacy);
+      const [updated] = await trx('checklist_template_apply_rules').where(key)
+        .update({ ...legacy, keywords: ['Replacement'] }).returning(Object.keys(legacy));
+      expect(updated).toEqual({ ...legacy, keywords: ['Replacement'] });
+      const insertedKey = { tenant: base.tenantId, apply_rule_id: uuid() };
+      const [inserted] = await trx('checklist_template_apply_rules')
+        .insert({ ...insertedKey, ...legacy }).returning(Object.keys(legacy));
+      expect(inserted).toEqual(legacy);
+
+      // Retaining legacy columns must not make recovery tooling backfill over newer edits.
+      const predicate = { join: 'or', clauses: [
+        { path: 'client.tags', operator: 'in', value: [uuid()] },
+        { path: 'priority_id', operator: 'equals', value: base.priorityId },
+      ] };
+      await trx('checklist_template_apply_rules').where(key).update({ where: JSON.stringify(predicate) });
+      await migration.up(trx);
+      expect((await trx('checklist_template_apply_rules').where(key).first('where')).where)
+        .toEqual(predicate);
+      expect(await trx('checklist_template_apply_rules').where(insertedKey).first(...Object.keys(legacy)))
+        .toEqual(legacy);
+    } finally {
+      await trx.rollback();
+    }
+  });
+
   it('migrates more than one backfill batch without losing rules and can be invoked again', async () => {
     const trx = await db.transaction();
     try {
@@ -322,18 +373,6 @@ describe('checklist persisted predicates', () => {
           ...rule,
         });
       await migration.up(trx);
-      const columns = await trx('checklist_template_apply_rules').columnInfo();
-      expect(Object.keys(columns)).toEqual(expect.arrayContaining(['where', 'where_version']));
-      for (const column of Object.keys(emptyRule).concat([
-        'client_ids',
-        'ticket_origins',
-        'from_service_request',
-        'service_request_definition_id',
-        'keywords',
-        'keyword_mode',
-        'keyword_target',
-      ]))
-        expect(columns).not.toHaveProperty(column);
       const stored = await trx('checklist_template_apply_rules').select('where', 'where_version').orderBy('apply_rule_id');
       await migration.up(trx);
       expect(await trx('checklist_template_apply_rules').select('where', 'where_version').orderBy('apply_rule_id')).toEqual(stored);

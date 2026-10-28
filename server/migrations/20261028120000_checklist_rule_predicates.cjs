@@ -20,7 +20,8 @@ const COLUMNS = [
 
 exports.up = async function up(knex) {
   await installChecklistTextFunctions(knex);
-  if (!(await knex.schema.hasColumn(TABLE, 'where'))) {
+  const alreadyExpanded = await knex.schema.hasColumn(TABLE, 'where');
+  if (!alreadyExpanded) {
     await knex.schema.alterTable(TABLE, (table) => {
       table.jsonb('where').notNullable().defaultTo('{"join":"and","clauses":[]}');
     });
@@ -30,8 +31,8 @@ exports.up = async function up(knex) {
       table.smallint('where_version').notNullable().defaultTo(1);
     });
   }
-  // A completed migration may be invoked again by setup/recovery tooling.
-  if (!(await knex.schema.hasColumn(TABLE, 'board_id'))) return;
+  // The migration is transactional. Once expanded, recovery must preserve predicate edits.
+  if (alreadyExpanded) return;
 
   // Bound memory while materializing in JS: Citus disallows arbitrary UPDATE expressions.
   let cursor;
@@ -49,10 +50,8 @@ exports.up = async function up(knex) {
     const last = rules[rules.length - 1];
     cursor = [last.tenant, last.apply_rule_id];
   }
-  await knex.schema.alterTable(TABLE, (table) => {
-  // migration-lint: allow 3 - all legacy values have been converted to the versioned predicate above; retaining two writable formats would permit drift
-    COLUMNS.forEach((column) => table.dropColumn(column));
-  });
+  // Keep legacy columns, constraints and values for N-1 rule CRUD during blue/green upgrades.
+  // Their removal requires a later release whose baseline no longer reads or writes them.
 };
 
 // Predicates (including tag targeting and nested groups) cannot be represented by the old columns.

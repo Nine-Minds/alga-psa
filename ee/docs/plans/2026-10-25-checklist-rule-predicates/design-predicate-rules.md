@@ -34,19 +34,18 @@ whole set, so it will force the test update with the code.
 
 ## 3. Migration (`packages/db` / server migrations)
 
-Add, backfill, drop in one migration set:
+Add and backfill in one transactional migration:
 
 ```sql
 ALTER TABLE checklist_template_apply_rules
   ADD COLUMN "where" jsonb NOT NULL DEFAULT '{"join":"and","clauses":[]}'::jsonb,
   ADD COLUMN where_version smallint NOT NULL DEFAULT 1;
--- backfill in JS (needs the keyword normalisation), then:
-ALTER TABLE checklist_template_apply_rules
-  DROP COLUMN board_id, DROP COLUMN category_id, DROP COLUMN subcategory_id, DROP COLUMN priority_id,
-  DROP COLUMN client_ids, DROP COLUMN ticket_origins, DROP COLUMN from_service_request,
-  DROP COLUMN service_request_definition_id, DROP COLUMN keywords, DROP COLUMN keyword_mode,
-  DROP COLUMN keyword_target;
+-- Backfill in JS (needs the keyword normalisation).
+-- Retain legacy columns, constraints and values for the previous release.
 ```
+
+Column removal requires a later release whose baseline no longer reads or writes the legacy fields.
+Once the predicate column exists, reinvoking the migration skips backfill to preserve predicate edits.
 
 `where_version = 1` is the schema version of the stored group. A reader that meets a version it does
 not know fails the rule evaluation loudly (`UnsupportedRuleVersionError`) rather than guessing — a
