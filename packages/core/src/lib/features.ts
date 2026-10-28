@@ -56,6 +56,22 @@ export async function isFeatureFlagEnabled(
   flagKey: string,
   context: FeatureFlagContext = {},
 ): Promise<boolean> {
+  // Runtime server targeting shared by admission, the probe and RSC bootstrap.
+  // An absent allowlist leaves PostHog in charge. A configured allowlist is
+  // authoritative (including empty => off), so control tenants stay closed.
+  // This changes only the release flag; capability eligibility still applies.
+  if (typeof window === 'undefined' && flagKey === 'release-v2-0-feature') {
+    const raw = process.env.RELEASE_V2_0_FEATURE_TENANTS;
+    if (raw !== undefined) {
+      const tenants = raw.split(',').map((id) => id.trim().toLowerCase());
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+      // Reject the entire malformed configuration rather than partially
+      // enabling a release. No wildcard or user-supplied identity is accepted.
+      if (!context.tenantId || tenants.some((id) => !uuid.test(id))) return false;
+      return tenants.includes(context.tenantId.toLowerCase());
+    }
+  }
+
   if (featureFlagsAreDisabled()) {
     return true;
   }

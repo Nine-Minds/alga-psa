@@ -6,6 +6,34 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 
 ## Current Feature Flags
 
+### `release-v2-0-feature` tenant override
+
+Operators can set the runtime server environment variable
+`RELEASE_V2_0_FEATURE_TENANTS` to a comma-separated list of tenant UUIDs.
+When configured, it enables only `release-v2-0-feature` for those tenants and
+disables that flag for all other tenants. An empty value or any malformed entry
+disables the release flag for everyone. There is no wildcard. When unset, the
+existing PostHog evaluation applies; the override admits nobody by default.
+
+For example, set `RELEASE_V2_0_FEATURE_TENANTS=<oz-tenant-uuid>,<emerald-tenant-uuid>`
+on the server and restart it after the matching Temporal worker is ready. Kansas
+must be omitted. No rebuild or browser environment variable is required. Server
+admission, the capability probe and the browser bootstrap use the same evaluation.
+This also supplies the release flag's existing Timeline bootstrap value for the
+listed tenants; other feature flags keep their existing evaluation.
+
+Co-managed admission still requires a durable entitlement: Oz can enable a client,
+while Emerald (flag on without an entitlement) gets no co-managed UI. Existing
+participants remain served independently of the release flag. Keep
+`FORCE_CAPABILITIES` unset for this review;
+`FORCE_CAPABILITIES=co-managed:on` bypasses eligibility. The kill switch
+`FORCE_CAPABILITIES=co-managed:off` still closes admission and service even for
+listed tenants. Workers use participation and do not evaluate release targeting.
+
+To close new admission, set the allowlist to an empty value and restart. To return
+targeting to PostHog, remove the variable and restart. This operator override does
+not establish that PostHog targeting is configured.
+
 ### 1. `billing-enabled`
 Controls access to billing-related features across the application.
 
