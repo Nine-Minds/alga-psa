@@ -213,14 +213,10 @@
           "loadingGroups": "Groepen laden...",
           "noGroups": "Deze klant heeft geen klantgebruikersgroepen.",
           "groupsHelp": "Elke klant geldt voor al zijn gebruikers of alleen voor de leden van geselecteerde groepen. Een groep geeft alleen toegang aan leden van de eigen klant. Een klant kan niet op alle gebruikers staan en tegelijk geselecteerde groepen hebben.",
-          "emptyWarning": "Niemand kan dit formulier zien totdat je een doelgroep toevoegt.",
+          "emptyWarning": "Niemand kan dit formulier zien totdat u een doelgroep toevoegt.",
           "save": "Doelgroep opslaan",
           "allUsersOf": "Alle gebruikers van {{name}}",
           "onlyGroups": "Alleen leden van geselecteerde groepen"
-        },
-        "advanced": {
-          "title": "Geavanceerde zichtbaarheidsregels",
-          "help": "Gelden naast de bovenstaande doelgroep: een gebruiker moet aan beide voldoen."
         }
       },
       "fields": {

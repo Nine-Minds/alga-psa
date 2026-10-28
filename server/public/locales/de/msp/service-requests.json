@@ -217,10 +217,6 @@
           "save": "Zielgruppe speichern",
           "allUsersOf": "Alle Benutzer von {{name}}",
           "onlyGroups": "Nur Mitglieder ausgewählter Gruppen"
-        },
-        "advanced": {
-          "title": "Erweiterte Sichtbarkeitsregeln",
-          "help": "Gelten zusätzlich zur obigen Zielgruppe: Ein Benutzer muss beide erfüllen."
         }
       },
       "fields": {

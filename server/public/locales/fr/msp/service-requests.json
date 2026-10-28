@@ -217,10 +217,6 @@
           "save": "Enregistrer l'audience",
           "allUsersOf": "Tous les utilisateurs de {{name}}",
           "onlyGroups": "Uniquement les membres des groupes sélectionnés"
-        },
-        "advanced": {
-          "title": "Règles de visibilité avancées",
-          "help": "S'appliquent en plus de l'audience ci-dessus : un utilisateur doit satisfaire les deux."
         }
       },
       "fields": {

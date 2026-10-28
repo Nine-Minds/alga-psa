@@ -217,10 +217,6 @@
           "save": "Salva destinatari",
           "allUsersOf": "Tutti gli utenti di {{name}}",
           "onlyGroups": "Solo i membri dei gruppi selezionati"
-        },
-        "advanced": {
-          "title": "Regole di visibilità avanzate",
-          "help": "Si applicano in aggiunta ai destinatari sopra: un utente deve soddisfare entrambi."
         }
       },
       "fields": {

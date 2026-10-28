@@ -217,10 +217,6 @@
           "save": "Save audience",
           "allUsersOf": "All users of {{name}}",
           "onlyGroups": "Only members of selected groups"
-        },
-        "advanced": {
-          "title": "Advanced visibility rules",
-          "help": "Applies in addition to the audience above: a user must satisfy both."
         }
       },
       "fields": {

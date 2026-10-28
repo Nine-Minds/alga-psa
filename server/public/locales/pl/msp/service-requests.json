@@ -217,10 +217,6 @@
           "save": "Zapisz odbiorców",
           "allUsersOf": "Wszyscy użytkownicy klienta {{name}}",
           "onlyGroups": "Tylko członkowie wybranych grup"
-        },
-        "advanced": {
-          "title": "Zaawansowane reguły widoczności",
-          "help": "Obowiązują dodatkowo do powyższych odbiorców: użytkownik musi spełniać oba warunki."
         }
       },
       "fields": {

@@ -217,10 +217,6 @@
           "save": "Spara målgrupp",
           "allUsersOf": "Alla användare hos {{name}}",
           "onlyGroups": "Endast medlemmar i valda grupper"
-        },
-        "advanced": {
-          "title": "Avancerade synlighetsregler",
-          "help": "Gäller utöver målgruppen ovan: en användare måste uppfylla båda."
         }
       },
       "fields": {

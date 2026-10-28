@@ -217,10 +217,6 @@
           "save": "Guardar audiencia",
           "allUsersOf": "Todos los usuarios de {{name}}",
           "onlyGroups": "Solo miembros de los grupos seleccionados"
-        },
-        "advanced": {
-          "title": "Reglas de visibilidad avanzadas",
-          "help": "Se aplican además de la audiencia anterior: un usuario debe cumplir ambas."
         }
       },
       "fields": {
