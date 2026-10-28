@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
@@ -84,6 +85,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
@@ -160,5 +162,6 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

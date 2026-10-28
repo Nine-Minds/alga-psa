@@ -29,8 +29,14 @@ describe('tenant suspension chokepoint gates', () => {
   });
 
   it('T018: EE maintenance fan-out enumeration excludes suspended tenants', () => {
+    // Suspended tenants are excluded unless a job explicitly opts in with
+    // includeSuspended (behavior pinned in packages/jobs jobDescriptors.test.ts);
+    // no native maintenance job opts in.
     const source = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
-    expect(source).toMatch(/unscoped[^;]*tenants[^;]*\.whereNull\('suspended_at'\)/s);
+    expect(source).toMatch(
+      /const tenantQuery = db\s*\.unscoped<[^>]*>\('tenants'[^;]*;\s*if \(!def\.includeSuspended\) tenantQuery\.whereNull\('suspended_at'\);/s,
+    );
+    expect(source).not.toMatch(/includeSuspended:\s*true/);
   });
 
   it('T019: marketing tenant enumeration excludes suspended tenants', () => {

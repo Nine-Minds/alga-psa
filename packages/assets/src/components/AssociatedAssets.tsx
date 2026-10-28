@@ -45,6 +45,8 @@ interface AssociatedAssetsProps {
     defaultBoardId?: string;
     /** Server-started associated-assets promise; skips the mount fetch when provided. */
     initialAssets?: Promise<Asset[]>;
+    /** List associations without add/remove (for example on an ended co-managed workspace). */
+    readOnly?: boolean;
 }
 
 interface SelectedAsset {
@@ -53,7 +55,7 @@ interface SelectedAsset {
 }
 
 export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId,
-    initialAssets,
+    initialAssets, readOnly = false,
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
     const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
@@ -461,7 +463,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                 title={t('associatedAssets.title', { defaultValue: 'Assets' })}
                 headerIcon={<Monitor className="w-5 h-5" />}
                 count={associatedAssets.length}
-                addButton={{
+                addButton={readOnly ? undefined : {
                     id: 'add-asset-button',
                     label: t('associatedAssets.actions.addAsset', { defaultValue: 'Add Asset' }),
                     onClick: handleOpenDialog
@@ -525,7 +527,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 iconOnly
                                             />
                                         )}
-                                        <Button
+                                        {!readOnly && <Button
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
                                             size="sm"
@@ -535,7 +537,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             className="text-gray-600 hover:text-gray-900"
                                         >
                                             <span aria-hidden="true">×</span>
-                                        </Button>
+                                        </Button>}
                                     </div>
                                 </div>
                                 {/* Badges: status + custody wrap on their own row so they can never squeeze the name */}

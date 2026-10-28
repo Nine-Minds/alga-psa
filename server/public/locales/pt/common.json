@@ -1583,6 +1583,8 @@
     "printColumns": "Imprimir colunas",
     "dialog": {
       "assetTitle": "Imprimir etiquetas de recursos",
+      "batch_one": "Uma etiqueta para o item retido ({{count}})",
+      "batch_other": "Uma etiqueta por item retido ({{count}})",
       "count_one": "{{count}} selecionado",
       "count_other": "{{count}} selecionados",
       "failed": "Não foi possível imprimir as etiquetas.",
@@ -1592,6 +1594,14 @@
       "noAsset": "Nenhum recurso",
       "notFound": "Não foi possível abrir estes registros.",
       "openPdf": "Abrir PDF",
+      "previewBatch_one": "Imprimir {{count}} etiqueta para o item retido.",
+      "previewBatch_other": "Imprimir {{count}} etiquetas, uma por item retido.",
+      "previewPicked": "A etiqueta mostrará o local e a próxima ação deste item.",
+      "previewPickedNotHeld": "Este item não está retido, então a etiqueta não mostra local.",
+      "previewSingle": "A etiqueta mostrará {{location}}.",
+      "previewSingleNoLocation": "A etiqueta mostrará a próxima ação deste item.",
+      "previewSummary_one": "{{count}} item retido.",
+      "previewSummary_other": "{{count}} itens retidos.",
       "printed_one": "{{count}} etiqueta impressa.",
       "printed_other": "{{count}} etiquetas impressas.",
       "printing": "Preparando…",
@@ -1603,6 +1613,7 @@
       "template": "Modelo",
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
+      "unnamedAsset": "Recurso sem nome",
       "useTemplate": "Usar {{template}}"
     }
   },

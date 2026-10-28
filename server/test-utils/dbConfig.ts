@@ -141,6 +141,12 @@ export async function createTestDbConnection(
         password: appPassword,
         database: databaseName,
       },
+      migrations: {
+        directory: migrationsDir,
+      },
+      seeds: {
+        directory: seedsDir,
+      },
       asyncStackTraces: true,
       pool: {
         min: 2,
@@ -188,6 +194,20 @@ export async function createTestDbConnection(
       user: appUser,
       password: appPassword,
       database: databaseName,
+    },
+    // Suites commonly follow this call with `db.migrate.latest()` as a
+    // belt-and-braces "make sure the schema is current". Without a directory
+    // knex defaults to `./migrations` relative to the process cwd (server/),
+    // which is only the CE set — so against a database bootstrapped from the
+    // CE+EE overlay every one of those calls throws "The migration directory
+    // is corrupt, the following files are missing: ..." listing the EE
+    // migrations. Carry the directory this database was actually built from so
+    // the follow-up call is the no-op it was written to be.
+    migrations: {
+      directory: migrationsDir,
+    },
+    seeds: {
+      directory: seedsDir,
     },
     asyncStackTraces: true,
     pool: {

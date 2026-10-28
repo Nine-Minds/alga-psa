@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -32,9 +33,40 @@ export function throwActionError(
   };
 }
 
+/** A lifecycle refusal keeps its own code, so a run fails as "read-only" or
+ * "awaiting acceptance" rather than as an internal error. */
+function throwIfLifecycleRefusal(ctx: ActionContext, error: unknown): void {
+  if (isCoManagedLifecycleError(error)) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: error.code,
+      message: error.message,
+      details: { lifecycle_state: error.lifecycle.state },
+    });
+  }
+}
+
+/**
+ * Write admission for a workflow action whose transaction will change
+ * tag_definitions or tag_mappings. Call it before the action writes any row,
+ * in the action's own transaction. It dispatches through the write-admission
+ * primitive: with no provider registered it resolves without touching `tx.trx`.
+ * A lifecycle refusal from a provider surfaces as an ActionError.
+ */
+// LEVERAGE: friction workflow-lifecycle-admission — withTenantTransaction admits nothing, so tag writes admit per action and the same actions' non-tag writes (ticket, contact and client rows) stay unadmitted for a read-only workspace; admission belongs in the runtime's write transaction
+export async function admitWorkflowTagWrite(ctx: ActionContext, tx: TenantTxContext): Promise<void> {
+  try {
+    await admitWrite(tx.trx, { tenant: tx.tenantId, operation: 'workflow-tag-write' });
+  } catch (error) {
+    throwIfLifecycleRefusal(ctx, error);
+    throw error;
+  }
+}
+
 export function rethrowAsStandardError(ctx: ActionContext, error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
 
+  throwIfLifecycleRefusal(ctx, error);
   if (error instanceof z.ZodError) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
   }

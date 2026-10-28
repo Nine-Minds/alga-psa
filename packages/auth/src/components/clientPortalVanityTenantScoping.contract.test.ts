@@ -87,7 +87,10 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
     const authSource = read('packages/auth/src/actions/auth.tsx');
 
     expect(modelSource).toContain('findUsersByEmailAndType');
-    expect(authSource).toContain('User.findUsersByEmailAndType(normalizedEmail, \'client\')');
+    expect(authSource).toContain("userType: 'client' | 'internal'");
+    expect(authSource).toContain('User.findUsersByEmailAndType(normalizedEmail, userType)');
+    expect(authSource).toContain('resolveUnscopedUser(normalizedEmail, password, userType)');
+    expect(authSource).not.toContain('User.findUserByEmailAndType(normalizedEmail, userType)');
     expect(authSource).toContain('new TenantRequiredError()');
   });
 });

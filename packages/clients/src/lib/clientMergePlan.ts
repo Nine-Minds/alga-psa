@@ -541,6 +541,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   table: string;
   label: string;
   nullableBillingProfile?: boolean;
+  /** Table exists only in some editions; skipped (count 0) where it is not installed. */
+  editionOptional?: boolean;
 }> = [
   { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
@@ -548,4 +550,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
   { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
+  // Enterprise autopay consent hangs off the profile (PK tenant + billing_profile_id)
+  // and repeats the profile's client_id. The profile moves to the target, so the
+  // row's client_id must follow it. One row per profile, so no key collision.
+  { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];

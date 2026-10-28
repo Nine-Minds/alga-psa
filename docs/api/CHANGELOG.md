@@ -2,6 +2,15 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-10-27 — Time sheet create/update fixed; act-on-behalf enforced on create
+
+**Affected endpoints:** `POST /api/v1/time-sheets`, `PUT /api/v1/time-sheets/{id}`
+
+**Changes:**
+
+- API keys/users without act-on-behalf rights can no longer create time sheets for other users. `POST` with a `user_id` other than the caller's now returns `403` unless the caller has `time_sheet:approve` and either `time_sheet:read_all` or manages that user. Creating a time sheet for yourself is unchanged.
+- `POST` and `PUT` no longer fail with a database error: they wrote `created_at`/`updated_at` columns that `time_sheets` does not have.
+
 ## 2026-10-17 — Time entries resolve contract lines; delete reverses billing usage
 
 **Affected endpoints:** `POST /api/v1/time-entries`, `PUT /api/v1/time-entries/{id}`, `DELETE /api/v1/time-entries/{id}`, `DELETE /api/v1/time-entries/bulk`

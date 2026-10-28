@@ -17,15 +17,12 @@ import {
   useTileData,
 } from '@alga-psa/ui/components/bento';
 import {
-  getTicketScheduleEntries,
-  getTicketInteractions,
-  getTicketBillingRollup,
-  getTicketAppointmentRequests,
   type TicketScheduleEntrySummary,
   type TicketInteractionSummary,
   type TicketBillingRollup,
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
+import { useTicketDataSource, useTicketScreenReadOnly } from '../TicketDataSourceContext';
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -71,6 +68,9 @@ export function ScheduledWorkTile({
   onOpenEntry?: (entryId: string) => void;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketScheduleEntries } = useTicketDataSource().tiles;
+  // A read-only screen lists scheduled work but offers no way to schedule more (not even the dispatch link).
+  const readOnly = useTicketScreenReadOnly();
   const { data, error, loading } = useTileData(
     () => getTicketScheduleEntries(ticketId),
     [ticketId, refreshKey],
@@ -106,7 +106,7 @@ export function ScheduledWorkTile({
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
-          {onSchedule ? (
+          {readOnly ? null : onSchedule ? (
             <button
               id={`${id}-schedule-link`}
               type="button"
@@ -257,6 +257,7 @@ export function AppointmentRequestsTile({
   refreshKey?: number;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketAppointmentRequests } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketAppointmentRequests(ticketId),
     [ticketId, refreshKey],
@@ -316,6 +317,7 @@ export function CallsEmailsTile({
 }) {
   const { t } = useTranslation('features/tickets');
   const { teamsPhoneConnected } = useCallLinkContext();
+  const { getTicketInteractions } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
@@ -456,6 +458,7 @@ export function BillingSummary({
   footer?: React.ReactNode;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketBillingRollup } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketBillingRollup(ticketId),
     [ticketId, refreshKey],
