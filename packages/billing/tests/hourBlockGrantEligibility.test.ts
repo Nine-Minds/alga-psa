@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// grantHourBlock must enforce the same hourly-only service rule as the sell path,
-// so a direct action call cannot mint a block against a fixed/usage service.
-
 const state = vi.hoisted(() => ({
   rows: {} as Record<string, unknown>,
-  writes: [] as string[],
+  writes: [] as Array<{ table: string; row: Record<string, unknown> }>,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -23,13 +20,15 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   withTransaction: vi.fn(async (_knex: any, cb: (trx: any) => Promise<unknown>) => cb({})),
   tenantDb: vi.fn(() => ({
     table: (name: string) => {
-      const qb: any = {
+      const qb = {
         where: () => qb,
         whereIn: () => qb,
         forUpdate: () => qb,
         first: async () => state.rows[name],
-        update: async () => { state.writes.push(name); },
-        insert: async () => { state.writes.push(name); },
+        insert: async (row: Record<string, unknown>) => {
+          state.writes.push({ table: name, row });
+          state.rows[name] = row;
+        },
       };
       return qb;
     },
@@ -46,17 +45,17 @@ beforeEach(() => {
 });
 
 describe('grantHourBlock service eligibility', () => {
-  it.each(['fixed', 'usage'])('rejects a %s service and writes nothing', async (billingMethod) => {
+  it.each(['fixed', 'usage', 'per_unit'])('rejects a %s service and writes nothing', async (billingMethod) => {
     state.rows.service_catalog = { service_id: 's1', billing_method: billingMethod };
 
-    await expect((grantHourBlock as any)(grantInput)).rejects.toThrow(
+    await expect(grantHourBlock(grantInput)).rejects.toThrow(
       'Hour blocks can only be granted for hourly services',
     );
     expect(state.writes).toEqual([]);
   });
 
   it('rejects a missing service and writes nothing', async () => {
-    const result = await (grantHourBlock as any)(grantInput);
+    const result = await grantHourBlock(grantInput);
 
     expect(result).toMatchObject({ actionError: expect.stringContaining('Service not found') });
     expect(state.writes).toEqual([]);
@@ -65,8 +64,32 @@ describe('grantHourBlock service eligibility', () => {
   it('mints the block for an hourly service', async () => {
     state.rows.service_catalog = { service_id: 's1', billing_method: 'hourly' };
 
-    await (grantHourBlock as any)(grantInput).catch(() => undefined);
+    const result = await grantHourBlock(grantInput);
 
-    expect(state.writes).toContain('hour_blocks');
+    expect(result).toMatchObject({
+      block_id: expect.any(String),
+      tenant: 't1',
+      client_id: 'c1',
+      service_id: 's1',
+      total_minutes: 300,
+      remaining_minutes: 300,
+      hourly_rate: 10000,
+      purchase_amount: 50000,
+      status: 'active',
+      source_type: 'grant',
+    });
+    expect(state.writes).toEqual([
+      { table: 'hour_blocks', row: result },
+      {
+        table: 'hour_block_audit',
+        row: expect.objectContaining({
+          block_id: expect.any(String),
+          tenant: 't1',
+          type: 'grant',
+          reason: 'comp',
+          created_by: 'u1',
+        }),
+      },
+    ]);
   });
 });
