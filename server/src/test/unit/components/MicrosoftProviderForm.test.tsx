@@ -234,7 +234,9 @@ describe('MicrosoftProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    expect(screen.getByText(/Write nested folders as Inbox\/Subfolder/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/exact folder name as it appears in Outlook.*nested folders as Inbox\/Subfolder/i),
+    ).toBeInTheDocument();
 
     await user.type(screen.getByPlaceholderText('e.g., Support Mailbox (internal)'), 'TopLeft');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'help@topleft.team');

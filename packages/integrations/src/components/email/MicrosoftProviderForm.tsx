@@ -826,7 +826,7 @@ export function MicrosoftProviderForm({
                 placeholder={t('forms.microsoft.advanced.folderFiltersPlaceholder', { defaultValue: 'Inbox, Support, Custom Folder' })}
               />
               <p className="text-xs text-muted-foreground">
-                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox). Write nested folders as Inbox/Subfolder.' })}
+                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox). Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.' })}
               </p>
             </div>
 
