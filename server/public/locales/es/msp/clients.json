@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Facturar el trabajo y los dispositivos combinados en",
     "billingStrategySource": "Perfil de facturación de {{source}}, mantenido como perfil separado en {{target}}",
     "billingStrategyTarget": "Perfil de facturación predeterminado de {{target}}",
-    "billingStrategyHelp": "Se aplica a {{tickets}} ticket(s), {{projects}} proyecto(s), {{assets}} activo(s) y {{mappings}} grupo(s) de dispositivos RMM sin perfil de facturación propio. Las filas con un perfil explícito lo conservan, y las facturas, los ciclos de facturación, los pagos y los créditos siempre permanecen en el perfil combinado."
+    "billingStrategyHelp": "Se aplica a {{tickets}} ticket(s), {{projects}} proyecto(s), {{assets}} activo(s) y {{mappings}} grupo(s) de dispositivos RMM sin perfil de facturación propio. Las filas con un perfil explícito lo conservan, y las facturas, los ciclos de facturación, los pagos y los créditos siempre permanecen en el perfil combinado.",
+    "locationsColumn": "Ubicaciones",
+    "remoteBadge": "Remota",
+    "noLocationsAfterMerge": "Sin ubicaciones",
+    "unnamedLocation": "Ubicación",
+    "movingFrom": "procede de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} también tiene «{{location}}»",
+    "useIt": "Usar esta",
+    "contactLocationSummary": "{{count}} vínculos de ubicación de contactos, {{repointed}} redirigidos"
   },
   "billingProfileContacts": {
     "title": "Contactos del perfil",

@@ -565,7 +565,7 @@
     "prdRefs": [
       "FR-B8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Merge preview contacts carry locations[] (id, name, isPrimary) and workArrangement; preview carries locationsAfterMerge (source locations flagged fromSource plus target locations) and suggestedTargetLocationId per link when a target location name matches case- and whitespace-insensitively"
   },
   {
@@ -574,7 +574,7 @@
     "prdRefs": [
       "UX merge dialog"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MergeClientsDialog Contacts step adds a Locations column (id merge-contact-locations-<contactId>): multi-select of locationsAfterMerge with primary marker, pre-filled from current links, source locations labelled 'moving from <source>', Remote badge for remote contacts"
   },
   {
@@ -583,7 +583,7 @@
     "prdRefs": [
       "UX merge dialog"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contacts step shows a 'Target also has <name>' hint with a one-click Use it that re-points that link to the target location; nothing is re-pointed without the click"
   },
   {
@@ -592,7 +592,7 @@
     "prdRefs": [
       "FR-B9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Merge input contactLocationAssignments; engine applies replaceContactLocations per listed contact after the client-owned tables move; unlisted contacts keep their links"
   },
   {
@@ -601,7 +601,7 @@
     "prdRefs": [
       "FR-B9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Engine and dry run reject a chosen location that is neither a moved source location nor a target location with a clear error; report counts contact location links and re-pointed links; confirm step shows both"
   }
 ]

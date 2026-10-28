@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Profilo di fatturazione per il lavoro e i dispositivi trasferiti",
     "billingStrategySource": "Profilo di fatturazione di {{source}}, mantenuto come profilo separato su {{target}}",
     "billingStrategyTarget": "Profilo di fatturazione predefinito di {{target}}",
-    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetto/i, {{assets}} asset e {{mappings}} gruppo/i di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono, mentre fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito."
+    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetto/i, {{assets}} asset e {{mappings}} gruppo/i di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono, mentre fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito.",
+    "locationsColumn": "Sedi",
+    "remoteBadge": "Remota",
+    "noLocationsAfterMerge": "Nessuna sede",
+    "unnamedLocation": "Sede",
+    "movingFrom": "arriva da {{client}}",
+    "primaryLocation": "Principale",
+    "targetAlsoHas": "{{client}} ha anche «{{location}}»",
+    "useIt": "Usa questa",
+    "contactLocationSummary": "{{count}} collegamenti di sede dei contatti, {{repointed}} ricollegati"
   },
   "billingProfileContacts": {
     "title": "Contatti del profilo",

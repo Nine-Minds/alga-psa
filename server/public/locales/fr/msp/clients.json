@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Facturer le travail et les appareils fusionnés sous",
     "billingStrategySource": "Profil de facturation de {{source}}, conservé comme profil distinct chez {{target}}",
     "billingStrategyTarget": "Profil de facturation par défaut de {{target}}",
-    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné."
+    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné.",
+    "locationsColumn": "Sites",
+    "remoteBadge": "À distance",
+    "noLocationsAfterMerge": "Aucun site",
+    "unnamedLocation": "Site",
+    "movingFrom": "provient de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} possède aussi « {{location}} »",
+    "useIt": "Utiliser celui-ci",
+    "contactLocationSummary": "{{count}} liens de site de contacts, {{repointed}} redirigés"
   },
   "billingProfileContacts": {
     "title": "Contacts du profil",

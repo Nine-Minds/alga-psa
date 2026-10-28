@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Abrechnungsprofil für zusammengeführte Arbeit und Geräte",
     "billingStrategySource": "Abrechnungsprofil von {{source}}, als separates Profil bei {{target}} beibehalten",
     "billingStrategyTarget": "Standard-Abrechnungsprofil von {{target}}",
-    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil."
+    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil.",
+    "locationsColumn": "Standorte",
+    "remoteBadge": "Im Homeoffice",
+    "noLocationsAfterMerge": "Keine Standorte",
+    "unnamedLocation": "Standort",
+    "movingFrom": "wechselt von {{client}}",
+    "primaryLocation": "Primär",
+    "targetAlsoHas": "{{client}} hat auch „{{location}}“",
+    "useIt": "Diesen verwenden",
+    "contactLocationSummary": "{{count}} Kontakt-Standortverknüpfungen, {{repointed}} umgehängt"
   },
   "billingProfileContacts": {
     "title": "Profilkontakte",

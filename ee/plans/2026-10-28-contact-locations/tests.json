@@ -848,7 +848,7 @@
     "featureIds": [
       "F063"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Merge preview: a contact linked to source Warehouse (primary) and Head office shows both with the primary; locationsAfterMerge lists source rows with fromSource true and target rows false; suggestedTargetLocationId set for 'Head office' when the target has ' head office '"
   },
   {
@@ -875,7 +875,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Engine: a contact with an assignment switching Head office (source) to Head office (target) ends linked to the target row with the primary flag; a contact with no assignment keeps its links on the moved source rows"
   },
   {
@@ -884,7 +884,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Engine: an assignment with an empty locations array clears the contact's links; an assignment with two primaries fails the merge"
   },
   {
@@ -893,7 +893,7 @@
     "featureIds": [
       "F067"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Engine and dry run: a location id of a third client fails with an error naming the contact and location, and the transaction rolls back; report counts links and re-pointed links; confirm step shows 'N contact location links, M re-pointed'"
   }
 ]

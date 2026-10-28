@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Bill merged work and devices under",
     "billingStrategySource": "{{source}} billing profile, kept as a separate profile on {{target}}",
     "billingStrategyTarget": "{{target}} default billing profile",
-    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile."
+    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile.",
+    "locationsColumn": "Locations",
+    "remoteBadge": "Remote",
+    "noLocationsAfterMerge": "No locations",
+    "unnamedLocation": "Location",
+    "movingFrom": "moving from {{client}}",
+    "primaryLocation": "Primary",
+    "targetAlsoHas": "{{client}} also has \"{{location}}\"",
+    "useIt": "Use it",
+    "contactLocationSummary": "{{count}} contact location links, {{repointed}} re-pointed"
   },
   "billingProfileContacts": {
     "title": "Profile contacts",

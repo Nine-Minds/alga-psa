@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Faturar o trabalho e os dispositivos mesclados em",
     "billingStrategySource": "Perfil de faturamento de {{source}}, mantido como perfil separado em {{target}}",
     "billingStrategyTarget": "Perfil de faturamento padrão de {{target}}",
-    "billingStrategyHelp": "Aplica-se a {{tickets}} ticket(s), {{projects}} projeto(s), {{assets}} ativo(s) e {{mappings}} grupo(s) de dispositivos RMM sem perfil de faturamento próprio. Linhas com um perfil explícito o mantêm, e faturas, ciclos de faturamento, pagamentos e créditos permanecem sempre no perfil mesclado."
+    "billingStrategyHelp": "Aplica-se a {{tickets}} ticket(s), {{projects}} projeto(s), {{assets}} ativo(s) e {{mappings}} grupo(s) de dispositivos RMM sem perfil de faturamento próprio. Linhas com um perfil explícito o mantêm, e faturas, ciclos de faturamento, pagamentos e créditos permanecem sempre no perfil mesclado.",
+    "locationsColumn": "Localizações",
+    "remoteBadge": "Remoto",
+    "noLocationsAfterMerge": "Sem localizações",
+    "unnamedLocation": "Localização",
+    "movingFrom": "vem de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} também tem \"{{location}}\"",
+    "useIt": "Usar esta",
+    "contactLocationSummary": "{{count}} vínculos de localização de contatos, {{repointed}} redirecionados"
   },
   "billingProfileContacts": {
     "title": "Contatos do perfil",

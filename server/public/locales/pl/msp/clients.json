@@ -2087,7 +2087,16 @@
     "billingStrategyHeading": "Rozliczaj scaloną pracę i urządzenia w",
     "billingStrategySource": "Profil rozliczeniowy {{source}}, zachowany jako osobny profil u {{target}}",
     "billingStrategyTarget": "Domyślny profil rozliczeniowy {{target}}",
-    "billingStrategyHelp": "Dotyczy {{tickets}} zgłoszeń, {{projects}} projektów, {{assets}} zasobów i {{mappings}} grup urządzeń RMM bez własnego profilu rozliczeniowego. Wiersze z jawnym profilem go zachowują, a faktury, cykle rozliczeniowe, płatności i kredyty zawsze pozostają w scalonym profilu."
+    "billingStrategyHelp": "Dotyczy {{tickets}} zgłoszeń, {{projects}} projektów, {{assets}} zasobów i {{mappings}} grup urządzeń RMM bez własnego profilu rozliczeniowego. Wiersze z jawnym profilem go zachowują, a faktury, cykle rozliczeniowe, płatności i kredyty zawsze pozostają w scalonym profilu.",
+    "locationsColumn": "Lokalizacje",
+    "remoteBadge": "Zdalny",
+    "noLocationsAfterMerge": "Brak lokalizacji",
+    "unnamedLocation": "Lokalizacja",
+    "movingFrom": "przenosi się z {{client}}",
+    "primaryLocation": "Główna",
+    "targetAlsoHas": "{{client}} ma również „{{location}}”",
+    "useIt": "Użyj tej",
+    "contactLocationSummary": "{{count}} powiązań lokalizacji kontaktów, {{repointed}} przekierowanych"
   },
   "billingProfileContacts": {
     "title": "Kontakty profilu",

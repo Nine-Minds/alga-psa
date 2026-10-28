@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Samengevoegd werk en apparaten factureren onder",
     "billingStrategySource": "Factureringsprofiel van {{source}}, behouden als apart profiel bij {{target}}",
     "billingStrategyTarget": "Standaard factureringsprofiel van {{target}}",
-    "billingStrategyHelp": "Geldt voor {{tickets}} ticket(s), {{projects}} project(en), {{assets}} asset(s) en {{mappings}} RMM-apparaatgroep(en) zonder eigen factureringsprofiel. Rijen met een expliciet profiel houden dat, en facturen, factureringscycli, betalingen en credits blijven altijd op het samengevoegde profiel."
+    "billingStrategyHelp": "Geldt voor {{tickets}} ticket(s), {{projects}} project(en), {{assets}} asset(s) en {{mappings}} RMM-apparaatgroep(en) zonder eigen factureringsprofiel. Rijen met een expliciet profiel houden dat, en facturen, factureringscycli, betalingen en credits blijven altijd op het samengevoegde profiel.",
+    "locationsColumn": "Locaties",
+    "remoteBadge": "Op afstand",
+    "noLocationsAfterMerge": "Geen locaties",
+    "unnamedLocation": "Locatie",
+    "movingFrom": "komt van {{client}}",
+    "primaryLocation": "Primair",
+    "targetAlsoHas": "{{client}} heeft ook ‘{{location}}’",
+    "useIt": "Deze gebruiken",
+    "contactLocationSummary": "{{count}} locatiekoppelingen van contactpersonen, {{repointed}} omgezet"
   },
   "billingProfileContacts": {
     "title": "Profielcontactpersonen",

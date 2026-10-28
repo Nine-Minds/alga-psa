@@ -2033,7 +2033,16 @@
     "billingStrategyHeading": "Fakturera sammanslaget arbete och enheter under",
     "billingStrategySource": "Faktureringsprofilen för {{source}}, behållen som en separat profil hos {{target}}",
     "billingStrategyTarget": "Standardfaktureringsprofilen för {{target}}",
-    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen."
+    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen.",
+    "locationsColumn": "Platser",
+    "remoteBadge": "Distans",
+    "noLocationsAfterMerge": "Inga platser",
+    "unnamedLocation": "Plats",
+    "movingFrom": "flyttas från {{client}}",
+    "primaryLocation": "Primär",
+    "targetAlsoHas": "{{client}} har också ”{{location}}”",
+    "useIt": "Använd den",
+    "contactLocationSummary": "{{count}} platskopplingar för kontakter, {{repointed}} omdirigerade"
   },
   "billingProfileContacts": {
     "title": "Profilens kontakter",
