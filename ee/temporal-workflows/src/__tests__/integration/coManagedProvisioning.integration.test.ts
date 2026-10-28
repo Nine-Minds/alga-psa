@@ -20,14 +20,16 @@ const appliance = vi.hoisted(() => ({ check: vi.fn(async () => ({ seats: 0 })) }
 vi.mock('@alga-psa/db', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return { ...actual, getAdminConnection: async () => db,
+    getConnection: async () => db,
     createTenantKnex: async (tenant?: string) => ({ knex: db, tenant: tenant ?? actual.getTenantContext() }) };
 });
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth', async () => ({
   withAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),
   hasPermission: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').hasPermission>) =>
     (await import('../../../../../packages/auth/src/lib/rbac')).hasPermission(...args),
   checkMultiplePermissions: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').checkMultiplePermissions>) =>
     (await import('../../../../../packages/auth/src/lib/rbac')).checkMultiplePermissions(...args),
+  shouldTouchApiKeyLastUsed: (await import('../../../../../packages/auth/src/services/apiKeyService')).shouldTouchApiKeyLastUsed,
   checkPortalInvitationLimit: async () => ({ success: true }), formatRateLimitError: async () => 'Rate limited',
   verifyAuthenticator: async () => false,
 }));

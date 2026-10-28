@@ -239,3 +239,11 @@ content and editing paths also require further authorization work. The
 focused test mocks the action authentication facade, so it does not prove the
 pending-acceptance guard or the ticket API. The live ticket/API journey and
 commercial action denials remain to be verified as well.
+
+API key validation checks pending acceptance before changing the key's
+last-used state. In the disposable provisioning suite, a key for the newly
+signed-up administrator is refused with `CO_MANAGED_NOT_ACTIVE` through both
+tenant-specified and tenant-discovery validation. Its row remains unchanged.
+After acceptance the same key validates. This exercises the key validator and
+the real lifecycle provider; it does not exercise a ticket controller or the
+browser action guard.

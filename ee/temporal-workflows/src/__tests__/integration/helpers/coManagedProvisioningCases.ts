@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
 import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../../packages/co-managed/src/acceptance';
@@ -151,7 +151,22 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const actor = { tenant: operation.customer_tenant, userId: result.userId! };
       const review = await getCoManagedAcceptanceState(db, actor);
       if (review.state !== 'pending_acceptance') throw new Error('No acceptance proposal');
+      const lifecycle = await import('@alga-psa/licensing/lifecycle');
+      lifecycle.registerCoManagedLifecycleProvider(lifecycle.coManagedLifecycleProvider);
+      const apiKey = randomUUID();
+      await customer.table('api_keys').insert({ tenant: actor.tenant, user_id: actor.userId,
+        api_key: createHash('sha256').update(apiKey).digest('hex'), active: true });
+      const { ApiKeyServiceForApi } = await import('../../../../../../server/src/lib/services/apiKeyServiceForApi');
+      const beforeKey = await customer.table('api_keys').first();
+      await expect(ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, actor.tenant))
+        .rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+      await expect(ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey))
+        .rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+      expect(await customer.table('api_keys').first()).toEqual(beforeKey);
       await acceptCoManagedRelationship(db, actor, { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint });
+      expect(await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, actor.tenant)).toMatchObject({ user_id: actor.userId });
+      expect(await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey)).toMatchObject({ user_id: actor.userId });
+      expect(await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, operation.tenant)).toBeNull();
       // Exercise the actual RBAC reader against the role assigned by signup.
       // The harness mocks the action facade's permission helper, so do not use it here.
       const { hasPermission } = await import('../../../../../../packages/auth/src/lib/rbac');
