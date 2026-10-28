@@ -62,7 +62,8 @@
       "phoneNumber": "Telefonnummer",
       "client": "Kund",
       "tags": "Taggar",
-      "actions": "Åtgärder"
+      "actions": "Åtgärder",
+      "location": "Plats"
     },
     "lastPhoneTypeUsage": {
       "title": "Sista användningen av telefontypen",
@@ -182,7 +183,10 @@
       "role": "Roll",
       "notes": "Anteckningar",
       "primaryEmailLabel": "Typ av primär e-postadress",
-      "additionalEmails": "Ytterligare e-postadresser"
+      "additionalEmails": "Ytterligare e-postadresser",
+      "workArrangement": "Arbetsform",
+      "locations": "Platser",
+      "primaryLocation": "Primär plats"
     },
     "unassigned": "Välj fält",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "E-post",
       "phoneNumber": "Telefonnummer",
       "actions": "Åtgärder",
-      "role": "Roll"
+      "role": "Roll",
+      "location": "Plats"
     },
     "filter": {
       "show": "Visa:",
       "active": "Aktiva kontakter",
       "inactive": "Inaktiva kontakter",
       "all": "Alla kontakter",
-      "searchPlaceholder": "Sök kontakter…"
+      "searchPlaceholder": "Sök kontakter…",
+      "allLocations": "Alla platser",
+      "noLocation": "Ingen plats"
     },
     "actions": {
       "openMenu": "Öppna meny",
@@ -798,7 +805,8 @@
         "updateClientUsers": "Du har inte behörighet att uppdatera kundanvändare",
         "viewClientUsers": "Du har inte behörighet att visa kundanvändare"
       },
-      "field": "fält"
+      "field": "fält",
+      "locationClientMismatch": "Den platsen hör till en annan klient."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Senast synkroniserad {{date}}",
     "deleted": "Inaktiv – Microsoft-kontot har tagits bort.",
     "disabled": "Inaktiv – Microsoft-kontot är inaktiverat."
+  },
+  "contactLocations": {
+    "locations": "Platser",
+    "workArrangement": "Arbetsform",
+    "primary": "Primär",
+    "none": "Inga platser",
+    "inactiveMarker": "(inaktiv)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Välj först en klient för att kunna välja dess platser.",
+    "loading": "Läser in platser…",
+    "noneForClient": "Den här klienten har inga platser än.",
+    "arrangement": {
+      "unset": "Inte angiven",
+      "on_site": "På plats",
+      "hybrid": "Hybridarbete",
+      "remote": "Distans"
+    },
+    "clientChange": {
+      "title": "Byta klient?",
+      "message": "Detta tar bort {{count}} platskoppling(ar). Platser hör till en klient och kan därför inte följa kontakten.",
+      "confirm": "Byt klient"
+    }
   }
 }

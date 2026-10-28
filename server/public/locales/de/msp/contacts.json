@@ -62,7 +62,8 @@
       "phoneNumber": "Telefonnummer",
       "client": "Kunde",
       "tags": "Tags",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "location": "Standort"
     },
     "lastPhoneTypeUsage": {
       "title": "Zuletzt verwendeter Telefontyp",
@@ -182,7 +183,10 @@
       "role": "Rolle",
       "notes": "Notizen",
       "primaryEmailLabel": "Label für primäre E-Mail",
-      "additionalEmails": "Zusätzliche E-Mail-Adressen"
+      "additionalEmails": "Zusätzliche E-Mail-Adressen",
+      "workArrangement": "Arbeitsform",
+      "locations": "Standorte",
+      "primaryLocation": "Primärer Standort"
     },
     "unassigned": "Feld auswählen",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "E-Mail",
       "phoneNumber": "Telefonnummer",
       "actions": "Aktionen",
-      "role": "Rolle"
+      "role": "Rolle",
+      "location": "Standort"
     },
     "filter": {
       "show": "Anzeigen:",
       "active": "Aktive Kontakte",
       "inactive": "Inaktive Kontakte",
       "all": "Alle Kontakte",
-      "searchPlaceholder": "Kontakte suchen..."
+      "searchPlaceholder": "Kontakte suchen...",
+      "allLocations": "Alle Standorte",
+      "noLocation": "Kein Standort"
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -798,7 +805,8 @@
         "updateClientUsers": "Sie haben keine Berechtigung, Kundenbenutzer zu aktualisieren",
         "viewClientUsers": "Sie haben keine Berechtigung, Kundenbenutzer anzuzeigen"
       },
-      "field": "Feld"
+      "field": "Feld",
+      "locationClientMismatch": "Dieser Standort gehört zu einem anderen Kunden."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Zuletzt synchronisiert am {{date}}",
     "deleted": "Inaktiv — das Microsoft-Konto wurde gelöscht.",
     "disabled": "Inaktiv — das Microsoft-Konto ist deaktiviert."
+  },
+  "contactLocations": {
+    "locations": "Standorte",
+    "workArrangement": "Arbeitsform",
+    "primary": "Primär",
+    "none": "Keine Standorte",
+    "inactiveMarker": "(inaktiv)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Wählen Sie zuerst einen Kunden, um dessen Standorte auszuwählen.",
+    "loading": "Standorte werden geladen…",
+    "noneForClient": "Dieser Kunde hat noch keine Standorte.",
+    "arrangement": {
+      "unset": "Nicht festgelegt",
+      "on_site": "Vor Ort",
+      "hybrid": "Teils vor Ort",
+      "remote": "Im Homeoffice"
+    },
+    "clientChange": {
+      "title": "Kunden ändern?",
+      "message": "Dadurch werden {{count}} Standortverknüpfung(en) entfernt. Standorte gehören zu einem Kunden und können dem Kontakt nicht folgen.",
+      "confirm": "Kunden ändern"
+    }
   }
 }

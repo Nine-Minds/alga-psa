@@ -62,7 +62,8 @@
       "phoneNumber": "Número de teléfono",
       "client": "Cliente",
       "tags": "Etiquetas",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "location": "Ubicación"
     },
     "lastPhoneTypeUsage": {
       "title": "Último uso del tipo de teléfono",
@@ -182,7 +183,10 @@
       "role": "Cargo",
       "notes": "Notas",
       "primaryEmailLabel": "Etiqueta del correo principal",
-      "additionalEmails": "Direcciones de correo adicionales"
+      "additionalEmails": "Direcciones de correo adicionales",
+      "workArrangement": "Modalidad de trabajo",
+      "locations": "Ubicaciones",
+      "primaryLocation": "Ubicación principal"
     },
     "unassigned": "Seleccionar campo",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "Correo electrónico",
       "phoneNumber": "Número de teléfono",
       "actions": "Acciones",
-      "role": "Rol"
+      "role": "Rol",
+      "location": "Ubicación"
     },
     "filter": {
       "show": "Mostrar:",
       "active": "Contactos activos",
       "inactive": "Contactos inactivos",
       "all": "Todos los contactos",
-      "searchPlaceholder": "Buscar contactos..."
+      "searchPlaceholder": "Buscar contactos...",
+      "allLocations": "Todas las ubicaciones",
+      "noLocation": "Sin ubicación"
     },
     "actions": {
       "openMenu": "Abrir menú",
@@ -798,7 +805,8 @@
         "updateClientUsers": "No tiene permiso para actualizar usuarios de clientes",
         "viewClientUsers": "No tiene permiso para ver usuarios de clientes"
       },
-      "field": "campo"
+      "field": "campo",
+      "locationClientMismatch": "Esa ubicación pertenece a otro cliente."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Última sincronización: {{date}}",
     "deleted": "Inactivo — la cuenta de Microsoft se eliminó.",
     "disabled": "Inactivo — la cuenta de Microsoft está deshabilitada."
+  },
+  "contactLocations": {
+    "locations": "Ubicaciones",
+    "workArrangement": "Modalidad de trabajo",
+    "primary": "Principal",
+    "none": "Sin ubicaciones",
+    "inactiveMarker": "(inactiva)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Elija primero un cliente para seleccionar sus ubicaciones.",
+    "loading": "Cargando ubicaciones…",
+    "noneForClient": "Este cliente aún no tiene ubicaciones.",
+    "arrangement": {
+      "unset": "Sin definir",
+      "on_site": "En la oficina",
+      "hybrid": "Híbrida",
+      "remote": "Remota"
+    },
+    "clientChange": {
+      "title": "¿Cambiar de cliente?",
+      "message": "Esto elimina {{count}} vínculo(s) de ubicación. Las ubicaciones pertenecen a un cliente, por lo que no pueden seguir al contacto.",
+      "confirm": "Cambiar de cliente"
+    }
   }
 }

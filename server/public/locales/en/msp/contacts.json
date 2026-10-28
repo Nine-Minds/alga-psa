@@ -62,7 +62,8 @@
       "phoneNumber": "Phone Number",
       "client": "Client",
       "tags": "Tags",
-      "actions": "Actions"
+      "actions": "Actions",
+      "location": "Location"
     },
     "lastPhoneTypeUsage": {
       "title": "Last Phone Type Usage",
@@ -182,7 +183,10 @@
       "role": "Role",
       "notes": "Notes",
       "primaryEmailLabel": "Primary Email Label",
-      "additionalEmails": "Additional Email Addresses"
+      "additionalEmails": "Additional Email Addresses",
+      "workArrangement": "Work Arrangement",
+      "locations": "Locations",
+      "primaryLocation": "Primary Location"
     },
     "unassigned": "Select field",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "Email",
       "phoneNumber": "Phone Number",
       "actions": "Actions",
-      "role": "Role"
+      "role": "Role",
+      "location": "Location"
     },
     "filter": {
       "show": "Show:",
       "active": "Active Contacts",
       "inactive": "Inactive Contacts",
       "all": "All Contacts",
-      "searchPlaceholder": "Search contacts..."
+      "searchPlaceholder": "Search contacts...",
+      "allLocations": "All locations",
+      "noLocation": "No location"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -798,7 +805,8 @@
         "updateClientUsers": "You do not have permission to update client users",
         "viewClientUsers": "You do not have permission to view client users"
       },
-      "field": "field"
+      "field": "field",
+      "locationClientMismatch": "That location belongs to another client."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Last synced {{date}}",
     "deleted": "Inactive — the Microsoft account was deleted.",
     "disabled": "Inactive — the Microsoft account is disabled."
+  },
+  "contactLocations": {
+    "locations": "Locations",
+    "workArrangement": "Work arrangement",
+    "primary": "Primary",
+    "none": "No locations",
+    "inactiveMarker": "(inactive)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Choose a client first to pick its locations.",
+    "loading": "Loading locations…",
+    "noneForClient": "This client has no locations yet.",
+    "arrangement": {
+      "unset": "Not set",
+      "on_site": "On site",
+      "hybrid": "Hybrid",
+      "remote": "Remote"
+    },
+    "clientChange": {
+      "title": "Change client?",
+      "message": "This removes {{count}} location link(s). Locations belong to a client, so they cannot follow the contact.",
+      "confirm": "Change client"
+    }
   }
 }

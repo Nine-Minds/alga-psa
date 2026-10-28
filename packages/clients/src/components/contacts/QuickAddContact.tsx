@@ -11,7 +11,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
-import type { ContactPhoneNumberInput, CreateContactInput, IClient } from '@alga-psa/types';
+import type { ContactLocationInput, ContactPhoneNumberInput, ContactWorkArrangement, CreateContactInput, IClient } from '@alga-psa/types';
 import QuickAddClient from '../clients/QuickAddClient';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -28,6 +28,7 @@ import {
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
+import ContactLocationsEditor from './ContactLocationsEditor';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseContactActionError } from '../../lib/contactActionErrorCodes';
@@ -124,6 +125,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [workArrangement, setWorkArrangement] = useState<ContactWorkArrangement | null>(null);
+  const [locationLinks, setLocationLinks] = useState<ContactLocationInput[]>([]);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -334,6 +337,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         is_inactive: isInactive,
         role: role.trim(),
         notes: notes.trim(),
+        work_arrangement: workArrangement,
+        locations: locationLinks,
       };
 
       const addContactResult = await addContact(contactData);
@@ -679,6 +684,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               {fieldErrors.notes && (
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
               )}
+            </div>
+            <div>
+              <ContactLocationsEditor
+                id="quick-add-contact-locations-editor"
+                clientId={clientId}
+                workArrangement={workArrangement}
+                onWorkArrangementChange={setWorkArrangement}
+                value={locationLinks}
+                onChange={setLocationLinks}
+                disabled={isSubmitting}
+              />
             </div>
             <QuickAddTagPicker
               id="quick-add-contact-tags"

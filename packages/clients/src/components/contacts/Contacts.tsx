@@ -42,6 +42,7 @@ import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
+import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -784,6 +785,28 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             extension={defaultPhone?.extension}
             fallback={t('common.states.na', { defaultValue: 'N/A' })}
           />
+        );
+      },
+    },
+    {
+      title: t('contactsPage.table.location', { defaultValue: 'Location' }),
+      dataIndex: 'primaryLocation',
+      width: '12%',
+      render: (value, record): React.ReactNode => {
+        const cell = contactLocationCell(record);
+        if (!cell.label) return t('common.states.na', { defaultValue: 'N/A' });
+        return (
+          <span className="truncate">
+            {cell.label === 'Remote'
+              ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+              : cell.label}
+            {cell.extraCount > 0 ? (
+              <span className="text-gray-500">
+                {' '}
+                {t('contactLocations.extraCount', { defaultValue: '+{{count}}', count: cell.extraCount })}
+              </span>
+            ) : null}
+          </span>
         );
       },
     },

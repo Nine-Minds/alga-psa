@@ -62,7 +62,8 @@
       "phoneNumber": "Numéro de téléphone",
       "client": "Client",
       "tags": "Étiquettes",
-      "actions": "Actions"
+      "actions": "Actions",
+      "location": "Site"
     },
     "lastPhoneTypeUsage": {
       "title": "Dernière utilisation du type de téléphone",
@@ -182,7 +183,10 @@
       "role": "Rôle",
       "notes": "Notes",
       "primaryEmailLabel": "Libellé de l'e-mail principal",
-      "additionalEmails": "Adresses e-mail supplémentaires"
+      "additionalEmails": "Adresses e-mail supplémentaires",
+      "workArrangement": "Organisation du travail",
+      "locations": "Sites",
+      "primaryLocation": "Site principal"
     },
     "unassigned": "Sélectionner un champ",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "E-mail",
       "phoneNumber": "Numéro de téléphone",
       "actions": "Actions",
-      "role": "Rôle"
+      "role": "Rôle",
+      "location": "Site"
     },
     "filter": {
       "show": "Afficher :",
       "active": "Contacts actifs",
       "inactive": "Contacts inactifs",
       "all": "Tous les contacts",
-      "searchPlaceholder": "Rechercher des contacts..."
+      "searchPlaceholder": "Rechercher des contacts...",
+      "allLocations": "Tous les sites",
+      "noLocation": "Aucun site"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -798,7 +805,8 @@
         "updateClientUsers": "Vous n’avez pas l’autorisation de mettre à jour les utilisateurs clients",
         "viewClientUsers": "Vous n’avez pas l’autorisation de consulter les utilisateurs clients"
       },
-      "field": "champ"
+      "field": "champ",
+      "locationClientMismatch": "Ce site appartient à un autre client."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Dernière synchronisation le {{date}}",
     "deleted": "Inactif — le compte Microsoft a été supprimé.",
     "disabled": "Inactif — le compte Microsoft est désactivé."
+  },
+  "contactLocations": {
+    "locations": "Sites",
+    "workArrangement": "Organisation du travail",
+    "primary": "Principal",
+    "none": "Aucun site",
+    "inactiveMarker": "(inactif)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Choisissez d’abord un client pour sélectionner ses sites.",
+    "loading": "Chargement des sites…",
+    "noneForClient": "Ce client n’a pas encore de site.",
+    "arrangement": {
+      "unset": "Non défini",
+      "on_site": "Sur site",
+      "hybrid": "Hybride",
+      "remote": "À distance"
+    },
+    "clientChange": {
+      "title": "Changer de client ?",
+      "message": "Cette action supprime {{count}} lien(s) de site. Les sites appartiennent à un client et ne peuvent pas suivre le contact.",
+      "confirm": "Changer de client"
+    }
   }
 }

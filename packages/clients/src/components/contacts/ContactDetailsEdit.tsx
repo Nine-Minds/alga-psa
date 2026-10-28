@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ContactEmailAddressInput, ContactPhoneNumberInput, CreateContactInput, IClient, IContact, ITag } from '@alga-psa/types';
+import type { ContactEmailAddressInput, ContactLocationInput, ContactPhoneNumberInput, ContactWorkArrangement, CreateContactInput, IClient, IContact, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -32,6 +32,8 @@ import ContactEmailAddressesEditor, {
   compactContactEmailAddresses,
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
+import ContactLocationsEditor from './ContactLocationsEditor';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { collectReportContactIds } from '../../lib/managerSubtree';
 import { parseContactActionError } from '../../lib/contactActionErrorCodes';
@@ -88,6 +90,15 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
   // Reports-to candidates: same-client contacts (all statuses), excluding this contact and anyone who reports up to it.
   const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+  const [locationLinks, setLocationLinks] = useState<ContactLocationInput[]>(
+    (initialContact.locations ?? []).map((location) => ({
+      location_id: location.location_id,
+      is_primary: location.is_primary,
+    })),
+  );
+  // A location link only ever points at the contact's own client's locations, so moving the contact
+  // removes them all. The count is stated before the save, never discovered after it.
+  const [pendingClientChange, setPendingClientChange] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,13 +222,23 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     setContact(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleClientSelect = (clientId: string | null) => {
-    // The manager must belong to the same client, so a client change drops it.
+  const applyClientSelect = useCallback((clientId: string | null) => {
+    // The manager must belong to the same client, so a client change drops it. So do the location
+    // links, which is why the confirmation below runs first when there are any.
     setContact(prev => ({
       ...prev,
       client_id: clientId || '',
       manager_contact_id: clientId === prev.client_id ? prev.manager_contact_id : null,
     }));
+    setLocationLinks(prev => (clientId === contact.client_id ? prev : []));
+  }, [contact.client_id]);
+
+  const handleClientSelect = (clientId: string | null) => {
+    if (clientId !== contact.client_id && locationLinks.length > 0) {
+      setPendingClientChange(clientId ?? '');
+      return;
+    }
+    applyClientSelect(clientId);
   };
 
   const handleSave = async () => {
@@ -252,6 +273,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         ...contact,
         ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
+        work_arrangement: contact.work_arrangement ?? null,
+        locations: locationLinks,
       });
       if (isReturnedActionError(updatedContact)) {
         setError(getErrorMessage(updatedContact));
@@ -490,6 +513,22 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               </td>
             </tr>
             <tr>
+              <td className="py-2 font-semibold align-top">
+                {t('contactLocations.locations', { defaultValue: 'Locations' })}
+              </td>
+              <td className="py-2">
+                <ContactLocationsEditor
+                  id={`${id}-locations-editor`}
+                  clientId={contact.client_id}
+                  currentLocations={initialContact.locations ?? []}
+                  workArrangement={contact.work_arrangement as ContactWorkArrangement | null | undefined}
+                  onWorkArrangementChange={(value) => handleInputChange('work_arrangement', value)}
+                  value={locationLinks}
+                  onChange={setLocationLinks}
+                />
+              </td>
+            </tr>
+            <tr>
               <td className="py-2 font-semibold">
                 {t('contactDetailsEdit.fields.status', { defaultValue: 'Status:' })}
               </td>
@@ -541,6 +580,23 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
           </tbody>
         </table>
+        <ConfirmationDialog
+          id={`${id}-location-links-confirm`}
+          isOpen={pendingClientChange !== null}
+          onClose={() => setPendingClientChange(null)}
+          onConfirm={() => {
+            const next = pendingClientChange;
+            setPendingClientChange(null);
+            applyClientSelect(next === '' ? null : next);
+          }}
+          title={t('contactLocations.clientChange.title', { defaultValue: 'Change client?' })}
+          message={t('contactLocations.clientChange.message', {
+            defaultValue: 'This removes {{count}} location link(s). Locations belong to a client, so they cannot follow the contact.',
+            count: locationLinks.length,
+          })}
+          confirmLabel={t('contactLocations.clientChange.confirm', { defaultValue: 'Change client' })}
+          cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        />
         <DrawerFooter className="gap-4">
           <Button
             id={`${id}-cancel-button`}

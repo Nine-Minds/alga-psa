@@ -62,7 +62,8 @@
       "phoneNumber": "Telefoonnummer",
       "client": "Klant",
       "tags": "Labels",
-      "actions": "Acties"
+      "actions": "Acties",
+      "location": "Locatie"
     },
     "lastPhoneTypeUsage": {
       "title": "Laatste gebruik van telefoonsoort",
@@ -182,7 +183,10 @@
       "role": "Rol",
       "notes": "Notities",
       "primaryEmailLabel": "Label primaire e-mail",
-      "additionalEmails": "Aanvullende e-mailadressen"
+      "additionalEmails": "Aanvullende e-mailadressen",
+      "workArrangement": "Werkvorm",
+      "locations": "Locaties",
+      "primaryLocation": "Primaire locatie"
     },
     "unassigned": "Veld selecteren",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "E-mail",
       "phoneNumber": "Telefoonnummer",
       "actions": "Acties",
-      "role": "Rol"
+      "role": "Rol",
+      "location": "Locatie"
     },
     "filter": {
       "show": "Toon:",
       "active": "Actieve contacten",
       "inactive": "Inactieve contacten",
       "all": "Alle contacten",
-      "searchPlaceholder": "Contacten zoeken..."
+      "searchPlaceholder": "Contacten zoeken...",
+      "allLocations": "Alle locaties",
+      "noLocation": "Geen locatie"
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -798,7 +805,8 @@
         "updateClientUsers": "U heeft geen toestemming om klantgebruikers bij te werken",
         "viewClientUsers": "U heeft geen toestemming om klantgebruikers te bekijken"
       },
-      "field": "veld"
+      "field": "veld",
+      "locationClientMismatch": "Die locatie hoort bij een andere klant."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Laatst gesynchroniseerd op {{date}}",
     "deleted": "Inactief — het Microsoft-account is verwijderd.",
     "disabled": "Inactief — het Microsoft-account is uitgeschakeld."
+  },
+  "contactLocations": {
+    "locations": "Locaties",
+    "workArrangement": "Werkvorm",
+    "primary": "Primair",
+    "none": "Geen locaties",
+    "inactiveMarker": "(inactief)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Kies eerst een klant om de locaties te selecteren.",
+    "loading": "Locaties laden…",
+    "noneForClient": "Deze klant heeft nog geen locaties.",
+    "arrangement": {
+      "unset": "Niet ingesteld",
+      "on_site": "Op locatie",
+      "hybrid": "Hybride",
+      "remote": "Op afstand"
+    },
+    "clientChange": {
+      "title": "Klant wijzigen?",
+      "message": "Hiermee worden {{count}} locatiekoppeling(en) verwijderd. Locaties horen bij een klant en kunnen het contact niet volgen.",
+      "confirm": "Klant wijzigen"
+    }
   }
 }

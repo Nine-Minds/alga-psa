@@ -158,7 +158,7 @@
     "prdRefs": [
       "UX contact page"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactLocationsEditor component (id contact-locations-editor): work-arrangement select, multi-select of the client's active locations (linked inactive ones listed and marked), primary radio; disabled with hint until a client is chosen"
   },
   {
@@ -168,7 +168,7 @@
       "UX contact page",
       "FR-B3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact edit form and bento edit drawer use ContactLocationsEditor; changing the client clears the selection and, when the contact has links, shows a confirmation naming the removal count before save"
   },
   {
@@ -177,7 +177,7 @@
     "prdRefs": [
       "UX quick add contact"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddContact includes ContactLocationsEditor collapsed under Locations, enabled once a client is chosen"
   },
   {
@@ -186,7 +186,7 @@
     "prdRefs": [
       "UX contact page"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact bento Locations tile (id contact-bento-locations): work-arrangement badge, one row per location with name, address line, Primary and Inactive markers; empty state with Add action; 'Remote' when remote with no links"
   },
   {
@@ -195,7 +195,7 @@
     "prdRefs": [
       "UX contact lists"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contacts.tsx and ClientContactsList.tsx add a sortable Location column: primary name, '+N' for extra links, 'Remote' when remote and unlinked"
   },
   {
@@ -204,7 +204,7 @@
     "prdRefs": [
       "UX contact lists"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client contacts tab Location filter with the client's locations plus Remote and No location options"
   },
   {

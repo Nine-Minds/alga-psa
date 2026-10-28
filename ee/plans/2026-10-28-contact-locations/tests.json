@@ -241,7 +241,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactLocationsEditor renders disabled with a hint when no client is chosen and lists the client's active locations once chosen"
   },
   {
@@ -250,7 +250,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactLocationsEditor keeps an inactive already-linked location listed and marked; the primary radio only offers selected locations"
   },
   {
@@ -304,7 +304,7 @@
     "featureIds": [
       "F022"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contacts table Location column shows 'Warehouse +1' for two links with Warehouse primary, 'Remote' for an unlinked remote contact, and empty otherwise; sorting by the column orders by primary name"
   },
   {

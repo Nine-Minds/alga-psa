@@ -512,6 +512,28 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               </td>
             </tr>
             <TableRow label={t('contactDetailsView.fields.reportsTo', { defaultValue: 'Reports to' })} value={contact.manager_contact_id ? (managerName ?? '…') : t('contactDetailsView.empty.noManager', { defaultValue: 'No manager' })} />
+            <tr>
+              <td className="py-2 font-semibold align-top">
+                {t('contactLocations.locations', { defaultValue: 'Locations' })}
+              </td>
+              <td className="py-2">
+                {(contact.locations ?? []).length > 0 ? (
+                  <div className="space-y-0.5">
+                    {(contact.locations ?? []).map((location) => (
+                      <div key={location.location_id} className="text-sm">
+                        {location.location_name || location.address_line1 || '—'}
+                        {location.is_primary ? ` • ${t('contactLocations.primary', { defaultValue: 'Primary' })}` : ''}
+                        {location.is_active === false ? ` • ${t('contactLocations.inactiveMarker', { defaultValue: '(inactive)' })}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                ) : contact.work_arrangement === 'remote' ? (
+                  <span className="text-sm">{t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })}</span>
+                ) : (
+                  <span className="text-sm text-gray-500">{t('contactLocations.none', { defaultValue: 'No locations' })}</span>
+                )}
+              </td>
+            </tr>
             <TableRow label={t('contactDetailsView.fields.role', { defaultValue: 'Role' })} value={contact.role || t('contactDetailsView.empty.notSet', { defaultValue: 'Not set' })} />
             <TableRow label={t('contactDetailsView.fields.status', { defaultValue: 'Status' })} value={contact.is_inactive ? t('contactDetailsView.status.inactive', { defaultValue: 'Inactive' }) : t('contactDetailsView.status.active', { defaultValue: 'Active' })} />
             <TableRow label={t('contactDetailsView.fields.createdAt', { defaultValue: 'Created At' })} value={new Date(contact.created_at).toLocaleString()} />

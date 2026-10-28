@@ -62,7 +62,8 @@
       "phoneNumber": "Numero di telefono",
       "client": "Cliente",
       "tags": "Tag",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "location": "Sede"
     },
     "lastPhoneTypeUsage": {
       "title": "Ultimo utilizzo del tipo di telefono",
@@ -182,7 +183,10 @@
       "role": "Ruolo",
       "notes": "Note",
       "primaryEmailLabel": "Etichetta email principale",
-      "additionalEmails": "Indirizzi email aggiuntivi"
+      "additionalEmails": "Indirizzi email aggiuntivi",
+      "workArrangement": "Modalità di lavoro",
+      "locations": "Sedi",
+      "primaryLocation": "Sede principale"
     },
     "unassigned": "Seleziona campo",
     "errors": {
@@ -630,14 +634,17 @@
       "email": "E-mail",
       "phoneNumber": "Numero di telefono",
       "actions": "Azioni",
-      "role": "Ruolo"
+      "role": "Ruolo",
+      "location": "Sede"
     },
     "filter": {
       "show": "Mostra:",
       "active": "Contatti attivi",
       "inactive": "Contatti inattivi",
       "all": "Tutti i contatti",
-      "searchPlaceholder": "Cerca contatti..."
+      "searchPlaceholder": "Cerca contatti...",
+      "allLocations": "Tutte le sedi",
+      "noLocation": "Nessuna sede"
     },
     "actions": {
       "openMenu": "Apri menu",
@@ -798,7 +805,8 @@
         "updateClientUsers": "Non hai l’autorizzazione per aggiornare gli utenti dei clienti",
         "viewClientUsers": "Non hai l’autorizzazione per visualizzare gli utenti dei clienti"
       },
-      "field": "campo"
+      "field": "campo",
+      "locationClientMismatch": "Questa sede appartiene a un altro cliente."
     }
   },
   "portal": {
@@ -849,5 +857,27 @@
     "lastSynced": "Ultima sincronizzazione: {{date}}",
     "deleted": "Inattivo — l’account Microsoft è stato eliminato.",
     "disabled": "Inattivo — l’account Microsoft è disabilitato."
+  },
+  "contactLocations": {
+    "locations": "Sedi",
+    "workArrangement": "Modalità di lavoro",
+    "primary": "Principale",
+    "none": "Nessuna sede",
+    "inactiveMarker": "(inattiva)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Scegli prima un cliente per selezionare le sue sedi.",
+    "loading": "Caricamento sedi…",
+    "noneForClient": "Questo cliente non ha ancora sedi.",
+    "arrangement": {
+      "unset": "Non impostata",
+      "on_site": "In sede",
+      "hybrid": "Ibrida",
+      "remote": "Remota"
+    },
+    "clientChange": {
+      "title": "Cambiare cliente?",
+      "message": "Questa operazione rimuove {{count}} collegamento/i di sede. Le sedi appartengono a un cliente e non possono seguire il contatto.",
+      "confirm": "Cambia cliente"
+    }
   }
 }
