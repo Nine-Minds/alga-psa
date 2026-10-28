@@ -581,6 +581,7 @@ async function selectEligibleBlocks(
   const db = tenantDb(trx, tenant);
   const workDate = toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time);
   if (!workDate) return [];
+  const timeZone = await resolveEffectiveTimeZone(trx, tenant);
 
   const rows: any[] = await db.table('hour_blocks as hb')
     .where({ 'hb.client_id': clientId })
@@ -632,7 +633,7 @@ async function selectEligibleBlocks(
         .whereRaw(`?::date > COALESCE(NULLIF(end_audit.metadata->>'effective_end_date', '')::date,
           CASE WHEN end_audit.metadata->>'assignment_status' = 'expired'
             THEN NULLIF(end_audit.metadata->>'assignment_end_date', '')::date END,
-          end_audit.created_at::date)`, [workDate]);
+          (end_audit.created_at AT TIME ZONE ?)::date)`, [workDate, timeZone]);
     })
     .where(function (this: Knex.QueryBuilder) {
       this.whereNotExists(function (this: Knex.QueryBuilder) {

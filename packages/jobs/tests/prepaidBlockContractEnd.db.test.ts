@@ -214,6 +214,29 @@ describe.runIf(enabled)('Prepaid Block contract-end forfeiture', () => {
     expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(180);
   });
 
+  it('reads legacy termination timestamps in the tenant business time zone', async () => {
+    const w = await setup();
+    await db('tenant_settings').where({ tenant }).update({ settings: JSON.stringify({ timezone: 'Pacific/Honolulu' }) });
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: '2026-12-31', is_active: false });
+    const blockId = await insertBlock(w, { remaining: 180, status: 'expired', expiration: '2026-12-31' });
+    await db('hour_block_audit').insert({ tenant, block_id: blockId, type: 'contract_end_expiration',
+      created_at: '2026-08-11T02:00:00Z', metadata: { assignment_status: 'terminated', assignment_end_date: '2026-12-31' } });
+    const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    for (const [date, expected] of [['2026-08-10', 60], ['2026-08-11', 0]] as const) {
+      const entryId = uuidv4();
+      await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+        start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+        work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+      await db.transaction(async (trx) => {
+        const allocations = await allocateTimeEntry(trx, tenant, w.clientId, { entry_id: entryId, service_id: w.serviceId,
+          billable_duration: 60, contract_line_id: w.lineId, work_item_id: w.ticketId, work_item_type: 'ticket',
+          work_date: date, start_time: `${date}T09:00:00Z` });
+        expect(allocations).toEqual(expected ? [{ block_id: blockId, minutes: expected }] : []);
+      });
+    }
+  });
+
   it('rechecks uninvoiced allocations on expiry without changing invoiced allocations', async () => {
     const w = await setup();
     await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60) });
