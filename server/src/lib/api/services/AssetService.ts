@@ -1212,90 +1212,88 @@ export class AssetService extends BaseService<any> {
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    await this.assertAssetExists(knex, context.tenant, assetId);
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
+    return knex.transaction(async (trx) => {
+      await this.assertAssetExists(trx, context.tenant, assetId);
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .insert({
+          ...data,
+          description: data.description ?? null,
+          asset_id: assetId,
+          tenant: context.tenant,
+          created_by: context.userId,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
 
-    const scheduleData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    // Calculate next maintenance date
-    (scheduleData as any).next_maintenance = this.calculateNextMaintenanceDate(
-      data.start_date || new Date().toISOString(), 
-      data.frequency, 
-      data.frequency_interval
-    );
-
-    const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
-      .insert(scheduleData)
-      .returning('*');
-
-    if (schedule.is_active !== false) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences').insert({
-        tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
-        due_date: schedule.next_maintenance, status: 'open'
+      await scopedTable(trx, context.tenant, 'asset_maintenance_notifications').insert({
+        tenant: context.tenant,
+        schedule_id: schedule.schedule_id,
+        asset_id: assetId,
+        notification_type: 'upcoming',
+        notification_date: schedule.next_maintenance,
+        notification_data: {
+          schedule_name: schedule.schedule_name,
+          maintenance_type: schedule.maintenance_type
+        }
       });
-    }
 
-    return schedule;
+      if (schedule.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({
+          tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
+          due_date: schedule.next_maintenance, status: 'open'
+        });
+      }
+      return schedule;
+    });
   }
 
   async updateMaintenanceSchedule(scheduleId: string, data: UpdateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
+    return knex.transaction(async (trx) => {
+      const existing = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .forUpdate()
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Maintenance schedule not found');
+      }
 
-    if (!existing) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .update({ ...data, updated_at: new Date() })
+        .returning('*');
 
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
-
-    const updateData = {
-      ...data,
-      updated_at: new Date()
-    };
-
-    // Recalculate next maintenance if frequency changed
-    if (data.frequency || data.frequency_interval || data.start_date) {
-      const startDate = data.start_date || existing.start_date;
-      const frequency = data.frequency || existing.frequency;
-      const interval = data.frequency_interval || existing.frequency_interval;
-      (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
-    }
-
-    const updated = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .update(updateData);
-
-    if (!updated) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
-
-    if ((updateData as any).next_maintenance) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences')
-        .where({ schedule_id: scheduleId, status: 'open' })
-        .update({ due_date: (updateData as any).next_maintenance, updated_at: new Date() });
-    }
-
-    if (!schedule) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    return schedule;
+      if (data.next_maintenance) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ due_date: data.next_maintenance, updated_at: new Date() });
+      }
+      if (data.next_maintenance || data.schedule_name || data.maintenance_type) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_notifications')
+          .where({ schedule_id: scheduleId, is_sent: false })
+          .update({
+            notification_date: schedule.next_maintenance,
+            notification_data: trx.raw(
+              "notification_data || ?::jsonb",
+              [JSON.stringify({ schedule_name: schedule.schedule_name, maintenance_type: schedule.maintenance_type })]
+            )
+          });
+      }
+      if (data.is_active === false && existing.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ status: 'cancelled', closed_at: new Date(), closed_by: context.userId, updated_at: new Date() });
+      } else if (data.is_active === true && !existing.is_active && !schedule.archived_at) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .insert({
+            tenant: context.tenant, schedule_id: scheduleId, asset_id: schedule.asset_id,
+            due_date: schedule.next_maintenance, status: 'open'
+          })
+          .onConflict().ignore();
+      }
+      return schedule;
+    });
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
