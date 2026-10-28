@@ -15,6 +15,7 @@ import {
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { withClientSinceDateString } from '../lib/clientSince';
 import { attachDisplayTags } from '../lib/displayTags';
+import { attachContactLocations } from '../lib/contactLocations';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -373,7 +374,8 @@ export const getContactsByClient = withAuth(async (
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
-    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    return (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
   } catch (err) {
     console.error('Error fetching contacts for client:', err);
 
@@ -511,7 +513,8 @@ export const getAllContacts = withAuth(async (
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
-    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    return (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
   } catch (err) {
     console.error('Error fetching all contacts:', err);
 

@@ -330,6 +330,74 @@ async function moveClientOwnedRows(
   return moved;
 }
 
+/**
+ * Contact location links key on the contact and the location, never on the client, so a merge that
+ * moves both sides wholesale leaves every row untouched — which is exactly why nothing in the merge
+ * reports them unless it is asked to. These two reads are that report, and the guard against a
+ * silent half-move: a link whose contact and location ended up at different clients would be
+ * invisible in the UI and unfixable from it.
+ */
+async function countContactLocationLinks(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: readonly string[],
+): Promise<number> {
+  if (contactIds.length === 0) return 0;
+  const row = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .count<{ count: string }>('location_id as count')
+    .first();
+  return Number(row?.count ?? 0);
+}
+
+async function assertContactLocationsConsistent(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: readonly string[],
+  expectedCount: number,
+): Promise<number> {
+  const after = await countContactLocationLinks(trx, tenant, contactIds);
+  if (after !== expectedCount) {
+    throw new Error(
+      `CLIENT_MERGE_ERROR: contact location links changed during the merge (${expectedCount} before, ${after} after)`,
+    );
+  }
+
+  if (contactIds.length === 0) return after;
+
+  // Three scoped reads rather than a two-way join: the sets are one client's worth of rows, and
+  // comparing in TypeScript keeps the check readable and the tenant scope obvious on each side.
+  const links = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .select('contact_name_id', 'location_id') as Array<{ contact_name_id: string; location_id: string }>;
+  if (links.length === 0) return after;
+
+  const contactClients = new Map(
+    ((await scoped(trx, tenant, 'contacts')
+      .whereIn('contact_name_id', contactIds)
+      .select('contact_name_id', 'client_id')) as Array<{ contact_name_id: string; client_id: string | null }>)
+      .map((row) => [row.contact_name_id, row.client_id ?? null]),
+  );
+  const locationClients = new Map(
+    ((await scoped(trx, tenant, 'client_locations')
+      .whereIn('location_id', [...new Set(links.map((link) => link.location_id))])
+      .select('location_id', 'client_id')) as Array<{ location_id: string; client_id: string | null }>)
+      .map((row) => [row.location_id, row.client_id ?? null]),
+  );
+
+  const crossed = links.find(
+    (link) => contactClients.get(link.contact_name_id) !== locationClients.get(link.location_id),
+  );
+  if (crossed) {
+    throw new Error(
+      'CLIENT_MERGE_ERROR: a contact location link would cross clients '
+      + `(contact ${crossed.contact_name_id}, location ${crossed.location_id})`,
+    );
+  }
+
+  return after;
+}
+
 async function readSourceProfiles(
   trx: Knex.Transaction,
   tenant: string,
@@ -484,6 +552,7 @@ export async function previewClientMerge(
 
   const contactIds = contactRows.map((row: any) => row.contact_name_id as string);
   const unrestrictedPortalUserIds = await findUnrestrictedPortalUsers(trx, tenant, contactIds);
+  counts['contact location'] = await countContactLocationLinks(trx, tenant, contactIds);
 
   const externalMappings = await readExternalMappings(trx, tenant, source.clientId, target.clientId);
   const assets = await readMergeAssetsPreview(trx, tenant, source.clientId);
@@ -645,6 +714,7 @@ export async function executeClientMerge(
     .where({ client_id: source.clientId })
     .select('contact_name_id');
   const sourceContactIds = sourceContacts.map((row: any) => row.contact_name_id as string);
+  const contactLocationLinksBefore = await countContactLocationLinks(trx, tenant, sourceContactIds);
   const unrestrictedPortalUserIds = input.pinPortalGrants === false
     ? []
     : await findUnrestrictedPortalUsers(trx, tenant, sourceContactIds);
@@ -860,6 +930,13 @@ export async function executeClientMerge(
     // A source default arriving beside the target's default is demoted; that shows up here as is_default.
     if (after) queueClientLocationUpdated(trx, tenant, before, after, eventOptions);
   }
+
+  counts['contact location'] = await assertContactLocationsConsistent(
+    trx,
+    tenant,
+    sourceContactIds,
+    contactLocationLinksBefore,
+  );
 
   // --- 6. Polymorphic associations ---------------------------------------
   counts['logo demoted'] = await demoteCollidingLogos(

@@ -5,6 +5,7 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
   ContactEmailAddressInput,
+  ContactLocationInput,
   DeletionValidationResult,
   IClient,
   IContact,
@@ -54,6 +55,13 @@ import {
   parseSubmittedFields
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
+import { attachContactLocations } from '../../lib/contactLocations';
+import {
+  getContactLocationCount as readContactLocationCount,
+  getContactLocations,
+  isContactLocationClientMismatch,
+  replaceContactLocations,
+} from '../../models/contactLocation';
 import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
 // Keep the error key alongside localized text so classification never depends on
@@ -171,7 +179,9 @@ function buildDefaultPhoneNumbers(phoneNumber?: string | null) {
   }];
 }
 
-type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_email_addresses'> & {
+type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_email_addresses' | 'locations'> & {
+  /** Omitted leaves the location links unchanged; [] removes them all. */
+  locations?: ContactLocationInput[];
   phone_numbers?: CreateContactInput['phone_numbers'];
   primary_email_canonical_type?: CreateContactInput['primary_email_canonical_type'];
   primary_email_custom_type?: CreateContactInput['primary_email_custom_type'];
@@ -224,6 +234,9 @@ async function contactEmailConflictMessageFrom(error: unknown): Promise<string |
 async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpdateActionError | null> {
   const localized = localizedContactActionError(error);
   if (localized) return localized;
+  if (isContactLocationClientMismatch(error)) {
+    return actionError(error.message, 'msp/contacts:errors.contact.locationClientMismatch');
+  }
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:') || message.includes('You do not have permission')) {
@@ -428,7 +441,8 @@ export const getContactByContactNameId = withAuth(async (
     // The model doesn't resolve avatars (they live in document associations),
     // but single-contact reads feed avatar-bearing surfaces (bento hero, quick view).
     const avatarUrlsMap = await getContactAvatarUrlsBatchAsync([contact.contact_name_id], tenant);
-    return { ...contact, avatarUrl: avatarUrlsMap.get(contact.contact_name_id) ?? null };
+    const [withLocations] = await attachContactLocations(db, tenant, [contact], (row) => row.contact_name_id);
+    return { ...withLocations, avatarUrl: avatarUrlsMap.get(contact.contact_name_id) ?? null };
   } catch (err) {
     console.error('Error getting contact by contact_name_id:', err);
 
@@ -709,14 +723,22 @@ export const addContact = withAuth(async (
       manager_contact_id: contactData.manager_contact_id || undefined,
       role: contactData.role ?? undefined,
       notes: contactData.notes || undefined,
-      is_inactive: contactData.is_inactive ?? undefined
+      is_inactive: contactData.is_inactive ?? undefined,
+      work_arrangement: contactData.work_arrangement ?? undefined,
     };
 
     // LEVERAGE: pattern contact-create-with-event
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return ContactModel.createContact(createInput, tenant, trx);
+      const contact = await ContactModel.createContact(createInput, tenant, trx);
+      // Same transaction as the contact: a cross-client location rolls the contact back too.
+      const locations = contactData.locations === undefined
+        ? []
+        : await replaceContactLocations(trx, tenant, contact.contact_name_id, contactData.locations, {
+          createdBy: user?.user_id ?? null,
+        });
+      return { ...contact, locations };
     });
 
     const clientId = (created as any)?.client_id;
@@ -936,7 +958,19 @@ export const updateContact = withAuth(async (
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,
+        work_arrangement: contactData.work_arrangement ?? undefined,
       }, tenant, trx);
+
+      // ContactModel already dropped every link when the client changed (a link never crosses
+      // clients) and reported how many went; an explicit `locations` then writes the new set, so a
+      // move plus a new selection in one call lands only the new links.
+      const removedLocationCount = Number((updated as { removedLocationCount?: number }).removedLocationCount ?? 0);
+      if (contactData.locations !== undefined) {
+        await replaceContactLocations(trx, tenant, contactData.contact_name_id!, contactData.locations, {
+          createdBy: user?.user_id ?? null,
+        });
+      }
+      const locations = await getContactLocations(trx, tenant, contactData.contact_name_id!);
 
       if (contactData.is_inactive === true) {
         await tenantScopedTable(trx, 'users', tenant)
@@ -946,7 +980,7 @@ export const updateContact = withAuth(async (
 
       return {
         before: existingContact,
-        after: updated,
+        after: { ...updated, locations, removedLocationCount },
         updatedFieldKeys: Object.keys(contactData).filter((key) => key !== 'contact_name_id'),
         occurredAt: updated.updated_at,
       };
@@ -2077,6 +2111,21 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
     console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
     throw error;
   }
+});
+
+/**
+ * How many locations this contact is linked to. Backs the "this removes N location links"
+ * confirmation the edit form shows before a client change actually drops them.
+ */
+export const getContactLocationCount = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<number> => {
+  const { knex: db } = await createTenantKnex();
+  await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
+  if (!contactId) return 0;
+  return await readContactLocationCount(db, tenant, contactId);
 });
 
 /** Number of people (transitively) reporting to this contact; drives the portal tab's "also sees" note. */

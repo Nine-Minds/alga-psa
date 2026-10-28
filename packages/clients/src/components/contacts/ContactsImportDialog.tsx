@@ -93,8 +93,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     client: t('contactsImportDialog.fields.client', { defaultValue: 'Client' }),
     tags: t('contactsImportDialog.fields.tags', { defaultValue: 'Tags' }),
     role: t('contactsImportDialog.fields.role', { defaultValue: 'Role' }),
-    notes: t('contactsImportDialog.fields.notes', { defaultValue: 'Notes' })
-  } as const), [t]);
+    notes: t('contactsImportDialog.fields.notes', { defaultValue: 'Notes' }),
+    work_arrangement: t('contactsImportDialog.fields.workArrangement', { defaultValue: 'Work Arrangement' }),
+    locations: t('contactsImportDialog.fields.locations', { defaultValue: 'Locations' }),
+    primary_location: t('contactsImportDialog.fields.primaryLocation', { defaultValue: 'Primary Location' })
+  } as const satisfies Record<MappableField, string>), [t]);
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {

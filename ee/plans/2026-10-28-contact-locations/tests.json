@@ -60,7 +60,7 @@
       "F006",
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "replaceContactLocations with two links and one primary persists both with the primary flagged; with one unflagged link it becomes primary"
   },
   {
@@ -69,7 +69,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "replaceContactLocations with an empty array removes all links; replacing a set drops links not in the new set"
   },
   {
@@ -78,7 +78,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "replaceContactLocations rejects a location of another client with ContactLocationClientMismatch and writes nothing"
   },
   {
@@ -87,7 +87,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "replaceContactLocations rejects two primaries and a non-existent location id"
   },
   {
@@ -96,7 +96,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Tenant isolation: links written under tenant A are invisible to reads under tenant B, and a location id from tenant B is rejected as not found"
   },
   {
@@ -141,7 +141,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getContactLocationCount returns the link count and 0 for a contact with none"
   },
   {
@@ -151,7 +151,7 @@
       "F013",
       "F014"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "attachContactLocations runs one query for a page of contacts and attaches locations[] and primaryLocation; contacts with no links get [] and null"
   },
   {
@@ -160,7 +160,7 @@
     "featureIds": [
       "F014"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getContactByContactNameId returns locations with address fields, is_primary and is_active for an inactive linked location"
   },
   {
@@ -169,7 +169,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveContactLocationId returns the primary link when several exist"
   },
   {
@@ -178,7 +178,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveContactLocationId returns the only link when one exists without a primary flag"
   },
   {
@@ -187,7 +187,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveContactLocationId returns the client's default active location when the contact has no links and is not remote"
   },
   {
@@ -196,7 +196,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveContactLocationId returns null for a remote contact even when the client has a default location, and null when the client has no active default"
   },
   {
@@ -205,7 +205,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "deleteLocation with two linked contacts throws 'Cannot delete location: it has associated 2 contact(s)' and the location remains"
   },
   {
@@ -214,7 +214,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "deleteLocation message lists contacts together with tickets and tax rates when all apply"
   },
   {
@@ -223,7 +223,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Deactivating a linked location keeps the link and the contact read marks it is_active false"
   },
   {
@@ -232,7 +232,7 @@
     "featureIds": [
       "F017"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client merge: a contact linked to a source location keeps its link after both move; link count before equals after; no link references a location of a different client than its contact; a demoted source default keeps its links"
   },
   {
@@ -775,7 +775,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Merge preview for a source with 3 contact location links reports 3 moving links; report after merge matches"
   },
   {
@@ -784,7 +784,7 @@
     "featureIds": [
       "F017"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Merge engine assertion fails the merge (transaction rolled back) when a link would end up crossing clients, instead of finishing silently"
   },
   {
