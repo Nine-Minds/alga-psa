@@ -49,12 +49,25 @@ const LIVE_PREDICATE = 'deleted_at IS NULL';
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
-  await knex.raw('DROP INDEX IF EXISTS idx_unique_external_mapping');
+  // A cancelled concurrent build can leave an invalid index. IF NOT EXISTS
+  // alone would reuse it and remove the only working uniqueness check.
+  const replacement = await knex.raw(`
+    SELECT indisvalid FROM pg_index
+    WHERE indexrelid = to_regclass('idx_unique_external_mapping_live')
+  `);
+  if (replacement.rows[0]?.indisvalid === false) {
+    await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping_live');
+  }
+
+  // Keep the old index enforcing uniqueness until the new one is valid.
+  // A retry after DROP but before RENAME reuses the completed replacement.
   await knex.raw(`
-    CREATE UNIQUE INDEX idx_unique_external_mapping
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_external_mapping_live
     ON tenant_external_entity_mappings (${INDEX_KEY})
     WHERE ${XERO_PREDICATE} AND ${DESKTOP_PREDICATE} AND ${LIVE_PREDICATE}
   `);
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_unique_external_mapping');
+  await knex.raw('ALTER INDEX idx_unique_external_mapping_live RENAME TO idx_unique_external_mapping');
 };
 
 /** @param {import('knex').Knex} knex */
