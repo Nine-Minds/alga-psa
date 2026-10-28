@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -1702,16 +1703,26 @@ export class TicketModel {
             author: authorName
           }
         };
-        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
-          // The inbound publisher writes its durable outbox in this transaction.
-          await eventPublisher.publishCommentCreated(event);
-        } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
-            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
-            comment: { content: validatedData.content, author: authorName,
-              isInternal: commentIsInternal, authorType: dbAuthorType },
-          }) });
-        }
+        await publishCommentEvent(trx, 'ticket', {
+          tenantId: tenant,
+          ticketId: validatedData.ticket_id,
+          commentId,
+          userId: event.userId,
+          actor: event.actor,
+          metadata: event.metadata,
+          eventType: 'TICKET_COMMENT_ADDED',
+        }, async () => {
+          if ((eventPublisher as any).__inboundOutboxPublisher === true) {
+            // The inbound publisher writes its durable outbox in this transaction.
+            await eventPublisher.publishCommentCreated(event);
+          } else {
+            await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+              tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+              comment: { content: validatedData.content, author: authorName,
+                isInternal: commentIsInternal, authorType: dbAuthorType },
+            }) });
+          }
+        });
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
         throw error;
