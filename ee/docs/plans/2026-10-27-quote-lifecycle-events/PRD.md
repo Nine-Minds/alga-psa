@@ -109,7 +109,7 @@ Today's status writers on `origin/main`:
 **Design:**
 
 - **Pure mapper:** `quoteLifecycleEventFor(before, after, details)` maps a status pair (plus details) to an event descriptor or `null`. It is driven by a table keyed on the target status (with the `converted → accepted` special case), so adding an event later is one table row.
-- **Emitter:** `queueQuoteLifecycleEvent(trx, tenant, descriptor, ctx)`. It calls `registerAfterCommit` and then `publishWorkflowEvent`, so a rollback never emits. It must live where both `packages/billing` and the workflow-worker runtime can import it: alongside the builders in `shared/workflow/streams/`, or a small shared module that the design session picks.
+- **Emitter:** `queueQuoteLifecycleEvent(trx, tenant, descriptor, ctx)`. It calls `registerAfterCommit` and then `publishWorkflowEvent`, so a rollback never emits. Lives at `shared/lib/quotes/quoteLifecycleEvents.ts` (see §9.5 — decided; mirrors `shared/lib/tickets/ticketLifecycleEvents.ts`).
 - **Billing transition seam:** `Quote.update` calls the mapper and emitter whenever status changes. The direct writers in item 3 are moved onto a `Quote.transitionStatus(trx, tenant, quoteId, to, { actor, reason, details, system? })` seam where possible. Where a direct write stays (for performance or row-lock shape), it calls the emitter itself and gets a ledger entry.
 - **Worker path:** `crmWorkerDal.update` calls the same mapper and emitter. Add a `// LEVERAGE: pattern quote-update-dal` marker; the worker DAL duplicating `Quote.update` is the missing layer.
 - **Expiry race:** expire-on-read and the job must both use a conditional update (`where status = 'sent'`) and emit only when a row actually changed. The idempotency key backs this up.
@@ -161,7 +161,14 @@ Line items are fetched with `GET /api/v1/quotes/{id}`.
 - Existing webhooks are unaffected until an admin subscribes.
 - Ships in CE and EE: webhooks are CE, and the workflow catalog is used by EE workflows.
 
-## 9. Open questions (resolve in the design session)
+## 9. Open questions — RESOLVED 2026-10-28 (XO design desk, conn)
+
+1. **Generic `quote.status_changed`: NO for v1.** It collides with `(eventId, webhookId)` dedupe when one internal event feeds two public names, and consumers who want the firehose can subscribe to the ten specific events. Adding it later is one registry row plus one catalog entry, not a seam change.
+2. **`selectedOptionalItemIds`: IDs only, in the `accepted` payload.** Consumers should not have to re-fetch to answer "which options did they take"; full item bodies stay out so the payload does not version with pricing edits.
+3. **`pending_approval` / `approval_changes_requested`: NOT in v1.** Both are approval-workflow states, not customer-facing lifecycle. The mapper table makes each one row when a customer asks.
+4. **Opportunity hooks: follow-up, not this card.** `onQuoteSent` / `onQuoteAccepted` also run on link flows that are not transitions, so moving them into the seam would change behaviour on paths this card does not test.
+5. **Emitter/mapper location — DECIDED: `shared/lib/quotes/quoteLifecycleEvents.ts`.** Mirrors the established ticket engine (`shared/lib/tickets/ticketLifecycleEvents.ts`), which already solves this exact problem: `registerAfterCommit` + `tenantDb` from `@alga-psa/db`, `WorkflowEventPublishContext` from `@alga-psa/event-bus/publishers`, and a write-site contract test (`ticketStatusWriteSites.contract.test.ts`) that fails when a new write site skips the publisher. `packages/billing` already depends on `@alga-psa/shared`, so `Quote.update` imports `queueQuoteLifecycleEvent` by subpath with no cycle; the workflow worker DAL imports the same module. Builders stay in `shared/workflow/streams/domainEventBuilders/quoteEventBuilders.ts` and are re-exported through `packages/workflow-streams/src/streams/index.ts` exactly as `opportunityEventBuilders` is today.
+
 
 1. Should a generic `quote.status_changed` be added? It conflicts with the `(eventId, webhookId)` dedupe when one internal event feeds two public names. Recommendation: no for v1.
 2. Should `selectedOptionalItemIds` be in the accepted payload, or should consumers always fetch? Recommendation: IDs only, in the payload.

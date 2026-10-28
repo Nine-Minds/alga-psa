@@ -60,3 +60,17 @@ npx vitest run server/src/lib/eventBus/subscribers/__tests__/entityWebhookSubscr
 # Find every quotes.status writer (feed the ledger test)
 git grep -n -E "status: '(sent|accepted|rejected|expired|converted|approved|pending_approval|cancelled|superseded)'" -- packages/billing/src packages/client-portal/src server/src/lib shared/workflow
 ```
+
+## 2026-10-28 — design desk (XO, conn): plan adopted, drift checked, §9 resolved
+
+Cherry-picked `21680b0c` (docs-only: PRD.md, features.json, tests.json, SCRATCHPAD.md) onto `origin/main` @ `44629a24f1` — applied cleanly, no conflicts.
+
+Drift re-checked against `44629a24f1` (the base named in the PRD is still current):
+- `packages/billing/src/models/quote.ts` — `canTransitionQuoteStatus` used at L302, `status_changed` activity at L313. PRD said "~L290"; behaviour matches, line drift only.
+- `shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts` — present, still a duplicate of `Quote.update`.
+- `packages/event-schemas/src/schemas/domain/` has no quote schema file; `shared/workflow/streams/domainEventBuilders/` has no quote builders. Both are correctly "to be created".
+- `server/src/lib/webhooks/eventRegistry.ts` — `WebhookEntity = 'ticket' | 'project' | 'client' | 'contact' | 'client_location'` (5 entities, no `quote`). §6.4 widening is still needed as written.
+- `server/migrations/20261016100000_seed_client_location_workflow_events.cjs` — present, still a valid seed model.
+- `quote_activities` is written through `QuoteActivity` (FK CASCADE does not reach it under Citus; `quote.ts:345` deletes explicitly), so the per-transition idempotency key in §6.1 holds.
+
+Decisions: §9.1–9.4 adopt the PRD's own recommendations (no generic status_changed, IDs-only optional items, no approval events in v1, opportunity hooks as follow-up). §9.5 decided in favour of `shared/lib/quotes/quoteLifecycleEvents.ts` on the strength of the ticket precedent, which also supplies the contract-test pattern for §6.2's ledger test.
