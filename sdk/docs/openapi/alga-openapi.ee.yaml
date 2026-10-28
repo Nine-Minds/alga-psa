@@ -825,6 +825,8 @@ components:
             - desc
         team_name:
           type: string
+        description:
+          type: string
         manager_id:
           type: string
           format: uuid
@@ -1107,6 +1109,11 @@ components:
       properties:
         team_name:
           type: string
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
         manager_id:
           type: string
           format: uuid
@@ -1122,6 +1129,11 @@ components:
       properties:
         team_name:
           type: string
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
         manager_id:
           type: string
           format: uuid
@@ -23607,6 +23619,11 @@ paths:
             type: string
           required: false
           name: team_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: description
           in: query
         - schema:
             type: string
