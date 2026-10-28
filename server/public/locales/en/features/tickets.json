@@ -1011,7 +1011,9 @@
       "heading": "Watchers",
       "placeholder": "Add watchers..."
     },
-    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.",
+    "contactLocationSuffix": "(contact's location)",
+    "contactPrimaryLocationSuffix": "(contact's primary)"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",

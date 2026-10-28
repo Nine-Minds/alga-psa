@@ -1003,7 +1003,9 @@
       "heading": "Observateurs",
       "placeholder": "Ajouter des observateurs..."
     },
-    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket."
+    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket.",
+    "contactLocationSuffix": "(site du contact)",
+    "contactPrimaryLocationSuffix": "(site principal du contact)"
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",

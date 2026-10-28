@@ -1003,7 +1003,9 @@
       "heading": "Volgers",
       "placeholder": "Volgers toevoegen..."
     },
-    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket.",
+    "contactLocationSuffix": "(locatie van contactpersoon)",
+    "contactPrimaryLocationSuffix": "(primaire locatie van contactpersoon)"
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",

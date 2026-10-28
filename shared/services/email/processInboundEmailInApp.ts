@@ -2071,6 +2071,32 @@ export async function processInboundEmailInApp(
   }
   if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
 
+  // The matched contact's own explicit location, read before the ticket is built so the precedence
+  // in the createTicketFromEmail call below is a single readable expression. `remote` resolves to
+  // null here and therefore yields to the mailbox defaults. Only an *explicit* link counts: the
+  // client-default fallback is the model's job, and letting it happen there keeps the "different
+  // client than the defaults" case from borrowing the wrong client's default.
+  let contactExplicitLocationId: string | undefined;
+  if (targetContactId) {
+    try {
+      const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+      const { getContactLocations } = await import('../../models/contactLocation');
+      contactExplicitLocationId = await withAdminTransaction(async (trx: any) => {
+        const contact = await tenantDb(trx, tenantId).table('contacts')
+          .where({ contact_name_id: targetContactId })
+          .first(['work_arrangement']);
+        if (contact?.work_arrangement === 'remote') return undefined;
+        const links = await getContactLocations(trx, tenantId, targetContactId!);
+        const active = links.filter((link) => link.is_active);
+        const primary = active.find((link) => link.is_primary) ?? (active.length === 1 ? active[0] : undefined);
+        return primary?.location_id;
+      });
+    } catch (error) {
+      // An unreadable link list must not drop the email; the defaults still apply.
+      console.error('Failed to resolve the inbound contact location', { tenantId, emailId: emailData.id, error });
+    }
+  }
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -2096,8 +2122,14 @@ export async function processInboundEmailInApp(
       priority_id: defaults.priority_id,
       category_id: defaults.category_id,
       subcategory_id: defaults.subcategory_id,
-      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
-      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
+      // Location precedence (OQ1, confirmed): the matched contact's own explicit link wins, because
+      // the person who emailed knows where they are better than the mailbox does; then the
+      // mailbox defaults, but only when the client we inferred is the defaults' client (otherwise
+      // the location would belong to someone else); then `undefined`, which lets
+      // TicketModel.createTicket fall back to the client's default location. A remote contact
+      // resolves to null and so skips straight on to the defaults.
+      location_id: contactExplicitLocationId
+        ?? (targetClientId === defaults.client_id ? (defaults.location_id ?? undefined) : undefined),
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),

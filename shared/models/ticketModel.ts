@@ -23,6 +23,7 @@ import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
+import { resolveContactLocationId } from './contactLocation';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -167,7 +168,8 @@ export interface CreateTicketInput {
   description?: string;
   client_id?: string;
   contact_id?: string; // Note: Maps to contact_name_id in database
-  location_id?: string;
+  /** undefined = nobody said (resolved from the contact); null = explicitly none. */
+  location_id?: string | null;
   /**
    * Billing profile the ticket's work is attributed to. A soft default, never
    * required: a technician who ignores it still produces a correctly attributed
@@ -952,6 +954,18 @@ export class TicketModel {
           ? 'No default ticket status configured for the selected board'
           : 'Validation failed: status_id is required'
       );
+    }
+
+    // The one ticket-location autofill rule, and therefore the one every creation path inherits:
+    // REST v1 POST /tickets, mobile, the client portal, recurring generation and the MSP forms.
+    // `undefined` means "nobody said", so the requester's own location answers it; `null` means the
+    // operator chose None and is kept. The same-client check below then runs on the resolved value,
+    // so a contact at another client still fails rather than quietly attaching a foreign site.
+    if (cleanedInput.location_id === undefined && cleanedInput.contact_name_id) {
+      const resolvedLocationId = await resolveContactLocationId(trx, tenant, cleanedInput.contact_name_id);
+      if (resolvedLocationId) {
+        cleanedInput.location_id = resolvedLocationId;
+      }
     }
 
     // Perform business rule validation

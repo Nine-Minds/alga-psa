@@ -1011,7 +1011,9 @@
       "heading": "⟦Ẇȧŧƈħḗřş⟧",
       "placeholder": "⟦Ȧḓḓ ẇȧŧƈħḗřş...⟧"
     },
-    "attachmentsPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ, ƀŭŧ ŧħḗşḗ ƒīŀḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧŧŧȧƈħḗḓ: {{files}}. Ȧḓḓ ŧħḗḿ ƒřȯḿ ŧħḗ ŧīƈķḗŧ.⟧"
+    "attachmentsPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ, ƀŭŧ ŧħḗşḗ ƒīŀḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧŧŧȧƈħḗḓ: {{files}}. Ȧḓḓ ŧħḗḿ ƒřȯḿ ŧħḗ ŧīƈķḗŧ.⟧",
+    "contactLocationSuffix": "⟦(ƈȯƞŧȧƈŧ'ş ŀȯƈȧŧīȯƞ)⟧",
+    "contactPrimaryLocationSuffix": "⟦(ƈȯƞŧȧƈŧ'ş ƥřīḿȧřẏ)⟧"
   },
   "itil": {
     "calculatedPriority": "⟦Ƥřīȯřīŧẏ (Ƈȧŀƈŭŀȧŧḗḓ)⟧",

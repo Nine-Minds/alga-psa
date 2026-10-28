@@ -55,6 +55,7 @@ import type {
   getClientById,
   getAllClients,
   getClientBillingProfiles,
+  getContactEffectiveLocation,
 } from '../actions/clientLookupActions';
 import type {
   addTicketCommentWithCache,
@@ -419,6 +420,7 @@ export interface TicketPeopleMethods {
   getAllClients: typeof getAllClients;
   getClientLocations: typeof getClientLocations;
   getClientBillingProfiles: typeof getClientBillingProfiles;
+  getContactEffectiveLocation: typeof getContactEffectiveLocation;
 }
 
 /** Additional agents and team assignment. */

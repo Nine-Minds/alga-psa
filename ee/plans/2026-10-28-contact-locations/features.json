@@ -258,7 +258,7 @@
     "prdRefs": [
       "FR-C1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket resolves location_id via resolveContactLocationId when location_id is undefined and contact_name_id is set; null is kept as explicit none; same-client check runs on the resolved value"
   },
   {
@@ -267,7 +267,7 @@
     "prdRefs": [
       "FR-C2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getContactEffectiveLocation(contactId) server action returning the resolved location and the contact's links for the ticket forms"
   },
   {
@@ -276,7 +276,7 @@
     "prdRefs": [
       "FR-C2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket tracks locationSource (user | contact | none); contact select fills an empty or contact-filled location with the resolved one and never replaces a user-chosen one; clearing the contact clears a contact-filled location"
   },
   {
@@ -285,7 +285,7 @@
     "prdRefs": [
       "FR-C2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket location select groups 'Contact's locations' (primary first, marked) before 'Other locations'; submits null for explicit None and omits the field when untouched"
   },
   {
@@ -294,7 +294,7 @@
     "prdRefs": [
       "FR-C3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketDetails.handleContactChange sets the resolved location when the ticket has none and records a contact-derived location change in ticket history"
   },
   {
@@ -303,7 +303,7 @@
     "prdRefs": [
       "FR-C3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket contact tile shows a one-click 'Use contact's location' hint when the ticket location is not among the contact's locations; existing locations are never overwritten without the click"
   },
   {
@@ -312,7 +312,7 @@
     "prdRefs": [
       "FR-C4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound email passes location precedence: contact explicit location (primary or only link; remote skips) \u2192 inbound defaults location when clients match \u2192 undefined"
   },
   {
@@ -321,7 +321,7 @@
     "prdRefs": [
       "FR-C5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Portal createClientTicket passes location_id undefined so the model fills it from the portal user's contact"
   },
   {
@@ -330,7 +330,7 @@
     "prdRefs": [
       "FR-C6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "RecurringClientOverridesDialog pre-fills the location from the chosen contact when empty; generation leaves an unset override to the model rule"
   },
   {

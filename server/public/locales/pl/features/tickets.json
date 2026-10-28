@@ -1003,7 +1003,9 @@
       "heading": "Obserwatorzy",
       "placeholder": "Dodaj obserwatorów..."
     },
-    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu.",
+    "contactLocationSuffix": "(lokalizacja kontaktu)",
+    "contactPrimaryLocationSuffix": "(główna lokalizacja kontaktu)"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",

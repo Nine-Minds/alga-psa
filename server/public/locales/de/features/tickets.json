@@ -1003,7 +1003,9 @@
       "heading": "Beobachter",
       "placeholder": "Beobachter hinzufügen..."
     },
-    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu.",
+    "contactLocationSuffix": "(Standort des Kontakts)",
+    "contactPrimaryLocationSuffix": "(primärer Standort des Kontakts)"
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",

@@ -1003,7 +1003,9 @@
       "heading": "Observadores",
       "placeholder": "Adicionar observadores..."
     },
-    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket.",
+    "contactLocationSuffix": "(localização do contato)",
+    "contactPrimaryLocationSuffix": "(localização principal do contato)"
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",

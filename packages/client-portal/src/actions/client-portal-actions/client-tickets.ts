@@ -1486,6 +1486,9 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        // The portal never asks where the ticket is, so leave it unsaid: the model fills it from
+        // the portal user's own contact (or the client default), and a remote worker gets none.
+        location_id: undefined,
         billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',

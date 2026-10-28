@@ -1,8 +1,12 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { IClient, IClientLocation, IContact, IContactLocation } from '@alga-psa/types';
+import {
+  getContactLocations,
+  resolveContactLocationId,
+} from '@alga-psa/shared/models/contactLocation';
 import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
 import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
@@ -123,5 +127,39 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
+  });
+});
+
+export interface ContactEffectiveLocation {
+  /** What TicketModel.createTicket would fill in when nobody picks a location. */
+  locationId: string | null;
+  /** The contact's own links, so the form can mark and group them. */
+  locations: IContactLocation[];
+  workArrangement: string | null;
+}
+
+/**
+ * The same effective-location rule the model applies, read ahead of the save so the ticket forms
+ * can show the operator what they are about to get and let them override it. One source of truth:
+ * the form calls this, the model calls the same function again on write.
+ */
+export const getContactEffectiveLocation = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+): Promise<ContactEffectiveLocation> => {
+  await assertInternalReadAccess(user, 'contact');
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const contact = await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
+      .first<{ work_arrangement: string | null }>(['work_arrangement']);
+
+    return {
+      locationId: await resolveContactLocationId(trx, tenant, contactId),
+      locations: await getContactLocations(trx, tenant, contactId),
+      workArrangement: contact?.work_arrangement ?? null,
+    };
   });
 });

@@ -17,7 +17,7 @@ import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
-import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
+import { getContactsByClient, getClientLocations, getContactEffectiveLocation } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketDuplicateSource } from '../actions/ticketActions';
 import { getTicketTemplateForCreate, listTicketTemplatesForCreate } from '../actions/ticketTemplateActions';
@@ -317,6 +317,11 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
+  // Who put the location there. A location the dispatcher chose by hand is never replaced when the
+  // contact changes; one the contact filled is replaced, or cleared when the contact is cleared.
+  const [locationSource, setLocationSource] = useState<'user' | 'contact' | null>(null);
+  const [contactLocationIds, setContactLocationIds] = useState<string[]>([]);
+  const [contactPrimaryLocationId, setContactPrimaryLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
@@ -716,6 +721,9 @@ export function QuickAddTicket({
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
+    setLocationSource(null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     clearErrorIfSubmitted();
 
     if (newClientId !== null) {
@@ -827,6 +835,8 @@ export function QuickAddTicket({
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
     setLocationId(source.location_id ?? null);
+    // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
+    setLocationSource(source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
@@ -838,6 +848,62 @@ export function QuickAddTicket({
       }))
     );
   }
+
+  /**
+   * Picking a contact fills the Location select with where that person works (the same rule the
+   * model applies on save), but only when the field is empty or the previous contact filled it.
+   * Clearing the contact clears a contact-filled location and leaves a hand-picked one alone.
+   */
+  const handleContactSelect = async (nextContactId: string | null) => {
+    setContactId(nextContactId);
+
+    if (!nextContactId) {
+      setContactLocationIds([]);
+      setContactPrimaryLocationId(null);
+      if (locationSource === 'contact') {
+        setLocationId(null);
+        setLocationSource(null);
+      }
+      return;
+    }
+
+    try {
+      const effective = await getContactEffectiveLocation(nextContactId);
+      setContactLocationIds(effective.locations.map((location) => location.location_id));
+      setContactPrimaryLocationId(
+        effective.locations.find((location) => location.is_primary)?.location_id ?? null,
+      );
+      if (locationSource !== 'user') {
+        setLocationId(effective.locationId);
+        setLocationSource(effective.locationId ? 'contact' : null);
+      }
+    } catch (error) {
+      console.error('Error resolving the contact effective location:', error);
+    }
+  };
+
+  // The contact's own sites first and marked, then everything else the client has.
+  const contactLocationIdSet = useMemo(() => new Set(contactLocationIds), [contactLocationIds]);
+  const locationOptions = useMemo(() => {
+    const label = (location: IClientLocation) =>
+      formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location'))
+      + (location.location_id === contactPrimaryLocationId
+        ? ` ${t('quickAdd.contactPrimaryLocationSuffix', "(contact's primary)")}`
+        : contactLocationIdSet.has(location.location_id)
+          ? ` ${t('quickAdd.contactLocationSuffix', "(contact's location)")}`
+          : '')
+      + (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '');
+
+    const contactsFirst = [
+      ...locations.filter((location) => contactLocationIdSet.has(location.location_id)),
+      ...locations.filter((location) => !contactLocationIdSet.has(location.location_id)),
+    ];
+
+    return [
+      ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
+      ...contactsFirst.map((location) => ({ value: location.location_id, label: label(location) })),
+    ];
+  }, [locations, contactLocationIdSet, contactPrimaryLocationId, t]);
 
   // The ticket fields a duplicate and a template have in common. Same rule as above: state is set
   // directly, never through handleBoardChange, so the copied priority / category survive and the
@@ -1207,6 +1273,9 @@ export function QuickAddTicket({
 
       if (locationId) {
         formData.append('location_id', locationId);
+      } else if (locationSource === 'user') {
+        // An explicit None, not an untouched field: the model must keep null rather than resolve.
+        formData.append('location_id', 'none');
       }
 
       if (selectedCategories.length > 0) {
@@ -1678,7 +1747,7 @@ export function QuickAddTicket({
                       contacts={contacts}
                       value={contactId || ''}
                       onValueChange={(value) => {
-                        setContactId(value || null);
+                        handleContactSelect(value || null);
                         clearErrorIfSubmitted();
                       }}
                       clientId={clientId}
@@ -1697,16 +1766,11 @@ export function QuickAddTicket({
                       value={locationId || ''}
                       onValueChange={(value) => {
                         setLocationId(value === 'none' ? null : value || null);
+                        // Including an explicit None: the dispatcher said it, so nothing overwrites it.
+                        setLocationSource('user');
                         clearErrorIfSubmitted();
                       }}
-                      options={[
-                        ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
-                        ...locations.map(location => ({
-                          value: location.location_id,
-                          label: formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location')) +
-                            (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '')
-                        }))
-                      ]}
+                      options={locationOptions}
                       placeholder={locations.length === 0
                         ? t('quickAdd.noLocationsForClient', 'No locations for selected client')
                         : t('quickAdd.selectLocation', 'Select location')}
@@ -2237,7 +2301,7 @@ export function QuickAddTicket({
             }
             return [...prevContacts, newContact];
           });
-          setContactId(newContact.contact_name_id);
+          void handleContactSelect(newContact.contact_name_id);
           setIsQuickAddContactOpen(false);
         },
         clients,
