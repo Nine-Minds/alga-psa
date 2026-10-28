@@ -17,7 +17,17 @@
 
 const crypto = require('crypto');
 
-const PRODUCTS = ['algadesk', 'psa'];
+const PRODUCTS = ['algadesk', 'psa', 'co_managed'];
+
+/**
+ * Capabilities a product holds by definition. An entry tagged with `capabilities`
+ * is provisioned only where every one of them is held: inherently by the product
+ * (below) or because the caller names it explicitly. Every other tenant keeps the
+ * entry out of its catalog, so a capability-tagged permission is never written by a
+ * fleet-wide synchronization to tenants that merely share a product (a plain PSA
+ * tenant). Capability admission (e.g. admitCoManagedPermissions) grants it per tenant.
+ */
+const PRODUCT_CAPABILITIES = { co_managed: ['co-managed'] };
 
 /**
  * Legacy resource spellings and the catalog name that replaced them.
@@ -46,6 +56,8 @@ function canonicalResource(resource) {
 }
 
 const ACTIVE_PERMISSIONS = [
+  { resource: 'co_management', action: 'manage', msp: true, client: false, description: 'Manage co-management provisioning and customer-approved scopes', capabilities: ['co-managed'], products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'co_management', action: 'read', msp: true, client: false, description: 'View co-management relationships and scopes', capabilities: ['co-managed'], products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Delete account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
@@ -408,12 +420,28 @@ function isProductPermission(entry, product) {
   return entry.products.includes(product);
 }
 
-/** Active catalog entries for one product, in catalog order. */
-function getProductPermissions(product) {
+/**
+ * Whether a product-member entry is provisionable given the capabilities held.
+ * An untagged entry always is; a tagged one needs every capability, either
+ * inherent to the product or passed in by a capability-aware caller.
+ */
+function isEntryAvailable(entry, product, capabilities = []) {
+  if (!entry.capabilities || entry.capabilities.length === 0) return true;
+  const held = new Set([...(PRODUCT_CAPABILITIES[product] || []), ...capabilities]);
+  return entry.capabilities.every((capability) => held.has(capability));
+}
+
+/**
+ * Active catalog entries for one product, in catalog order, without any entry
+ * gated on a capability the product does not inherently hold (see PRODUCT_CAPABILITIES).
+ * Pass `capabilities` to include entries for tenants admitted to those capabilities.
+ */
+function getProductPermissions(product, { capabilities = [] } = {}) {
   if (!PRODUCTS.includes(product)) {
     throw new Error(`Unknown product "${product}"; expected one of ${PRODUCTS.join(', ')}`);
   }
-  return ACTIVE_PERMISSIONS.filter((entry) => isProductPermission(entry, product));
+  return ACTIVE_PERMISSIONS.filter((entry) => isProductPermission(entry, product)
+    && isEntryAvailable(entry, product, capabilities));
 }
 
 let cachedVersion = null;
@@ -428,6 +456,7 @@ function catalogVersion() {
     permissionIdentity(entry),
     entry.description,
     entry.products.join(','),
+    (entry.capabilities || []).join(','),
     PRODUCTS.map((product) => `${product}=${((entry.defaultGrants || {})[product] || []).join('+')}`).join(';'),
   ].join('\u0000')).join('\n');
   cachedVersion = `v1-${crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 16)}`;
@@ -436,11 +465,13 @@ function catalogVersion() {
 
 module.exports = {
   PRODUCTS,
+  PRODUCT_CAPABILITIES,
   ACTIVE_PERMISSIONS,
   RENAMED_RESOURCES,
   canonicalResource,
   catalogVersion,
   getProductPermissions,
+  isEntryAvailable,
   isProductPermission,
   permissionGrantKeys,
   permissionIdentity,

@@ -282,6 +282,8 @@ const nextConfig = {
       '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
+      '@alga-psa/co-managed': '../packages/co-managed/src',
+      '@alga-psa/co-managed/': '../packages/co-managed/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
       // Leaf horizontal packages (resolve to source during local dev)
@@ -507,6 +509,7 @@ const nextConfig = {
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
+    '@alga-psa/co-managed',
     '@alga-psa/integrations',
     '@alga-psa/client-portal',
     '@alga-psa/portal-shared',

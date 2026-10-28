@@ -369,6 +369,12 @@
       "@alga-psa/licensing/*": [
         "../packages/licensing/src/*"
       ],
+      "@alga-psa/co-managed": [
+        "../packages/co-managed/src"
+      ],
+      "@alga-psa/co-managed/*": [
+        "../packages/co-managed/src/*"
+      ],
       "@alga-psa/tags": [
         "../packages/tags/src"
       ],

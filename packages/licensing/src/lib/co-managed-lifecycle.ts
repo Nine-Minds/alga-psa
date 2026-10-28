@@ -1,13 +1,14 @@
 /**
- * Co-managed lifecycle admission: signatures and provider dispatch only.
+ * Co-managed lifecycle admission: provider dispatch, plus the relationship-backed provider.
  *
- * This module reads no table. With no provider registered every workspace is
- * `independent` and writable, and no SQL is issued. The domain that owns the
- * relationship data registers a state reader (and, for write admission, a
- * `@alga-psa/db` write-admission provider); this card registers neither.
+ * The dispatchers read no table. With no provider registered every workspace is
+ * `independent` and writable, and no SQL is issued. `coManagedLifecycleProvider` is the
+ * provider that reads the relationship tables; the co-managed capability module registers
+ * it (and the write-admission provider) when it is imported at server and worker boot.
  */
 import type { Knex } from 'knex';
-import { admitWrite, withTransaction } from '@alga-psa/db';
+import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
+import { getCoManagedEntitlementState } from './co-managed-entitlements';
 
 export {
   CoManagedLifecycleError,
@@ -96,3 +97,88 @@ export async function withCoManagedOperationalTransaction<T>(
     return work(trx);
   });
 }
+
+/** Read under the same lock order as acceptance, allocation, and termination:
+ * sponsor entitlement, sponsor tenant, customer relationship, customer tenant.
+ * The caller retains these locks until its operational write commits. This is
+ * lifecycle admission, not resource authorization or a release-flag check. */
+async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManagedOperationalState> {
+  if (!tenant) throw new Error('A tenant is required for lifecycle admission');
+  const customer = tenantDb(trx, tenant);
+  const workspace = await customer.table('tenants').first('product_code');
+  if (!workspace) throw new CoManagedWorkspaceNotFoundError();
+  if (workspace.product_code !== 'co_managed') return INDEPENDENT;
+
+  // A terminated relationship is retained for export and historical identity.
+  // It must never turn an orphaned co-managed product into an independent PSA.
+  const found = await customer.table('co_management_relationships').whereNull('ended_at').first();
+  if (!found) return { state: 'terminated', canWrite: false, graceEndsAt: null };
+  const sponsor = tenantDb(trx, found.sponsor_tenant);
+  await sponsor.table('co_managed_entitlements').forUpdate().first();
+  await sponsor.table('tenants').forShare().first('tenant');
+  const relationship = await customer.table('co_management_relationships')
+    .where('relationship_id', found.relationship_id).forShare().first();
+  const current = await customer.table('tenants').forShare().first('product_code');
+  // An independent upgrade can win while we wait. Its complete transaction
+  // must detach the relationship before the product becomes writable as PSA.
+  if (current?.product_code !== 'co_managed') {
+    if (!current) throw new CoManagedWorkspaceNotFoundError();
+    if (relationship && !relationship.ended_at) throw new Error('The workspace upgrade has not detached co-management');
+    return INDEPENDENT;
+  }
+  if (!relationship || relationship.ended_at || relationship.state === 'terminated' ||
+      relationship.sponsor_tenant !== found.sponsor_tenant) {
+    return { state: 'terminated', canWrite: false, graceEndsAt: null };
+  }
+  if (relationship.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
+  const allocation = await sponsor.table('co_managed_allocations').where({
+    customer_tenant: tenant, relationship_id: relationship.relationship_id, state: 'active',
+  }).first('allocation_id');
+  if (!allocation) return { state: 'read_only', canWrite: false, graceEndsAt: null };
+  const entitlement = await getCoManagedEntitlementState(trx, found.sponsor_tenant);
+  if (entitlement.isReadOnly) return { state: 'read_only', canWrite: false, graceEndsAt: entitlement.graceEndsAt };
+  return { state: entitlement.graceEndsAt ? 'grace' : 'active', canWrite: true, graceEndsAt: entitlement.graceEndsAt };
+}
+
+// Per-process awaiting-acceptance cache. A negative entry is final and never expires: a
+// tenant's product only ever leaves `co_managed`, and an active or terminated relationship
+// never returns to pending. A positive entry expires after 60s so a missed invalidation (an
+// accept in another process) heals. A probe that finds no workspace row or no live
+// relationship is not final (the row can appear next) and is not cached.
+const AWAITING_POSITIVE_TTL_MS = 60_000;
+const awaitingAcceptance = new Map<string, { awaiting: boolean; expiresAt: number }>();
+
+/** Call after a transition that changes whether the customer awaits acceptance (accept,
+ * decline, cleanup completion), once it has committed. Drops this process's entry only;
+ * other processes converge through the positive-entry TTL. */
+export function invalidateCoManagedAwaitingAcceptance(tenant: string): void {
+  awaitingAcceptance.delete(tenant);
+}
+
+/** Test seam: forget every cached awaiting-acceptance answer. */
+export function resetCoManagedAwaitingAcceptanceCache(): void {
+  awaitingAcceptance.clear();
+}
+
+async function isAwaitingAcceptance(db: Knex, tenant: string): Promise<boolean> {
+  const cached = awaitingAcceptance.get(tenant);
+  if (cached && (!cached.awaiting || cached.expiresAt > Date.now())) return cached.awaiting;
+  const customer = tenantDb(db, tenant);
+  const workspace = await customer.table('tenants').first('product_code');
+  if (!workspace) return false;
+  if (workspace.product_code !== 'co_managed') {
+    awaitingAcceptance.set(tenant, { awaiting: false, expiresAt: Infinity });
+    return false;
+  }
+  const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('state');
+  if (!relationship) return false;
+  if (relationship.state === 'active' || relationship.state === 'terminated') {
+    awaitingAcceptance.set(tenant, { awaiting: false, expiresAt: Infinity });
+    return false;
+  }
+  awaitingAcceptance.set(tenant, { awaiting: true, expiresAt: Date.now() + AWAITING_POSITIVE_TTL_MS });
+  return true;
+}
+
+/** The relationship-backed provider. Register with `registerCoManagedLifecycleProvider`. */
+export const coManagedLifecycleProvider: CoManagedLifecycleProvider = { readState, isAwaitingAcceptance };

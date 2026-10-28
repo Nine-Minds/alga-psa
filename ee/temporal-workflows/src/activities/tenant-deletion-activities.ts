@@ -55,7 +55,7 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-export const TENANT_TABLES_DELETION_ORDER: string[] = [
+export export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Outbound sender routes reference sender addresses and boards; addresses
   // also reference email providers. Delete the route rows first, then senders,
   // before any of those parent tables.
@@ -460,6 +460,14 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===
+  // Co-managed foundation. No FKs (distributed): allocations before the entitlement that
+  // holds the pool; the relationship root last.
+  'co_management_board_scopes',
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_provisioning_operations',
+  'co_management_relationship_events',
+  'co_management_relationships',
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
   // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
