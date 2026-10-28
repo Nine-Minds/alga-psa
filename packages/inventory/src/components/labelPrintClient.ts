@@ -11,7 +11,7 @@ export type LabelPrintResult =
  */
 export async function requestLabelPdf(input: {
   labelClass: string;
-  ids: string[];
+  labels: Array<{ recordId: string }>;
   templateCode?: string;
 }): Promise<LabelPrintResult> {
   let response: Response;

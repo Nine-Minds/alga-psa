@@ -2,6 +2,7 @@ import type {
   ChargeExplanation,
   IBillingPeriod,
   IClientContractLine,
+  ILateServicePeriodSource,
   ITimeBasedCharge,
   InvoiceTimeEntrySnapshot,
 } from "@alga-psa/types";
@@ -58,6 +59,12 @@ export interface TimeEntryComputeRow {
   /** Customer-visible ticket description (tickets.attributes->>'description'). */
   ticket_description?: string | null;
   project_task_name?: string | null;
+  /**
+   * Set by the loader when the entry is dated inside a service period an issued
+   * invoice already closed. Priced under the same contract terms; the charge
+   * reports this period instead of the current one.
+   */
+  late_for_service_period?: ILateServicePeriodSource | null;
 }
 
 export interface HourlyServiceConfigEntry {
@@ -463,6 +470,7 @@ export function computeTimeBasedCharges(
         markers,
       });
 
+      const late = entry.late_for_service_period ?? null;
       return {
         serviceId: effectiveServiceId,
         serviceName: effectiveServiceName as string,
@@ -490,9 +498,10 @@ export function computeTimeBasedCharges(
         tax_region: effectiveTaxRegion,
         entryId: entry.entry_id,
         is_taxable: isTaxable,
-        servicePeriodStart,
-        servicePeriodEnd,
+        servicePeriodStart: late?.servicePeriodStart ?? servicePeriodStart,
+        servicePeriodEnd: late?.servicePeriodEnd ?? servicePeriodEnd,
         servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
+        ...(late ? { lateForServicePeriod: late } : {}),
         billingTiming: timing.duePosition,
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,

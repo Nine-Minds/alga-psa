@@ -21,7 +21,7 @@ export function isWorkspaceDbTest(file) {
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|services\/workflow-worker\/src)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|server\/src\/test\/contract|services\/workflow-worker\/src)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 
@@ -56,6 +56,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/quote-terms-formatting-source-mapping.contract.test.ts',
+      'ee/temporal-workflows/src/__tests__/db-subpath-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
@@ -67,6 +68,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-health.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
