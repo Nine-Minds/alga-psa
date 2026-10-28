@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbConfig';
 
 // Behavioral DB test for widening tenants.product_code to admit 'co_managed'
-// (20261028100000 step 1, 20261028103000 step 2, 20261028104000 step 3). The
+// (20261028130000 step 1, 20261028133000 step 2, 20261028134000 step 3). The
 // sequence must end with one validated three-value constraint under the
 // original name without RENAME CONSTRAINT, which Citus refuses on the
 // distributed `tenants` table, and must recover from the state the earlier
@@ -14,8 +14,8 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 const require = createRequire(import.meta.url);
 type Migration = { up: (knex: Knex) => Promise<void> };
-const step2: Migration = require(path.resolve(__dirname, '../20261028103000_validate_product_code_check.cjs'));
-const step3: Migration = require(path.resolve(__dirname, '../20261028104000_finalize_product_code_check.cjs'));
+const step2: Migration = require(path.resolve(__dirname, '../20261028133000_validate_product_code_check.cjs'));
+const step3: Migration = require(path.resolve(__dirname, '../20261028134000_finalize_product_code_check.cjs'));
 
 const OLD = 'tenants_product_code_check';
 const NEXT = 'tenants_product_code_check_co_managed';

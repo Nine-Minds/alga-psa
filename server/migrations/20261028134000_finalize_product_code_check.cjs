@@ -1,5 +1,5 @@
 // Step 3 of 3 for admitting 'co_managed' in tenants.product_code (see
-// 20261028103000_validate_product_code_check). Validates the three-value
+// 20261028133000_validate_product_code_check). Validates the three-value
 // constraint re-added under the original name, then drops the temporary
 // constraint it replaces.
 //
@@ -35,7 +35,7 @@ exports.up = async function up(knex) {
     if ((await constraintDef(run, NEXT)) === null) return;
     const live = await constraintDef(run, OLD);
     if (!live || !live.includes('co_managed')) {
-      throw new Error(`${OLD} does not admit 'co_managed'; run 20261028103000_validate_product_code_check first`);
+      throw new Error(`${OLD} does not admit 'co_managed'; run 20261028133000_validate_product_code_check first`);
     }
     await run(`ALTER TABLE tenants VALIDATE CONSTRAINT ${OLD}`);
     // migration-lint: allow 3 - drops the temporary product check only after its replacement under the original name validated

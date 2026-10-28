@@ -14,8 +14,8 @@ worker is ready. A successful worker build, a healthy worker on another database
 or fixture verification alone does not meet this condition. Workers use durable
 participation, not PostHog rollout evaluation.
 
-The L1a migration sequence is `20261028100000`, `101000`, `101500`, `102000`,
-and `103000`. These create the foundation, provisioning operations and events,
+The L1a migration sequence is `20261028130000`, `131000`, `131500`, `132000`,
+`133000`, and `134000`. These create the foundation, provisioning operations and events,
 allow system-seeded priorities, and validate the expanded product-code constraint.
 Use the CE+EE migration runner; do not copy EE migrations into the branch's CE
 migration directory. Do not globally backfill co-management permissions.

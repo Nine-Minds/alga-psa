@@ -1,10 +1,10 @@
 // Step 2 of 3 for admitting 'co_managed' in tenants.product_code (step 1 is
-// 20261028100000_create_co_management_foundation, which adds the new CHECK
+// 20261028130000_create_co_management_foundation, which adds the new CHECK
 // NOT VALID under a temporary name). VALIDATE takes SHARE UPDATE EXCLUSIVE for
 // one scan while reads and writes continue; the superseded two-value constraint
 // is then replaced by a NOT VALID three-value constraint under the original
 // name, so later `DROP CONSTRAINT IF EXISTS tenants_product_code_check`
-// migrations keep working. Step 3 (20261028104000) validates it and drops the
+// migrations keep working. Step 3 (20261028134000) validates it and drops the
 // temporary constraint.
 //
 // The original name is re-added rather than renamed onto because Citus refuses
