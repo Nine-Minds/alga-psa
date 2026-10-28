@@ -14,11 +14,6 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  addTicketCommentWithCacheForCurrentUser,
-  updateTicketWithCache,
-  updateTicketWithCacheForCurrentUser,
-} from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
@@ -26,6 +21,7 @@ import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -91,6 +87,7 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
+  renderReceiveEquipment?: React.ComponentProps<typeof TicketDetails>['renderReceiveEquipment'];
   renderCreateWorkflowFromTicket?: React.ComponentProps<typeof TicketDetails>['renderCreateWorkflowFromTicket'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   isAlgaDeskMode?: boolean;
@@ -122,6 +119,7 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderQuickInvoice,
+  renderReceiveEquipment,
   renderCreateWorkflowFromTicket,
   renderClientDetails,
   isAlgaDeskMode = false,
@@ -139,6 +137,9 @@ export default function TicketDetailsContainer({
   disableAgentSchedule = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
+  const dataSource = useTicketDataSource();
+  const { updateTicketWithCache, updateTicketWithCacheForCurrentUser } = dataSource.ticket;
+  const { addTicketCommentWithCacheForCurrentUser } = dataSource.comments;
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -247,7 +248,7 @@ export default function TicketDetailsContainer({
         toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
-        router.refresh();
+        runTicketRefresh(dataSource, 'soft', router);
 
         return true;
       } catch (error) {
@@ -255,7 +256,7 @@ export default function TicketDetailsContainer({
         return false;
       }
     });
-  }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
+  }, [dataSource, router, session?.user, t, ticketData.ticket.ticket_id, updateTicketWithCache, withSubmitting]);
 
   const handleAddComment = async (
     content: string,
@@ -264,10 +265,10 @@ export default function TicketDetailsContainer({
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
-  ) => {
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
-      return;
+      return false;
     }
 
     try {
@@ -288,8 +289,12 @@ export default function TicketDetailsContainer({
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
+      return true;
     } catch (error) {
+      // The failure is reported here; the composer learns only that the message was not
+      // confirmed, so it keeps the draft for the same intent to be retried.
       handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -319,7 +324,12 @@ export default function TicketDetailsContainer({
     : null;
 
   const shouldEnableTicketLiveUpdates =
-    Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
+    Boolean(
+      dataSource.capabilities.live &&
+      liveCurrentUser &&
+      ticketData.ticket.tenant &&
+      ticketData.ticket.ticket_id,
+    );
 
   const ticketDetailsContent = (
     <TicketDetails
@@ -358,6 +368,7 @@ export default function TicketDetailsContainer({
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderQuickInvoice={renderQuickInvoice}
+      renderReceiveEquipment={renderReceiveEquipment}
       renderCreateWorkflowFromTicket={renderCreateWorkflowFromTicket}
       renderClientDetails={renderClientDetails}
       isAlgaDeskMode={isAlgaDeskMode}

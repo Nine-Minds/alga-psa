@@ -68,8 +68,9 @@ describe('project status update tenant-scoped query contract', () => {
     expect(source).toContain("permissionError('Permission denied: Cannot read project', 'projects:errors.permissions.readProject')");
   });
 
-  it('only drops the tenant slug for an active vanity portal domain', () => {
-    expect(source).toContain("portalDomain.status === 'active'");
+  it('only drops the tenant slug for an active vanity domain serving the client portal', () => {
+    expect(source).toContain("resolveTenantAppBase(tenant, 'client_portal'");
+    expect(source).toContain("resolved.source === 'vanity'");
     expect(source).toContain('?tenant=${buildTenantPortalSlug(tenant)}');
   });
 });

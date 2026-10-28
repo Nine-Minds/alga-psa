@@ -881,6 +881,7 @@
       "add": "Toevoegen",
       "remove": "Verwijderen",
       "empty": "Nog geen koppelingen.",
+      "nameRequired": "Voer een naam in voor deze koppeling.",
       "expressionLabel": "Expressie"
     },
     "schemaForm": {

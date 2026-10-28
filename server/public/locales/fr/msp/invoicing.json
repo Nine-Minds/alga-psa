@@ -323,6 +323,21 @@
       "any": "tout",
       "clear": "Effacer",
       "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "lateTime": {
+      "title": "Temps horaire approuvé tardivement",
+      "description": "Ce temps a été approuvé après l'émission de la facture de sa période de service. Les entrées en attente de facturation sont ajoutées une seule fois à la prochaine facture, signalées comme temps tardif. Les entrées hors de la période de rétroaction ne sont pas facturées.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technicien",
+        "service": "Service",
+        "workDate": "Date de travail",
+        "hours": "Heures",
+        "closedPeriod": "Période de service clôturée",
+        "status": "Statut"
+      },
+      "nextInvoice": "Facturé sur la prochaine facture",
+      "outsideLookback": "Hors de la période de rétroaction — non facturé"
     }
   },
   "manualInvoices": {
@@ -556,6 +571,17 @@
       "actionBar": {
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Facture finalisée, mais une étape de suivi n'a pas abouti : {{steps}}. La facture est finalisée ; vous pouvez relancer cette étape.",
+      "steps": {
+        "credit_auto_apply": "application automatique du crédit",
+        "project_deposit_credits": "crédits d'acompte de projet",
+        "workflow_events": "événements de workflow",
+        "accounting_export": "export comptable",
+        "replenishment_status": "statut de réapprovisionnement prépayé",
+        "autopay": "prélèvement automatique"
       }
     }
   },
@@ -857,6 +883,19 @@
       "cancel": "Annuler",
       "confirm": "Annuler la facture",
       "voiding": "Annulation…"
+    },
+    "history": {
+      "title": "Historique",
+      "empty": "Aucun historique enregistré.",
+      "loadFailed": "Échec du chargement de l'historique de la facture.",
+      "system": "Système",
+      "ops": {
+        "invoice_finalized": "Finalisée",
+        "invoice_unfinalized": "Rouverte",
+        "invoice_deleted": "Supprimée"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "aucun"
     }
   },
   "templateEditor": {
@@ -1377,7 +1416,7 @@
       "mediaSource": "Source de l'image",
       "mediaSourceLogo": "Logo de l'entreprise",
       "mediaSourceCustom": "Image personnalisée",
-      "mediaSourceLogoHint": "Affiche sur chaque document le logo défini dans les paramètres de marque de votre entreprise.",
+      "mediaSourceLogoHint": "Affiche sur chaque document le logo de la fiche client de votre propre entreprise.",
       "mediaSourceUrl": "URL source",
       "renameInner": "Renommer aussi {{count}} calques internes ({{from}} → {{to}}…) ?",
       "renameInnerApply": "Renommer",
@@ -1427,7 +1466,14 @@
           "widthTooltip": "Utiliser la largeur exacte saisie ci-dessous",
           "heightTooltip": "Utiliser la hauteur exacte saisie ci-dessous"
         }
-      }
+      },
+      "barcode": "Code-barres",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "Code QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valeur",
+      "barcodeHintWorkTag": "Du texte, ou un champ tel que {{example}} (le lien vers l’enregistrement). Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
+      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible."
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
@@ -1440,7 +1486,11 @@
       "title": "Mise en page",
       "description": "Choisissez le préréglage de papier et la marge sans sélectionner le nœud de page masqué.",
       "paperPreset": "Préréglage papier",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Taille personnalisée…",
+      "customWidth": "Largeur",
+      "customHeight": "Hauteur",
+      "customUnit": "Unité"
     },
     "breadcrumbs": {
       "emptyHelp": "Sélectionnez un composant du canevas pour voir sa hiérarchie.",
@@ -1471,7 +1521,13 @@
         "noQuotesFound": "Aucun devis trouvé.",
         "selectQuote": "Sélectionner un devis",
         "loadingQuoteDetails": "Chargement des détails du devis…",
-        "loadingDocumentDetails": "Chargement des détails du document…"
+        "loadingDocumentDetails": "Chargement des détails du document…",
+        "zoom": {
+          "fit": "Ajuster",
+          "actual": "100 %",
+          "label": "Zoom de l'aperçu",
+          "fitWithScale": "Ajuster ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Conception",
@@ -2365,7 +2421,7 @@
     },
     "imagePicker": {
       "browse": "Parcourir les documents",
-      "hiddenFromClients": "{{document}} est masqué pour les clients. Il n’apparaîtra pas sur les devis ni les factures consultés depuis le portail client.",
+      "hiddenFromClients": "{{document}} est masqué pour les clients, qui ne peuvent donc pas l’ouvrir dans le portail client. Il apparaît toujours sur les factures et dans les PDF de devis qui l’utilisent.",
       "updating": "Mise à jour...",
       "markVisible": "Rendre visible pour les clients",
       "visibleInPortal": "Visible dans le portail client",
@@ -2414,11 +2470,13 @@
     "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
     "availableLayouts": "Mises en page disponibles",
     "actions": {
-      "newLayout": "Nouvelle mise en page"
+      "newLayout": "Nouvelle mise en page",
+      "setDefaultForClass": "Définir par défaut pour {{class}}"
     },
     "columns": {
       "name": "Nom",
-      "source": "Source"
+      "source": "Source",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2450,7 +2508,10 @@
         "details": "Détails de la mise en page"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Classe d'étiquette",
+        "labelFields": "Champs affichés sur l'étiquette",
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"
@@ -2487,7 +2548,9 @@
     "types": {
       "salesOrder": "Commande client",
       "packingSlip": "Bon de livraison",
-      "pickList": "Liste de prélèvement"
+      "pickList": "Liste de prélèvement",
+      "workTag": "Étiquette de travail / Label",
+      "stagingManifest": "Manifeste de colisage"
     }
   },
   "errors": {
@@ -2495,7 +2558,8 @@
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
-      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client"
+      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",
+      "invoiceRead": "Autorisation refusée : lecture des factures requise"
     },
     "invoice": {
       "notFound": "Facture introuvable",
@@ -2517,7 +2581,9 @@
       "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
       "missingField": "Un champ obligatoire de la facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}.",
-      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client."
+      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client.",
+      "deleteNotDraft": "Seules les factures brouillon peuvent être supprimées ; annulez plutôt la facture.",
+      "deleteHasPayments": "Les factures avec des paiements enregistrés ne peuvent pas être supprimées."
     },
     "billingCycle": {
       "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",

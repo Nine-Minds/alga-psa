@@ -2,6 +2,7 @@ import { ensureMiscellaneousService } from '@alga-psa/db';
 import { Context, ApplicationFailure } from '@temporalio/activity';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation.js';
 import type { Knex } from 'knex';
 import type {
   CreateTenantActivityInput,
@@ -321,22 +322,22 @@ export async function createTenantInDB(
 
       if (clientName) {
         const tenantScopedDb = tenantDb(trx, tenantId);
-        const clientResult = await tenantScopedDb.table('clients')
-          .insert({
-            client_name: clientName,
-            tenant: tenantId,
-            client_type: 'company',
-            is_inactive: false,
-            properties: {
-              type: 'msp',
-              is_system_client: true,
-              created_by: 'tenant_setup'
-            },
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          })
-          .returning('client_id');
-        clientId = clientResult[0].client_id;
+        // Routed through the shared creation seam so the MSP system client gets
+        // its default billing profile at creation. The default-contract step is
+        // gated on billing configuration and tax init tolerates an
+        // unconfigured tenant, so both no-op this early; currency falls back to
+        // 'USD' because default_billing_settings does not exist yet.
+        const createdClient = await createClientWithDefaults(trx, tenantId, {
+          client_name: clientName,
+          client_type: 'company',
+          is_inactive: false,
+          properties: {
+            type: 'msp',
+            is_system_client: true,
+            created_by: 'tenant_setup'
+          }
+        });
+        clientId = createdClient.client_id;
         log.info('Client created', { clientId, clientName, tenantId });
 
         // Create default location for the MSP client with email from the tenant
@@ -685,6 +686,13 @@ export async function rollbackTenantInDB(
       // Setup seeds a tenant-owned default service catalog. It must be removed
       // before the tenant row because the catalog has a tenant foreign key.
       await db.table('service_catalog').delete();
+
+      // The creation seam gives the MSP system client a default billing
+      // profile and a tax settings row; both carry a foreign key to clients
+      // (the billing profile FK is NO ACTION), so they go first.
+      await db.table('client_tax_rates').delete();
+      await db.table('client_tax_settings').delete();
+      await db.table('client_billing_profiles').delete();
 
       // Delete clients (references tenant)
       await db.table('clients').delete();

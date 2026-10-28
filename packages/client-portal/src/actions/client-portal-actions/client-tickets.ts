@@ -1,5 +1,6 @@
 'use server'
 
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
@@ -14,6 +15,7 @@ import { reconcileCommentAttachments, filterReadableCommentAttachments, withdraw
 import { stripCommentBccFromMetadata } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -142,7 +144,7 @@ function clientPortalUserIdOrError(user: { user_id?: string | null; user_type?: 
     return permissionError('User ID not found in session', 'common:errors.auth.userIdNotFound');
   }
 
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return permissionError('Access denied: Client portal actions are restricted to client users', 'common:errors.auth.clientPortalOnly');
   }
 
@@ -727,21 +729,29 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await persistCommentPublication(trx, {
+      await publishCommentEvent(trx, 'ticket', {
+        tenantId: tenant,
+        ticketId,
+        commentId: newComment.comment_id,
+        userId,
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: buildTicketCommentAddedPayload({
-          tenantId: tenant,
-          occurredAt: newComment.created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId,
-          comment: {
-            content: content,
-            author: `${userRecord.first_name} ${userRecord.last_name}`,
-            isInternal
-          }
-        })
-      }, publishStoredWorkflowEvent);
+      }, async () => {
+        await persistCommentPublication(trx, {
+          eventType: 'TICKET_COMMENT_ADDED',
+          payload: buildTicketCommentAddedPayload({
+            tenantId: tenant,
+            occurredAt: newComment.created_at ?? new Date().toISOString(),
+            ticketId: ticketId,
+            commentId: newComment.comment_id,
+            userId,
+            comment: {
+              content: content,
+              author: `${userRecord.first_name} ${userRecord.last_name}`,
+              isInternal
+            }
+          })
+        }, publishStoredWorkflowEvent);
+      });
 
       await publishTicketUpdate({
         tenantId: tenant,

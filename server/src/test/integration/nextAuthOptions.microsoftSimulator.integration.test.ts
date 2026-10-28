@@ -29,7 +29,10 @@ const PROVIDER_EMAIL = 'ND@computerbutlereurope.onmicrosoft.com';
 const ALGA_EMAIL = 'nd@computerbutler.eu';
 const LINK_STATE_COOKIE_NAME = 'sso-link-state';
 
-const findUserByEmailAndTypeMock = vi.fn(async (_email: string, _type: string): Promise<unknown> => undefined);
+const findUsersByEmailAndTypeMock = vi.fn(async (_email: string, _type: string): Promise<unknown[]> => []);
+const findUserByEmailTenantAndTypeMock = vi.fn(
+  async (_email: string, _tenant: string, _type: string): Promise<unknown> => undefined
+);
 const userSessionCreateMock = vi.fn(async () => 'session-1');
 const cookieGetMock = vi.fn((_name: string): { value: string } | undefined => undefined);
 const cookieDeleteMock = vi.fn();
@@ -120,7 +123,9 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
-    findUserByEmailAndType: (...args: [string, string]) => findUserByEmailAndTypeMock(...args),
+    findUsersByEmailAndType: (...args: [string, string]) => findUsersByEmailAndTypeMock(...args),
+    findUserByEmailTenantAndType: (...args: [string, string, string]) =>
+      findUserByEmailTenantAndTypeMock(...args),
     updateLastLogin: vi.fn(async () => undefined),
   },
 }));
@@ -132,6 +137,8 @@ vi.mock('@alga-psa/auth/deviceFingerprint', () => ({
 }));
 vi.mock('@alga-psa/auth/geolocation', () => ({ getLocationFromIp: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
+// The DB layer is mocked above; the user row is faked, so the interactive-user gate is stubbed (as in the other nextAuthOptions tests).
+vi.mock('../../../../packages/auth/src/lib/assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
 vi.mock('@alga-psa/auth/lib/PortalDomainModel', () => ({
   getPortalDomain: vi.fn(),
   getPortalDomainByHostname: vi.fn(),
@@ -219,6 +226,20 @@ async function signInThroughSimulator() {
   return { provider, userinfo, user };
 }
 
+function algaUser(userId: string, tenant: string) {
+  return {
+    user_id: userId,
+    email: ALGA_EMAIL,
+    username: ALGA_EMAIL,
+    first_name: 'N',
+    last_name: 'D',
+    user_type: 'internal',
+    tenant,
+    hashed_password: 'hashed',
+    is_inactive: false,
+  };
+}
+
 async function invokeSignIn(user: unknown) {
   const options = await getAuthOptions();
   return options.callbacks!.signIn!({
@@ -244,7 +265,8 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.clearAllMocks();
   cookieGetMock.mockReturnValue(undefined);
-  findUserByEmailAndTypeMock.mockResolvedValue(undefined);
+  findUsersByEmailAndTypeMock.mockResolvedValue([]);
+  findUserByEmailTenantAndTypeMock.mockResolvedValue(undefined);
   // Per test, not in beforeAll: server/src/test/setup.ts sweeps
   // vi.unstubAllEnvs() after every test outside the DB-backed lanes, so a
   // stub established once would be gone from the second test onward.
@@ -287,7 +309,7 @@ describe('Microsoft sign-in over the Microsoft simulator', () => {
       userType: 'internal',
     });
     expect(user.id).toBe('');
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith(PROVIDER_EMAIL.toLowerCase(), 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith(PROVIDER_EMAIL.toLowerCase(), 'internal');
   });
 
   it('sends a failed profile link back to the SSO tab naming the provider email', async () => {
@@ -327,22 +349,33 @@ describe('Microsoft sign-in over the Microsoft simulator', () => {
 
   it('still signs in over the same wire when the mail does match an AlgaPSA user', async () => {
     await controlPost('seed/signed-in-user', { mail: ALGA_EMAIL, userPrincipalName: ALGA_EMAIL });
-    findUserByEmailAndTypeMock.mockResolvedValue({
-      user_id: 'user-1',
-      email: ALGA_EMAIL,
-      username: ALGA_EMAIL,
-      first_name: 'N',
-      last_name: 'D',
-      user_type: 'internal',
-      tenant: 'tenant-1',
-      hashed_password: 'hashed',
-      is_inactive: false,
-    });
+    findUsersByEmailAndTypeMock.mockResolvedValue([algaUser('user-1', 'tenant-1')]);
 
     const { user } = await signInThroughSimulator();
 
     expect(user.authFailure).toBeUndefined();
     expect(user.id).toBe('user-1');
     expect(await invokeSignIn(user)).toBe(true);
+  });
+
+  it('refuses to pick a tenant when the mail matches live AlgaPSA users in two tenants', async () => {
+    await controlPost('seed/signed-in-user', { mail: ALGA_EMAIL, userPrincipalName: ALGA_EMAIL });
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      algaUser('user-1', 'tenant-1'),
+      algaUser('user-2', 'tenant-2'),
+    ]);
+
+    const { user } = await signInThroughSimulator();
+
+    expect(user.id).toBe('');
+    expect(user.authFailure).toEqual({
+      code: 'tenant_required',
+      providerEmail: ALGA_EMAIL,
+      userType: 'internal',
+    });
+    expect(await invokeSignIn(user)).toBe(
+      '/auth/msp/signin?error=AccessDenied&reason=tenant_required&providerEmail=nd%40computerbutler.eu'
+    );
+    expect(userSessionCreateMock).not.toHaveBeenCalled();
   });
 });

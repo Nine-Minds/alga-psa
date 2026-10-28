@@ -710,7 +710,8 @@
         "importNewName": "Importeren met een andere naam:",
         "importWithResolutions": "Importeren met oplossingen",
         "orderConflict": "Volgorde {{order}} is al in gebruik",
-        "importWithOrder": "Importeren met volgorde {{order}}"
+        "importWithOrder": "Importeren met volgorde {{order}}",
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
         "active": "Actief"
@@ -779,7 +780,9 @@
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
-          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
+          "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog andere instellingen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -893,6 +896,48 @@
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
         "saved": "Afzender opgeslagen"
+      },
+      "deleteDependencies": {
+        "categories_one": "categorie",
+        "categories_other": "categorieën",
+        "categories_few": "categorieën",
+        "categories_many": "categorieën",
+        "statuses_one": "ticketstatus",
+        "statuses_other": "ticketstatussen",
+        "statuses_few": "ticketstatussen",
+        "statuses_many": "ticketstatussen",
+        "autoCloseRules_one": "automatisch-sluitenregel",
+        "autoCloseRules_other": "automatisch-sluitenregels",
+        "autoCloseRules_few": "automatisch-sluitenregels",
+        "autoCloseRules_many": "automatisch-sluitenregels",
+        "notificationRules_one": "meldingsregel",
+        "notificationRules_other": "meldingsregels",
+        "notificationRules_few": "meldingsregels",
+        "notificationRules_many": "meldingsregels",
+        "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
+        "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_many": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "emailSenderRoutes_one": "uitgaande afzenderroute",
+        "emailSenderRoutes_other": "uitgaande afzenderroutes",
+        "emailSenderRoutes_few": "uitgaande afzenderroutes",
+        "emailSenderRoutes_many": "uitgaande afzenderroutes",
+        "ticketTemplates_one": "ticketsjabloon",
+        "ticketTemplates_other": "ticketsjablonen",
+        "ticketTemplates_few": "ticketsjablonen",
+        "ticketTemplates_many": "ticketsjablonen",
+        "recurringTickets_one": "planning voor terugkerende tickets",
+        "recurringTickets_other": "planningen voor terugkerende tickets",
+        "recurringTickets_few": "planningen voor terugkerende tickets",
+        "recurringTickets_many": "planningen voor terugkerende tickets",
+        "checklistRules_one": "controlelijstregel",
+        "checklistRules_other": "controlelijstregels",
+        "checklistRules_few": "controlelijstregels",
+        "checklistRules_many": "controlelijstregels",
+        "cannedResponses_one": "standaardantwoord van het bord",
+        "cannedResponses_other": "standaardantwoorden van het bord",
+        "cannedResponses_few": "standaardantwoorden van het bord",
+        "cannedResponses_many": "standaardantwoorden van het bord"
       }
     },
     "priorities": {
@@ -984,7 +1029,8 @@
         "description": "Beschrijving",
         "items": "Artikelen",
         "status": "Status",
-        "actions": "Acties"
+        "actions": "Acties",
+        "scope": "Beschikbaar voor"
       },
       "statusLabels": {
         "active": "Actief",
@@ -1002,7 +1048,9 @@
         "down": "Omlaag",
         "remove": "Verwijderen",
         "addItem": "Item toevoegen",
-        "addRule": "Regel toevoegen"
+        "addRule": "Regel toevoegen",
+        "duplicateToClient": "Dupliceren naar klant…",
+        "duplicate": "Dupliceren"
       },
       "fields": {
         "name": {
@@ -1024,13 +1072,48 @@
         },
         "rules": {
           "label": "Automatisch-toepassenregels",
-          "help": "Het sjabloon wordt automatisch toegepast op nieuwe tickets die overeenkomen met een van deze regels. Laat een veld op \"Willekeurig\" staan om alle waarden te matchen.",
+          "help": "Een sjabloon wordt toegepast op een nieuw ticket als het aan een van de regels voldoet. Een regel komt alleen overeen als het ticket aan alle ingestelde filters voldoet. Laat een filter leeg om het te negeren.",
           "empty": "Geen automatisch-toepassenregels. Dit sjabloon kan nog steeds handmatig op tickets worden toegepast.",
           "board": "Bord",
           "category": "Categorie",
           "subcategory": "Subcategorie",
           "priority": "Prioriteit",
-          "any": "Willekeurig"
+          "any": "Willekeurig",
+          "appliesToAll": "Geldt voor alle tickets",
+          "appliesToAllClientTickets": "Geldt voor alle tickets van {{client}}",
+          "clients": "Klanten",
+          "clientsAny": "Elke klant",
+          "clientsFixedByTemplate": "Alleen {{client}} (bepaald door de klant van het sjabloon)",
+          "clientsAddAnother": "Nog een klant toevoegen",
+          "removeClient": "{{name}} verwijderen",
+          "origins": "Bron van het ticket",
+          "originsAny": "Elke bron",
+          "fromServiceRequest": "Alleen tickets uit een serviceaanvraag",
+          "anyServiceRequest": "Elke serviceaanvraag",
+          "keywords": "Trefwoorden",
+          "keywordsPlaceholder": "Typ een woord of zin en druk op Enter",
+          "keywordsHelp": "Ook woorddelen komen overeen, dus \"onboard\" vindt ook \"onboarding\". Hoofdletters worden genegeerd.",
+          "removeKeyword": "{{keyword}} verwijderen",
+          "keywordMode": "Overeenkomst",
+          "keywordModeAny": "Een willekeurig trefwoord",
+          "keywordModeAll": "Alle trefwoorden",
+          "keywordTarget": "Zoeken in",
+          "keywordTargetBoth": "Titel en beschrijving",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beschrijving",
+          "originLabels": {
+            "internal": "Aangemaakt door medewerkers",
+            "client_portal": "Klantenportaal",
+            "inbound_email": "Inkomende e-mail",
+            "api": "API",
+            "recurring": "Terugkerende planning"
+          },
+          "clientScopedWarning": "Dit sjabloon is beperkt tot {{client}}: deze regels gelden alleen voor tickets van {{client}}."
+        },
+        "availableTo": {
+          "label": "Beschikbaar voor",
+          "clear": "Alle klanten",
+          "help": "Laat op Alle klanten staan om deze sjabloon bij elk ticket aan te bieden, of kies een klant om hem tot de tickets van die klant te beperken."
         }
       },
       "dialog": {
@@ -1038,13 +1121,17 @@
         "editTemplate": "Checklistsjabloon bewerken",
         "createFirstHelp": "Maak eerst het sjabloon aan en voeg daarna checklistitems en automatisch-toepassenregels toe.",
         "deleteTitle": "Checklistsjabloon verwijderen",
-        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed."
+        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed.",
+        "duplicateTitle": "Dupliceren naar klant",
+        "duplicateHelp": "Kopieer \"{{name}}\" en de bijbehorende items naar een nieuw sjabloon dat tot één klant is beperkt. De kopie is onafhankelijk: latere wijzigingen aan het ene sjabloon hebben geen invloed op het andere.",
+        "duplicateClientPlaceholder": "Selecteer een klant"
       },
       "messages": {
         "success": {
           "created": "Checklistsjabloon succesvol aangemaakt",
           "updated": "Checklistsjabloon succesvol bijgewerkt",
-          "deleted": "Checklistsjabloon succesvol verwijderd"
+          "deleted": "Checklistsjabloon succesvol verwijderd",
+          "duplicated": "Checklistsjabloon naar klant gedupliceerd"
         },
         "error": {
           "fetchFailed": "Kan checklistsjablonen niet ophalen",
@@ -1054,8 +1141,18 @@
           "deleteFailed": "Kan checklistsjabloon niet verwijderen",
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
-          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan",
+          "duplicateFailed": "Checklistsjabloon dupliceren mislukt"
         }
+      },
+      "scope": {
+        "allClients": "Alle klanten",
+        "unknownClient": "Onbekende klant"
+      },
+      "filter": {
+        "client": "Klant",
+        "allClients": "Alle klanten",
+        "clear": "Filter wissen"
       }
     },
     "externalSystems": {
@@ -1396,7 +1493,9 @@
         "saveDomain": "Domein opslaan",
         "updateDomain": "Domein bijwerken",
         "submitting": "Bezig met verzenden…",
-        "cancelEdit": "Bewerken annuleren"
+        "cancelEdit": "Bewerken annuleren",
+        "confirmUris": "Ik heb deze geregistreerd — bevestigen",
+        "confirmingUris": "Bevestigen…"
       },
       "form": {
         "label": "Aangepast domein",
@@ -1434,7 +1533,8 @@
         "deploying": "Implementeren",
         "active": "Actief",
         "disabled": "Uitgeschakeld",
-        "unknown": "Onbekend"
+        "unknown": "Onbekend",
+        "pending_redirect_uri": "Redirect-URI's in afwachting"
       },
       "messages": {
         "requestSubmitted": "Aanvraag voor aangepast domein verzonden.",
@@ -1446,9 +1546,32 @@
         "registerFailed": "Kan aangepast domein niet registreren.",
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
-        "disableFailed": "Kan aangepast domein niet uitschakelen."
+        "disableFailed": "Kan aangepast domein niet uitschakelen.",
+        "confirmUrisFailed": "Bevestigen van redirect-URI's mislukt.",
+        "urisConfirmed": "Redirect-URI's bevestigd."
       },
-      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "surface": {
+        "label": "Bedient",
+        "current": "Bedient: {{value}}",
+        "updatingSurface": "Opslaan wijzigt welke app dit domein bedient en start de provisioning opnieuw.",
+        "options": {
+          "client_portal": "Klantenportaal",
+          "msp": "MSP-app",
+          "both": "Beide"
+        },
+        "descriptions": {
+          "client_portal": "Het domein opent uw klantenportaal. Dit is de standaardinstelling.",
+          "msp": "Het domein opent de MSP-app (technici). De redirect-URI's voor single sign-on moeten eerst worden geregistreerd.",
+          "both": "Eén domein bedient beide apps. Paden onder /msp openen de MSP-app en paden onder /client-portal openen het klantenportaal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-redirect-URI's moeten worden geregistreerd",
+        "description": "Dit domein bedient de MSP-app, dus single sign-on werkt pas zodra de onderstaande redirect-URI's bij uw SSO-provider zijn geregistreerd. Het domein blijft in behandeling totdat ze zijn bevestigd.",
+        "listLabel": "Registreer deze redirect-URI's:",
+        "contactSupport": "Vraag uw beheerder of neem contact op met support om deze redirect-URI's te registreren en te bevestigen."
+      }
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
@@ -2352,7 +2475,23 @@
         "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
         "claimedBySamePackage": "Al gemigreerd door dit pakket",
         "claimedByOtherPackage": "Al gemigreerd door {{file}}",
-        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit",
+        "matchedBySku": "Op SKU gekoppeld aan een bestaand product"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Producten (catalogus / prijslijst)",
+          "vendorProducts": "Leveranciersprijslijst (distributiekosten)"
+        },
+        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam."
+      },
+      "configure": {
+        "products": {
+          "title": "Producten",
+          "serviceType": "Servicetype voor nieuwe producten",
+          "serviceTypePlaceholder": "Selecteer een servicetype",
+          "serviceTypeHelp": "Producten waarvan de SKU al bestaat worden gekoppeld en ongewijzigd gelaten; alleen nieuwe producten worden onder dit servicetype geplaatst."
+        }
       }
     },
     "jobDetails": {
@@ -2911,7 +3050,8 @@
     "emptyState": "Geen gebruikers beschikbaar.",
     "roles": {
       "client": "Klantgebruiker",
-      "internal": "Interne gebruiker"
+      "internal": "Interne gebruiker",
+      "service": "Serviceaccount"
     },
     "badge": {
       "inactive": "Inactief"
@@ -3642,7 +3782,12 @@
       "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
       "notApplianceHost": "Kies een ander domein dan de primaire host van deze server. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
-      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie.",
+      "alreadyInUse": "Dit domein is al in gebruik. Kies een ander domein.",
+      "usedByOtherSurface": "Dit domein wordt al gebruikt door een ander aangepast domein van u. Kies \"Beide\" om het klantportaal en de MSP-app via één domein aan te bieden.",
+      "invalidSurface": "Kies wat het aangepaste domein aanbiedt: klantportaal, MSP-app of beide.",
+      "redirectUrisHosted": "Omleidings-URI's voor gehoste domeinen worden door platformondersteuning geregistreerd.",
+      "nothingToConfirm": "Er staat geen bevestiging van SSO-omleidings-URI's open voor dit domein."
     }
   },
   "common": {

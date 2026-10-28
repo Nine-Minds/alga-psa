@@ -18,6 +18,26 @@ export function isInternalUserLicenseLimitRejected(
 }
 
 /**
+ * Pending email invitations, which reserve a seat until they are accepted
+ * (`used_at` set — the invitee then counts as an active user, never both) or
+ * expire. The one definition of "pending": sendUserInvitation reserves it and
+ * the onboarding wizard reports it. `excludeEmail` leaves out the invitee being
+ * (re)invited so a resend never blocks itself.
+ */
+export async function countPendingInvitationSeats(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  options?: { excludeEmail?: string }
+): Promise<number> {
+  let query = tenantDb(trx, tenant).table('user_invitations')
+    .whereNull('used_at')
+    .where('expires_at', '>', trx.fn.now());
+  if (options?.excludeEmail !== undefined) query = query.whereNot('email', options.excludeEmail);
+  const row = await query.count('* as count').first();
+  return parseInt(String(row?.count ?? '0'), 10);
+}
+
+/**
  * Enforce the same internal-user seat limits addUser applies (solo-plan,
  * licensed_user_count, and the EE appliance seat limit), so any code path
  * that can create an internal user account — direct creation or an accepted

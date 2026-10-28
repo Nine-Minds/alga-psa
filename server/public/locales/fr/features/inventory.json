@@ -32,7 +32,8 @@
     "to": "À",
     "today": "Aujourd'hui",
     "total": "Total",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "recordUnavailable": "Introuvable, ou vous n'y avez pas accès"
   },
   "counts": {
     "adjustments": "{{count}} ajustement(s)",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "Chez le fournisseur depuis {{days}} j",
     "filters": {
       "statusActive": "Affichage des dossiers RMA au statut {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Référence RMA",
+      "product": "Produit",
+      "returnedSerial": "Numéro de série de l'unité retournée",
+      "opened": "Ouvert le",
+      "updated": "Mis à jour le",
+      "age": "Ancienneté (jours)",
+      "reason": "Motif",
+      "viewUnit": "Voir l'unité",
+      "viewAsset": "Voir l'actif"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Reconstruction…"
     },
     "receive": {
+      "searchProducts": "Rechercher des produits ou un SKU...",
+      "noProductsFound": "Aucun produit trouvé",
+      "searchLocations": "Rechercher des emplacements...",
+      "noLocationsFound": "Aucun emplacement trouvé",
       "costNonNegative": "Le coût unitaire ne peut pas être négatif.",
       "failed": "Impossible de réceptionner le stock.",
       "inProgress": "Réception…",
@@ -1698,6 +1715,12 @@
       "failed": "Impossible de réapprovisionner le retour.",
       "restocking": "Réapprovisionnement…",
       "submit": "Réapprovisionner"
+    },
+    "printLabel": "Imprimer l'étiquette",
+    "printWithTemplate": "Imprimer avec {{code}}",
+    "claimant": {
+      "project": "Projet {{number}}",
+      "salesOrder": "Commande de vente {{number}}"
     }
   },
   "transfers": {

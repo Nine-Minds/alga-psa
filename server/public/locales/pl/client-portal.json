@@ -327,7 +327,8 @@
       "missing_email": "Dostawca tożsamości nie zwrócił adresu e-mail, więc nie udało się dopasować konta portalu klienta. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
       "inactive_user": "Konto portalu klienta dla {{providerEmail}} jest nieaktywne. Skontaktuj się z usługodawcą, aby je ponownie aktywować.",
       "user_type_mismatch": "{{providerEmail}} nie jest kontem portalu klienta. Skontaktuj się z usługodawcą.",
-      "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą."
+      "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
+      "tenant_required": "{{providerEmail}} jest używany w więcej niż jednej organizacji. Skontaktuj się ze swoim dostawcą usług."
     },
     "configurationTitle": "Logowanie nie powiodło się",
     "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą.",
@@ -478,6 +479,15 @@
         "failed": "Nie udało się zapisać Twojej karty",
         "savedDescription": "Twoja karta jest gotowa do przyszłych płatności.",
         "failedDescription": "Nie udało się zweryfikować konfiguracji. Poproś dostawcę rozliczeń o nowy link."
+      },
+      "payLink": {
+        "heading": "Nie można użyć tego linku do płatności",
+        "expired": "Ten link do płatności wygasł.",
+        "invalid": "Ten link do płatności jest nieprawidłowy.",
+        "notPayable": "Tej faktury nie można już opłacić za pomocą tego linku. Być może została już opłacona lub nie jest już dostępna do płatności online.",
+        "unavailable": "Nie udało się teraz otworzyć strony płatności. Spróbuj ponownie za kilka minut.",
+        "viewInPortal": "Zobacz fakturę w portalu klienta",
+        "contactProvider": "Skontaktuj się ze swoim dostawcą rozliczeń, aby otrzymać nowy link."
       }
     }
   },

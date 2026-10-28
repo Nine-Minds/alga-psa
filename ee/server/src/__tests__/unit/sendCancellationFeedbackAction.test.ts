@@ -5,6 +5,10 @@ const mocks = vi.hoisted(() => ({
   getConnection: vi.fn(),
   getSession: vi.fn(),
   sendCancellationFeedbackEmail: vi.fn(),
+  systemSendEmail: vi.fn(),
+  useRealHelper: { current: false },
+  loggerError: vi.fn(),
+  loggerInfo: vi.fn(),
 }));
 
 vi.mock('../../lib/license/get-license-usage', () => ({ getLicenseUsage: vi.fn() }));
@@ -23,15 +27,27 @@ vi.mock('../../lib/stripe/StripeService', () => ({
 vi.mock('@/lib/db/db', () => ({ getConnection: mocks.getConnection }));
 
 vi.mock('@alga-psa/core/logger', () => ({
-  default: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+  default: { error: mocks.loggerError, info: mocks.loggerInfo, warn: vi.fn() },
 }));
 
 vi.mock('@alga-psa/email/sendCancellationRequestEmail', () => ({
   sendCancellationRequestEmail: vi.fn(),
 }));
 
-vi.mock('@alga-psa/email', () => ({
-  sendCancellationFeedbackEmail: mocks.sendCancellationFeedbackEmail,
+// Default to the stubbed helper; tests that exercise the real helper flip useRealHelper.
+vi.mock('@alga-psa/email', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/email/sendCancellationFeedbackEmail')>(
+    '@alga-psa/email/sendCancellationFeedbackEmail'
+  );
+  return {
+    sendCancellationFeedbackEmail: (...args: Parameters<typeof actual.sendCancellationFeedbackEmail>) =>
+      mocks.useRealHelper.current
+        ? actual.sendCancellationFeedbackEmail(...args)
+        : mocks.sendCancellationFeedbackEmail(...args),
+  };
+});
+vi.mock('@alga-psa/email/system/SystemEmailService', () => ({
+  getSystemEmailService: async () => ({ sendEmail: mocks.systemSendEmail }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -71,6 +87,7 @@ import { sendCancellationFeedbackAction } from '../../lib/actions/license-action
 describe('sendCancellationFeedbackAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.useRealHelper.current = false;
     mocks.getSession.mockResolvedValue({
       user: { tenant: 'tenant-1', email: 'session@example.test' },
     });
@@ -117,5 +134,22 @@ describe('sendCancellationFeedbackAction', () => {
       monthlyCost: 75,
       cancelAt: expect.any(String),
     });
+  });
+
+  it('returns failure and logs an error when the email service resolves { success: false }', async () => {
+    mocks.useRealHelper.current = true;
+    mocks.systemSendEmail.mockResolvedValue({ success: false, error: 'SMTP connection refused' });
+
+    const result = await sendCancellationFeedbackAction('Too expensive', undefined);
+
+    expect(result).toEqual({ success: false, error: 'Failed to send cancellation feedback' });
+    expect(mocks.systemSendEmail).toHaveBeenCalledTimes(1);
+    expect(mocks.loggerInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('Cancellation feedback sent')
+    );
+    expect(mocks.loggerError).toHaveBeenCalledWith(
+      '[sendCancellationFeedbackAction] Error:',
+      expect.objectContaining({ message: expect.stringContaining('SMTP connection refused') })
+    );
   });
 });

@@ -23,6 +23,8 @@ import {
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { normalizePaymentTerms } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { resolveTenantDefaultPaymentTerms } from '@alga-psa/shared/billingClients/tenantPaymentTerms';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
@@ -176,6 +178,8 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const chargesById = expanded.charges;
     context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, invoicesById);
+    // Resolved once per batch: the term for clients that hold none of their own.
+    const tenantDefaultPaymentTerms = await resolveTenantDefaultPaymentTerms(knex, tenantId);
 
     // Set up mapping resolver
     const resolver = await AccountingMappingResolver.create();
@@ -279,7 +283,8 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         }
 
       // Resolve payment terms
-      const paymentTermId = client.payment_terms ?? 'net_30';
+      // `''` and legacy free text count as unset, like everywhere else.
+      const paymentTermId = normalizePaymentTerms(client.payment_terms) ?? tenantDefaultPaymentTerms;
       const termMapping = await resolver.resolvePaymentTermMapping({
         tenantId: context.batch.tenant,
         adapterType: this.type,

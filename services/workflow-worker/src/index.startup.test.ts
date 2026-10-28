@@ -133,6 +133,23 @@ vi.mock('@alga-psa/email', () => ({
   EmailProviderManager: class EmailProviderManager {}
 }));
 
+// Worker boot safety (capability gate, A6): the gate must be unable to stop the
+// worker from booting, so every export throws.
+const { capabilityThrow } = vi.hoisted(() => ({
+  capabilityThrow: vi.fn(() => {
+    throw new Error('capability gate forced to fail');
+  })
+}));
+vi.mock('@alga-psa/core/capability', () => ({
+  admits: capabilityThrow,
+  serves: capabilityThrow,
+  filterServed: capabilityThrow,
+  isCapabilityServed: capabilityThrow,
+  filterCapabilityServed: capabilityThrow,
+  activityServesCapability: capabilityThrow,
+  evaluateCapability: capabilityThrow
+}));
+
 describe('workflow worker startup', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -203,6 +220,22 @@ describe('workflow worker startup', () => {
         expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
       });
 
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  it('boots (startServices completes) when the capability gate throws on every call', async () => {
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => {
+        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
+      });
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();

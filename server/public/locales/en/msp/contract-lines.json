@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Enable Overtime Rates",
           "rateHelp": "Rate applied after threshold.",
-          "rateLabel": "Overtime Rate ($/hr)",
           "thresholdHelp": "Hours before OT applies.",
           "thresholdLabel": "Overtime Threshold (hrs/period)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Hourly Rate ($)",
         "minimumBillableTime": "Minimum Billable Time (minutes)",
         "roundUpToNearest": "Round Up To Nearest (minutes)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technician"
         },
         "perHourSuffix": "/hr",
-        "rateSrLabel": "Rate ($/hr)",
         "selectTypePlaceholder": "Select type",
         "tooltip": "Define different hourly rates for specific user types working on this service. These override the service's default hourly rate.",
         "userTypeSrLabel": "User Type",

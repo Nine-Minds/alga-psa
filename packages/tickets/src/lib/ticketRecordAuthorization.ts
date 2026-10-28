@@ -1,3 +1,4 @@
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -118,7 +119,7 @@ async function resolveClientSelectedBoardIds(
   tenant: string,
   user: IUserWithRoles,
 ): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
+  if (isMspPrincipalUserType(user.user_type)) {
     return undefined;
   }
 

@@ -370,6 +370,45 @@ describe('ServiceCatalogManager price-change rollout reachability', () => {
   });
 });
 
+describe('ServiceCatalogManager rates follow the currency exponent', () => {
+  beforeEach(configureMocks);
+
+  // A price is stored in its own currency's minor units, which is what the invoice
+  // renderer and the invoice lists scale by. A fixed ×100 banked ¥50 as 5000, so the
+  // product billed ¥5,000 on a manual invoice.
+  it('banks a typed yen price as whole yen', async () => {
+    const jpyService = {
+      ...service,
+      prices: [{ ...service.prices[0], currency_code: 'JPY', rate: 100 }],
+    };
+    getServicesMock.mockResolvedValue({
+      services: [jpyService],
+      totalCount: 1,
+      page: 1,
+      pageSize: 10,
+    });
+    const finishPreview = deferPricePreview();
+    const input = await openEditDialog();
+
+    // ¥100 stored reads as 100 in the editor, not 1.00.
+    expect(input.value).toBe('100');
+
+    fireEvent.change(input, { target: { value: '50' } });
+    fireEvent.blur(input);
+    fireEvent.click(document.getElementById('save-button') as HTMLButtonElement);
+
+    await screen.findByText('Price change rollout');
+    fireEvent.click(await finishPreview());
+
+    await waitFor(() => expect(applyServicePriceChangeMock).toHaveBeenCalledTimes(1));
+    expect(applyServicePriceChangeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prices: [{ currency_code: 'JPY', rate: 50 }],
+      }),
+    );
+  });
+});
+
 describe('ServiceCatalogManager rate-review reachability', () => {
   beforeEach(configureMocks);
 

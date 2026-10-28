@@ -8,7 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -127,13 +127,7 @@ export const sendUserInvitation = withAuth(async (
     // past the first would only find out at acceptance, after choosing a
     // password. This invitee's own pending invitation is excluded so a
     // resend never blocks itself.
-    const pendingRow = await tenantDb(knex, tenant).table('user_invitations')
-      .whereNull('used_at')
-      .whereNot('email', normalizedEmail)
-      .where('expires_at', '>', knex.fn.now())
-      .count('* as count')
-      .first();
-    const reservedSeats = parseInt(String(pendingRow?.count ?? '0'), 10);
+    const reservedSeats = await countPendingInvitationSeats(knex, tenant, { excludeEmail: normalizedEmail });
 
     const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
@@ -177,6 +171,7 @@ export const sendUserInvitation = withAuth(async (
       scopedDb.tenantJoin(tenantDefaultClientQuery, 'clients', 'clients.client_id', 'tenant_companies.client_id');
       const tenantDefaultClient = await tenantDefaultClientQuery as { client_name: string } | undefined;
 
+      // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for an MSP-recipient link (/auth/team/setup is not surface-routable by path, left canonical).
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL ||
         process.env.NEXTAUTH_URL ||
