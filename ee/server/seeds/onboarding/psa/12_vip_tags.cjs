@@ -1,7 +1,7 @@
 /**
  * Seeds the "VIP" contact and client tag definitions, each with an internal display rule, for a
  * newly created tenant (F062). Mirrors the existing-tenant seeding in
- * server/migrations/20261024120000_create_tag_display_rules.cjs, which only covers definitions that
+ * server/migrations/20261028020000_create_tag_display_rules.cjs, which only covers definitions that
  * already exist: tenants created after that migration would otherwise have no VIP chip until an
  * admin set it up. Invoked by the tenant-creation workflow via runOnboardingSeeds, which calls
  * exports.seed(trx, tenantId). Idempotent.

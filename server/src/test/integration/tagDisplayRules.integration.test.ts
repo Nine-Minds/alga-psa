@@ -229,7 +229,7 @@ describeDb('tag display rules (DB)', () => {
         def(t, 'VIP', 'ticket', tenant),
         def(n, 'Gold', 'contact', tenant),
       ]);
-      const migration = require(path.join(root, 'server/migrations/20261024120000_create_tag_display_rules.cjs'));
+      const migration = require(path.join(root, 'server/migrations/20261028020000_create_tag_display_rules.cjs'));
       await migration.up(db);
       await migration.up(db); // idempotent
 
@@ -262,7 +262,7 @@ describeDb('tag display rules (DB)', () => {
       const [rule] = await db('tag_display_rules')
         .insert({ tenant, tagged_type: 'contact', audience: 'internal', tag_id: c, position: 0 })
         .returning('rule_id');
-      const migration = require(path.join(root, 'server/migrations/20261025120000_create_tag_references.cjs'));
+      const migration = require(path.join(root, 'server/migrations/20261028030000_create_tag_references.cjs'));
       await migration.up(db);
       await migration.up(db);
       const refs = await db('tag_references').where({ tenant });
