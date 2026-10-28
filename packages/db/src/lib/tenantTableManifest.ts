@@ -768,6 +768,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'users', deletion: 'ordered', export: { rank: 0 } },
   { table: 'sla_policies', deletion: 'ordered' },
   { table: 'business_hours_schedules', deletion: 'ordered' },
+  { table: 'webhook_event_receipts', deletion: 'ordered' },
   { table: 'webhook_deliveries', deletion: 'ordered' },
   { table: 'webhooks', deletion: 'ordered' },
   { table: 'api_rate_limit_settings', deletion: 'ordered' },

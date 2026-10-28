@@ -104,7 +104,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi
       .enum(WEBHOOK_EVENT_NAMES as unknown as [string, ...string[]])
       .describe(
-        'Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*). ' +
+        'Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). ' +
           'Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); ' +
           'those are returned as stored, never deliver, and are rejected when newly added.',
       ),
@@ -919,7 +919,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'read',
       summary: 'List available webhook events',
       description:
-        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*).',
+        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*).',
       success: { description: 'Event type list.', schema: WebhookEventListEnvelope },
     },
     {
