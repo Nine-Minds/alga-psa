@@ -601,7 +601,7 @@ describe('ticket watchers', () => {
     });
   });
 
-  describe('migration 20261020120000_create_ticket_watchers backfill', () => {
+  describe('migration 20261029150000_create_ticket_watchers backfill', () => {
     it('backfills from attributes.watch_list normalized and deduped like shared/lib/tickets/watchList.ts', async () => {
       const entityId = uuidv4();
       const t1 = await insertTicket({
@@ -623,7 +623,7 @@ describe('ticket watchers', () => {
       await scoped('ticket_watchers').whereIn('ticket_id', [t1, t2, t3]).delete();
 
       const require = createRequire(import.meta.url);
-      const migration = require(path.resolve(__dirname, '../../../migrations/20261020120000_create_ticket_watchers.cjs'));
+      const migration = require(path.resolve(__dirname, '../../../migrations/20261029150000_create_ticket_watchers.cjs'));
       await migration.up(db);
       // Re-running is a no-op (idempotent).
       await migration.up(db);
