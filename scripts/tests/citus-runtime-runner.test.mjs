@@ -21,7 +21,7 @@ test('Citus runner records actual Vitest collection and fails before execution w
   write('.gitignore', 'node_modules/\ntest-results/\n');
   const configure = include => write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include, maxWorkers: 1, fileParallelism: false } })};`);
   configure(files.map(file => path.relative('server', file)));
-  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   git(['init', '-q']); git(['add', '.']); git(['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '--no-gpg-sign', '-qm', 'Fixture']);
   const run = (args = []) => spawnSync(process.execPath, ['scripts/run-citus-runtime-tests.mjs', ...args], {

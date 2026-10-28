@@ -54,7 +54,7 @@ const env = {
   INVOICE_LIFECYCLE_DB_NAME: 'test_database',
 };
 const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
-const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = (args) => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 const filters = process.argv.slice(2);
 let before;
 let evidence;
