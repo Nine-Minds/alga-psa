@@ -115,11 +115,14 @@ export async function acceptCoManagedRelationship(db: Knex, actor: CoManagedCust
         await countCoManagedCommittedSeats(trx, actor.tenant) > Number(allocation.seats)) {
       throw new CoManagedAcceptanceError('CAPACITY_UNAVAILABLE');
     }
+    // write-admission: exempt — co-management acceptance/decline is the lifecycle transition admission depends on; serialized under the relationship lock
     await customer.table('co_management_relationships').where('relationship_id', input.relationshipId)
       .update({ state: 'active', accepted_by: actor.userId, accepted_at: trx.fn.now(),
         revision: input.revision + 1, updated_at: trx.fn.now() });
+    // write-admission: exempt — co-management acceptance/decline is the lifecycle transition admission depends on; serialized under the relationship lock
     await sponsor.table('co_managed_allocations').where('allocation_id', operation.allocation_id)
       .update({ state: 'active', updated_at: trx.fn.now() });
+    // write-admission: exempt — co-management acceptance/decline is the lifecycle transition admission depends on; serialized under the relationship lock
     await customer.table('co_management_relationship_events').insert({ tenant: actor.tenant, event_id: randomUUID(),
       relationship_id: input.relationshipId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
       event_type: 'accepted', revision: input.revision + 1, scope, scope_fingerprint: input.scopeFingerprint });
@@ -175,8 +178,10 @@ export async function declineCoManagedRelationship(db: Knex, actor: CoManagedCus
     if (relationship.revision !== input.revision || coManagedScopeFingerprint(scope) !== input.scopeFingerprint) {
       throw new CoManagedAcceptanceError('SCOPE_CHANGED');
     }
+    // write-admission: exempt — co-management acceptance/decline is the lifecycle transition admission depends on; serialized under the relationship lock
     await customer.table('co_management_relationships').where('relationship_id', input.relationshipId)
       .update({ revision: input.revision + 1, updated_at: trx.fn.now() });
+    // write-admission: exempt — co-management acceptance/decline is the lifecycle transition admission depends on; serialized under the relationship lock
     await customer.table('co_management_relationship_events').insert({ tenant: actor.tenant, event_id: randomUUID(),
       relationship_id: input.relationshipId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
       event_type: 'declined', revision: input.revision + 1, scope, scope_fingerprint: input.scopeFingerprint });

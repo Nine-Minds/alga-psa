@@ -112,6 +112,7 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
     if (claim || pendingInvitation) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_PENDING');
     const board = await sponsor.table('boards').where({ board_id: input.escalationBoardId, is_inactive: false }).forShare().first();
     if (!board) throw new CoManagedProvisioningError('DESTINATION_NOT_FOUND');
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     const [operation] = await sponsor.table('co_managed_provisioning_operations').insert({
       tenant: input.sponsorTenant, operation_id: input.operationId, allocation_id: reservation.allocation_id,
       customer_tenant: reservation.customer_tenant, relationship_id: reservation.relationship_id,
@@ -121,6 +122,7 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
     }).returning('*');
     const scope = { visibilityMode: request.visibilityMode, escalationBoardId: request.escalationBoardId,
       customerBoardId: operation.customer_board_id };
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, reservation.customer_tenant).table('co_management_relationship_events').insert({
       tenant: reservation.customer_tenant, event_id: randomUUID(), relationship_id: reservation.relationship_id,
       actor_tenant: input.sponsorTenant, actor_user_id: input.requestedBy, event_type: 'requested', revision: 1,
@@ -180,6 +182,7 @@ export async function runCoManagedProvisioningStep<T>(db: Knex, sponsorTenant: s
         relationship_id: operation.relationship_id, state: 'reserved' }).first();
     if (!allocation) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
     const result = await work(trx, operation);
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'provisioning', step, error_code: null, updated_at: trx.fn.now() });
     return { skipped: false, result };
@@ -191,6 +194,7 @@ export async function recordCoManagedProvisioningFailure(db: Knex, sponsorTenant
   await db.transaction(async trx => {
     const operation = await lockOperation(trx, sponsorTenant, operationId);
     if (!['queued', 'provisioning', 'failed'].includes(operation.state)) return;
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'failed', error_code: 'PROVISIONING_FAILED', updated_at: trx.fn.now() });
   });
@@ -222,6 +226,7 @@ export async function requestCoManagedProvisioningCleanup(db: Knex, sponsorTenan
     const operation = await lockOperation(trx, sponsorTenant, operationId);
     if (operation.state === 'cancelled') return;
     await assertProvisioningCleanupEligible(trx, operation);
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'cleanup_requested', updated_at: trx.fn.now() });
   });
@@ -246,6 +251,7 @@ export async function runCoManagedProvisioningCleanup(db: Knex, sponsorTenant: s
 }
 
 export async function recordCoManagedProvisioningCleanupFailure(db: Knex, sponsorTenant: string, operationId: string): Promise<void> {
+  // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
   await tenantDb(db, sponsorTenant).table('co_managed_provisioning_operations')
     .where({ operation_id: operationId, state: 'cleanup_requested' })
     .update({ error_code: 'PROVISIONING_CLEANUP_FAILED', updated_at: db.fn.now() });
@@ -267,11 +273,14 @@ export async function completeCoManagedProvisioningCleanup(db: Knex, sponsorTena
       if (table === 'co_management_relationships' || tenantTableMetadata[table]?.scope !== 'tenant') continue;
       if (await customer.table(table).first()) throw new CoManagedProvisioningError('CLEANUP_INCOMPLETE');
     }
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await customer.table('co_management_relationships').where('relationship_id', operation.relationship_id)
       .update({ state: 'terminated', ended_at: trx.fn.now(), updated_at: trx.fn.now(), revision: trx.raw('revision + 1') });
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_allocations')
       .where({ allocation_id: operation.allocation_id, customer_tenant: operation.customer_tenant, relationship_id: operation.relationship_id })
       .whereNot('state', 'released').update({ state: 'released', released_at: trx.fn.now(), updated_at: trx.fn.now() });
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'cancelled', error_code: null, updated_at: trx.fn.now() });
     customerTenant = operation.customer_tenant;
@@ -304,9 +313,11 @@ export async function finalizeCoManagedProvisioning(db: Knex, sponsorTenant: str
       email: operation.request.administrator.email, used_at: null }).where('expires_at', '>', trx.fn.now()).first();
     const destination = await tenantDb(trx, sponsorTenant).table('boards').where({ board_id: operation.escalation_board_id, is_inactive: false }).first();
     if (!owner || !board || !invitation || !destination) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await customer.table('co_management_relationships').where('relationship_id', operation.relationship_id)
       .update({ state: 'pending_acceptance', escalation_board_id: operation.escalation_board_id, updated_at: trx.fn.now() });
     if (operation.request.visibilityMode === 'board_scope') {
+      // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
       await customer.table('co_management_board_scopes').insert({ tenant: operation.customer_tenant,
         relationship_id: operation.relationship_id, board_id: operation.customer_board_id, can_collaborate: true,
       }).onConflict(['tenant', 'relationship_id', 'board_id']).ignore();
@@ -316,10 +327,12 @@ export async function finalizeCoManagedProvisioning(db: Knex, sponsorTenant: str
     // never reaches here (pending_acceptance returned early above).
     const relationship = await customer.table('co_management_relationships').where('relationship_id', operation.relationship_id).first();
     const scope = await readCoManagedAcceptanceScope(trx, relationship, true);
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await customer.table('co_management_relationship_events').insert({ tenant: operation.customer_tenant, event_id: randomUUID(),
       relationship_id: operation.relationship_id, actor_tenant: sponsorTenant, actor_user_id: operation.requested_by,
       event_type: 'prepared', revision: 1, scope, scope_fingerprint: coManagedScopeFingerprint(scope),
     }).onConflict(['tenant', 'relationship_id', 'revision', 'event_type']).ignore();
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'pending_acceptance', error_code: null, updated_at: trx.fn.now() });
   });

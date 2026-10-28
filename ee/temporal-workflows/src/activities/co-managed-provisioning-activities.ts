@@ -46,6 +46,7 @@ export async function deliverCoManagedAdministratorInvitation(input: CoManagedPr
     // until the administrator frees an allocated seat and explicitly retries.
     if ((error as { code?: string })?.code === 'CO_MANAGED_SEAT_LIMIT') throw error;
     const db = await getAdminConnection();
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine
     await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations')
       .where({ operation_id: input.operationId, state: 'pending_acceptance' })
       .update({ invitation_delivery_error: 'INVITATION_DELIVERY_FAILED', updated_at: db.fn.now() });

@@ -103,6 +103,7 @@ export async function reserveCoManagedWorkspace(
     const customerTenant = randomUUID();
     const relationshipId = randomUUID();
     const allocationId = randomUUID();
+    // write-admission: exempt — seat reservation lifecycle owned by licensing; it decides admission rather than being subject to it
     await tenantDb(trx, customerTenant).table('co_management_relationships').insert({
       tenant: customerTenant,
       relationship_id: relationshipId,
@@ -111,6 +112,7 @@ export async function reserveCoManagedWorkspace(
       visibility_mode: input.visibilityMode,
       state: 'provisioning',
     });
+    // write-admission: exempt — seat reservation lifecycle owned by licensing; it decides admission rather than being subject to it
     const [allocation] = await sponsor.table('co_managed_allocations').insert({
       tenant: input.sponsorTenant,
       allocation_id: allocationId,

@@ -121,6 +121,7 @@ export async function changeCoManagedAllocation(db: Knex, sponsorTenant: string,
           capacity.graceEndsAt || capacity.isReadOnly) throw new CoManagedAdmissionError('CO_MANAGED_LICENSE_LAPSED');
       if (capacity.available < input.seats - input.expectedSeats) throw new CoManagedAdmissionError('CO_MANAGED_POOL_LIMIT');
     }
+    // write-admission: exempt — seat allocation lifecycle owned by licensing; it decides admission rather than being subject to it
     await tenantDb(trx, sponsorTenant).table('co_managed_allocations').where('allocation_id', scope.allocation.allocation_id)
       .update({ seats: input.seats, updated_at: trx.fn.now() });
     await tenantDb(trx, input.customerTenant).table('tenants').update({ licensed_user_count: input.seats });

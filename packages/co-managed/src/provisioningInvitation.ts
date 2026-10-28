@@ -82,6 +82,7 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
       });
     }
     // Clearing the delivery receipt is what makes the worker send it again.
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
       invitation_sent_at: null, invitation_delivery_error: null, updated_at: trx.raw('now()'),
     });
@@ -132,6 +133,7 @@ export async function deliverCoManagedInitialAdministratorInvitation(db: Knex, s
     // Postgres does report.
     const context = await retainInvitation(trx, sponsorTenant, operationId);
     if (!context || context.invitation.token !== prepared.token) return false;
+    // write-admission: exempt — co-managed provisioning lifecycle state, written by its owning state machine under the operation lock
     await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
       invitation_sent_at: delivered ? trx.raw('now()') : null,
       invitation_delivery_error: delivered ? null : 'INVITATION_DELIVERY_FAILED', updated_at: trx.raw('now()'),

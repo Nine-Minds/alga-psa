@@ -60,6 +60,7 @@ async function materializeState(trx: Knex.Transaction, sponsor: string, row: any
   }
   const deadline = start ? new Date(start.getTime() + GRACE_MS) : null;
   if ((row.lapse_started_at ? new Date(row.lapse_started_at).getTime() : null) !== (start?.getTime() ?? null)) {
+    // write-admission: exempt — sponsor entitlement lifecycle owned by licensing; it decides admission rather than being subject to it
     await tenantDb(trx, sponsor).table('co_managed_entitlements').update({
       lapse_started_at: start, read_only_after: deadline, updated_at: now,
       revision: trx.raw('revision + 1'),
