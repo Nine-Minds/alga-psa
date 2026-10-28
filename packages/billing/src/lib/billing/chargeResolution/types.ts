@@ -189,6 +189,16 @@ export interface PrepaidCoverageRow {
   entryId: string;
   blockStatus: string;
   minutes: number;
+  /**
+   * The entry's work date and the drawn block's validity window (`YYYY-MM-DD`,
+   * either bound null = unbounded). A source that knows them supplies them so
+   * the resolver can refuse a draw from a block that was not valid on the work
+   * date; a source with no dates (the simulator's synthetic draws, which are
+   * valid by construction) omits them.
+   */
+  workDate?: string | null;
+  blockValidFrom?: string | null;
+  blockExpirationDate?: string | null;
 }
 
 export interface ConfiguredService {

@@ -3199,6 +3199,31 @@ export class BillingEngine {
    * allocation rows of one contract line's own blocks inside its service
    * period, oldest block first. Which of them count is the resolver's call.
    */
+  /**
+   * Earlier invoice-claimed windows whose approved time rides this line's
+   * next invoice (see lateHourlyTime.ts). The hourly load and the block draw
+   * lines read the same windows, so late time is priced, covered and shown on
+   * the same invoice, once.
+   */
+  private async loadCarriedWindowsForLine(
+    clientContractLine: IClientContractLine,
+    before: ISO8601String,
+    periodEndExclusive: ISO8601String,
+  ) {
+    return loadCarriedForwardWindows(this.knex, this.tenant as string, {
+      obligationIds: [
+        ...new Set(
+          [
+            clientContractLine.client_contract_line_id,
+            clientContractLine.contract_line_id,
+          ].filter((id): id is string => Boolean(id)),
+        ),
+      ],
+      before,
+      periodEndExclusive,
+    });
+  }
+
   private async loadHourBlockDrawRows(
     clientId: string,
     clientContractLine: IClientContractLine,
@@ -3225,6 +3250,11 @@ export class BillingEngine {
       { type: "left" },
     );
 
+    const carriedWindows = await this.loadCarriedWindowsForLine(
+      clientContractLine,
+      timing.servicePeriodStartExclusive,
+      timing.servicePeriodEndExclusive,
+    );
     return await query
       .where({
         "hb.client_id": clientId,
@@ -3232,8 +3262,25 @@ export class BillingEngine {
         "te.invoiced": false,
       })
       .where("te.approval_status", "APPROVED")
-      .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
-      .where("te.end_time", "<", timing.servicePeriodEndExclusive)
+      .where(function (this: Knex.QueryBuilder) {
+        this.where(function (this: Knex.QueryBuilder) {
+          this.where("te.start_time", ">=", timing.servicePeriodStartExclusive).where(
+            "te.end_time",
+            "<",
+            timing.servicePeriodEndExclusive,
+          );
+        });
+        // Late time dated in an earlier, already-invoiced window draws the
+        // block valid on its work date; its draw line rides this invoice with
+        // the entry (same windows and line rule as the hourly load).
+        for (const window of carriedWindows) {
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.where("te.contract_line_id", clientContractLine.contract_line_id)
+              .where("te.start_time", ">=", window.startInclusive)
+              .where("te.start_time", "<", window.endExclusive);
+          });
+        }
+      })
       .orderBy("hb.purchased_at", "asc")
       .orderBy("hb.block_id", "asc")
       .select(
@@ -5819,18 +5866,11 @@ export class BillingEngine {
     // (exactly once, via the invoiced flag); see lateHourlyTime.ts.
     const carriedWindows = projectTarget
       ? []
-      : await loadCarriedForwardWindows(this.knex, tenant, {
-          obligationIds: [
-            ...new Set(
-              [
-                clientContractLine.client_contract_line_id,
-                clientContractLine.contract_line_id,
-              ].filter((id): id is string => Boolean(id)),
-            ),
-          ],
-          before: servicePeriodStartExclusive,
-          periodEndExclusive: servicePeriodEndExclusive,
-        });
+      : await this.loadCarriedWindowsForLine(
+          clientContractLine,
+          servicePeriodStartExclusive,
+          servicePeriodEndExclusive,
+        );
 
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
@@ -6096,15 +6136,36 @@ export class BillingEngine {
     const db = tenantDb(this.knex, this.tenant as string);
     const query = db.table("hour_block_time_allocations as hba");
     db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
-    const rows: Array<{ time_entry_id: string; status: string; minutes: string | number }> =
-      await query
-        .where("hb.contract_line_id", contractLineId)
-        .whereIn("hba.time_entry_id", entryIds)
-        .select("hba.time_entry_id", "hb.status", "hba.minutes");
+    db.tenantJoin(query, "time_entries as te", "hba.time_entry_id", "te.entry_id");
+    const rows: Array<{
+      time_entry_id: string;
+      status: string;
+      minutes: string | number;
+      work_date: unknown;
+      start_time: unknown;
+      valid_from: unknown;
+      expiration_date: unknown;
+    }> = await query
+      .where("hb.contract_line_id", contractLineId)
+      .whereIn("hba.time_entry_id", entryIds)
+      .select(
+        "hba.time_entry_id",
+        "hb.status",
+        "hba.minutes",
+        "te.work_date",
+        "te.start_time",
+        "hb.valid_from",
+        "hb.expiration_date",
+      );
     return rows.map((row) => ({
       entryId: row.time_entry_id,
       blockStatus: row.status,
       minutes: Number(row.minutes),
+      // Same work date the draw used (hourBlockService.selectEligibleBlocks).
+      workDate:
+        toPrepaidBlockDateOnly(row.work_date) ?? toPrepaidBlockDateOnly(row.start_time),
+      blockValidFrom: toPrepaidBlockDateOnly(row.valid_from),
+      blockExpirationDate: toPrepaidBlockDateOnly(row.expiration_date),
     }));
   }
 

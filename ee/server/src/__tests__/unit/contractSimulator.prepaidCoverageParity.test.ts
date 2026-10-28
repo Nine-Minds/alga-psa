@@ -92,4 +92,25 @@ describe('prepaid coverage: engine and simulator share one decision', () => {
       applyPrepaidCoverage([entry], [{ entryId: entry.sourceId, blockStatus: 'void', minutes: 30 }]),
     ).toEqual([entry]);
   });
+
+  it('counts a draw only from a block valid on the entry work date (late time)', () => {
+    const entry = { sourceId: 'late-1', billableMinutes: 840 } as any;
+    const row = (over: Partial<PrepaidCoverageRow>): PrepaidCoverageRow => ({
+      entryId: 'late-1',
+      blockStatus: 'active',
+      minutes: 600,
+      workDate: '2026-11-10',
+      blockValidFrom: '2026-11-01',
+      blockExpirationDate: '2026-11-30',
+      ...over,
+    });
+    // November's block pays for November work even when approved in January.
+    expect(applyPrepaidCoverage([entry], [row({})])[0].billableMinutes).toBe(240);
+    // A later block (valid from 1 Dec) never covers it, nor does a lapsed one.
+    expect(applyPrepaidCoverage([entry], [row({ blockValidFrom: '2026-12-01', blockExpirationDate: '2026-12-31' })])).toEqual([entry]);
+    expect(applyPrepaidCoverage([entry], [row({ blockExpirationDate: '2026-11-09' })])).toEqual([entry]);
+    // Open bounds and undated rows count.
+    expect(applyPrepaidCoverage([entry], [row({ blockValidFrom: null, blockExpirationDate: null })])[0].billableMinutes).toBe(240);
+    expect(applyPrepaidCoverage([entry], [row({ workDate: undefined })])[0].billableMinutes).toBe(240);
+  });
 });

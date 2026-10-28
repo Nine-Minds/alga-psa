@@ -102,6 +102,22 @@ export function selectHourBlockDrawRows(
 }
 
 /**
+ * Whether the drawn block was valid on the entry's work date
+ * (`validFrom <= workDate <= expirationDate`, a null bound is open). Time is
+ * paid for by the block that was valid when the work happened, never by a
+ * later block: late-approved November time cannot be absorbed by December's
+ * block, nor can a block cover work dated after it lapsed. A row that carries
+ * no dates is taken as valid.
+ */
+export function blockValidOnWorkDate(row: PrepaidCoverageRow): boolean {
+  const workDate = row.workDate;
+  if (!workDate) return true;
+  if (row.blockValidFrom && row.blockValidFrom > workDate) return false;
+  if (row.blockExpirationDate && row.blockExpirationDate < workDate) return false;
+  return true;
+}
+
+/**
  * Overage subtraction for Prepaid Block lines (plan section 4).
  *
  * Minutes an entry drew from the line's `active` or `expired` blocks are
@@ -110,7 +126,9 @@ export function selectHourBlockDrawRows(
  * from a `pending` block is HELD: not priced, not marked invoiced. It surfaces
  * once the block activates (then it is covered or partially covered) or falls
  * back to overage if the block is voided. Fully covered entries drop out.
- * Entries with no rows pass through untouched.
+ * Entries with no rows pass through untouched. Only draws from a block valid
+ * on the entry's work date count (see blockValidOnWorkDate), so late time is
+ * covered by its own period's block and the rest bills as overage.
  */
 export function applyPrepaidCoverage<
   A extends { sourceId: string; billableMinutes: number },
@@ -121,6 +139,7 @@ export function applyPrepaidCoverage<
   for (const row of rows) {
     const minutes = Number(row.minutes) || 0;
     if (minutes <= 0) continue;
+    if (!blockValidOnWorkDate(row)) continue;
     if (row.blockStatus === "pending") {
       held.add(row.entryId);
     } else if (row.blockStatus === "active" || row.blockStatus === "expired") {
