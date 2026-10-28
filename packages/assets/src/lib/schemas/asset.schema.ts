@@ -182,8 +182,11 @@ const maintenanceFrequencySchema = z.enum([
   'custom'
 ]);
 
+// Mirrors the asset_maintenance_schedules / _history CHECK constraints, widened
+// to include 'corrective' by migration 20260728100000.
 const maintenanceTypeSchema = z.enum([
   'preventive',
+  'corrective',
   'inspection',
   'calibration',
   'replacement'
