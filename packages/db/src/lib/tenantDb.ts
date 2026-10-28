@@ -325,6 +325,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       throw new Error(`Parent row not found for parent-scoped insert into ${parsed.tableName}`);
     }
 
+    // write-admission: exempt — insertParentScoped admits parsed.tableName before parent validation above.
     const inserted = await conn<Row, Row[]>(tableExpression)
       .insert(values as any)
       .returning(returning as any);

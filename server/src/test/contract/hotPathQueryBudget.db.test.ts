@@ -157,6 +157,18 @@ describe('hot-path query budget', () => {
     // Production config: server/src/instrumentation.ts always installs the co-managed resolver.
     const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
     installCoManagedWriteAdmission();
+    // Chapter 0: control only the rollout input; eligibility remains false.
+    // No PostHog request or capability SQL is included in the measured native writes.
+    const rollout = process.env.CM_L0C_REVIEW_ROLLOUT;
+    if (rollout) {
+      const { registerFeatureFlagChecker } = await import('@alga-psa/core');
+      const { registerCapabilityEligibility, evaluateCapability } = await import('@alga-psa/core/capability');
+      registerFeatureFlagChecker(async (flagKey) => flagKey === 'release-v2-0-feature' && rollout === 'on');
+      registerCapabilityEligibility('co-managed', async () => false);
+      const decision = await evaluateCapability('co-managed', 'budget-plain-psa');
+      expect(decision.admitted).toBe(false);
+      expect(decision.reasons.admitted).toBe(rollout === 'on' ? 'not-eligible' : 'flag-off');
+    }
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {

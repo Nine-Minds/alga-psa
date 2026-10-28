@@ -6,7 +6,7 @@ import {
 } from '@alga-psa/db/testing';
 
 /** The tenant the fake database reports as `product_code = 'co_managed'`. */
-export const CO_MANAGED_TENANT = 'tenant-co-managed';
+export const CO_MANAGED_TENANT = '10000000-0000-4000-8000-000000000001';
 export const PSA_TENANT = 'tenant-psa';
 
 export interface FakeKnex {
