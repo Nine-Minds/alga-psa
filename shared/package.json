@@ -68,6 +68,8 @@
     "./lib/ticketStatusClock.js": "./dist/lib/ticketStatusClock.js",
     "./lib/ticketActivity": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketActivity/index.js": "./dist/lib/ticketActivity/index.js",
+    "./lib/ticketQuery/ticketQuerySchema": "./dist/lib/ticketQuery/ticketQuerySchema.js",
+    "./lib/ticketQuery/ticketSlaSql": "./dist/lib/ticketQuery/ticketSlaSql.js",
     "./lib/ticketChecklists": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketChecklists/scope": "./dist/lib/ticketChecklists/scope.js",

@@ -61,7 +61,9 @@ export async function GET(
           .first();
 
         const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
-        if (tenantLogoAssoc && !commentAttachment) {
+        const assetAssociation = await tenantScopedAdminDb.table('document_associations')
+          .where({ document_id: documentRecord.document_id, entity_type: 'asset' }).first();
+        if (tenantLogoAssoc && !commentAttachment && !assetAssociation) {
           isTenantLogo = true;
           // Public access granted for tenant logo
         }

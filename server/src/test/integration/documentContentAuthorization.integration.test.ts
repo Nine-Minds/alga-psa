@@ -20,6 +20,9 @@ import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-uti
 
 const SECRET = 'SECRET-CONTENT';
 
+// RBAC is supplied by the route fixture; this suite exercises document record and field rules.
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: async () => true }));
+
 const refs = vi.hoisted(() => ({ db: null as any, tenantId: '', user: null as any }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({

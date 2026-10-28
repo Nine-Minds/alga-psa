@@ -54,9 +54,12 @@ vi.mock('../../actions/optimizedTicketActions', () => ({
 import TicketNavigation from './TicketNavigation';
 import { parseReturnFilters } from '../../lib/ticketFilterUtils';
 
-// Exactly what getCurrentFiltersQuery() emits for "status filter + sort by
-// Last Activity", i.e. more than one pair.
-const LIST_STATE = 'statusId=status-open&sortBy=latest_activity_at&sortDirection=asc';
+const CONTACT_A = '44444444-5555-4666-8777-888888888888';
+
+// Exactly what getCurrentFiltersQuery() emits for "status filter + contact
+// filter + sort by Last Activity", i.e. more than one pair.
+const LIST_STATE =
+  `statusId=status-open&contactId=${CONTACT_A}&sortBy=latest_activity_at&sortDirection=asc`;
 
 describe('TicketNavigation returnFilters round-trip', () => {
   const originalLocation = window.location;
@@ -99,6 +102,9 @@ describe('TicketNavigation returnFilters round-trip', () => {
     expect(restored.sortBy).toBe('latest_activity_at');
     expect(restored.sortDirection).toBe('asc');
     expect(restored.statusId).toBe('status-open');
+    // The contact filter is list state like any other: it has to survive the
+    // hop so Back to Tickets returns to the same narrowed list.
+    expect(restored.contactId).toBe(CONTACT_A);
   });
 
   it('uses the same list state for the pager it hands to the next URL', async () => {
@@ -109,6 +115,7 @@ describe('TicketNavigation returnFilters round-trip', () => {
     expect(filters.sortBy).toBe('latest_activity_at');
     expect(filters.sortDirection).toBe('asc');
     expect(filters.statusId).toBe('status-open');
+    expect(filters.contactId).toBe(CONTACT_A);
   });
 
   it('omits returnFilters entirely when the URL carries none', async () => {

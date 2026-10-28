@@ -255,6 +255,18 @@ const CustomSelect = ({
           if (newValue === PLACEHOLDER_VALUE) {
             return;
           }
+          // Radix mirrors the value into a hidden <select> so the select can take
+          // part in form submission, and echoes that element's change event back
+          // through here. While its option list is still registering, assigning
+          // the value to an option-less <select> yields '', so the echo arrives as
+          // an empty value and used to wipe a selection that was set
+          // programmatically — an edit dialog filling its fields from a record
+          // came up blank. No option here ever carries '' (an empty choice travels
+          // as EMPTY_SELECTION_VALUE, clearing as __CLEAR__), so a bare '' is
+          // always that echo and never a user's pick.
+          if (newValue === '') {
+            return;
+          }
           const externalValue = newValue === EMPTY_SELECTION_VALUE ? '' : newValue;
           onValueChange(externalValue);
         }}

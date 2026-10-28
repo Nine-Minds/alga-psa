@@ -190,6 +190,7 @@ class Compiler {
         alias,
         conditions: [
           ...this.correlation(alias, parentAlias, relation.foreign, relation.local),
+          ...(relation.correlate ?? []).map(({ local, foreign }) => ({ sql: '?? = ??', bindings: [`${alias}.${foreign}`, `${parentAlias}.${local}`] })),
           ...this.constantFilters(alias, relation.where),
         ],
       });

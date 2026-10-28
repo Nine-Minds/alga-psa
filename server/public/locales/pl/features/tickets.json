@@ -519,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
+      "allContacts": "Wszystkie kontakty",
       "selectStatus": "Wybierz status",
       "responseState": "Stan odpowiedzi",
       "allResponseStates": "Wszystkie stany odpowiedzi",
@@ -1719,7 +1720,9 @@
       "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
       "templateClientInvalid": "Nie znaleziono wybranego klienta.",
       "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
-      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta."
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
+      "predicateClientOutsideScope": "Klient {{client}} jest poza zakresem tego szablonu.",
+      "predicateInvalid": "Nieprawidłowa reguła listy kontrolnej: {{detail}}"
     }
   },
   "ticketSection": {

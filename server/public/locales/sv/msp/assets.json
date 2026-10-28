@@ -1291,7 +1291,10 @@
       "frequency": "Frekvens *",
       "interval": "Intervall *",
       "nextMaintenanceDate": "Nästa underhållsdatum *",
-      "active": "Aktivt"
+      "active": "Aktivt",
+      "recurrenceUnit": "Enhet *",
+      "onWeekdays": "På veckodagar (valfritt)",
+      "onDayOfMonth": "På dag i månaden (valfritt)"
     },
     "placeholders": {
       "scheduleName": "t.ex. Månatligt serverunderhåll",
@@ -1306,7 +1309,8 @@
       "weekly": "Veckovis",
       "monthly": "Månadsvis",
       "quarterly": "Kvartalsvis",
-      "yearly": "Årligen"
+      "yearly": "Årligen",
+      "custom": "Anpassad"
     },
     "errors": {
       "scheduleNameRequired": "Schemanamn krävs",
@@ -1315,6 +1319,18 @@
       "nextMaintenanceRequired": "Nästa underhållsdatum krävs",
       "frequencyIntervalMin": "Upprepningsintervallet måste vara minst 1",
       "saveFailed": "Det gick inte att skapa underhållsschemat"
+    },
+    "recurrenceUnits": {
+      "days": "Dagar",
+      "weeks": "Veckor",
+      "months": "Månader",
+      "years": "År"
+    },
+    "dayOfMonthOptions": {
+      "any": "Valfri dag"
+    },
+    "hints": {
+      "selectors": "Utan val upprepas från slutförandedatumet."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1366,7 +1382,37 @@
         "yearly_many": "år"
       },
       "every_few": "Intervall: {{count}} {{frequency}}",
-      "every_many": "Intervall: {{count}} {{frequency}}"
+      "every_many": "Intervall: {{count}} {{frequency}}",
+      "customUnconfigured": "Anpassad (inte konfigurerad)",
+      "onWeekdays": "{{cadence}} på {{days}}",
+      "onDaysOfMonth": "{{cadence}} på dag {{days}}",
+      "weekdays": {
+        "sun": "sön",
+        "mon": "mån",
+        "tue": "tis",
+        "wed": "ons",
+        "thu": "tors",
+        "fri": "fre",
+        "sat": "lör"
+      },
+      "customUnits": {
+        "days_one": "dag",
+        "days_other": "dagar",
+        "days_few": "dagar",
+        "days_many": "dagar",
+        "weeks_one": "vecka",
+        "weeks_other": "veckor",
+        "weeks_few": "veckor",
+        "weeks_many": "veckor",
+        "months_one": "månad",
+        "months_other": "månader",
+        "months_few": "månader",
+        "months_many": "månader",
+        "years_one": "år",
+        "years_other": "år",
+        "years_few": "år",
+        "years_many": "år"
+      }
     },
     "status": {
       "active": "Aktivt",
@@ -2074,6 +2120,10 @@
       "openAsset": "Öppna tillgång",
       "close": "Stäng",
       "inCustodyOption": "{{asset}} — I förvar: {{location}}"
+    },
+    "photos": {
+      "limit": "Upp till 20 foton, totalt 10 MB. Foton är dolda för kunder.",
+      "tooLarge": "Välj högst 20 foton på sammanlagt högst 10 MB."
     }
   }
 }

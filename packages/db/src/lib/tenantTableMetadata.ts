@@ -248,6 +248,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ext_storage_schemas: { scope: 'tenant' },
   ext_storage_usage: { scope: 'tenant' },
   external_files: { scope: 'tenant' },
+  file_upload_sessions: { scope: 'tenant' },
+  file_upload_session_files: { scope: 'tenant' },
   provider_events: { scope: 'tenant' },
   provider_disconnect_records: { scope: 'tenant' },
   storage_configurations: { scope: 'tenant' },
