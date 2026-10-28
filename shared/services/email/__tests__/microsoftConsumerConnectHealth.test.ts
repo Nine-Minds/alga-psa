@@ -81,6 +81,18 @@ function segmentNotFoundError() {
   });
 }
 
+/**
+ * The error `connect()` raises for a bare top-level filter such as
+ * `AlgaInbox`: Graph parses the name as a folder id and rejects it with 400
+ * ErrorInvalidIdMalformed before resolution can run.
+ */
+function malformedIdError() {
+  return Object.assign(new Error('Error in connect: Id is malformed.'), {
+    status: 400,
+    code: 'ErrorInvalidIdMalformed',
+  });
+}
+
 describe('consumer connect failures surface on the provider card', () => {
   beforeEach(() => {
     tables.email_providers = [{
@@ -108,6 +120,27 @@ describe('consumer connect failures surface on the provider card', () => {
       subscription_status: 'error',
       last_renewal_result: 'consumer_connect_failed',
     });
+  });
+
+  it('marks and then clears the card for a 400 malformed-id folder probe', async () => {
+    const { connectMicrosoftAdapterForFetch } = await import('../unifiedInboundEmailQueueJobProcessor');
+
+    await expect(connectMicrosoftAdapterForFetch(failingAdapter(malformedIdError()) as any, PROVIDER))
+      .rejects.toThrow(/Id is malformed/);
+
+    expect(providerRow().status).toBe('error');
+    expect(String(providerRow().error_message)).toContain('Inbound message fetch failed:');
+    expect(String(providerRow().error_message)).toContain('Id is malformed.');
+    expect(healthRow()).toMatchObject({ is_healthy: false, last_renewal_result: 'consumer_connect_failed' });
+
+    // The job that follows the deploy reads the red card and clears it.
+    await connectMicrosoftAdapterForFetch(
+      { connect: async () => undefined } as any,
+      { ...PROVIDER, connection_status: 'error' },
+    );
+
+    expect(providerRow().status).toBe('connected');
+    expect(providerRow().error_message).toBeNull();
   });
 
   it('clears the consumer-written error on the next successful connect', async () => {

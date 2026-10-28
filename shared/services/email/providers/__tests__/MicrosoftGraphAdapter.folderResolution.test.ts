@@ -222,6 +222,57 @@ describe('MicrosoftGraphAdapter folder path resolution', () => {
     expect(fake.requested).toEqual([`${MAILBOX}/mailFolders/inbox/childFolders`]);
   });
 
+  /**
+   * Graph reads the segment after `/mailFolders/` as an id, so a bare custom
+   * name answers 400 ErrorInvalidIdMalformed rather than 404. Resolution has to
+   * treat that as "not an id" and enumerate display names.
+   */
+  function malformedIdClient(requested: string[], topLevel: Array<{ id: string; displayName: string }>, status = 400) {
+    return { get: async (path: string) => {
+      requested.push(path);
+      if (/\/mailFolders$/.test(path)) return { status: 200, data: { value: topLevel }, headers: {} };
+      const match = path.match(/^\/users\/[^/]+\/mailFolders\/(.+)$/);
+      const hit = match && topLevel.find((folder) => folder.id === decodeURIComponent(match[1]));
+      if (hit) return { status: 200, data: { id: hit.id, displayName: hit.displayName }, headers: {} };
+      throw { config: { url: path }, response: { status, data: { error: { code: 'ErrorInvalidIdMalformed', message: 'Id is malformed.' } } } };
+    } };
+  }
+
+  it('resolves a bare custom folder whose direct probe answers 400 Id is malformed', async () => {
+    const instance = adapter('AlgaInbox');
+    const requested: string[] = [];
+    (instance as any).httpClient = malformedIdClient(requested, [{ id: 'alga-top-id', displayName: 'AlgaInbox' }]);
+
+    await expect((instance as any).resolveFolderPath('AlgaInbox')).resolves.toEqual({
+      id: 'alga-top-id',
+      resolvedFolder: 'AlgaInbox',
+    });
+    expect(requested).toEqual([`${MAILBOX}/mailFolders/AlgaInbox`, `${MAILBOX}/mailFolders`]);
+  });
+
+  it('resolveFolderIds enumerates past a 400 malformed-id direct probe', async () => {
+    const instance = adapter('AlgaInbox');
+    const requested: string[] = [];
+    (instance as any).httpClient = malformedIdClient(requested, [{ id: 'alga-top-id', displayName: 'AlgaInbox' }]);
+
+    const resolved = await instance.resolveFolderIds(['AlgaInbox']);
+
+    expect([...resolved]).toEqual(['alga-top-id']);
+    expect(requested).toEqual([`${MAILBOX}/mailFolders/AlgaInbox`, `${MAILBOX}/mailFolders`]);
+  });
+
+  it('surfaces an auth failure on the direct probe instead of masking it as a miss', async () => {
+    const instance = adapter('AlgaInbox');
+    const requested: string[] = [];
+    (instance as any).httpClient = malformedIdClient(requested, [], 401);
+
+    await expect(instance.resolveFolderIds(['AlgaInbox'])).rejects.toMatchObject({
+      response: { status: 401 },
+    });
+    // Enumeration is never attempted: it cannot fix a rejected token.
+    expect(requested).toEqual([`${MAILBOX}/mailFolders/AlgaInbox`]);
+  });
+
   it('resolveFolderIds keeps plain single-folder behaviour', async () => {
     const instance = adapter('Inbox');
     const fake = graphFake({}, { directHits: { inbox: { id: 'inbox-guid', displayName: 'Inbox' } } });

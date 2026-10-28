@@ -336,7 +336,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       if (direct.data?.id) {
         return { id: String(direct.data.id), displayName: direct.data.displayName || requested };
       }
-    } catch { /* Fall through to root enumeration for display names. */ }
+    } catch (error: any) {
+      // Fall through to root enumeration for display names.
+      if (!this.isFolderIdProbeMiss(error)) throw error;
+    }
 
     let list;
     try {
@@ -353,6 +356,22 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         String(f.id) === requested || String(f.displayName || '').toLowerCase() === requested.toLowerCase(),
     );
     return match?.id ? { id: String(match.id), displayName: match.displayName || requested } : null;
+  }
+
+  /**
+   * Decide whether a failed direct `/mailFolders/{name}` GET was just a missed
+   * id probe. Graph parses that segment as an id, so every user-typed display
+   * name fails: 400 `ErrorInvalidIdMalformed` for a bare name like
+   * `AlgaInbox`, 400 "Resource not found for the segment" when a separator
+   * survives encoding, 404 for an id-shaped miss. Those are misses to resolve
+   * past. 401/429/5xx are real failures resolution cannot fix, so they surface;
+   * 403 still falls through so root enumeration can raise the curated
+   * MicrosoftFolderRootAccessError.
+   */
+  private isFolderIdProbeMiss(error: any): boolean {
+    const status = this.classifyGraphFailure(error).status;
+    if (typeof status !== 'number') return true;
+    return status !== 401 && status !== 429 && status < 500;
   }
 
   /** Find a child folder of `parentId` by display name (or id), paging Graph. */
@@ -1099,7 +1118,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       try {
         const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(filter)}`, { params: { $select: 'id' } });
         if (direct.data?.id) { resolved.add(String(direct.data.id)); continue; }
-      } catch { /* Display names require root enumeration as a last resort. */ }
+      } catch (error: any) {
+        // Display names require root enumeration as a last resort.
+        if (!this.isFolderIdProbeMiss(error)) throw error;
+      }
       let folders;
       try {
         folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
@@ -1138,7 +1160,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           // configured folder was rejected downstream.
           return {
             success: false,
-            error: `Folder '${configuredFolder}' was not found in this mailbox. Write nested folders as Inbox/Subfolder.`,
+            error: `Folder '${configuredFolder}' was not found in this mailbox. Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.`,
           };
         }
         await this.httpClient.get(resolved.resource.replace(/\/messages$/, ''), { params: { $top: 1, $select: 'id' } });
@@ -1160,9 +1182,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       } catch (error: any) {
         if (MICROSOFT_WELL_KNOWN_FOLDERS[key]) throw error;
         const directFailure = this.classifyGraphFailure(error);
-        const segmentMiss = directFailure.status === 400
-          && /Resource not found for the segment/i.test(directFailure.message || '');
-        if (directFailure.status !== 404 && !segmentMiss) throw error;
+        // Graph reads the segment after /mailFolders/ as an id, so any
+        // user-typed name can only fail: 400 ErrorInvalidIdMalformed for a bare
+        // name like `AlgaInbox`, 400 "Resource not found for the segment" when
+        // a separator survives encoding, 404 for an id-shaped miss. All three
+        // mean "not an id" — resolve by display name instead. Auth, throttle
+        // and server failures (401/403/429/5xx) still surface as before.
+        if (directFailure.status !== 404 && directFailure.status !== 400) throw error;
         return await resolveAndProbe();
       }
       return { success: true };
