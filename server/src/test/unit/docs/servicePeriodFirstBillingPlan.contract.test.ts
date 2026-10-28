@@ -164,6 +164,8 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
+  // alga-2026-0002684: cadence Prepaid Block reads the client-cadence billed recurring periods.
+  'shared/billingClients/billedClientCadenceRecurringPeriods.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
   // alga-2026-0002499: contract-scoped client-cadence billed-boundary regression test.
   'server/src/test/unit/billing/clientCadenceContractBoundary.regeneration.test.ts',
