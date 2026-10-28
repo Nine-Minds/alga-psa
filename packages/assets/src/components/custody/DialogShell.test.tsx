@@ -42,7 +42,7 @@ describe('DialogShell error contract', () => {
     expect(alert.textContent).toBe('Server said no');
     expect(alert.className).toContain('sticky');
     expect(alert.className).toContain('top-0');
-    expect(document.activeElement).toBe(alert);
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(alert.compareDocumentPosition(screen.getByText('body')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -82,7 +82,7 @@ describe('DialogShell error contract', () => {
     renderShell(onSubmit);
     fireEvent.click(document.getElementById('shell-submit')!);
     const alert = await screen.findByRole('alert');
-    expect(document.activeElement).toBe(alert);
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     fireEvent.click(document.getElementById('shell-submit')!);
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
@@ -90,6 +90,29 @@ describe('DialogShell error contract', () => {
   it('turns a thrown error into the alert', async () => {
     renderShell(async () => { throw new Error('boom'); });
     fireEvent.click(document.getElementById('shell-submit')!);
-    expect((await screen.findByRole('alert')).textContent).toBe('boom');
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('boom');
+    await waitFor(() => expect(document.activeElement).toBe(alert));
+  });
+
+  it('keeps a pending submission busy, then focuses the alert when the response arrives', async () => {
+    let resolveFailure!: (message: string) => void;
+    const response = new Promise<string>((resolve) => { resolveFailure = resolve; });
+    renderShell(() => response);
+    const submit = document.getElementById('shell-submit') as HTMLButtonElement;
+    const cancel = document.getElementById('shell-cancel') as HTMLButtonElement;
+
+    fireEvent.click(submit);
+    expect(submit.disabled).toBe(true);
+    expect(cancel.disabled).toBe(true);
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    resolveFailure('Server said no');
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Server said no');
+    // Rendering the alert and focusing it happen in separate React phases.
+    await waitFor(() => expect(document.activeElement).toBe(alert));
+    expect(submit.disabled).toBe(false);
+    expect(cancel.disabled).toBe(false);
   });
 });
