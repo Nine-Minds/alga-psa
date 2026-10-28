@@ -87,6 +87,7 @@ async function resolveOnlineMeetingIdFromJoinUrl(params: {
     `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(params.organizerUpn)}/onlineMeetings?$filter=${filter}`,
     {
       method: 'GET',
+      signal: AbortSignal.timeout(30_000),
       headers: {
         Authorization: `Bearer ${params.accessToken}`,
       },

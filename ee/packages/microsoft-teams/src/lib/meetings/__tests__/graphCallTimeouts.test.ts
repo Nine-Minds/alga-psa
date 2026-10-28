@@ -91,3 +91,45 @@ describe.each(['create', 'update', 'delete'] as const)('Teams Graph %s call', (o
     expect(outcome.errorMessage).toContain('denied-by-graph');
   });
 });
+
+describe('Teams Graph create flow: every fetch is bounded', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('passes an AbortSignal on both the event POST and the onlineMeeting id lookup GET', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'event-1', onlineMeeting: { joinUrl: 'https://teams.example/join' } }), {
+          status: 201,
+        })
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ value: [{ id: 'meeting-1' }] }), { status: 200 }));
+
+    const outcome = (await calls.create()) as any;
+
+    expect(outcome.status).toBe('created');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map((c) => c[1].method)).toEqual(['POST', 'GET']);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+    }
+  });
+
+  it('a timeout on the onlineMeeting id lookup surfaces as a failed outcome', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'event-1', onlineMeeting: { joinUrl: 'https://teams.example/join' } }), {
+          status: 201,
+        })
+      )
+      .mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+
+    const outcome = (await calls.create()) as any;
+
+    expect(outcome.status).toBe('failed');
+    expect(outcome.errorCode).toBe('exception');
+  });
+});
