@@ -116,6 +116,7 @@ describe('ticket fixed-fee service card', () => {
     fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
     const filter = await screen.findByLabelText('catalogFilter.category');
     await waitFor(() => expect(filter).not.toBeDisabled());
+    expect(state.materials.getTicketCatalogCategories).toHaveBeenCalledWith({ item_kinds: ['service'], billing_methods: ['fixed'] });
     fireEvent.change(filter, { target: { value: 'category-1' } });
     fireEvent.change(screen.getByPlaceholderText('form.searchPlaceholder'), { target: { value: 'license' } });
     await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
@@ -249,6 +250,7 @@ describe('ticket material editing controls', () => {
     fireEvent.click(screen.getByRole('combobox'));
     const filter = await screen.findByLabelText('catalogFilter.category');
     await waitFor(() => expect(filter).not.toBeDisabled());
+    expect(state.materials.getTicketCatalogCategories).toHaveBeenCalledWith({ item_kinds: ['product'] });
     fireEvent.change(filter, { target: { value: 'category-2' } });
     await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
       search: '', page: 1, limit: 10, item_kinds: ['product'], is_active: true, category_id: 'category-2',

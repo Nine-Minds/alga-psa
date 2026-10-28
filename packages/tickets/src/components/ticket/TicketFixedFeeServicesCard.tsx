@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus, Receipt, Trash2, Pencil } from 'lucide-react';
 import type { IServicePrice, ITicketFixedFeeService } from '@alga-psa/types';
 import { ContentCard } from '@alga-psa/ui/components';
@@ -94,6 +94,11 @@ export default function TicketFixedFeeServicesCard({
     };
   }, [materials, categoryId]);
 
+  const getTicketCatalogCategories = materials.getTicketCatalogCategories;
+  const loadCategories = useMemo(() => getTicketCatalogCategories
+    && (() => getTicketCatalogCategories({ item_kinds: ['service'], billing_methods: ['fixed'] })),
+  [getTicketCatalogCategories]);
+
   const selectService = async (value: string, label?: string) => {
     const request = ++priceRequest.current;
     setServiceId(value);
@@ -182,9 +187,9 @@ export default function TicketFixedFeeServicesCard({
               triggerId={`${id}-service-select-trigger`}
               onChange={(value, option) => void selectService(value, option?.label)}
               loadOptions={loadOptions} placeholder={t('fixedFeeServices.selectService')} dropdownMode="overlay" disabled={saving}
-              headerContent={materials.getTicketCatalogCategories && <TicketCatalogCategoryFilter
+              headerContent={loadCategories && <TicketCatalogCategoryFilter
                 id={`${id}-category-filter`} value={categoryId} onChange={setCategoryId}
-                loadCategories={materials.getTicketCatalogCategories} />} />
+                loadCategories={loadCategories} />} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${id}-currency-select`}>{t('fixedFeeServices.currency')}</Label>

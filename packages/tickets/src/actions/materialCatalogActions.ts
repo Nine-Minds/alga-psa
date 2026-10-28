@@ -106,15 +106,35 @@ export const searchServiceCatalogForPicker = withAuth(async (
   });
 });
 
-export const getTicketCatalogCategories = withAuth(async (user, { tenant }): Promise<Array<{ category_id: string; category_name: string }>> => {
+const ticketCatalogCategoryScopeSchema = z.object({
+  item_kinds: z.array(z.enum(['service', 'product'])).min(1).optional(),
+  billing_methods: z.array(z.enum(['fixed', 'hourly', 'usage', 'per_unit'])).min(1).optional(),
+}).strict();
+
+/** Same item filters the picker searches with, so only categories holding matching items are offered. */
+export type TicketCatalogCategoryScope = z.infer<typeof ticketCatalogCategoryScopeSchema>;
+
+export const getTicketCatalogCategories = withAuth(async (
+  user,
+  { tenant },
+  scope: TicketCatalogCategoryScope = {},
+): Promise<Array<{ category_id: string; category_name: string }>> => {
   if (!await hasPermission(user, 'ticket', 'read')) {
     throw new Error('Permission denied: ticket read required to load catalog categories');
   }
+  const { item_kinds: itemKinds, billing_methods: billingMethods } = ticketCatalogCategoryScopeSchema.parse(scope);
   const { knex } = await createTenantKnex();
-  return tenantDb(knex, tenant).table('service_categories')
-    .select('category_id', 'category_name')
-    .orderBy('display_order', 'asc')
-    .orderBy('category_name', 'asc');
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_categories as c')
+    .distinct('c.category_id', 'c.category_name', 'c.display_order');
+  db.tenantJoin(query, 'service_catalog as sc', 'sc.category_id', 'c.category_id');
+  query.where('sc.is_active', true);
+  if (itemKinds) query.whereIn('sc.item_kind', itemKinds);
+  if (billingMethods) query.whereIn('sc.billing_method', billingMethods);
+  const rows: Array<{ category_id: string; category_name: string }> = await query
+    .orderBy('c.display_order', 'asc')
+    .orderBy('c.category_name', 'asc');
+  return rows.map(({ category_id, category_name }) => ({ category_id, category_name }));
 });
 
 export const getServicePrices = withAuth(async (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -186,6 +186,10 @@ export default function TicketMaterialsCard({
     },
     [t, categoryId, searchServiceCatalogForPicker]
   );
+
+  const loadProductCategories = useMemo(() => getTicketCatalogCategories
+    && (() => getTicketCatalogCategories({ item_kinds: ['product'] })),
+  [getTicketCatalogCategories]);
 
   // Load product prices when product is selected
   useEffect(() => {
@@ -394,9 +398,9 @@ export default function TicketMaterialsCard({
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
               <AsyncSearchableSelect
                 id={`${id}-product-select`}
-                headerContent={getTicketCatalogCategories && <TicketCatalogCategoryFilter
+                headerContent={loadProductCategories && <TicketCatalogCategoryFilter
                   id={`${id}-category-filter`} value={categoryId} onChange={setCategoryId}
-                  loadCategories={getTicketCatalogCategories} />}
+                  loadCategories={loadProductCategories} />}
                 value={selectedProductId}
                 selectedLabel={selectedProductLabel}
                 onChange={(value, option) => {

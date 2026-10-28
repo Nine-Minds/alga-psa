@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   movement: vi.fn(),
   signal: vi.fn(),
   publish: vi.fn(),
+  tenantJoin: vi.fn(),
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: unknown[]) => unknown) =>
@@ -53,6 +54,7 @@ function query(row: Record<string, unknown> | undefined, rows: Record<string, un
   const builder = {
     where: vi.fn(() => builder),
     whereIn: vi.fn(() => builder),
+    distinct: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     forUpdate: vi.fn(() => builder),
     forShare: vi.fn(() => builder),
@@ -95,7 +97,7 @@ beforeEach(() => {
       if (!tables[name]) throw new Error(`Unexpected table: ${name}`);
       return tables[name];
     },
-    tenantJoin: vi.fn(),
+    tenantJoin: mocks.tenantJoin,
   }));
 });
 
@@ -106,13 +108,30 @@ describe('ticket fixed-fee actions', () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it('loads category options through the tenant facade', async () => {
-    const categories = query(undefined, [{ category_id: serviceId, category_name: 'Software' }]);
-    tables.service_categories = categories;
-    expect(await getTicketCatalogCategories()).toEqual([{ category_id: serviceId, category_name: 'Software' }]);
+  it('loads only categories holding active items in the picker scope through the tenant facade', async () => {
+    const categories = query(undefined, [{ category_id: serviceId, category_name: 'Software', display_order: 1 }]);
+    tables['service_categories as c'] = categories;
+    expect(await getTicketCatalogCategories({ item_kinds: ['service'], billing_methods: ['fixed'] }))
+      .toEqual([{ category_id: serviceId, category_name: 'Software' }]);
     expect(mocks.facade).toHaveBeenCalledWith({}, 'tenant-a');
-    expect(categories.select).toHaveBeenCalledWith('category_id', 'category_name');
-    expect(categories.orderBy).toHaveBeenCalledWith('display_order', 'asc');
+    expect(mocks.tenantJoin).toHaveBeenCalledWith(categories, 'service_catalog as sc', 'sc.category_id', 'c.category_id');
+    expect(categories.where).toHaveBeenCalledWith('sc.is_active', true);
+    expect(categories.whereIn).toHaveBeenCalledWith('sc.item_kind', ['service']);
+    expect(categories.whereIn).toHaveBeenCalledWith('sc.billing_method', ['fixed']);
+    expect(categories.orderBy).toHaveBeenCalledWith('c.display_order', 'asc');
+  });
+
+  it('does not restrict billing methods when the picker scope omits them', async () => {
+    const categories = query(undefined, []);
+    tables['service_categories as c'] = categories;
+    await getTicketCatalogCategories({ item_kinds: ['product'] });
+    expect(categories.whereIn).toHaveBeenCalledOnce();
+    expect(categories.whereIn).toHaveBeenCalledWith('sc.item_kind', ['product']);
+  });
+
+  it('rejects unknown category scope values before querying', async () => {
+    await expect(getTicketCatalogCategories({ item_kinds: ['bundle' as 'product'] })).rejects.toThrow();
+    expect(mocks.connect).not.toHaveBeenCalled();
   });
 
   it('rejects invalid catalog category IDs before querying', async () => {

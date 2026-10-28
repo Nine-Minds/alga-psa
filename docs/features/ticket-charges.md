@@ -14,7 +14,7 @@ The form shows the catalog unit price for the selected currency and the quantity
 
 Services and Materials use the same quantity, rate, total, status, and inline edit/remove controls, with unbilled totals grouped by currency. Narrow cards stack each item's details without a horizontal scrollbar.
 
-Both catalog dropdowns include a **Category** filter below the search field. Select a service catalog category to narrow the results, or **All categories** to clear it. Category and text search apply together before pagination; Materials still lists only products, and Services still lists only active fixed-fee services. Changing the filter does not change an already selected item. Alternate ticket data sources can supply their own category loader; they never fall through to native catalog actions.
+Both catalog dropdowns include a **Category** filter below the search field. Select a service catalog category to narrow the results, or **All categories** to clear it. The filter only lists categories that contain at least one item the dropdown can show: active products for Materials, and active fixed-fee services for Services. A category used only by hourly or usage services, for example, does not appear in either list. Category and text search apply together before pagination; Materials still lists only products, and Services still lists only active fixed-fee services. Changing the filter does not change an already selected item. Alternate ticket data sources can supply their own category loader, which receives the same item-kind and billing-method scope; they never fall through to native catalog actions.
 
 ## Edit an unbilled charge
 
