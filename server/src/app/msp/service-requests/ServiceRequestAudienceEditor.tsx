@@ -106,10 +106,12 @@ export function ServiceRequestAudienceEditor({ definitionId, initialAudience, re
           const group = base.path === 'contact.group.id' ? options?.groups.find((g) => ids.includes(g.group_id)) : undefined;
           const clientId = base.path === 'client.id' ? ids[0] : group?.client_id;
           const client = clients.find((item) => item.client_id === clientId);
-          const contact = contacts.find((item) => item.contact_name_id === ids[0]);
           return <div key={`${base.path}-${index}`} className="space-y-2 rounded border p-3">
             {clientId && <EntityChip kind="client" id={clientId} name={client?.client_name ?? tx('missingClient', 'Unavailable client')} tags={client?.displayTags} imageUrl={client?.logoUrl} />}
-            {base.path === 'contact.id' && <EntityChip kind="contact" id={ids[0]} name={contact?.full_name ?? tx('missingContact', 'Unavailable contact')} tags={contact?.displayTags} imageUrl={contact?.avatarUrl} />}
+            {base.path === 'contact.id' && ids.map((id, contactIndex) => {
+              const contact = contacts.find((item) => item.contact_name_id === id);
+              return <EntityChip key={`${id}-${contactIndex}`} kind="contact" id={id} name={contact?.full_name ?? tx('missingContact', 'Unavailable contact')} tags={contact?.displayTags} imageUrl={contact?.avatarUrl} />;
+            })}
             {(base.path === 'client.tags' || base.path === 'contact.tags') && tagPicker(base.path === 'client.tags' ? 'client' : 'contact', ids, (next) => replaceEntry(index, next.length ? withTags(clause(base.path, next), narrowing) : null), `audience-tags-${index}`)}
             {clientId && <><p>{base.path === 'client.id' ? tx('allUsers', 'All users of this client') : tx('onlyGroups', 'Only members of selected groups')}</p>{base.path === 'contact.group.id' && <Button id={`audience-all-${index}`} variant="ghost" onClick={() => replaceEntry(index, withTags(clause('client.id', [clientId]), narrowing))}>{tx('allUsers', 'All users of this client')}</Button>}
               {clientGroups.filter((item) => item.client_id === clientId).map((item) => <Checkbox key={item.group_id} id={`audience-group-${index}-${item.group_id}`} label={`${item.name} (${client?.client_name ?? tx('missingClient', 'Unavailable client')})`} checked={base.path === 'contact.group.id' && ids.includes(item.group_id)} onChange={(event) => { const next = event.target.checked ? [...(base.path === 'contact.group.id' ? ids : []), item.group_id] : ids.filter((id) => id !== item.group_id); replaceEntry(index, next.length ? withTags(clause('contact.group.id', next), narrowing) : null); }} />)}</>}

@@ -7,6 +7,7 @@ const client = '11111111-1111-4111-8111-111111111111';
 const group = '22222222-2222-4222-8222-222222222222';
 const tag = '33333333-3333-4333-8333-333333333333';
 const contact = '44444444-4444-4444-8444-444444444444';
+const secondContact = '55555555-5555-4555-8555-555555555555';
 const save = vi.fn();
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }) }));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -17,7 +18,7 @@ vi.mock('../../../../../app/msp/service-requests/actions', () => ({
 }));
 vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: async () => ({ clients: [{ client_id: client, client_name: 'Acme', displayTags: [] }] }) }));
 vi.mock('@alga-psa/client-portal/actions/client-portal-actions/visibilityGroupActions', () => ({ getClientPortalVisibilityGroups: async () => [{ group_id: group, name: 'Finance' }] }));
-vi.mock('@alga-psa/clients/actions', () => ({ getAllContacts: async () => [{ contact_name_id: contact, full_name: 'Jules' }] }));
+vi.mock('@alga-psa/clients/actions', () => ({ getAllContacts: async () => [{ contact_name_id: contact, full_name: 'Jules' }, { contact_name_id: secondContact, full_name: 'Morgan' }] }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: ({ onSelect }: { onSelect: (id: string) => void }) => <button onClick={() => onSelect(client)}>Pick Acme</button> }));
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: ({ onValueChange }: { onValueChange: (id: string) => void }) => <button onClick={() => onValueChange(contact)}>Pick Jules</button> }));
 vi.mock('@alga-psa/ui/components/tags/TagFilter', () => ({ TagFilter: ({ id, onToggleTag }: { id: string; onToggleTag: (name: string) => void }) => <button onClick={() => onToggleTag('VIP')}>{id}</button> }));
@@ -56,6 +57,16 @@ describe('audience editor', () => {
     render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={{ join: 'or', clauses: [] }} />);
     fireEvent.click(screen.getByText('Save audience'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Selected group no longer exists');
+  });
+  it.each([false, true])('renders and saves every contact in a multi-contact entry (narrowed: %s)', async (narrowed) => {
+    const base = { path: 'contact.id', operator: 'in' as const, value: [contact, secondContact] };
+    const entry = narrowed ? { join: 'and' as const, clauses: [base, { path: 'contact.tags', operator: 'in' as const, value: [tag] }] } : base;
+    const audience = { join: 'or' as const, clauses: [entry] };
+    render(<ServiceRequestAudienceEditor definitionId="definition" initialAudience={audience} />);
+    expect(await screen.findByText('Jules')).toBeInTheDocument();
+    expect(screen.getByText('Morgan')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save audience'));
+    await waitFor(() => expect(save).toHaveBeenCalledWith('definition', audience));
   });
 
 });
