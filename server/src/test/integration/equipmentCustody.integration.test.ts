@@ -83,6 +83,10 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
         action({ user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId, roles: [] }, { tenant: actionAuth.tenant }, ...args)),
   };
 });
+// This suite isolates custody flows from RBAC; dedicated document authorization tests use real grants.
+vi.mock('@alga-psa/authorization/rbac', () => ({
+  hasPermission: (...args: any[]) => import('@alga-psa/auth').then(auth => (auth.hasPermission as any)(...args)),
+}));
 vi.mock('@alga-psa/auth/rbac', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth/rbac')>();
   return { ...actual, hasPermission: vi.fn().mockResolvedValue(true) };

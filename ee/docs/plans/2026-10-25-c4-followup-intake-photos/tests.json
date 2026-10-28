@@ -28,5 +28,10 @@
     "id": "T006",
     "description": "Picker and server enforce 20 photos and a 10 MiB aggregate limit, leaving multipart headroom under the default 20 MB request limit",
     "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Deploy mitigation: exercise authenticated thumbnail and preview handlers, original view identifiers, real document and asset RBAC, asset bundle narrowing, public logos, metadata and binary refusal",
+    "implemented": true
   }
 ]

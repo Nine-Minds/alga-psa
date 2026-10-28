@@ -1434,7 +1434,7 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 
     // Check if thumbnail exists
     if (document.thumbnail_file_id) {
-      return `/api/documents/thumbnail/${documentId}`;
+      return `/api/documents/${documentId}/thumbnail`;
     }
 
     // Fallback: For images without thumbnails, return original file
@@ -1477,7 +1477,7 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 
     // Check if preview exists
     if (document.preview_file_id) {
-      return `/api/documents/preview/${documentId}`;
+      return `/api/documents/${documentId}/preview`;
     }
 
     // Fallback: Return original file if available

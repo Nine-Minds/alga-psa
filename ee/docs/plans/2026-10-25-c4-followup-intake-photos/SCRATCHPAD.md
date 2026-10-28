@@ -23,3 +23,26 @@
 - Assets, documents and storage builds and their package typechecks pass.
 - Plan validation, translation validation and migration lint pass.
 - Review the storage claim/recovery transaction first, then the two-photo receive and later-step paths. Live smoke testing must apply the new migrations before starting the app. No live browser claim is made.
+
+## Deploy mitigation verification (2026-10-28)
+
+The smoke at `46b49a5003` found reversed thumbnail and preview URLs, an original-view document
+permission bypass, and an asset-read bypass. The shared document boundary now checks document
+RBAC and each associated asset's RBAC and record decision. The asset decision helper moved to
+the authorization package and remains re-exported by assets. Public tenant logos remain public
+unless associated with an asset or comment attachment.
+
+- Isolated database and handler test: 7 passed. It uses real roles and a published asset-narrowing
+  bundle, injected sessions, local storage and actual handlers. It checks helper URLs, original
+  file and document IDs, public logo access, private metadata, and thumbnail, preview, original
+  and download refusals. API-key authentication and browser rendering were not exercised.
+- Custody integration and history: 32 passed, including failed receive cleanup, associations,
+  client hiding and later custody steps. These existing fixtures mock permission checks.
+- Document content and permission integration: 16 passed. Content tests mock permission grants
+  to focus on document record and redaction rules.
+- Dialog, preview and existing viewer authorization tests: 16 passed.
+- Authorization, shared, documents, assets and storage package builds passed. The full server
+  TypeScript check passed with a 16 GiB Node heap.
+- No application server was started. Live review remains outstanding: receive two PNGs, inspect
+  asset Documents and the matching received and moved history entries, then repeat direct photo
+  requests under roles missing document or asset read.

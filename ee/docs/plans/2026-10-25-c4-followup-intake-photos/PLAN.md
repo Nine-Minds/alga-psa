@@ -108,3 +108,12 @@ Receive and five custody steps share the same lifetime and rollback requirements
 single-document action remains available to its other callers. File paths are owned before external
 I/O, so the mechanism also covers a provider writing bytes and then throwing before external_files
 is inserted. Preview failures retain only the referenced artifacts and recover any unused writes.
+
+## Deploy mitigation
+
+Thumbnail and preview helpers use the document-ID routes. Protected document reads require
+`document:read` at the shared authorization boundary. A document associated with assets also
+requires `asset:read` and a successful record decision for every associated asset, even when it
+has another association. Missing assets fail closed. The original-view public tenant-logo path
+remains available, but excludes asset-associated documents. Thumbnail responses are private and
+not stored by caches.
