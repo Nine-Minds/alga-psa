@@ -349,6 +349,15 @@ describe('service request audience scoping', () => {
     const requester = await loadRequesterRecord(db, f.tenant, { requesterUserId: other.userA, clientId: f.clientA, contactId: f.contactA1 });
     expect(requester.user).toBeNull();
   });
+  it('refuses legacy link tables even if the mode column is absent', async () => {
+    const trx = await db.transaction();
+    try {
+      await trx.schema.createTable('service_request_audience_clients', (table) => table.uuid('client_id'));
+      await expect(audienceMigration.up(trx)).rejects.toThrow('Revision-1 service request audience schema exists');
+    } finally {
+      await trx.rollback();
+    }
+  });
   it('refuses to replace a revision-1 schema without explicit cleanup', async () => {
     const trx = await db.transaction();
     try {
