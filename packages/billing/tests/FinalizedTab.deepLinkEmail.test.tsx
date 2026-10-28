@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 
 const mocks = vi.hoisted(() => ({
   fetchInvoicesPaginated: vi.fn(),
+  unfinalizeInvoice: vi.fn(),
   searchParams: new URLSearchParams('invoiceId=deep-linked-invoice'),
 }));
 
@@ -19,7 +20,7 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: mocks.fetchInvoicesPaginated,
 }));
 vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({ getInvoiceTemplates: vi.fn().mockResolvedValue([]) }));
-vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ unfinalizeInvoice: vi.fn() }));
+vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ unfinalizeInvoice: mocks.unfinalizeInvoice }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ downloadInvoicePDF: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({ scheduleInvoiceZipAction: vi.fn() }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -59,10 +60,11 @@ vi.mock('lucide-react', async (importOriginal) => {
   };
 });
 vi.mock('../src/components/billing-dashboard/invoicing/InvoicePreviewPanel', () => ({
-  default: ({ invoiceId, onEmail }: { invoiceId: string | null; onEmail: () => void }) => (
+  default: ({ invoiceId, onEmail, onUnfinalize }: { invoiceId: string | null; onEmail: () => void; onUnfinalize: () => void }) => (
     <div>
       <span>Preview: {invoiceId}</span>
       <button onClick={onEmail}>Send Email</button>
+      <button onClick={onUnfinalize}>Unfinalize invoice</button>
     </div>
   ),
 }));
@@ -108,5 +110,24 @@ describe('FinalizedTab deep-linked invoice email', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send Email' }));
 
     expect(await screen.findByRole('dialog')).toHaveTextContent('Email invoices: deep-linked-invoice');
+  });
+
+  it('explains a used block refusal and does not offer the explanation for other errors', async () => {
+    mocks.fetchInvoicesPaginated.mockResolvedValue({ invoices: [{ invoice_id: 'deep-linked-invoice', invoice_number: 'INV-SELECTED' }], total: 1 });
+    mocks.unfinalizeInvoice.mockResolvedValueOnce({ actionError: 'Block already used', messageKey: 'msp/invoicing:errors.invoice.usedHourBlockUnfinalize' })
+      .mockResolvedValueOnce({ actionError: 'Invoice is exported' });
+    render(<FinalizedTab onRefreshNeeded={vi.fn()} refreshTrigger={0} />);
+    await screen.findByText('Preview: deep-linked-invoice');
+    await waitFor(() => expect(mocks.fetchInvoicesPaginated).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Unfinalize invoice' }));
+    expect(await screen.findByText('Block already used')).toBeInTheDocument();
+    const explain = screen.getByRole('button', { name: 'Explain this' });
+    expect(explain).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(explain);
+    expect(explain).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/Time has since been allocated to the block/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Unfinalize invoice' }));
+    expect(await screen.findByText('Invoice is exported')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Explain this' })).not.toBeInTheDocument();
   });
 });

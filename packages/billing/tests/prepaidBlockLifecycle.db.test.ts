@@ -358,6 +358,7 @@ describe.runIf(enabled)('Prepaid Block lifecycle: unfinalize', () => {
     expect((await allocationsFor(entry))).toHaveLength(1);
     const refused = await unfinalizeInvoice(invoiceId);
     expect(refused).toHaveProperty('actionError');
+    expect(refused).toHaveProperty('messageKey', 'msp/invoicing:errors.invoice.usedHourBlockUnfinalize');
     expect((await db('hour_blocks').where({ tenant, block_id: blockId }).first()).status).toBe('active');
   });
 });

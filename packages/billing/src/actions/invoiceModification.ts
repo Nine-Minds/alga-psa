@@ -150,7 +150,9 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
       const usedHours = (usedMinutes / 60).toFixed(1);
       const totalHours = (Number(block.total_minutes) / 60).toFixed(1);
       throw expectedInvoiceActionError(
-        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Expire or adjust the hour block instead of unfinalizing the invoice.`,
+        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Consider a separate adjustment or credit note to correct the invoice.`,
+        'msp/invoicing:errors.invoice.usedHourBlockUnfinalize',
+        { blockId: block.block_id, usedHours, totalHours },
       );
     }
 
@@ -740,13 +742,13 @@ export type FinalizeInvoiceActionResult =
   | InvoiceActionError;
 export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
-function expectedInvoiceActionError(message: string, i18nKey?: string): ExpectedInvoiceActionError {
-  return new ExpectedInvoiceActionError(message, i18nKey);
+function expectedInvoiceActionError(message: string, i18nKey?: string, messageParams?: Record<string, string | number>): ExpectedInvoiceActionError {
+  return new ExpectedInvoiceActionError(message, i18nKey, messageParams);
 }
 
 function toInvoiceActionError(error: unknown): InvoiceActionError | null {
   if (error instanceof ExpectedInvoiceActionError) {
-    return actionError(error.message, error.i18nKey);
+    return actionError(error.message, error.i18nKey, error.messageParams);
   }
 
   return null;
