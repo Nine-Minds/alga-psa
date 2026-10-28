@@ -2565,7 +2565,10 @@
       "Bcc",
       "Cc/Bcc",
       "Training",
-      "Code 128"
+      "Code 128",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "account",

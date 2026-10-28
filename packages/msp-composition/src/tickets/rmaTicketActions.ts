@@ -6,7 +6,8 @@ import { authorizeTicketRecordAccess } from "@alga-psa/tickets/lib/ticketRecordA
 import {
   addExternalLink, getTicketExternalLinks, removeExternalLink, updateExternalLink,
 } from "@alga-psa/tickets/actions/externalLinks/externalLinkActions";
-import { openWarrantyClaim, getRmaCase } from "@alga-psa/inventory/actions";
+import { openWarrantyClaim } from "@alga-psa/inventory/actions/rmaWarrantyActions";
+import { getRmaCase } from "@alga-psa/inventory/actions/rmaActions";
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from "@alga-psa/ui/lib/errorHandling";
 import {
   customExternalSystemToDefinition, isCustomExternalSystemKey, recordUrl, renderExternalLinkUrl,
