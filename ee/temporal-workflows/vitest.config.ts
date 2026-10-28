@@ -68,6 +68,11 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // Capability gate and co-managed package publish dist-only subpaths.
+      { find: /^@alga-psa\/core\/capability$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/capability.ts') },
+      { find: /^@alga-psa\/core\/capability\/server$/, replacement: path.resolve(__dirname, '../../packages/core/src/capability/server.ts') },
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../../packages/co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/co-managed/src')}/$1` },
       // Preserve the worker build's dependency-light notification implementation.
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: `${path.resolve(__dirname, './src/typings/notifications')}/$1` },
       { find: '@/lib/db', replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },

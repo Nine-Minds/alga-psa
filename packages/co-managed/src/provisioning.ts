@@ -39,7 +39,7 @@ export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
     'CLEANUP_INCOMPLETE' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
-    'ADMINISTRATOR_EMAIL_IN_USE' | 'ADMINISTRATOR_EMAIL_PENDING' | 'CLIENT_NOT_FOUND' | 'SETUP_CANCELLING') {
+    'ADMINISTRATOR_EMAIL_IN_USE' | 'ADMINISTRATOR_EMAIL_PENDING' | 'CLIENT_NOT_FOUND' | 'SETUP_CANCELLING' | 'RESEND_LIMIT_REACHED') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
       OPERATION_NOT_FOUND: 'Provisioning operation not found.', ACTOR_NOT_FOUND: 'An active internal sponsor user is required.',
@@ -52,6 +52,7 @@ export class CoManagedProvisioningError extends Error {
       ADMINISTRATOR_EMAIL_IN_USE: 'This administrator email already belongs to a user in another workspace. Use a different email address.',
       ADMINISTRATOR_EMAIL_PENDING: 'This administrator email has a pending invitation to another workspace. Use a different email address, or cancel that setup first.',
       CLIENT_NOT_FOUND: 'This client is no longer available.',
+      RESEND_LIMIT_REACHED: 'The invitation has already been resent once. Ask the administrator to check their spam folder or contact support.',
       SETUP_CANCELLING: 'The previous setup for this client is still being cancelled. Try again once cleanup finishes.',
     }[code]);
     this.name = 'CoManagedProvisioningError';

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { CoManagedProvisioningError } from './provisioning';
 import { lockCoManagedSeatScope, countCoManagedCommittedSeats, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { hasCoManagedLocalPermission } from './localPermission';
@@ -43,7 +44,14 @@ async function assertInvitationCapacity(trx: Knex.Transaction, context: NonNulla
 
 /** Explicit browser retry may replace an expired initial token only. A repeated
  * request sees the renewed token and never rotates it again or resets a login. */
-export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inputActor: CoManagedSessionActor, operationId: string): Promise<void> {
+export const CO_MANAGED_MAX_INVITATION_RESENDS = 1;
+
+/** `resend` marks a user-initiated re-send of an invitation that was already
+ * delivered. At most CO_MANAGED_MAX_INVITATION_RESENDS are allowed, counted on the
+ * customer invitation inside the same locked transaction. A retry after a failed
+ * delivery (no receipt) is recovery, not a resend, and is never counted. */
+export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inputActor: CoManagedSessionActor, operationId: string,
+  options: { resend?: boolean } = {}): Promise<void> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(operationId)) unavailable();
   await db.transaction(async trx => {
@@ -53,6 +61,13 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
     if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) unavailable();
     await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'client', 'read',
       { id: context.operation.request.clientId, clientId: context.operation.request.clientId });
+    if (options.resend && context.operation.invitation_sent_at) {
+      const resends = Number(context.invitation.metadata?.co_managed_resend_count ?? 0);
+      if (resends >= CO_MANAGED_MAX_INVITATION_RESENDS) throw new CoManagedProvisioningError('RESEND_LIMIT_REACHED');
+      await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id).update({
+        metadata: trx.raw("coalesce(metadata, '{}'::jsonb) || ?::jsonb", [JSON.stringify({ co_managed_resend_count: resends + 1 })]),
+      });
+    }
     const expired = await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id)
       .where('expires_at', '<=', trx.raw('clock_timestamp()')).first('invitation_id');
     if (expired) {
