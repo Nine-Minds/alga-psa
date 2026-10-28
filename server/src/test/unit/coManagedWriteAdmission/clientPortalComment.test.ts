@@ -9,6 +9,7 @@ import {
 const VALID_ID = '00000000-0000-4000-8000-000000000001';
 
 vi.mock('@alga-psa/client-portal/lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
+vi.mock('@alga-psa/db/commentEventRegistry', () => ({ publishCommentEvent: vi.fn(async () => undefined) }));
 
 let currentUser: any;
 
@@ -84,4 +85,28 @@ it('addClientTicketComment returns the mapped refusal payload from the REAL Comm
   });
   expect(fake.writes()).toEqual([]);
   await fake.destroy();
+});
+
+it('the client portal comment action succeeds with the kill switch off', async () => {
+  clearWriteAdmissionCacheForTests();
+  vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
+  const fake = createFakeKnex((sql) => {
+    if (/from "users"/.test(sql)) return [{ user_id: 'client-user-1', contact_id: 'contact-1', first_name: 'C', last_name: 'U', user_type: 'client' }];
+    if (/from "tickets"/.test(sql)) return [{ ticket_id: VALID_ID, client_id: 'client-1', tenant: CO_MANAGED_TENANT }];
+    if (/gen_random_uuid\(\)/i.test(sql)) return [{ comment_id: VALID_ID, thread_id: VALID_ID }];
+    if (/insert into "comments"|from "comments"/i.test(sql)) return [{ comment_id: VALID_ID, ticket_id: VALID_ID, note: 'hello', created_at: new Date().toISOString() }];
+    return undefined;
+  });
+  currentUser = { user_id: 'client-user-1', user_type: 'client', email: 'c@example.com', tenant: CO_MANAGED_TENANT };
+  hasPermissionMock.mockResolvedValue(true);
+  getConnectionMock.mockResolvedValue(fake.knex);
+  try {
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+    await expect(withReadOnlyWorkspace(() => actions.addClientTicketComment(VALID_ID, 'hello'))).resolves.toBe(true);
+    expect(fake.writes().some((sql) => /insert into "comments"/i.test(sql))).toBe(true);
+    expect(fake.statements.some((sql) => /^commit/i.test(sql))).toBe(true);
+  } finally {
+    vi.unstubAllEnvs();
+    await fake.destroy();
+  }
 });

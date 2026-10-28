@@ -63,7 +63,7 @@ describe('updateCredential on a read-only co-managed workspace (A4, real nativeC
     vi.resetModules();
     clearWriteAdmissionCacheForTests();
     h.loggerError.mockReset();
-    fake = createFakeKnex((sql) => (/from "credentials"/.test(sql) ? [CREDENTIAL_ROW] : undefined));
+    fake = createFakeKnex((sql) => (/from "credentials"/.test(sql) ? [CREDENTIAL_ROW] : /^\s*update "credentials"/i.test(sql) ? [{ ...CREDENTIAL_ROW, name: 'renamed' }] : undefined));
     h.fake = fake;
   });
 
@@ -87,5 +87,20 @@ describe('updateCredential on a read-only co-managed workspace (A4, real nativeC
     await updateCredential('credential-1', { name: 'renamed' });
     expect(fake.writes().some((s) => /^\s*update "credentials"/i.test(s))).toBe(true);
     await fake.destroy();
+  });
+
+  it('successfully updates a co-managed credential when the kill switch is off', async () => {
+    h.user = { ...h.user, tenant: CO_MANAGED_TENANT };
+    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
+    try {
+      const { updateCredential } = await import('@ee/lib/actions/credentials/credentialActions');
+      const result = await withReadOnlyWorkspace(() => updateCredential('credential-1', { name: 'renamed' }));
+      expect(result).toMatchObject({ ok: true, credential: { id: 'credential-1', name: 'renamed' } });
+      expect(fake.writes().some((sql) => /^\s*update "credentials"/i.test(sql))).toBe(true);
+      expect(fake.statements.some((sql) => /^commit/i.test(sql))).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+      await fake.destroy();
+    }
   });
 });

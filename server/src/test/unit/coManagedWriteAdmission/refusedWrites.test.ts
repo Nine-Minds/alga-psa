@@ -1,7 +1,7 @@
 /**
- * A4/A5: one refused write per surface, through the real functions, against a recording
- * fake knex. The refusal must (a) be a CoManagedLifecycleError and (b) leave no write
- * statement behind. Mapping to the client payload is asserted in mappedPayloads.test.ts.
+ * Model-level checks against a recording fake knex. A refusal must be a
+ * CoManagedLifecycleError and leave no write
+ * statement behind. Public-boundary behavior requires separate tests.
  */
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import Comment from '@alga-psa/tickets/models/comment';
@@ -10,7 +10,7 @@ import ProjectTaskModel from '@alga-psa/projects/models/projectTask';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { createFakeKnex, CO_MANAGED_TENANT, clearWriteAdmissionCacheForTests, withReadOnlyWorkspace } from './fakeKnex';
 
-const fake = createFakeKnex((sql) => (/from "users"/.test(sql) ? [{ user_type: 'internal' }] : /from "project_phases"/.test(sql) ? [{ phase_id: 'phase', wbs_code: '1' }] : undefined));
+const fake = createFakeKnex((sql) => (/from "users"/.test(sql) ? [{ user_type: 'internal' }] : /from "project_phases"/.test(sql) ? [{ phase_id: 'phase', wbs_code: '1' }] : /gen_random_uuid\(\)/i.test(sql) ? [{ comment_id: 'comment-1', thread_id: 'thread-1' }] : /insert into "comments"/i.test(sql) || /from "comments"/i.test(sql) ? [{ comment_id: 'comment-1', ticket_id: 'tk', note: 'x' }] : undefined));
 afterAll(() => fake.destroy());
 afterEach(() => {
   fake.statements.length = 0;
@@ -29,8 +29,8 @@ it('re-evaluates a cached refusal when the kill switch changes', async () => {
     const run = surfaces[0][1];
     await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
     vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
-    await run(CO_MANAGED_TENANT).catch(() => undefined);
-    expect(fake.writes().length).toBeGreaterThan(0);
+    await expect(run(CO_MANAGED_TENANT)).resolves.toBe('comment-1');
+    expect(fake.writes().some((sql) => /insert into "comments"/i.test(sql))).toBe(true);
     vi.stubEnv('FORCE_CAPABILITIES', '');
     await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
   });
