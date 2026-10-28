@@ -519,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
+      "allContacts": "Wszystkie kontakty",
       "selectStatus": "Wybierz status",
       "responseState": "Stan odpowiedzi",
       "allResponseStates": "Wszystkie stany odpowiedzi",

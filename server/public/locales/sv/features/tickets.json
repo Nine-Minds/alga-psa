@@ -527,6 +527,7 @@
     },
     "filters": {
       "allAssignees": "Alla ansvariga",
+      "allContacts": "Alla kontakter",
       "selectStatus": "Välj status",
       "responseState": "Svarsstatus",
       "allResponseStates": "Alla svarsstatusar",

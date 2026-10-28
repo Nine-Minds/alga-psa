@@ -519,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
+      "allContacts": "Alle contacten",
       "selectStatus": "Status selecteren",
       "responseState": "Reactiestatus",
       "allResponseStates": "Alle reactiestatussen",

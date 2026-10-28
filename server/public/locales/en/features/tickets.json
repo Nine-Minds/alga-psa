@@ -527,6 +527,7 @@
     },
     "filters": {
       "allAssignees": "All Assignees",
+      "allContacts": "All Contacts",
       "selectStatus": "Select Status",
       "responseState": "Response State",
       "allResponseStates": "All Response States",
