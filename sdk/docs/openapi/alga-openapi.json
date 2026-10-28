@@ -23169,8 +23169,17 @@
               ]
             },
             "description": "Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create."
+          },
+          "suppressContactNotifications": {
+            "type": "boolean",
+            "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+          },
+          "suppressInternalNotifications": {
+            "type": "boolean",
+            "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
           }
-        }
+        },
+        "description": "Ticket fields to create. Notification suppression applies only to this operation."
       },
       "WorkV1TicketUpdateBody": {
         "type": "object",
@@ -94345,7 +94354,7 @@
       },
       "post": {
         "summary": "Create ticket",
-        "description": "Creates ticket via ApiTicketController.create().",
+        "description": "Creates ticket via ApiTicketController.create(). Optional suppression flags make this operation silent for customer notifications or for all human notifications while preserving audit, workflow, and webhook records.",
         "tags": [
           "Work Management v1"
         ],
