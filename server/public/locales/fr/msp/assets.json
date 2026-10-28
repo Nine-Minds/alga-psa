@@ -949,12 +949,6 @@
       "type": "Taper",
       "status": "Statut"
     },
-    "assetStatuses": {
-      "active": "Actif",
-      "inactive": "Inactif",
-      "maintenance": "Entretien",
-      "held_by_msp": "Détenu par le MSP"
-    },
     "assetTypes": {
       "workstation": "Poste de travail",
       "server": "Serveur",
@@ -1856,8 +1850,8 @@
     "in_stock": "En stock",
     "maintenance": "En maintenance",
     "inactive": "Inactif",
-    "held_by_msp": "Détenu par le MSP",
-    "retired": "Retiré"
+    "retired": "Retiré",
+    "held_by_msp": "Détenu par le MSP"
   },
   "assetStatusKinds": {
     "deployable": "Déployable",
@@ -2121,7 +2115,8 @@
       "doneBody": "{{name}} ({{tag}}) est maintenant sous la garde du MSP.",
       "printLabel": "Imprimer l'étiquette d'actif",
       "openAsset": "Ouvrir l'actif",
-      "close": "Fermer"
+      "close": "Fermer",
+      "inCustodyOption": "{{asset}} — En dépôt : {{location}}"
     }
   }
 }

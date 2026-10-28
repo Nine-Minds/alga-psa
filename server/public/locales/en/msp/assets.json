@@ -949,12 +949,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance",
-      "held_by_msp": "Held by MSP"
-    },
     "assetTypes": {
       "workstation": "Workstation",
       "server": "Server",
@@ -1856,8 +1850,8 @@
     "in_stock": "In stock",
     "maintenance": "In maintenance",
     "inactive": "Inactive",
-    "held_by_msp": "Held by MSP",
-    "retired": "Retired"
+    "retired": "Retired",
+    "held_by_msp": "Held by MSP"
   },
   "assetStatusKinds": {
     "deployable": "Deployable",
@@ -2121,7 +2115,8 @@
       "doneBody": "{{name}} ({{tag}}) is now in MSP custody.",
       "printLabel": "Print asset label",
       "openAsset": "Open asset",
-      "close": "Close"
+      "close": "Close",
+      "inCustodyOption": "{{asset}} — In custody: {{location}}"
     }
   }
 }

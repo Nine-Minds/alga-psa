@@ -949,12 +949,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Wartung",
-      "held_by_msp": "Vom MSP verwahrt"
-    },
     "assetTypes": {
       "workstation": "Arbeitsplatz",
       "server": "Server",
@@ -1856,8 +1850,8 @@
     "in_stock": "Auf Lager",
     "maintenance": "In Wartung",
     "inactive": "Inaktiv",
-    "held_by_msp": "Vom MSP verwahrt",
-    "retired": "Ausgemustert"
+    "retired": "Ausgemustert",
+    "held_by_msp": "Vom MSP verwahrt"
   },
   "assetStatusKinds": {
     "deployable": "Einsetzbar",
@@ -2121,7 +2115,8 @@
       "doneBody": "{{name}} ({{tag}}) befindet sich jetzt in MSP-Verwahrung.",
       "printLabel": "Asset-Etikett drucken",
       "openAsset": "Asset öffnen",
-      "close": "Schließen"
+      "close": "Schließen",
+      "inCustodyOption": "{{asset}} — In Verwahrung: {{location}}"
     }
   }
 }
