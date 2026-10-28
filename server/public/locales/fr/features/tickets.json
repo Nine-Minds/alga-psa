@@ -116,7 +116,9 @@
     "clientTags": "Étiquettes du client",
     "tagModeAny": "Au moins une parmi",
     "tagModeNone": "Aucune parmi",
-    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés."
+    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés.",
+    "location": "Site",
+    "requesterLocation": "Site du demandeur"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -185,7 +187,7 @@
     "additionalAgents": "Agents supplémentaires",
     "createdBy": "Créé par",
     "lastActivity": "Dernière activité",
-    "location": "Emplacement",
+    "location": "Site",
     "contactPhone": "Téléphone du contact",
     "clientPhone": "Téléphone du client",
     "contactEmail": "E-mail du contact",

@@ -116,7 +116,9 @@
     "clientTags": "Klanttags",
     "tagModeAny": "Een van",
     "tagModeNone": "Geen van",
-    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd.",
+    "location": "Locatie",
+    "requesterLocation": "Locatie van aanvrager"
   },
   "create": {
     "title": "Supportticket aanmaken",

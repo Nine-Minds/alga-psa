@@ -124,7 +124,9 @@
     "clientTags": "Client tags",
     "tagModeAny": "Any of",
     "tagModeNone": "None of",
-    "droppedFromLink": "Some filters in this link are not valid and were ignored."
+    "droppedFromLink": "Some filters in this link are not valid and were ignored.",
+    "location": "Location",
+    "requesterLocation": "Requester location"
   },
   "create": {
     "title": "Create Support Ticket",

@@ -235,6 +235,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       priority_id: uuidColumn('priority_id'),
       category_id: uuidColumn('category_id'),
       subcategory_id: uuidColumn('subcategory_id'),
+      location_id: uuidColumn('location_id', ['equals', 'in', 'not_in', 'is_empty', 'is_not_empty']),
       assigned_to: uuidColumn('assigned_to'),
       assigned_team_id: uuidColumn('assigned_team_id'),
       master_ticket_id: uuidColumn('master_ticket_id', ['is_empty', 'is_not_empty']),
@@ -268,6 +269,16 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         attributes: {
           id: uuidColumn('contact_name_id', ['equals', 'in']),
           tags: tagSet({ taggedType: 'contact', local: 'contact_name_id' }),
+          // "Where the requester works", as a set: a person can be linked to several locations, so
+          // `in` means "linked to any of these" exactly as a tag clause does.
+          locations: {
+            kind: 'set',
+            table: 'contact_locations',
+            local: 'contact_name_id',
+            foreign: 'contact_name_id',
+            valueColumn: 'location_id',
+            valueType: 'uuid',
+          },
         },
       },
     },

@@ -116,7 +116,9 @@
     "clientTags": "Tag del cliente",
     "tagModeAny": "Almeno uno tra",
     "tagModeNone": "Nessuno tra",
-    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati.",
+    "location": "Sede",
+    "requesterLocation": "Sede del richiedente"
   },
   "create": {
     "title": "Crea ticket di supporto",

@@ -41,7 +41,15 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { WhereTagFilter } from './WhereTagFilter';
-import { WHERE_TAG_FILTERS, getWhereTagSelection, setWhereTagSelection, whereTagFilterChips } from '../lib/ticketWhereFilters';
+import {
+  WHERE_FILTERS,
+  WHERE_TAG_FILTERS,
+  getWhereTagSelection,
+  setWhereTagSelection,
+  whereFilterChips,
+} from '../lib/ticketWhereFilters';
+import { WhereLocationFilter, locationFilterLabel, type WhereLocationOption } from './WhereLocationFilter';
+import { listTicketFilterLocations } from '../actions/clientLookupActions';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -541,8 +549,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => ({ 'contact.tags': contactTagDefinitions, 'client.tags': clientTagDefinitions }),
     [contactTagDefinitions, clientTagDefinitions],
   );
-  const hasWhereTagFilters = WHERE_TAG_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
-  const whereTagFilterCount = WHERE_TAG_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+  const hasWhereTagFilters = WHERE_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
+  const whereTagFilterCount = WHERE_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+
+  // The filtered client's locations, or every active tenant location grouped by client when no
+  // client narrows the list. Both Location filters share the one list.
+  const [whereLocationOptions, setWhereLocationOptions] = useState<WhereLocationOption[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await listTicketFilterLocations(selectedClient ?? null);
+        // The options are informational: anything other than a list leaves the control empty
+        // rather than failing the toolbar.
+        if (!cancelled) setWhereLocationOptions(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error('Error loading the ticket location filter options:', error);
+        if (!cancelled) setWhereLocationOptions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedClient]);
+  const whereLocationLabelById = useMemo(
+    () => new Map(whereLocationOptions.map((option) => [option.location_id, locationFilterLabel(option)])),
+    [whereLocationOptions],
+  );
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
@@ -2329,9 +2360,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    whereTagFilterChips(
+    whereFilterChips(
       selectedWhere,
-      (descriptor, tagId) => whereTagDefinitions[descriptor.path].find((d) => d.tag_id === tagId)?.tag_text,
+      (descriptor, valueId) => ('tags' in descriptor.options
+        ? whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text
+        : whereLocationLabelById.get(valueId)),
       (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
     ).forEach((chip) => {
       chips.push({
@@ -2345,7 +2378,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ...chip,
       removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
     }));
-  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
@@ -2708,17 +2741,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
-                {WHERE_TAG_FILTERS.map((descriptor) => (
-                  <WhereTagFilter
-                    key={descriptor.path}
-                    id={`${id}-where-${descriptor.taggedType}-tags`}
-                    label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                    definitions={whereTagDefinitions[descriptor.path]}
-                    selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                    onChange={(selection) =>
-                      onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                    }
-                  />
+                {WHERE_FILTERS.map((descriptor) => (
+                  'tags' in descriptor.options ? (
+                    <WhereTagFilter
+                      key={descriptor.path}
+                      id={`${id}-where-${descriptor.options.tags}-tags`}
+                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                      definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
+                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                      onChange={(selection) =>
+                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                      }
+                    />
+                  ) : (
+                    <WhereLocationFilter
+                      key={descriptor.path}
+                      id={`${id}-where-${descriptor.options.locations}-location`}
+                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                      options={whereLocationOptions}
+                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                      onChange={(selection) =>
+                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                      }
+                    />
+                  )
                 ))}
                 </div>
               </div>

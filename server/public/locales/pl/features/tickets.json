@@ -116,7 +116,9 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
-    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
+    "location": "Lokalizacja",
+    "requesterLocation": "Lokalizacja zgłaszającego"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",

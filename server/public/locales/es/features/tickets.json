@@ -116,7 +116,9 @@
     "clientTags": "Etiquetas del cliente",
     "tagModeAny": "Cualquiera de",
     "tagModeNone": "Ninguna de",
-    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "location": "Ubicación",
+    "requesterLocation": "Ubicación del solicitante"
   },
   "create": {
     "title": "Crear ticket de soporte",

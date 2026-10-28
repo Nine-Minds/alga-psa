@@ -56,10 +56,17 @@ describe('WhereTagFilter', () => {
 
 describe('TicketingDashboard wiring (descriptor table)', () => {
   const source = fs.readFileSync(path.join(__dirname, 'TicketingDashboard.tsx'), 'utf8');
-  it('renders the toolbar filters, chips and reset from WHERE_TAG_FILTERS', () => {
-    expect(source).toContain('WHERE_TAG_FILTERS.map((descriptor) =>');
-    expect(source).toContain('whereTagFilterChips(');
+  it('renders the toolbar filters, chips and reset from the descriptor table', () => {
+    // The table is WHERE_FILTERS now that it holds location rows as well as tag rows; the control
+    // each row renders is chosen from its options source, so a new row is still never new wiring.
+    expect(source).toContain('WHERE_FILTERS.map((descriptor) =>');
+    expect(source).toContain('whereFilterChips(');
     expect(source).toMatch(/where: undefined,\s*\n\s*assignedToIds: undefined/);
     expect(source).toContain('onFilterChange({ where: chip.clear() })');
+  });
+
+  it('derives the active-filter count and the toolbar controls from the same table', () => {
+    expect(source).toContain('WHERE_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null)');
+    expect(source).toContain('WHERE_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null)');
   });
 });

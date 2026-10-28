@@ -339,7 +339,7 @@
     "prdRefs": [
       "FR-D3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket query schema adds location_id uuid column attribute (equals, in, not_in, is_empty, is_not_empty) and contact.locations set attribute over contact_locations (in, not_in, is_empty, is_not_empty)"
   },
   {
@@ -357,7 +357,7 @@
     "prdRefs": [
       "FR-D4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "WhereTagFilterDescriptor generalised to WhereFilterDescriptor with an options source ({tags} | {locations: 'ticket' | 'contact'}); toolbar control, active chips and clear derive from the table; two new rows Location and Requester location"
   },
   {
@@ -366,7 +366,7 @@
     "prdRefs": [
       "FR-D4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Location filter options: the filtered client's locations, or all tenant locations grouped by client when no client filter is set"
   },
   {
@@ -375,7 +375,7 @@
     "prdRefs": [
       "FR-D4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ticketPredicateFields exposes both location paths for checklist predicates with a location control"
   },
   {
@@ -384,7 +384,7 @@
     "prdRefs": [
       "FR-D6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket list definition gets a Location column (off by default, available in the column picker) when none exists"
   },
   {

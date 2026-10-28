@@ -123,6 +123,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** The ticket's own location, for the optional Location column (off by default). */
+  ticket_location_name?: string | null;
   /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
   contact_tags?: IDisplayTag[];
   /** Chip tags for the client, already filtered to the caller's audience by the display rules. */

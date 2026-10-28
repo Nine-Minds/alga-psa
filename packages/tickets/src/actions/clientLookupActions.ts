@@ -163,3 +163,44 @@ export const getContactEffectiveLocation = withAuth(async (
     };
   });
 });
+
+export interface TicketFilterLocationOption {
+  location_id: string;
+  location_name: string;
+  client_id: string;
+  client_name: string | null;
+}
+
+/**
+ * The options behind the two Location `where` filters. Narrowed to one client when the list is
+ * filtered to it (then the client name is left off, because every row would carry the same one);
+ * otherwise every active tenant location, labelled by client so two "Head office" rows are
+ * tellable apart.
+ */
+export const listTicketFilterLocations = withAuth(async (
+  user,
+  { tenant },
+  clientId?: string | null,
+): Promise<TicketFilterLocationOption[]> => {
+  await assertInternalReadAccess(user, 'client');
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_locations as loc').where('loc.is_active', true);
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'loc.client_id', { type: 'left' });
+    if (clientId) query.where('loc.client_id', clientId);
+
+    const rows = await query
+      .select('loc.location_id', 'loc.location_name', 'loc.address_line1', 'loc.client_id', 'c.client_name')
+      .orderBy([{ column: 'c.client_name', order: 'asc' }, { column: 'loc.location_name', order: 'asc' }]) as
+      Array<{ location_id: string; location_name: string | null; address_line1: string | null; client_id: string; client_name: string | null }>;
+
+    return rows.map((row) => ({
+      location_id: row.location_id,
+      location_name: row.location_name?.trim() || row.address_line1?.trim() || row.location_id,
+      client_id: row.client_id,
+      client_name: clientId ? null : row.client_name,
+    }));
+  });
+});

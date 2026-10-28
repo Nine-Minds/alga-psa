@@ -512,7 +512,7 @@
     "featureIds": [
       "F038"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ticketQuerySchema resolves location_id and contact.locations with the declared operators and rejects others"
   },
   {
@@ -550,7 +550,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Descriptor table test: both location descriptors produce a toolbar control, active-filter chips per selected location and individual clear, with no bespoke wiring in TicketingDashboard"
   },
   {
@@ -559,7 +559,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Existing tag descriptors and legacy saved-view migration behave exactly as before after the generalisation"
   },
   {

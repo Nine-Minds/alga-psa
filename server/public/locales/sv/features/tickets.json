@@ -124,7 +124,9 @@
     "clientTags": "Kundtaggar",
     "tagModeAny": "Någon av",
     "tagModeNone": "Ingen av",
-    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
+    "location": "Plats",
+    "requesterLocation": "Beställarens plats"
   },
   "create": {
     "title": "Skapa supportärende",
