@@ -35,6 +35,7 @@
  * remembered forever and never reaches the resolver again.
  */
 import type { Knex } from 'knex';
+import { isOperationalWriteTable } from './operationalWriteTables';
 import { tenantDb } from './tenantDb';
 
 export interface WriteAdmissionContext {
@@ -56,7 +57,10 @@ export interface WriteAdmissionDecision {
 }
 
 /** Called only for tenants whose `product_code` is `co_managed`. Must be lock-free. */
-export type WriteAdmissionResolver = (db: Knex | Knex.Transaction, tenant: string) => Promise<WriteAdmissionDecision>;
+export type WriteAdmissionResolver = ((db: Knex | Knex.Transaction, tenant: string) => Promise<WriteAdmissionDecision>) & {
+  /** Changes when external inputs invalidate cached decisions. */
+  cacheKey?: () => string;
+};
 
 export interface TenantWriteContext {
   table?: string;
@@ -67,9 +71,13 @@ interface WriteAdmissionState {
   /** Tenants known not to be co-managed. Permanent: a tenant only ever leaves the product. */
   negative: Set<string>;
   /** Short-lived decisions for co-managed tenants. */
-  decisions: Map<string, { until: number; decision: WriteAdmissionDecision }>;
-  inflight: Map<string, Promise<WriteAdmissionDecision | null>>;
+  decisions: Map<string, { until: number; decision: WriteAdmissionDecision; key?: string; resolver: WriteAdmissionResolver }>;
+  inflight: Map<string, { promise: Promise<WriteAdmissionDecision | null>; key?: string; revision: number; tenantRevision: number; resolver: WriteAdmissionResolver }>;
   warned: Set<string>;
+  /** Tenants invalidated and not yet re-read: product-code hints are ignored for them. */
+  mustLookup: Set<string>;
+  revision: number;
+  tenantRevisions: Map<string, number>;
 }
 
 declare global {
@@ -97,6 +105,9 @@ function state(): WriteAdmissionState {
     decisions: new Map(),
     inflight: new Map(),
     warned: new Set(),
+    mustLookup: new Set(),
+    revision: 0,
+    tenantRevisions: new Map(),
   });
 }
 
@@ -132,12 +143,20 @@ export function isTenantWriteGuarded(tenant: string): boolean {
 export function invalidateWriteAdmission(tenant?: string): void {
   const s = state();
   if (tenant === undefined) {
+    s.revision++;
     s.decisions.clear();
     s.negative.clear();
+    s.inflight.clear();
+    s.mustLookup.clear();
     return;
   }
   s.decisions.delete(tenant);
   s.negative.delete(tenant);
+  s.tenantRevisions.set(tenant, (s.tenantRevisions.get(tenant) ?? 0) + 1);
+  s.inflight.delete(tenant);
+  // A session minted before the transition still says the old product; until one real
+  // lookup has run, such hints must not re-seed the negative set.
+  s.mustLookup.add(tenant);
 }
 
 /** Reset everything this module remembers. For tests. */
@@ -147,9 +166,26 @@ export function resetWriteAdmissionCache(): void {
   s.decisions.clear();
   s.inflight.clear();
   s.warned.clear();
+  s.mustLookup.clear();
+  s.revision++;
+  s.tenantRevisions.clear();
 }
 
-async function decide(db: Knex | Knex.Transaction, tenant: string, resolver: WriteAdmissionResolver): Promise<WriteAdmissionDecision | null> {
+/**
+ * Seed the decision from a product code the caller already holds (the session carries
+ * `product_code`), so a plain PSA request pays no `tenants` read at all. Only a
+ * non-`co_managed` code is acted on: it goes straight into the negative set. A
+ * `co_managed` (or unknown) code changes nothing; the lookup decides. Ignored for a
+ * tenant that was invalidated and not yet re-read, because the hint may predate the change.
+ */
+export function noteTenantProductCode(tenant: string | undefined | null, productCode: string | undefined | null): void {
+  if (!tenant || (productCode !== 'psa' && productCode !== 'algadesk')) return;
+  const s = state();
+  if (s.mustLookup.has(tenant) || s.decisions.has(tenant) || s.inflight.has(tenant)) return;
+  s.negative.add(tenant);
+}
+
+async function decide(db: Knex | Knex.Transaction, tenant: string, resolver: WriteAdmissionResolver, valid: () => boolean): Promise<WriteAdmissionDecision | null> {
   const s = state();
   let productCode: string | null | undefined;
   try {
@@ -166,12 +202,18 @@ async function decide(db: Knex | Knex.Transaction, tenant: string, resolver: Wri
     });
     return null;
   }
+  if (!valid()) return null;
   if (productCode !== CO_MANAGED_PRODUCT_CODE) {
+    s.mustLookup.delete(tenant);
     s.negative.add(tenant);
     return null;
   }
+  const key = resolver.cacheKey?.();
   const decision = await resolver(db, tenant);
-  s.decisions.set(tenant, { until: Date.now() + WRITE_ADMISSION_TTL_MS, decision });
+  if (valid()) {
+    s.mustLookup.delete(tenant);
+    s.decisions.set(tenant, { until: Date.now() + WRITE_ADMISSION_TTL_MS, decision, key, resolver });
+  }
   return decision;
 }
 
@@ -198,15 +240,24 @@ export async function admitTenantWrite(
 
   let decision: WriteAdmissionDecision | null | undefined;
   const cached = s.decisions.get(tenant);
-  if (cached && cached.until > Date.now()) {
+  if (cached && cached.until > Date.now() && cached.resolver === resolver && cached.key === resolver.cacheKey?.()) {
     decision = cached.decision;
   } else {
+    const revision = s.revision;
+    const tenantRevision = s.tenantRevisions.get(tenant) ?? 0;
+    const key = resolver.cacheKey?.();
+    const valid = () => s.revision === revision && (s.tenantRevisions.get(tenant) ?? 0) === tenantRevision && globalThis.__algaWriteAdmissionResolver === resolver && resolver.cacheKey?.() === key;
     let pending = s.inflight.get(tenant);
-    if (!pending) {
-      pending = decide(db, tenant, resolver).finally(() => s.inflight.delete(tenant));
-      s.inflight.set(tenant, pending);
+    if (!pending || pending.key !== key || pending.revision !== revision || pending.tenantRevision !== tenantRevision || pending.resolver !== resolver) {
+      const entry = { promise: undefined as unknown as Promise<WriteAdmissionDecision | null>, key, revision, tenantRevision, resolver };
+      entry.promise = decide(db, tenant, resolver, valid).finally(() => {
+        if (s.inflight.get(tenant) === entry) s.inflight.delete(tenant);
+      });
+      pending = entry;
+      s.inflight.set(tenant, entry);
     }
-    decision = await pending;
+    decision = await pending.promise;
+    if (!valid()) return admitTenantWrite(db, tenant, context);
   }
   if (decision && !decision.canWrite) {
     throw decision.denial ?? new Error(`Writes are not admitted for this workspace (${context.operation})`);
@@ -221,4 +272,20 @@ export async function admitWrite(trx: Knex.Transaction, context: WriteAdmissionC
     await admitTenantWrite(trx, context.tenant, { operation: context.operation, table: context.resource });
   }
   if (provider) await provider(trx, context);
+}
+
+/**
+ * Explicit admission for a write that cannot go through a `tenantDb` builder (raw SQL, a
+ * bare knex builder). Free for plain PSA tenants: no resolver or a known-negative tenant
+ * returns before any read. Also the single implementation behind the `BaseService`
+ * default guard and `insertParentScoped`.
+ */
+export async function admitOperationalWrite(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+  operation: string,
+): Promise<void> {
+  if (!isOperationalWriteTable(table) || !isTenantWriteGuarded(tenant)) return;
+  await admitTenantWrite(db, tenant, { table, operation });
 }

@@ -14,13 +14,16 @@ import { OPERATIONAL_WRITE_TABLES, RETAINED_COMMAND_TABLES } from '@alga-psa/db'
  *
  *     // write-admission: exempt — <reason>
  *
- * on the line above (or the same line). A reason is mandatory.
+ * on the line above (or the same line). A reason is mandatory. A write is also covered when an
+ * explicit `await admitOperationalWrite(db, tenant, '<table>', '<op>')` precedes it (within 60 lines),
+ * which is how raw SQL and bare builders are admitted without rewriting them.
  */
 
 const SOURCE_ROOTS = ['src', '../ee/server/src', '../packages', '../shared', '../services', '../ee/temporal-workflows/src'];
 const SKIP_DIRS = new Set(['test-utils', 'node_modules', '.next', '.turbo', 'dist', 'build', 'coverage', '__tests__', '__mocks__', 'test', 'tests', 'migrations', 'seeds', 'testing']);
 const SKIP_FILES = [/\.(test|spec)\.(t|j)sx?$/, /\.d\.ts$/, /\.generated\.ts$/, /\.stories\.(t|j)sx?$/, /\.contract\.test\./];
 
+const ADMIT_WINDOW = 60;
 const EXEMPT = /write-admission:\s*exempt\s*[—-]\s*\S+/;
 
 function collectSourceFiles(dir: string, out: string[] = []): string[] {
@@ -67,6 +70,9 @@ export function findUnguardedWriteSites(source: string, file: string): Site[] {
     if (!hit) continue;
     const near = [lines[i], lines[i - 1] ?? '', lines[i - 2] ?? ''].join('\n');
     if (EXEMPT.test(near)) continue;
+    // Explicit admission: `await admitOperationalWrite(db, tenant, '<table>', …)` earlier in the same scope.
+    const before = lines.slice(Math.max(0, i - ADMIT_WINDOW), i + 1).join('\n');
+    if (new RegExp(`admitOperationalWrite\\([^)]*['"\`]${hit.table}['"\`]`).test(before)) continue;
     sites.push(hit);
   }
   return sites;
@@ -88,6 +94,8 @@ describe('write-admission coverage (A6)', () => {
     expect(findUnguardedWriteSites(`await trx.raw('UPDATE tickets SET a = 1');`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await trx('tickets').where({a:1}).first();`, 'x.ts')).toHaveLength(0);
     expect(findUnguardedWriteSites(`// write-admission: exempt — system job\nawait trx('tickets').insert({});`, 'x.ts')).toHaveLength(0);
+    expect(findUnguardedWriteSites(`await admitOperationalWrite(trx, t, 'tickets', 'x');\nawait trx.raw('UPDATE tickets SET a = 1');`, 'x.ts')).toHaveLength(0);
+    expect(findUnguardedWriteSites(`await admitOperationalWrite(trx, t, 'assets', 'x');\nawait trx.raw('UPDATE tickets SET a = 1');`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await tenantDb(trx, t).table('tickets').update({});`, 'x.ts')).toHaveLength(0);
   });
 
@@ -96,5 +104,12 @@ describe('write-admission coverage (A6)', () => {
       .flatMap((file) => findUnguardedWriteSites(fs.readFileSync(file, 'utf8'), path.relative(path.resolve(__dirname, '../../../../..'), file)));
     const report = sites.map((s) => `${s.file}:${s.line} [${s.kind}] ${s.table}`);
     expect(report, `Add "// write-admission: exempt — <reason>" or route through tenantDb:\n${report.join('\n')}`).toEqual([]);
+  });
+
+  it('no exemption on an operational table claims to be "NOT covered" at runtime', () => {
+    const offenders = SOURCE_ROOTS.flatMap((root) => collectSourceFiles(path.resolve(__dirname, '../../../../', root)))
+      .filter((file) => /write-admission:\s*exempt[^\n]*NOT covered/i.test(fs.readFileSync(file, 'utf8')))
+      .map((file) => path.relative(path.resolve(__dirname, '../../../../..'), file));
+    expect(offenders).toEqual([]);
   });
 });

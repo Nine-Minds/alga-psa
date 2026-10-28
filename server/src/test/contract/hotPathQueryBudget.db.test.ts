@@ -85,7 +85,8 @@ vi.mock('../../../../packages/auth/src/nextauth/auth', async () => ({
     const s = rt.session;
     if (!s) return null;
     return {
-      user: { id: s.userId, tenant: s.tenant, user_type: s.userType, email: s.email },
+      // product_code mirrors the real session callback (default 'psa'); getCurrentUser hands it to write admission.
+      user: { id: s.userId, tenant: s.tenant, user_type: s.userType, email: s.email, product_code: 'psa' },
       session_id: s.sessionId,
       expires: new Date(Date.UTC(2100, 0, 1)).toISOString(),
     };
@@ -153,6 +154,9 @@ describe('hot-path query budget', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     connection = await createTestDbConnection();
+    // Production config: server/src/instrumentation.ts always installs the co-managed resolver.
+    const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+    installCoManagedWriteAdmission();
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {

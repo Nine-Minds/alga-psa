@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   CLIENT_OWNED_MOVE_TABLES,
@@ -941,7 +941,7 @@ export async function executeClientMerge(
 
   // Other clients recorded as children of the source now hang off the target,
   // so the soft hierarchy does not point at a tombstone.
-  // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
+  await admitOperationalWrite(trx, tenant, 'clients', 'raw:client-merge-hierarchy');
   await trx.raw(
     `UPDATE clients
         SET properties = jsonb_set(

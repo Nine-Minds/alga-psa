@@ -7,7 +7,7 @@ import {
 } from './tenantTableMetadata';
 import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantScopedQuery';
 import { isOperationalWriteTable } from './operationalWriteTables';
-import { admitTenantWrite, isTenantWriteGuarded } from './writeAdmission';
+import { admitOperationalWrite, admitTenantWrite, isTenantWriteGuarded } from './writeAdmission';
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
@@ -278,9 +278,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       return [];
     }
 
-    if (isOperationalWriteTable(parsed.tableName) && isTenantWriteGuarded(tenant)) {
-      await admitTenantWrite(conn, tenant, { table: parsed.tableName, operation: `insert:${parsed.tableName}` });
-    }
+    await admitOperationalWrite(conn, tenant, parsed.tableName, `insert:${parsed.tableName}`);
 
     const parentIds = Array.from(new Set(rows.map((row) => (row as Record<string, unknown>)[scope.childColumn])));
     if (parentIds.some((id) => id === null || id === undefined || id === '')) {

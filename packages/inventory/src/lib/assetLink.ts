@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, admitOperationalWrite } from '@alga-psa/db';
 import { IStockUnit, CreateAssetRequest, Asset } from '@alga-psa/types';
 import { createAsset } from '@alga-psa/assets/actions';
 
@@ -52,7 +52,7 @@ export async function createAndLinkDeliveredAsset(
   if (!asset?.asset_id) return null;
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
+    await admitOperationalWrite(trx, tenant, 'assets', 'asset-link-unit');
     await trx('assets')
       .where({ tenant, asset_id: asset.asset_id })
       .update({ service_id: p.serviceId, stock_unit_id: p.unit.unit_id, updated_at: trx.fn.now() });

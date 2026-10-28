@@ -1,3 +1,5 @@
+import { admitOperationalWrite } from '@alga-psa/db';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { Knex } from 'knex';
 import {
   IProjectMaterial,
@@ -376,6 +378,7 @@ export async function addMaterial(
       const { createAndLinkDeliveredAsset } = await import('./assetLink');
       await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
     } catch (e) {
+      if (isCoManagedLifecycleError(e)) throw e;
       console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
     }
   }
@@ -451,7 +454,7 @@ export async function updateProjectMaterialBilling(
       );
     }
 
-    // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
+    await admitOperationalWrite(trx, tenant, 'project_materials', 'update-project-material');
     const [updated] = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId, is_billed: false })
       .update({

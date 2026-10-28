@@ -1,5 +1,7 @@
 'use server';
 
+import { admitOperationalWrite } from '@alga-psa/db';
+
 /**
  * Credentials vault server actions (EE-only, Pro tier).
  *
@@ -482,7 +484,7 @@ async function attachRefAssociations(
   );
   if (unique.length === 0) return;
   await knex.transaction(async (trx) => {
-    // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
+    await admitOperationalWrite(trx, ctx.tenant, 'credential_associations', 'raw:attach-credential-refs');
     await trx('credential_associations')
       .insert(
         unique.map((a) => ({

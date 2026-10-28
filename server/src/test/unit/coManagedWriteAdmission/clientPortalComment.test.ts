@@ -1,8 +1,14 @@
 import { expect, it, vi } from 'vitest';
+import {
+  CO_MANAGED_TENANT,
+  clearWriteAdmissionCacheForTests,
+  createFakeKnex,
+  withReadOnlyWorkspace,
+} from './fakeKnex';
 
 const VALID_ID = '00000000-0000-4000-8000-000000000001';
 
-vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
+vi.mock('@alga-psa/client-portal/lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
 
 let currentUser: any;
 
@@ -19,15 +25,14 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+// Real @alga-psa/db (tenantDb, withTransaction, the write choke point); only the connection is the recording fake.
+vi.mock('@alga-psa/db', async (orig) => ({
+  ...(await orig<object>()),
   getConnection: (...args: any[]) => getConnectionMock(...args),
-  withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
-  tenantDb: (conn: any) => ({ table: (table: string) => conn(table), unscoped: (table: string) => conn(table) }),
 }));
 
-const commentInsertMock = vi.fn();
-vi.mock('@alga-psa/tickets/models/comment', () => ({ default: { insert: (...a: any[]) => commentInsertMock(...a) } }));
+
 vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({ convertBlockNoteToMarkdown: vi.fn(async () => 'md') }));
 
 vi.mock('@alga-psa/tickets/lib', () => ({
@@ -59,30 +64,24 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 }));
 
 
-// A chainable, awaitable query stub: every builder method returns itself; `first` resolves a row.
-function chain(row: unknown) {
-  const q: any = new Proxy(function () {}, {
-    get: (_t, prop) => (prop === 'first' ? async () => row : prop === 'then' ? undefined : () => q),
+it('addClientTicketComment returns the mapped refusal payload from the REAL Comment.insert, with no write issued (A4)', async () => {
+  clearWriteAdmissionCacheForTests();
+  const fake = createFakeKnex((sql) => {
+    if (/from "users"/.test(sql)) return [{ user_id: 'client-user-1', contact_id: 'contact-1', first_name: 'C', last_name: 'U', user_type: 'client' }];
+    if (/from "tickets"/.test(sql)) return [{ ticket_id: VALID_ID, client_id: 'client-1', tenant: CO_MANAGED_TENANT }];
+    return undefined;
   });
-  return q;
-}
-
-it('addClientTicketComment returns the mapped refusal payload when write admission refuses (A4)', async () => {
-  const { createCoManagedWriteAdmissionResolver } = await import('@alga-psa/licensing/co-managed-write-admission');
-  const decision = await createCoManagedWriteAdmissionResolver(async () => ({ state: 'read_only', canWrite: false, graceEndsAt: null }))({} as any, 'tenant-1');
-  commentInsertMock.mockRejectedValue(decision.denial);
-  currentUser = { user_id: 'client-user-1', user_type: 'client', email: 'c@example.com', tenant: 'tenant-1' };
+  currentUser = { user_id: 'client-user-1', user_type: 'client', email: 'c@example.com', tenant: CO_MANAGED_TENANT };
   hasPermissionMock.mockResolvedValue(true);
-  getConnectionMock.mockResolvedValue(Object.assign(vi.fn(), { raw: vi.fn() }));
-  withTransactionMock.mockImplementation(async (_db: any, work: any) =>
-    work(Object.assign((table: string) => chain(table === 'users' ? { contact_id: 'contact-1' } : { ticket_id: VALID_ID }), { raw: vi.fn() })),
-  );
+  getConnectionMock.mockResolvedValue(fake.knex);
 
-  const actions = await import('./client-tickets');
-  const result = await actions.addClientTicketComment(VALID_ID, 'hello');
+  const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+  const result = await withReadOnlyWorkspace(() => actions.addClientTicketComment(VALID_ID, 'hello'));
 
   expect(result).toEqual({
     actionError: 'This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.',
     messageKey: 'common:errors.coManaged.readOnly',
   });
+  expect(fake.writes()).toEqual([]);
+  await fake.destroy();
 });

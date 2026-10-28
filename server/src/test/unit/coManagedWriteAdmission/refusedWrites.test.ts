@@ -24,6 +24,18 @@ const surfaces: Array<[string, (tenant: string) => Promise<unknown>]> = [
   ['ProjectTaskModel.addTask', (t) => ProjectTaskModel.addTask(fake.knex, t, 'phase', { task_name: 'n', project_status_mapping_id: 'm' } as any)],
 ];
 
+it('re-evaluates a cached refusal when the kill switch changes', async () => {
+  await withReadOnlyWorkspace(async () => {
+    const run = surfaces[0][1];
+    await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
+    const offResult = await run(CO_MANAGED_TENANT).catch((error) => error);
+    expect(isCoManagedLifecycleError(offResult)).toBe(false);
+    vi.stubEnv('FORCE_CAPABILITIES', '');
+    await expect(run(CO_MANAGED_TENANT)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  });
+});
+
 describe.each(surfaces)('%s on a read-only co-managed tenant', (_name, run) => {
   it('is refused with a lifecycle error and issues no write', async () => {
     await withReadOnlyWorkspace(async () => {

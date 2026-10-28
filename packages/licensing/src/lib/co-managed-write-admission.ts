@@ -19,7 +19,7 @@
  * this subpath directly and must boot when the co-managed package does not resolve.
  */
 import type { Knex } from 'knex';
-import { registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db';
+import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db';
 import { forcedValue } from '@alga-psa/core/capability';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';
 
@@ -36,15 +36,78 @@ export function isCoManagedKillSwitchEngaged(): boolean {
 export function createCoManagedWriteAdmissionResolver(
   readState: CoManagedLifecycleReader = async () => INDEPENDENT,
 ): WriteAdmissionResolver {
-  return async (db, tenant) => {
+  const resolver: WriteAdmissionResolver = async (db, tenant) => {
     if (isCoManagedKillSwitchEngaged()) return { canWrite: true };
     const lifecycle = await readState(db, tenant);
     if (lifecycle.canWrite) return { canWrite: true };
     return { canWrite: false, denial: new CoManagedLifecycleError(lifecycle) };
   };
+  resolver.cacheKey = () => isCoManagedKillSwitchEngaged() ? 'off' : 'on';
+  return resolver;
+}
+
+export interface InstallCoManagedWriteAdmissionOptions {
+  /** The real lifecycle reader (L7a). Defaults to "independent", which refuses nothing. */
+  readState?: CoManagedLifecycleReader;
+  /**
+   * DEV/TEST ONLY: force a lifecycle state for specific tenant ids, so a read-only or
+   * pending-acceptance tenant can be demonstrated before L7a's reader exists. Ignored (with a
+   * warning) when `NODE_ENV === 'production'`; the production resolver is built without it, so
+   * it adds no code to the PSA fast path (a PSA tenant never reaches the resolver at all).
+   * The tenant must still have `tenants.product_code = 'co_managed'`; see plan section 7.
+   */
+  devForcedStates?: Readonly<Record<string, CoManagedOperationalState>>;
+}
+
+function isProductionRuntime(): boolean {
+  return typeof process !== 'undefined' && process.env.NODE_ENV === 'production';
+}
+
+/** Wrap a reader so the listed tenants get a fixed state. Never called in production. */
+function withDevForcedStates(
+  readState: CoManagedLifecycleReader,
+  forced: Readonly<Record<string, CoManagedOperationalState>>,
+): CoManagedLifecycleReader {
+  return (db, tenant) => (Object.prototype.hasOwnProperty.call(forced, tenant) ? Promise.resolve(forced[tenant]) : readState(db, tenant));
+}
+
+/**
+ * DEV/TEST ONLY: parse `CO_MANAGED_DEV_FORCE_STATE="<tenantId>:read_only,<tenantId>:pending_acceptance"`.
+ * Returns undefined in production or when unset. Unknown states are skipped.
+ */
+export function devForcedStatesFromEnv(
+  env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {},
+): Record<string, CoManagedOperationalState> | undefined {
+  if (env.NODE_ENV === 'production') return undefined;
+  const raw = env.CO_MANAGED_DEV_FORCE_STATE;
+  if (!raw) return undefined;
+  const out: Record<string, CoManagedOperationalState> = {};
+  for (const part of raw.split(',')) {
+    const [tenant, state] = part.split(':').map((x) => x.trim());
+    if (!tenant) continue;
+    if (state === 'read_only' || state === 'terminated') out[tenant] = { state, canWrite: false, graceEndsAt: null };
+    else if (state === 'pending_acceptance') out[tenant] = { state, canWrite: false, graceEndsAt: null };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * The reader `installCoManagedWriteAdmission` will use: the supplied one, with dev-forced tenants
+ * layered on top outside production. In production `devForcedStates` is dropped (warned).
+ */
+export function resolveInstalledReader(options: InstallCoManagedWriteAdmissionOptions = {}): CoManagedLifecycleReader | undefined {
+  const forced = options.devForcedStates;
+  if (!forced || Object.keys(forced).length === 0) return options.readState;
+  if (isProductionRuntime()) {
+    console.warn('[CoManagedWriteAdmission] devForcedStates ignored: NODE_ENV is production');
+    return options.readState;
+  }
+  // A session that still says "psa" for this tenant must not seed the negative set first.
+  for (const tenant of Object.keys(forced)) invalidateWriteAdmission(tenant);
+  return withDevForcedStates(options.readState ?? (async () => INDEPENDENT), forced);
 }
 
 /** Register the co-managed resolver with `@alga-psa/db`. Safe to call more than once. */
-export function installCoManagedWriteAdmission(options: { readState?: CoManagedLifecycleReader } = {}): void {
-  registerWriteAdmissionResolver(createCoManagedWriteAdmissionResolver(options.readState));
+export function installCoManagedWriteAdmission(options: InstallCoManagedWriteAdmissionOptions = {}): void {
+  registerWriteAdmissionResolver(createCoManagedWriteAdmissionResolver(resolveInstalledReader(options)));
 }

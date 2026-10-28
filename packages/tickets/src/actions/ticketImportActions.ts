@@ -3,7 +3,7 @@
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, admitOperationalWrite } from '@alga-psa/db';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
@@ -889,8 +889,8 @@ export const importTickets = withAuth(async (
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
+      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
       await trx.raw(
-        // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
         `
           UPDATE tickets AS target
           SET entered_at = v.entered_at
@@ -909,8 +909,8 @@ export const importTickets = withAuth(async (
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
+      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
       await trx.raw(
-        // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
         `
           UPDATE tickets AS target
           SET closed_at = v.closed_at,

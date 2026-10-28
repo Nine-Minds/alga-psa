@@ -51,7 +51,9 @@ export type { WriteAdmissionContext, WriteAdmissionProvider } from './lib/writeA
 export {
   CO_MANAGED_PRODUCT_CODE,
   WRITE_ADMISSION_TTL_MS,
+  admitOperationalWrite,
   admitTenantWrite,
+  noteTenantProductCode,
   hasWriteAdmissionResolver,
   invalidateWriteAdmission,
   isTenantWriteGuarded,

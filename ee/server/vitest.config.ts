@@ -181,6 +181,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/server$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/server.ts')}` },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/index.ts')}` },
+      { find: /^@alga-psa\/db\/testing$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/testing/index.ts')}` },
       { find: /^@alga-psa\/db\/admin$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/lib/admin.ts')}` },
       { find: /^@alga-psa\/db\/models$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/models/index.ts')}` },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/models')}/$1` },

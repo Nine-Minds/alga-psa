@@ -3,7 +3,9 @@ import knexFactory, { type Knex } from 'knex';
 import { tenantDb } from './tenantDb';
 import {
   WRITE_ADMISSION_TTL_MS,
+  admitOperationalWrite,
   invalidateWriteAdmission,
+  noteTenantProductCode,
   isTenantWriteGuarded,
   registerWriteAdmissionResolver,
   resetWriteAdmissionResolver,
@@ -164,6 +166,31 @@ describe('tenantDb write admission: fast path (A1)', () => {
 });
 
 describe('tenantDb write admission: co-managed decisions', () => {
+  it('uses a replacement resolver instead of a cached decision from the previous one', async () => {
+    registerWriteAdmissionResolver(allow);
+    await tenantDb(knex, 'cm').table('tickets').insert({ a: 1 });
+    registerWriteAdmissionResolver(deny);
+    await expect(tenantDb(knex, 'cm').table('tickets').insert({ a: 2 })).rejects.toBeInstanceOf(Refusal);
+  });
+
+  it('does not restore an invalidated decision when an older lookup finishes', async () => {
+    let finish!: (decision: { canWrite: boolean; denial?: Error }) => void;
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const resolver = vi.fn()
+      .mockImplementationOnce(() => { started(); return new Promise((resolve) => { finish = resolve; }); })
+      .mockResolvedValue({ canWrite: false, denial: new Refusal() });
+    registerWriteAdmissionResolver(resolver);
+    const write = tenantDb(knex, 'cm').table('tickets').insert({ a: 1 });
+    const result = Promise.resolve(write);
+    await ready;
+    invalidateWriteAdmission('cm');
+    finish({ canWrite: true });
+    await expect(result).rejects.toBeInstanceOf(Refusal);
+    expect(nonLookup()).toEqual([]);
+    expect(resolver).toHaveBeenCalledTimes(2);
+  });
+
   it('caches a decision for the TTL and invalidation forgets it', async () => {
     vi.useFakeTimers();
     try {
@@ -215,5 +242,65 @@ describe('tenantDb write admission: no resolver (A8)', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe('seeded decision (session product code): a PSA request pays no tenants read', () => {
+  beforeEach(() => registerWriteAdmissionResolver(deny));
+
+  it('issues no tenants statement and no resolver call for a seeded PSA tenant', async () => {
+    noteTenantProductCode('psa', 'psa');
+    const db = tenantDb(knex, 'psa');
+    await db.table('tickets').where({ ticket_id: '1' }).update({ title: 'y' });
+    await db.table('comments').insert({ note: 'x' });
+    await admitOperationalWrite(knex, 'psa', 'tickets', 'raw');
+    expect(statements.filter((s) => /from "tenants"/.test(s))).toEqual([]);
+    expect(deny).not.toHaveBeenCalled();
+    expect(isTenantWriteGuarded('psa')).toBe(false);
+  });
+
+  it('a co_managed or empty hint seeds nothing, so the lookup still decides', async () => {
+    noteTenantProductCode('cm', 'co_managed');
+    noteTenantProductCode('cm', undefined);
+    expect(isTenantWriteGuarded('cm')).toBe(true);
+    await expect(tenantDb(knex, 'cm').table('tickets').update({ a: 1 })).rejects.toBeInstanceOf(Refusal);
+  });
+
+  it('does not override a known co-managed decision', async () => {
+    await expect(tenantDb(knex, 'cm').table('tickets').update({ a: 1 })).rejects.toBeInstanceOf(Refusal);
+    noteTenantProductCode('cm', 'psa');
+    expect(isTenantWriteGuarded('cm')).toBe(true);
+  });
+
+  it('after invalidation a stale session hint is ignored until one real lookup has run', async () => {
+    noteTenantProductCode('cm', 'psa');
+    invalidateWriteAdmission('cm');
+    noteTenantProductCode('cm', 'psa');
+    expect(isTenantWriteGuarded('cm')).toBe(true);
+    await expect(tenantDb(knex, 'cm').table('tickets').update({ a: 1 })).rejects.toBeInstanceOf(Refusal);
+    expect(statements.filter((s) => /from "tenants"/.test(s)).length).toBe(1);
+  });
+});
+
+describe('admitOperationalWrite (explicit admission for raw SQL / bare builders)', () => {
+  it('refuses an operational table for a refused co-managed tenant', async () => {
+    registerWriteAdmissionResolver(deny);
+    await expect(admitOperationalWrite(knex, 'cm', 'tickets', 'raw:tickets')).rejects.toBeInstanceOf(Refusal);
+    expect(nonLookup()).toEqual([]);
+  });
+
+  it('ignores a non-operational table and does no lookup', async () => {
+    registerWriteAdmissionResolver(deny);
+    await admitOperationalWrite(knex, 'cm', 'standard_priorities', 'raw');
+    expect(statements).toEqual([]);
+  });
+
+  it('is free without a resolver and for a known PSA tenant', async () => {
+    await admitOperationalWrite(knex, 'psa', 'tickets', 'raw');
+    registerWriteAdmissionResolver(allow);
+    await admitOperationalWrite(knex, 'psa', 'tickets', 'raw');
+    await admitOperationalWrite(knex, 'psa', 'tickets', 'raw');
+    expect(statements.filter((s) => /from "tenants"/.test(s)).length).toBe(1);
+    expect(allow).not.toHaveBeenCalled();
   });
 });

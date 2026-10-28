@@ -1,3 +1,4 @@
+import { admitOperationalWrite } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export interface DattoDeviceLivenessTouch {
@@ -35,7 +36,7 @@ export async function touchDattoDeviceLiveness(
 
   const assetValues = rows.map(() => '(?::uuid, ?::timestamptz)').join(', ');
   const assetBindings = rows.flatMap((row) => [row.assetId, parseIsoDate(row.lastSeenAt)]);
-  // write-admission: exempt — raw SQL bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, no builder to decorate)
+  await admitOperationalWrite(knex, tenant, 'assets', 'raw:datto-device-liveness');
   await knex.raw(
     `UPDATE assets AS a
         SET last_seen_at = v.last_seen_at,

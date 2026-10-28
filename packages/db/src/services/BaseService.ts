@@ -7,8 +7,7 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
-import { isOperationalWriteTable } from '../lib/operationalWriteTables';
-import { admitTenantWrite, isTenantWriteGuarded } from '../lib/writeAdmission';
+import { admitOperationalWrite } from '../lib/writeAdmission';
 
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
 const warnedMissingAuditFields = new Set<string>();
@@ -107,12 +106,14 @@ export abstract class BaseService<T = any> {
     this.searchableFields = options.searchableFields || [];
     this.defaultSort = options.defaultSort || this.auditFields.createdAt;
     this.defaultOrder = options.defaultOrder || 'desc';
-    // Default admission is the same decision `tenantDb` makes at the write terminals,
-    // taken early so a refused mutation does no row access or audit work first.
-    this.mutationGuard = options.mutationGuard ?? (async (trx, context) => {
-      if (!isOperationalWriteTable(this.tableName) || !isTenantWriteGuarded(context.tenant)) return;
-      await admitTenantWrite(trx, context.tenant, { table: this.tableName, operation: `service-mutation:${this.tableName}` });
-    });
+    // Default admission is the same decision `tenantDb` makes at the write terminals, taken
+    // early so a refused mutation does no row access or audit work first. A caller's guard
+    // COMPOSES with it (admission first), so a subclass cannot opt out by passing its own.
+    const callerGuard = options.mutationGuard;
+    this.mutationGuard = async (trx, context) => {
+      await admitOperationalWrite(trx, context.tenant, this.tableName, `service-mutation:${this.tableName}`);
+      await callerGuard?.(trx, context);
+    };
   }
 
   /**

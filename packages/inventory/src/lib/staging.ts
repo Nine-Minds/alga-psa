@@ -1,3 +1,4 @@
+import { admitOperationalWrite } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type {
   IProjectStagingLine,
@@ -809,7 +810,7 @@ export async function undoInstall(
       await trx('project_staging_lines')
         .where({ tenant, staging_line_id: lineId })
         .update({ status: 'staged', project_material_id: null, installed_at: null, installed_by: null, updated_at: trx.fn.now() });
-      // write-admission: exempt — bare knex builder bypasses the tenantDb terminal guard; NOT covered at runtime (known gap, move onto tenantDb in the L0c follow-up)
+      await admitOperationalWrite(trx, tenant, 'project_materials', 'unstage-project-material');
       await trx('project_materials').where({ tenant, project_material_id: materialId }).delete();
 
       const meta = await loadProductMeta(trx, tenant, line.service_id!);

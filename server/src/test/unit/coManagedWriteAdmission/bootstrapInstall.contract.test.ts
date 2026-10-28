@@ -2,7 +2,7 @@
  * A8: every process that can write native rows installs the co-managed resolver, fail-open,
  * so a missing/unresolvable co-managed package never stops a worker booting.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -19,11 +19,11 @@ describe.each(BOOTSTRAPS)('%s', (file) => {
 
   it('installs the co-managed write-admission resolver', () => {
     expect(source).toContain("import('@alga-psa/licensing/co-managed-write-admission')");
-    expect(source).toContain('installCoManagedWriteAdmission()');
+    expect(source).toMatch(/installCoManagedWriteAdmission\(/);
   });
 
   it('fails open: the install sits inside a try whose catch only reports', () => {
-    const at = source.indexOf('installCoManagedWriteAdmission()');
+    const at = source.indexOf('installCoManagedWriteAdmission(');
     const tryAt = source.lastIndexOf('try {', at);
     const catchAt = source.indexOf('catch (error)', at);
     expect(tryAt).toBeGreaterThan(-1);
@@ -34,10 +34,22 @@ describe.each(BOOTSTRAPS)('%s', (file) => {
   });
 });
 
-describe('REST error mapping', () => {
-  it('maps the refusal codes centrally to 409 / 423', () => {
-    const source = fs.readFileSync(path.join(ROOT, 'server/src/lib/api/middleware/apiMiddleware.ts'), 'utf8');
-    expect(source).toMatch(/CO_MANAGED_NOT_ACTIVE:\s*409/);
-    expect(source).toMatch(/CO_MANAGED_READ_ONLY:\s*423/);
+describe('REST error mapping (real handleApiError)', () => {
+  it.each([
+    ['read_only', 423, 'CO_MANAGED_READ_ONLY'],
+    ['terminated', 423, 'CO_MANAGED_READ_ONLY'],
+    ['pending_acceptance', 409, 'CO_MANAGED_NOT_ACTIVE'],
+  ] as const)('a thrown CoManagedLifecycleError (%s) becomes HTTP %i / %s', async (state, status, code) => {
+    const { handleApiError } = await import('server/src/lib/api/middleware/apiMiddleware');
+    const { CoManagedLifecycleError } = await import('@alga-psa/licensing/lib/co-managed-lifecycle-error');
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const response = handleApiError(new CoManagedLifecycleError({ state, canWrite: false, graceEndsAt: null }));
+      expect(response.status).toBe(status);
+      const body = await response.json();
+      expect(body.error.code).toBe(code);
+    } finally {
+      quiet.mockRestore();
+    }
   });
 });
