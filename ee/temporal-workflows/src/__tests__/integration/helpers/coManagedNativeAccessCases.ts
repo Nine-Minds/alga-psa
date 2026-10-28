@@ -91,7 +91,7 @@ export function registerNativeAccessTests(provision: (
   beforeAll(async () => {
     wireLocalTestDbEnv();
     process.env.NEXTAUTH_SECRET = 'co-managed-integration-test-secret';
-    const root = path.resolve(process.cwd(), '../..');
+    const root = path.resolve(__dirname, '../../../../../..');
     migrationWork = mkdtempSync(path.join(tmpdir(), 'co-managed-schema-'));
     const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
     const schema = prepareUpgradeSchema({ repository: root, commit, destination: path.join(migrationWork, 'schema'), edition: 'ee' });

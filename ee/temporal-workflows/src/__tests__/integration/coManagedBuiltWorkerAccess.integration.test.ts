@@ -14,13 +14,14 @@ import dotenv from 'dotenv';
 /** Opt-in integration transport. Requires the built Dockerfile seed payloads,
  * a local Temporal server, Redis and Mailpit; it never starts the app server. */
 registerNativeAccessTests(async (input, databaseName) => {
-  const root = path.resolve(process.cwd(), '../..');
-  const entry = path.resolve('dist/ee/temporal-workflows/src/worker.js');
+  const workflowsDir = path.resolve(__dirname, '../../..');
+  const root = path.resolve(workflowsDir, '../..');
+  const entry = path.join(workflowsDir, 'dist/ee/temporal-workflows/src/worker.js');
   // A local tsc build alone omits these Dockerfile COPY assets. Reject stale
   // seed code before letting the worker create any tenant.
-  expect(readFileSync('dist/seeds/permissions/catalog.cjs'))
+  expect(readFileSync(path.join(workflowsDir, 'dist/seeds/permissions/catalog.cjs')))
     .toEqual(readFileSync(path.join(root, 'server/migrations/utils/permissions/catalog.cjs')));
-  const defaults = dotenv.parse(readFileSync('.env'));
+  const defaults = dotenv.parse(readFileSync(path.join(workflowsDir, '.env')));
   const namespace = `cm-l1a-access-${randomUUID()}`;
   const queue = namespace;
   const reservation = createServer();
@@ -38,7 +39,7 @@ registerNativeAccessTests(async (input, databaseName) => {
   const work = mkdtempSync(path.join(tmpdir(), 'cm-l1a-worker-'));
   const logPath = path.join(work, 'worker.log');
   const log = openSync(logPath, 'w', 0o600);
-  const worker = spawn(process.execPath, [entry], { cwd: process.cwd(), env, stdio: ['ignore', log, log] });
+  const worker = spawn(process.execPath, [entry], { cwd: workflowsDir, env, stdio: ['ignore', log, log] });
   let redis: ReturnType<typeof createClient> | undefined;
   const close = async () => {
     if (redis?.isOpen) await redis.quit();
