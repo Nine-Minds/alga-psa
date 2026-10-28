@@ -42,11 +42,9 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
-  ensureDefaultContractForClientIfBillingConfigured,
-} from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
-import { resolveProductCode } from '@alga-psa/types';
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   ClientMergeBlockedError,
   executeClientMerge,
@@ -393,36 +391,18 @@ export class ClientService extends BaseService<IClient> {
         is_inactive: data.is_inactive || false,
         lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        tenant: context.tenant
       };
 
-      // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
-        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
-
-      // Terminal step of charge attribution — every client has exactly one.
-      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
-        clientName: client.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: context.tenant,
-        clientId: client.client_id,
-      });
-
-      // Tax initialization shares the client transaction: for PSA tenants an
-      // invalid/missing configuration must roll the client back rather than
-      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
-      // rates (the product intentionally excludes billing) and keep the same
-      // exemption as the UI and shared client-writer paths.
-      const tenantProduct = await tenantDb(trx, context.tenant)
-        .table('tenants')
-        .first('product_code');
-      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
-        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
-      }
+      // The shared creation seam owns the insert plus every default a client
+      // needs (tenant currency, default billing profile, default contract,
+      // default tax settings) in this transaction. Its failures are mapped to
+      // the same API errors direct inserts used to raise.
+      const client = await createClientWithDefaults(
+        trx,
+        context.tenant,
+        clientData as unknown as CreateClientWithDefaultsData
+      ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {

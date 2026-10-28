@@ -26,6 +26,7 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -76,6 +77,9 @@ export type UpdateUserErrorCode =
   | 'REPORTS_TO_CYCLE'
   | 'SCIM_MANAGED_INACTIVE'
   | 'INVALID_TIMEZONE'
+  | 'INVALID_ACTIVE_STATE'
+  | 'LICENSE_LIMIT_REACHED'
+  | 'SOLO_PLAN_LIMIT'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -1076,6 +1080,13 @@ export const updateUser = withAuth(async (
         }
       }
 
+      // Active state is a strict boolean. Seat admission and every seat count
+      // read `is_inactive = false`, while sign-in only tests truthiness, so any
+      // other value (null, "false") would leave a user signed in but uncounted.
+      if ('is_inactive' in userData && typeof userData.is_inactive !== 'boolean') {
+        return { success: false, code: 'INVALID_ACTIVE_STATE', error: 'Active state must be true or false.' };
+      }
+
       if (
         userData.is_inactive === false
         && isEnterprise
@@ -1124,13 +1135,13 @@ export const updateUser = withAuth(async (
 
       let normalizedUserData = userData;
 
-      // The email uniqueness check and the timezone change check both need the
-      // stored row, so read it once.
+      // The email uniqueness check, the timezone change check and the
+      // reactivation seat check all need the stored row, so read it once.
       const timezoneProvided = 'timezone' in userData && userData.timezone !== undefined;
-      const existing = (userData.email || timezoneProvided)
+      const existing = (userData.email || timezoneProvided || 'is_inactive' in userData)
         ? await tenantDb(trx, tenant).table('users')
             .where({ user_id: userId })
-            .select('email', 'user_type', 'timezone')
+            .select('email', 'user_type', 'timezone', 'is_inactive')
             .first()
         : undefined;
 
@@ -1182,6 +1193,20 @@ export const updateUser = withAuth(async (
           ...normalizedUserData,
           email: normalizedEmail,
         };
+      }
+
+      // Moving an internal user from inactive to active occupies a seat, so it
+      // is admitted like a new user. Only that transition is checked: an
+      // unrelated edit by an already-active user must not be refused at the limit.
+      if (
+        existing?.user_type === 'internal'
+        && existing.is_inactive === true
+        && userData.is_inactive === false
+      ) {
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant);
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          return { success: false, code: licenseCheck.code, error: licenseCheck.error };
+        }
       }
 
       await User.update(trx, userId, normalizedUserData);

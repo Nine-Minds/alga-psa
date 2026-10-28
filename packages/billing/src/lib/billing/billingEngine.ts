@@ -154,6 +154,7 @@ import {
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
 import { resolveContractLineBillingWindow } from "./contractLineWindow";
+import { findWindow, loadCarriedForwardWindows } from "./lateHourlyTime";
 import {
   contractAdjustmentDateOnly,
   reconcileContractChangeAdjustmentsForInvoice,
@@ -5720,10 +5721,12 @@ export class BillingEngine {
         configuration_type: "Hourly",
         quantity: configDetails.baseConfig.quantity ?? null,
         custom_rate: configDetails.baseConfig.custom_rate ?? null,
+        // A stored 0 or unset rate is "no contract rate": null lets it fall
+        // through to the catalog price instead of billing at zero.
         hourly_rate:
-          hourlyDetails.hourly_rate != null
+          hourlyDetails.hourly_rate != null && Number(hourlyDetails.hourly_rate) > 0
             ? Number(hourlyDetails.hourly_rate)
-            : 0,
+            : null,
         minimum_billable_time: hourlyDetails.minimum_billable_time ?? 0,
         round_up_to_nearest: hourlyDetails.round_up_to_nearest ?? 0,
       } as IContractLineServiceConfiguration & IContractLineServiceHourlyConfig;
@@ -5750,6 +5753,25 @@ export class BillingEngine {
         servicePeriodStartExclusive,
         servicePeriodEndExclusive,
       });
+
+    // Approved time dated inside an earlier window that an invoice already
+    // claimed can never join that invoice and falls outside every later
+    // window, so it would never bill. It rides this line's next invoice instead
+    // (exactly once, via the invoiced flag); see lateHourlyTime.ts.
+    const carriedWindows = projectTarget
+      ? []
+      : await loadCarriedForwardWindows(this.knex, tenant, {
+          obligationIds: [
+            ...new Set(
+              [
+                clientContractLine.client_contract_line_id,
+                clientContractLine.contract_line_id,
+              ].filter((id): id is string => Boolean(id)),
+            ),
+          ],
+          before: servicePeriodStartExclusive,
+          periodEndExclusive: servicePeriodEndExclusive,
+        });
 
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
@@ -5862,9 +5884,26 @@ export class BillingEngine {
     if (projectTarget) {
       query.where("projects.project_id", projectTarget.projectId);
     } else {
-      query
-        .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
-        .where("time_entries.end_time", "<", servicePeriodEndExclusive);
+      query.where(function (this: Knex.QueryBuilder) {
+        this.where(function (this: Knex.QueryBuilder) {
+          this.where(
+            "time_entries.start_time",
+            ">=",
+            servicePeriodStartExclusive,
+          ).where("time_entries.end_time", "<", servicePeriodEndExclusive);
+        });
+        for (const window of carriedWindows) {
+          // Carried time is only the line's own assigned time.
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.where(
+              "time_entries.contract_line_id",
+              clientContractLine.contract_line_id,
+            )
+              .where("time_entries.start_time", ">=", window.startInclusive)
+              .where("time_entries.start_time", "<", window.endExclusive);
+          });
+        }
+      });
     }
 
     const fixedPriceProjectIds =
@@ -5909,6 +5948,14 @@ export class BillingEngine {
     );
 
     const loadedTimeEntries = await query;
+    // Only a window an issued invoice closed makes the time "late". Voided,
+    // cancelled and draft windows carry the same way but as ordinary time.
+    for (const entry of loadedTimeEntries) {
+      const window = findWindow(carriedWindows, entry.start_time);
+      if (window?.closed) {
+        entry.late_for_service_period = window.source;
+      }
+    }
     // Prepaid Block lines: minutes already drawn from the line's blocks are
     // not priced here, and entries touching a pending block are held.
     const timeEntries = projectTarget
@@ -5930,6 +5977,8 @@ export class BillingEngine {
           enable_overtime: plan.enable_overtime,
           overtime_threshold: plan.overtime_threshold,
           overtime_rate: plan.overtime_rate,
+          minimum_billable_time: plan.minimum_billable_time,
+          round_up_to_nearest: plan.round_up_to_nearest,
         },
         serviceConfigMap,
         timeEntries,

@@ -323,6 +323,21 @@
       "any": "alle",
       "clear": "Zurücksetzen",
       "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
+    },
+    "lateTime": {
+      "title": "Verspätet genehmigte Stundenzeit",
+      "description": "Diese Zeit wurde genehmigt, nachdem die Rechnung für den Leistungszeitraum bereits ausgestellt wurde. Einträge, die auf die Abrechnung warten, werden einmalig der nächsten Rechnung hinzugefügt und als verspätete Zeit gekennzeichnet. Einträge außerhalb des Rückblickzeitraums werden nicht abgerechnet.",
+      "columns": {
+        "client": "Kunde",
+        "technician": "Techniker",
+        "service": "Dienst",
+        "workDate": "Arbeitsdatum",
+        "hours": "Stunden",
+        "closedPeriod": "Abgeschlossener Leistungszeitraum",
+        "status": "Status"
+      },
+      "nextInvoice": "Wird mit der nächsten Rechnung abgerechnet",
+      "outsideLookback": "Außerhalb des Rückblickzeitraums — nicht abgerechnet"
     }
   },
   "manualInvoices": {
