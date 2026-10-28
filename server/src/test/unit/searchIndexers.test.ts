@@ -46,6 +46,7 @@ function createFirstRowKnex(row: unknown) {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
@@ -63,6 +64,7 @@ function createBatchKnex(rows: unknown[]) {
     distinctOn: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -317,6 +319,32 @@ describe('search entity indexers', () => {
         isInternalOnly: true,
       },
     });
+  });
+
+  it('C7 ticket-comment indexer excludes soft-deleted and unpublished comments at the source', async () => {
+    const tenant = '11111111-1111-4111-8111-111111111111';
+    // loadOne: a soft-deleted/scheduled/canceled row is filtered out by the query, so no row comes back -> null.
+    const one = createFirstRowKnex(undefined);
+    expect(await ticketCommentIndexer.loadOne(one.knex as never, tenant, 'gone')).toBeNull();
+    expect(one.queryBuilder.whereNull).toHaveBeenCalledWith('c.deleted_at');
+    expect(one.queryBuilder.where).toHaveBeenCalledWith('c.publish_state', 'published');
+
+    // loadBatch shares the same base query.
+    const batch = createFirstRowKnex(undefined);
+    Object.assign(batch.queryBuilder, {
+      limit: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve, reject) => Promise.resolve([]).then(resolve, reject)),
+    });
+    await ticketCommentIndexer.loadBatch(batch.knex as never, tenant, { limit: 10 } as never);
+    expect(batch.queryBuilder.whereNull).toHaveBeenCalledWith('c.deleted_at');
+    expect(batch.queryBuilder.where).toHaveBeenCalledWith('c.publish_state', 'published');
+  });
+
+  it('C7 project-task-comment indexer excludes soft-deleted comments at the source', async () => {
+    const tenant = '11111111-1111-4111-8111-111111111111';
+    const one = createFirstRowKnex(undefined);
+    expect(await projectTaskCommentIndexer.loadOne(one.knex as never, tenant, 'gone')).toBeNull();
+    expect(one.queryBuilder.whereNull).toHaveBeenCalledWith('pc.deleted_at');
   });
 
   it('T033 ticket-comment indexer links to the comment hash anchor', async () => {

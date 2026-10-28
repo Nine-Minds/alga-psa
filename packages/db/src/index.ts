@@ -17,16 +17,37 @@ export { default as Knex } from './lib/knex-turbopack';
 export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
 
 // Tenant Connection
-export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly, withSavepoint } from './lib/tenant';
 export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
 export { getTenantTableScope, parseTableExpression, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
+export {
+  TENANT_TABLE_MANIFEST,
+  TenantManifestCycleError,
+  computeTenantDeletionOrder,
+  deletionEdges,
+  getTenantTableManifestEntry,
+  placeTenantTable,
+  tenantClientKeyedTables,
+  tenantDeletionOrder,
+  tenantExportOrder,
+} from './lib/tenantTableManifest';
+export type {
+  TenantDeletionComputation,
+  TenantDeletionViolation,
+  TenantInsertionWindow,
+  TenantTableEntry,
+  TenantTableForeignKey,
+  TenantTableReference,
+} from './lib/tenantTableManifest';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
-export { registerAfterCommit } from './lib/afterCommit';
+export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
+export { admitWrite, registerWriteAdmissionProvider, resetWriteAdmissionProvider } from './lib/writeAdmission';
+export type { WriteAdmissionContext, WriteAdmissionProvider } from './lib/writeAdmission';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)
@@ -51,7 +72,7 @@ export {
 } from './lib/invoiceExternalSyncLock';
 
 // Tenant Slug utilities
-export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
+export { getTenantIdBySlug, getTenantDisplayNameBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
 
 // Tenant suspension (reversible gate on background activity)
 export { isTenantSuspended, suspendTenant, resumeTenant } from './lib/tenantSuspension';
@@ -102,6 +123,31 @@ export async function withKnexTransaction<T>(
 }
 
 /**
+ * Describe an error for logging without ever throwing.
+ *
+ * `error.stack` is a lazy getter: V8 formats the trace on first access (and
+ * under vite-node a source-mapping `prepareStackTrace` runs then, consuming
+ * stack), so the read can itself raise (e.g. `RangeError: Maximum call stack
+ * size exceeded`). Inside a catch block that second error would replace the
+ * original failure the caller must see. Any failure to read falls back to
+ * `String(error)`; a hostile `toString` degrades to a fixed placeholder.
+ */
+function describeError(error: unknown): { error: string; stack: string | undefined } {
+  try {
+    return {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+  } catch {
+    try {
+      return { error: String(error), stack: undefined };
+    } catch {
+      return { error: '<unprintable error>', stack: undefined };
+    }
+  }
+}
+
+/**
  * Execute a function within an admin database transaction
  */
 export async function withAdminTransaction<T>(
@@ -135,10 +181,9 @@ export async function withAdminTransaction<T>(
     const result = await runOwnedTransaction(adminDb, callback);
     return result;
   } catch (error) {
-    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    // Reporting must never replace the error it reports: describing the error
+    // is guarded, the rethrow is not.
+    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, describeError(error));
     throw error;
   }
 }
@@ -147,3 +192,18 @@ export async function withAdminTransaction<T>(
 export type { Knex as KnexInstance } from 'knex';
 
 export { ensureMiscellaneousService } from './lib/ensureMiscellaneousService';
+
+export {
+  registerCommentEventContributor,
+  publishCommentEvent,
+  resetCommentEventContributors,
+  type CommentEvent,
+  type CommentEventContributor,
+  type CommentEventEnvelope,
+  type CommentEventSource,
+  type CommentEventType,
+  type CommentEventTypesBySource,
+  type CommentEventsBySource,
+  type ProjectTaskCommentEvent,
+  type TicketCommentEvent,
+} from './lib/commentEventRegistry';
