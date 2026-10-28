@@ -44,6 +44,17 @@ describe('after-commit quote event queue', () => {
       queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_CONVERTED', payload: builtWorkflowPayload('QUOTE_CONVERTED', {}) }, { ...params, activityId: 'second' });
     });
     expect(published.mock.calls.map(([event]) => event.idempotencyKey)).toEqual(['quote_viewed:quote-a', 'quote_converted:quote-a:first', 'quote_converted:quote-a:second']);
+    const ids = published.mock.calls.map(([, options]) => options?.eventId);
+    expect(new Set(ids).size).toBe(3);
+    published.mockClear();
+    await withTransaction(knex, async (t) => {
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_VIEWED', payload: builtWorkflowPayload('QUOTE_VIEWED', {}) }, params);
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_VIEWED', payload: builtWorkflowPayload('QUOTE_VIEWED', {}) }, { ...params, tenant: 'tenant-b' });
+      queueQuoteLifecycleEvent(t, { eventType: 'QUOTE_CONVERTED', payload: builtWorkflowPayload('QUOTE_CONVERTED', {}) }, { ...params, activityId: 'first' });
+    });
+    expect(published.mock.calls[0][1]?.eventId).toBe(ids[0]);
+    expect(published.mock.calls[1][1]?.eventId).not.toBe(ids[0]);
+    expect(published.mock.calls[2][1]?.eventId).toBe(ids[1]);
   });
 
   it('publishes after the owner commits and drops events on rollback', async () => {
@@ -65,7 +76,7 @@ describe('after-commit quote event queue', () => {
     });
     expect(trx.commit).toHaveBeenCalledOnce();
     expect(published).toHaveBeenCalledOnce();
-    expect(published).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: 'quote_sent:quote-a:activity-a', ctx: expect.objectContaining({ tenantId: 'tenant-a', actor: params.actor }) }));
+    expect(published).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: 'quote_sent:quote-a:activity-a', ctx: expect.objectContaining({ tenantId: 'tenant-a', actor: params.actor }) }), expect.objectContaining({ eventId: expect.any(String) }));
     published.mockClear();
     await expect(withTransaction(knex, async (t) => { queueQuoteLifecycleEvent(t, event, params); throw new Error('rollback'); })).rejects.toThrow('rollback');
     expect(published).not.toHaveBeenCalled();

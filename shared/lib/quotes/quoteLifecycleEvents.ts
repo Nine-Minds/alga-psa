@@ -1,5 +1,8 @@
 import type { QuoteStatus } from '@alga-psa/types';
 import { registerAfterCommit } from '@alga-psa/db';
+import { v5 as uuidv5 } from 'uuid';
+
+const QUOTE_EVENT_NAMESPACE = '725f0a11-0ab1-5c65-a8c0-b8a5362fa91c';
 
 /** Events correspond to real transitions, not repeated writes of the same status. */
 export type QuoteLifecycleEventType =
@@ -79,18 +82,19 @@ function registerQuoteAfterCommit(
   registerAfterCommit(trx, async () => {
     const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
     const ctx = { tenantId: params.tenant, occurredAt: params.occurredAt, actor: params.actor };
+    const options = { eventId: uuidv5(JSON.stringify([params.tenant, idempotencyKey]), QUOTE_EVENT_NAMESPACE) };
     // LEVERAGE: friction brand-union-dispatch — each branded event needs its own generic publish call.
     switch (event.eventType) {
-      case 'QUOTE_SENT': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_VIEWED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_APPROVED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_ACCEPTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_REJECTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_EXPIRED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_CONVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_CONVERSION_REVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_SUPERSEDED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
-      case 'QUOTE_CANCELLED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey });
+      case 'QUOTE_SENT': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_VIEWED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_APPROVED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_ACCEPTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_REJECTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_EXPIRED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_CONVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_CONVERSION_REVERTED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_SUPERSEDED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
+      case 'QUOTE_CANCELLED': return publishWorkflowEvent({ ...event, ctx, idempotencyKey }, options);
     }
   }, `${event.eventType} quote=${params.quoteId}`);
 }

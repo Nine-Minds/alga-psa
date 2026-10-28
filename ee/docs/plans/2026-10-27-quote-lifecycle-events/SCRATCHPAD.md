@@ -97,3 +97,9 @@ Decisions: §9.1–9.4 adopt the PRD's own recommendations (no generic status_ch
 - The queue has unit coverage using a simulated owning Knex transaction: hooks run after commit, rollback suppresses publication, and view/conversion idempotency keys have the intended shape. This does not replace real DB transaction, duplicate-delivery, or write-site coverage. The four focused suites now pass 61 tests.
 - `npm run build:ce` completed successfully, as did the workflow worker and shared builds. Server typecheck exhausted an 8 GiB Node heap and is being retried with a larger heap.
 - Server typecheck passed with `NODE_OPTIONS=--max-old-space-size=16384`; the earlier default and 8 GiB attempts failed from Node heap exhaustion. Shared typecheck also passed after the queue and tests were added.
+
+## Review follow-up
+
+- Registered real builder probes for all ten quote events in the workflow emitter contract harness. They remain explicitly marked `no-product-emitter` until write paths are connected. The full emitter-contract suite passes, and `node scripts/check-workflow-event-emit-sites.mjs` passes.
+- The quote queue now supplies a deterministic UUIDv5 event ID derived from the tenant and event-specific idempotency key. Unit tests check stability across repeated publication, tenant separation, and distinct activity IDs. This does not establish durable delivery deduplication: event-bus processed sets have a TTL, and webhook jobs are removed on claim. A durable delivery or publication ledger and end-to-end tests remain necessary.
+- No quote write site has been wired to the queue. Portal acceptance and first view, all automatic and worker transitions, reversal/reconversion, actual signed delivery, translated locale labels, and the webhook guide remain incomplete. The registry still advertises non-emitting events; do not ship this draft.
