@@ -27,11 +27,12 @@ export default function CoManagedClientRecovery({ operationId, state, canRetry, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
-  const run = async (action: () => Promise<{ enqueued: boolean }>, failure: string) => {
+  const run = async (action: () => Promise<{ enqueued: boolean } | { rejected: true; errorCode: string }>, failure: string) => {
     setBusy(true); setError(null);
     try {
       const result = await action();
-      if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable', { defaultValue: 'The provisioning worker is unavailable. Try again.' }));
+      if ('rejected' in result) setError(failure);
+      else if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable', { defaultValue: 'The provisioning worker is unavailable. Try again.' }));
       await onChanged();
     } catch { setError(failure); }
     finally { setBusy(false); }
