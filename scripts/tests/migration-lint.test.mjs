@@ -301,6 +301,35 @@ const TOUCH = '20240115000000_touch.cjs';
 const ADD_A = "  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS a int');\n";
 const DROP_NOTE = "  await knex.raw('ALTER TABLE widgets DROP COLUMN note');\n";
 
+test('CLI: JSON stays parseable in GitHub Actions while diagnostics remain available', (t) => {
+  const r = prRepo();
+  t.after(r.cleanup);
+  const name = '20240201000000_check.cjs';
+  const cases = [
+    { body: ADD_A, status: 0, violations: [], undecided: [], annotation: null },
+    { body: DROP_NOTE, status: 1, violations: [3], undecided: [], annotation: /::error file=server\/migrations\/20240201000000_check\.cjs,line=2::R3 / },
+    {
+      body: '  const table = process.env.TABLE;\n  await knex.raw(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS a int`);\n',
+      status: 2, violations: [], undecided: ['UNRESOLVED'], annotation: /::error file=server\/migrations\/20240201000000_check\.cjs,line=3::RUNRESOLVED /,
+    },
+  ];
+  for (const { body, status, violations, undecided, annotation } of cases) {
+    r.write(name, `exports.up = async (knex) => {\n${body}};\n`);
+    r.commit(`case ${status}`);
+    const out = spawnSync('node', [CLI, '--repo', r.repo, '--base', 'main', '--json'], {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: path.join(r.repo, '.git/summary.md') },
+    });
+    assert.equal(out.status, status, out.stderr);
+    const report = JSON.parse(out.stdout);
+    assert.equal(report.filesScanned, 1);
+    assert.deepEqual(report.violations.map((v) => v.rule), violations);
+    assert.deepEqual(report.undecided.map((v) => v.rule), undecided);
+    if (annotation) assert.match(out.stderr, annotation);
+    else assert.equal(out.stderr, '');
+  }
+});
+
 test('CLI PR mode: an edit that adds DROP COLUMN to a base migration fails R3 and is reported as modified', () => {
   const r = prRepo();
   r.write(TOUCH, `exports.up = async (knex) => {\n${ADD_A}${DROP_NOTE}};\n`);
@@ -358,6 +387,45 @@ test('CLI PR mode: an added file still goes through the unchanged path (no statu
   assert.match(out.stdout, /20240201000000_bad\.cjs:2: R3 /);
   assert.doesNotMatch(out.stdout, /: (modified|renamed)/);
   r.cleanup();
+});
+
+test('CLI PR mode: advancing base invalidates pending timestamps until both migrations are renumbered', (t) => {
+  const r = prRepo();
+  t.after(r.cleanup);
+  const migrations = [
+    ['20240201000000_receipts.cjs', '20240401000000_receipts.cjs', 'receipts'],
+    ['20240201000100_events.cjs', '20240401000100_events.cjs', 'events'],
+  ];
+  for (const [name, , table] of migrations) {
+    r.write(name, `exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS ${table} (id int)'); };\n`);
+  }
+  r.commit('add pending migrations');
+  assert.equal(r.lint().status, 0, 'timestamps initially follow base');
+
+  r.git('switch', '-q', 'main');
+  r.write('20240301000000_unrelated.cjs', 'exports.up = async () => {};\n');
+  r.commit('advance base with an unrelated migration');
+  r.git('switch', '-q', 'pr');
+  const merge = r.git('merge', '-q', '--no-edit', 'main');
+  assert.equal(merge.status, 0, merge.stderr);
+
+  const lintJson = () => spawnSync('node', [CLI, '--repo', r.repo, '--base', 'main', '--json'], { encoding: 'utf8' });
+  const blocked = lintJson();
+  assert.equal(blocked.status, 1, blocked.stdout);
+  assert.deepEqual(JSON.parse(blocked.stdout).violations.map(({ file, rule }) => ({ file, rule })),
+    migrations.map(([name]) => ({ file: `server/migrations/${name}`, rule: 6 })));
+
+  for (const [oldName, newName] of migrations) {
+    const rename = r.git('mv', `server/migrations/${oldName}`, `server/migrations/${newName}`);
+    assert.equal(rename.status, 0, rename.stderr);
+  }
+  r.commit('renumber pending migrations after base');
+  const repaired = lintJson();
+  assert.equal(repaired.status, 0, repaired.stdout);
+  const report = JSON.parse(repaired.stdout);
+  assert.deepEqual(report.violations, []);
+  assert.deepEqual(report.undecided, []);
+  assert.equal(report.filesScanned, 2, 'both renamed migrations remain covered by the gate');
 });
 
 test('CLI PR mode: touching a file whose duplicate timestamp already exists on base is not a new R6; a new duplicate still is', () => {

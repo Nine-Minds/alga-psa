@@ -114,6 +114,20 @@ test('questionnaire mapping deletion is required by the Temporal readiness inven
   assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
 });
 
+test('relocated tenant deletion regressions remain required in the Temporal readiness lane', () => {
+  const files = ['defaultTaxRate', 'workSchedule', 'teamsObservability'].map(name =>
+    `ee/temporal-workflows/src/activities/__tests__/${name}TenantDeletionOrder.test.ts`);
+  const candidates = files.filter(file => isAdditionalWorkspaceTest(file, 'temporal-readiness'));
+  assert.deepEqual(candidates, files);
+  const collected = { runner: 'temporal-readiness', status: 'passed', files };
+  assert.equal(inspect({ candidates, collections: [collected] }).status, 'passed');
+  for (const missing of files) {
+    const result = inspect({ candidates, collections: [{ ...collected, files: files.filter(file => file !== missing) }] });
+    assert.equal(result.status, 'failed');
+    assert.deepEqual(result.unmatched, [missing]);
+  }
+});
+
 test('HTTP locale rendering and fixture readback join API execution without absorbing browser suites', () => {
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/serverRenderedLocale.e2e.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/utils/utilities.test.ts', 'api-e2e'), true);

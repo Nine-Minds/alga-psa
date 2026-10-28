@@ -7,8 +7,8 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 // Behavioral DB test for the tombstone partial-index migration (ticket
 // alga-2026-0002886). `up` is called on a DB that may already be migrated; it
-// is idempotent (CONCURRENTLY build under a staging name, drop, rename back).
-// The suite leaves the index in its migrated (partial) state.
+// is idempotent and preserves uniqueness during concurrent replacement. The
+// suite leaves the index in its migrated (partial) state.
 
 const require = createRequire(import.meta.url);
 const MIGRATION_PATH = path.resolve(
@@ -91,6 +91,66 @@ afterAll(async () => {
 });
 
 describe('external mapping tombstone partial index (DB-backed)', () => {
+  it('keeps writes available and targets unique during an interrupted build, then retries safely', async () => {
+    const tenant = await makeTenant('online-rebuild');
+    await insertMapping(tenant, { target: 'RESERVED' });
+    await insertMapping(tenant, { target: 'BLOCKER' });
+    const blocker = await db.transaction();
+    await blocker(MAPPINGS).where({ tenant, external_entity_id: 'BLOCKER' })
+      .update({ updated_at: db.fn.now() });
+    const blockerPid = (await blocker.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+    // Handle cancellation immediately so the rejection cannot escape while
+    // the test inspects the database from another connection.
+    const upgrading = migration.up(db).then(() => null, (error: unknown) => error);
+    try {
+      let migrationPid: number | undefined;
+      await expect.poll(async () => {
+        const waiting = await db.raw(
+          'SELECT pid FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))',
+          [blockerPid]
+        );
+        migrationPid = waiting.rows[0]?.pid;
+        return migrationPid !== undefined;
+      }, { timeout: 10_000 }).toBe(true);
+
+      await db.transaction(async (writer) => {
+        await writer.raw("SET LOCAL lock_timeout = '500ms'");
+        await writer(MAPPINGS).insert({
+          id: randomUUID(), tenant, integration_type: 'quickbooks_online',
+          alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+          external_entity_id: 'AVAILABLE', external_realm_id: 'realm-1',
+          sync_status: 'manual_link',
+        });
+      });
+      await expect(insertMapping(tenant, { target: 'RESERVED' }))
+        .rejects.toMatchObject({ code: '23505' });
+
+      await db.raw('SELECT pg_cancel_backend(?)', [migrationPid]);
+      expect(await upgrading).toMatchObject({ code: '57014' });
+      const invalid = await db.raw(
+        'SELECT indexrelid FROM pg_index WHERE indrelid = ?::regclass AND NOT indisvalid',
+        [MAPPINGS]
+      );
+      expect(invalid.rows).toHaveLength(1);
+      await expect(insertMapping(tenant, { target: 'RESERVED' }))
+        .rejects.toMatchObject({ code: '23505' });
+    } finally {
+      await blocker.rollback();
+      await upgrading;
+    }
+
+    // A cancelled concurrent build leaves an invalid index behind. The retry
+    // must rebuild it, rather than treating IF NOT EXISTS as proof of validity.
+    await migration.up(db);
+    const invalid = await db.raw(
+      'SELECT indexrelid FROM pg_index WHERE indrelid = ?::regclass AND NOT indisvalid',
+      [MAPPINGS]
+    );
+    expect(invalid.rows).toHaveLength(0);
+    await insertMapping(tenant, { target: 'RESERVED', unlinked: true });
+    await expect(insertMapping(tenant, { target: 'RESERVED' }))
+      .rejects.toMatchObject({ code: '23505' });
+  }, 30_000);
   it('keeps writes available while an existing reader delays the index rebuild', async () => {
     await migration.up(db);
     const reader = await db.transaction();

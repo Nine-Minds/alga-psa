@@ -54,7 +54,8 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
@@ -292,7 +293,7 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={resolveAssetStatusLabel(t, asset.status, assetStatuses)} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={assetStatusLabel(t, asset.status, assetStatuses)} />
                 {/* FR-C6: the assignee is always shown, even when empty. */}
                 <AssetAssigneeRow
                   assetId={asset.asset_id}

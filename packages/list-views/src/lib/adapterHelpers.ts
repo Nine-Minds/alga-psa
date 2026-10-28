@@ -44,6 +44,9 @@ export function differsByCapture<TLive, F>(
  * Drop keys whose value states no constraint: undefined, null, '' and [].
  * `falseIsNoOp` names boolean filters whose `false` means "no constraint".
  */
+const isEmptyGroup = (value: unknown): boolean =>
+  typeof value === 'object' && value !== null && Array.isArray((value as { clauses?: unknown }).clauses) && (value as { clauses: unknown[] }).clauses.length === 0;
+
 export function compactFilters<F extends object>(
   filters: F,
   options: { exclude?: readonly string[]; falseIsNoOp?: readonly string[] } = {},
@@ -55,6 +58,8 @@ export function compactFilters<F extends object>(
     if (exclude.has(key)) continue;
     if (value === undefined || value === null || value === '') continue;
     if (Array.isArray(value) && value.length === 0) continue;
+    // An empty predicate group constrains nothing.
+    if (isEmptyGroup(value)) continue;
     if (value === false && falseIsNoOp.has(key)) continue;
     out[key] = value;
   }
@@ -94,6 +99,11 @@ export class DroppedReferenceCollector {
     if (!known || sentinels.includes(value) || known.has(value)) return value;
     this.record(field, 1);
     return undefined;
+  }
+
+  /** Records references a caller dropped itself (e.g. predicate clauses). */
+  recordDropped(field: string, count: number) {
+    this.record(field, count);
   }
 
   private record(field: string, count: number) {
