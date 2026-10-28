@@ -1354,7 +1354,7 @@
         "setDefault": "Als standaard instellen",
         "shippingTag": "Verzending",
         "unnamed": "Naamloze locatie",
-        "contactCount": "{{count}} contactpersonen",
+        "contactCount": "Contactpersonen: {{count}}",
         "contactPrimary": "Primair"
       },
       "dialog": {
@@ -2038,10 +2038,10 @@
     "remoteBadge": "Op afstand",
     "noLocationsAfterMerge": "Geen locaties",
     "unnamedLocation": "Locatie",
-    "movingFrom": "komt van {{client}}",
+    "movingFrom": "komt over van {{client}}",
     "primaryLocation": "Primair",
     "targetAlsoHas": "{{client}} heeft ook ‘{{location}}’",
-    "useIt": "Deze gebruiken",
+    "useIt": "Gebruiken",
     "contactLocationSummary": "{{count}} locatiekoppelingen van contactpersonen, {{repointed}} omgezet"
   },
   "billingProfileContacts": {
