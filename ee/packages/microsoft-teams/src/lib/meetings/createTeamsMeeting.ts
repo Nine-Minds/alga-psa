@@ -153,6 +153,7 @@ export async function createTeamsMeetingWithResult(
       `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events`,
       {
         method: 'POST',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
