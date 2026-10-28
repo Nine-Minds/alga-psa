@@ -360,6 +360,45 @@ test('CLI PR mode: an added file still goes through the unchanged path (no statu
   r.cleanup();
 });
 
+test('CLI PR mode: advancing base invalidates pending timestamps until both migrations are renumbered', (t) => {
+  const r = prRepo();
+  t.after(r.cleanup);
+  const migrations = [
+    ['20240201000000_receipts.cjs', '20240401000000_receipts.cjs', 'receipts'],
+    ['20240201000100_events.cjs', '20240401000100_events.cjs', 'events'],
+  ];
+  for (const [name, , table] of migrations) {
+    r.write(name, `exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS ${table} (id int)'); };\n`);
+  }
+  r.commit('add pending migrations');
+  assert.equal(r.lint().status, 0, 'timestamps initially follow base');
+
+  r.git('switch', '-q', 'main');
+  r.write('20240301000000_unrelated.cjs', 'exports.up = async () => {};\n');
+  r.commit('advance base with an unrelated migration');
+  r.git('switch', '-q', 'pr');
+  const merge = r.git('merge', '-q', '--no-edit', 'main');
+  assert.equal(merge.status, 0, merge.stderr);
+
+  const lintJson = () => spawnSync('node', [CLI, '--repo', r.repo, '--base', 'main', '--json'], { encoding: 'utf8' });
+  const blocked = lintJson();
+  assert.equal(blocked.status, 1, blocked.stdout);
+  assert.deepEqual(JSON.parse(blocked.stdout).violations.map(({ file, rule }) => ({ file, rule })),
+    migrations.map(([name]) => ({ file: `server/migrations/${name}`, rule: 6 })));
+
+  for (const [oldName, newName] of migrations) {
+    const rename = r.git('mv', `server/migrations/${oldName}`, `server/migrations/${newName}`);
+    assert.equal(rename.status, 0, rename.stderr);
+  }
+  r.commit('renumber pending migrations after base');
+  const repaired = lintJson();
+  assert.equal(repaired.status, 0, repaired.stdout);
+  const report = JSON.parse(repaired.stdout);
+  assert.deepEqual(report.violations, []);
+  assert.deepEqual(report.undecided, []);
+  assert.equal(report.filesScanned, 2, 'both renamed migrations remain covered by the gate');
+});
+
 test('CLI PR mode: touching a file whose duplicate timestamp already exists on base is not a new R6; a new duplicate still is', () => {
   const r = prRepo();
   r.write('20240115000000_twin.cjs', 'exports.up = async () => {};\n');
