@@ -726,7 +726,10 @@
       "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
       "reportsTo": "Berichtet an",
       "noManager": "Keine Führungskraft",
-      "reportsToHelp": "Eine Führungskraft sieht die Tickets, Geräte und Projekte der ihr unterstellten Personen, wenn ihre Sichtbarkeitsgruppe auf die eigenen Datensätze beschränkt ist."
+      "reportsToHelp": "Eine Führungskraft sieht die Tickets, Geräte und Projekte der ihr unterstellten Personen, wenn ihre Sichtbarkeitsgruppe auf die eigenen Datensätze beschränkt ist.",
+      "locations": "Standorte",
+      "primaryLocation": "Primär",
+      "remote": "Im Homeoffice"
     },
     "visibilityGroups": {
       "title": "Sichtbarkeitsgruppen",

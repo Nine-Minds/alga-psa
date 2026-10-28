@@ -726,7 +726,10 @@
       "reportsToCycle": "Esto crearía una cadena de reporte circular",
       "reportsTo": "Reporta a",
       "noManager": "Sin responsable",
-      "reportsToHelp": "Un responsable puede ver los tickets, dispositivos y proyectos de las personas que dependen de él, cuando su grupo de visibilidad se limita a sus propios registros."
+      "reportsToHelp": "Un responsable puede ver los tickets, dispositivos y proyectos de las personas que dependen de él, cuando su grupo de visibilidad se limita a sus propios registros.",
+      "locations": "Ubicaciones",
+      "primaryLocation": "Principal",
+      "remote": "Remota"
     },
     "visibilityGroups": {
       "title": "Grupos de visibilidad",

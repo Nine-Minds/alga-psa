@@ -330,6 +330,35 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           />
         </div>
 
+        {(user?.locations?.length || user?.work_arrangement) ? (
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {tProfile('clientSettings.users.locations', { defaultValue: 'Locations' })}
+            </label>
+            {/* Read-only: locations are managed by the service provider, and the portal write path
+                rejects them outright rather than dropping them quietly. */}
+            <div id={`user-${userId}-locations`} className="text-sm text-gray-700 space-y-0.5">
+              {user?.work_arrangement === 'remote' && (user?.locations?.length ?? 0) === 0 ? (
+                <div>{tProfile('clientSettings.users.remote', { defaultValue: 'Remote' })}</div>
+              ) : (
+                (user?.locations ?? []).map((location: { location_id: string; location_name: string | null; is_primary: boolean }) => (
+                  <div key={location.location_id}>
+                    {location.location_name || '—'}
+                    {location.is_primary
+                      ? ` • ${tProfile('clientSettings.users.primaryLocation', { defaultValue: 'Primary' })}`
+                      : ''}
+                  </div>
+                ))
+              )}
+              {user?.work_arrangement === 'remote' && (user?.locations?.length ?? 0) > 0 ? (
+                <div className="text-gray-500">
+                  {tProfile('clientSettings.users.remote', { defaultValue: 'Remote' })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between py-3">
           <div className="flex-1">
             <div className="text-sm font-medium">{tProfile('clientSettings.users.status')}</div>

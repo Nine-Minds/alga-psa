@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
 import { listContacts, type ContactListItem } from "../../../api/referenceData";
+import { contactPrimaryLocationLabel } from "../../../api/contacts";
 import type { ApiClient } from "../../../api/client";
 import {
   activeTicketNotificationSuppression,
@@ -261,6 +262,11 @@ export function ContactPickerModal({
                     <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
                     {contact.email ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{contact.email}</Text>
+                    ) : null}
+                    {contactPrimaryLocationLabel(contact) ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                        {contactPrimaryLocationLabel(contact)}
+                      </Text>
                     ) : null}
                   </View>
                   {busy ? <ActivityIndicator size="small" /> : null}

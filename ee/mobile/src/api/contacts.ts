@@ -22,6 +22,29 @@ export type ContactEmailAddress = {
   display_order?: number;
 };
 
+export type ContactWorkArrangement = "on_site" | "hybrid" | "remote";
+
+/** A client location this person works at. Address fields are read through from the client. */
+export type ContactLocation = {
+  location_id: string;
+  location_name?: string | null;
+  is_primary: boolean;
+  is_active: boolean;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+};
+
+export type ContactLocationInput = {
+  location_id: string;
+  is_primary?: boolean;
+};
+
 export type ContactListItem = {
   contact_name_id: string;
   full_name: string;
@@ -35,6 +58,8 @@ export type ContactListItem = {
   role?: string | null;
   notes?: string | null;
   is_inactive?: boolean;
+  work_arrangement?: ContactWorkArrangement | null;
+  locations?: ContactLocation[] | null;
   avatarUrl?: string | null;
 };
 
@@ -125,6 +150,9 @@ export type ContactWriteInput = {
   primary_email_canonical_type?: string | null;
   primary_email_custom_type?: string | null;
   additional_email_addresses?: ContactEmailAddressInput[];
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Omitted leaves the links untouched; [] removes them all. */
+  locations?: ContactLocationInput[];
   tags?: string[];
 };
 
@@ -214,6 +242,20 @@ export function getContactReachLine(contact: ContactListItem): string | null {
   const email = contact.email?.trim();
   if (email) return email;
   return null;
+}
+
+/**
+ * The one-line "where this person works" label for a list or picker row: the primary location name
+ * (with "+N" when there are more), or "Remote" for a remote worker with no links, or nothing. Never
+ * the client's default location — that is a guess the rows should not make.
+ */
+export function contactPrimaryLocationLabel(contact: ContactListItem): string | null {
+  const locations = contact.locations ?? [];
+  const primary = locations.find((location) => location.is_primary)
+    ?? (locations.length === 1 ? locations[0] : null);
+  const name = primary?.location_name?.trim();
+  if (name) return locations.length > 1 ? `${name} +${locations.length - 1}` : name;
+  return contact.work_arrangement === "remote" ? "Remote" : null;
 }
 
 export function buildContactAvatarUri(

@@ -766,7 +766,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "i18n key scanner finds no untranslated new strings; glossary register checks pass for every shipped locale"
   },
   {

@@ -2,6 +2,7 @@ import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/va
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { buildMapsUrl, mapsQueryFromLines } from "../urls/mapsUrl";
 import { Feather } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +18,7 @@ import {
   getContact,
   type ContactDetail,
   type ContactEmailAddress,
+  type ContactLocation,
   type ContactPhoneNumber,
 } from "../api/contacts";
 import { ErrorState, LoadingState } from "../ui/states";
@@ -187,6 +189,8 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   );
   const hasContactInfo = phones.length > 0 || Boolean(primaryEmail) || additionalEmails.length > 0;
   const notes = contact.notes?.trim() || null;
+  const locations = contact.locations ?? [];
+  const isRemote = contact.work_arrangement === "remote";
 
   return (
     <ScrollView
@@ -302,6 +306,47 @@ export function ContactDetailScreen({ route, navigation }: Props) {
         )}
       </SectionCard>
 
+      {locations.length > 0 || isRemote ? (
+        <SectionCard theme={theme} label={t("detail.locations", { defaultValue: "Locations" })}>
+          {locations.length === 0 ? (
+            <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>
+              {t("detail.remote", { defaultValue: "Remote" })}
+            </Text>
+          ) : (
+            locations.map((location, index) => (
+              <View
+                key={location.location_id}
+                style={{
+                  paddingVertical: theme.spacing.sm,
+                  borderBottomWidth: index === locations.length - 1 ? 0 : 1,
+                  borderBottomColor: theme.colors.borderLight,
+                }}
+              >
+                <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+                  {location.location_name || t("detail.locationFallback", { defaultValue: "Location" })}
+                  {location.is_primary ? ` • ${t("detail.primaryLocation", { defaultValue: "Primary" })}` : ""}
+                  {isRemote ? ` • ${t("detail.remote", { defaultValue: "Remote" })}` : ""}
+                </Text>
+                {/* The whole point on the road: hand the address to the maps app. With no address
+                    lines the location name is the best query there is. */}
+                <Pressable
+                  onPress={() => void Linking.openURL(buildMapsUrl(
+                    contactLocationLine(location) || (location.location_name ?? ""),
+                  ))}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("detail.openInMaps", { defaultValue: "Open in Maps" })}
+                  hitSlop={4}
+                >
+                  <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: 2 }}>
+                    {contactLocationLine(location) || location.location_name || ""}
+                  </Text>
+                </Pressable>
+              </View>
+            ))
+          )}
+        </SectionCard>
+      ) : null}
+
       {notes ? (
         <SectionCard theme={theme} label={t("detail.notes")}>
           <Text style={{ ...theme.typography.body, color: theme.colors.text }}>{notes}</Text>
@@ -320,6 +365,16 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       />
     </ScrollView>
   );
+}
+
+/** The address lines a maps query is built from; empty when the location holds no address. */
+export function contactLocationLine(location: ContactLocation): string {
+  return mapsQueryFromLines([
+    location.address_line1,
+    location.address_line2,
+    [location.city, location.state_province, location.postal_code].filter(Boolean).join(", "),
+    location.country_name,
+  ].filter(Boolean).join("\n"));
 }
 
 function SectionCard({ theme, label, children }: { theme: Theme; label: string; children: ReactNode }) {

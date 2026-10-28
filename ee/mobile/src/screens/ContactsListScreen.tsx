@@ -13,7 +13,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { buildContactAvatarUri, getContactReachLine, listContacts, type ContactListItem } from "../api/contacts";
+import { buildContactAvatarUri, contactPrimaryLocationLabel, getContactReachLine, listContacts, type ContactListItem } from "../api/contacts";
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
 import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
@@ -354,6 +354,11 @@ const ContactRow = memo(function ContactRow({
         {reachLine ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
             {reachLine}
+          </Text>
+        ) : null}
+        {contactPrimaryLocationLabel(item) ? (
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
+            {contactPrimaryLocationLabel(item)}
           </Text>
         ) : null}
       </View>

@@ -457,7 +457,7 @@
     "prdRefs": [
       "FR-F1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client portal ClientUserDetails shows a read-only Locations line (names, primary marked, remote badge); account action joins the links"
   },
   {
@@ -466,7 +466,7 @@
     "prdRefs": [
       "Security"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Portal contact write paths reject locations and work_arrangement"
   },
   {
@@ -475,7 +475,7 @@
     "prdRefs": [
       "FR-G1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ee/mobile api/contacts.ts: ContactDetail and ContactListItem gain work_arrangement and locations[]; ContactWriteInput gains both"
   },
   {
@@ -484,7 +484,7 @@
     "prdRefs": [
       "FR-G2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactDetailScreen Locations section: rows with name, Primary marker, address; press opens buildMapsUrl(mapsQueryFromLines(address)) falling back to the location name; Remote badge beside the name"
   },
   {
@@ -502,7 +502,7 @@
     "prdRefs": [
       "FR-G4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactsListScreen rows and ticket-detail ContactPickerModal show the primary location name as a secondary line"
   },
   {
@@ -511,7 +511,7 @@
     "prdRefs": [
       "FR-H1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "All new MSP, portal and mobile strings use t() with keys added to every shipped locale; glossary gates pass"
   },
   {
