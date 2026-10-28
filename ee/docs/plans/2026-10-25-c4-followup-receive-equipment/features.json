@@ -86,5 +86,21 @@
     "prdRefs": [
       "Findings to fix"
     ]
+  },
+  {
+    "id": "F012",
+    "description": "Bootstrap through SWR only for an uninitialized entity cache; later revalidations own freshness across layout remounts and failures.",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Give the Entry properties rail a usable minimum width while retaining the two-row asset layout and narrow Grid Details navigation.",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
   }
 ]

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import useSWR from 'swr';
+import useSWR, { unstable_serialize, useSWRConfig } from 'swr';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
 import { entityAssetsCacheKey } from '../lib/assetCacheKeys';
@@ -64,31 +64,29 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     // Single source of truth for the linked-assets list. Other surfaces (e.g.
     // Receive equipment) revalidate it via matchEntityAssetsCacheKeys.
+    const key = entityAssetsCacheKey(entityType, entityId);
+    const serializedKey = unstable_serialize(key);
+    const { cache } = useSWRConfig();
+    const cachedState = cache.get(serializedKey);
+    const initialized = cachedState?.data !== undefined;
+    // A remount may inherit an in-flight read even before it has cached data.
+    const bootstrap = useRef({ key: serializedKey, used: initialized || !!cachedState?.isValidating });
+    if (bootstrap.current.key !== serializedKey) bootstrap.current = { key: serializedKey, used: initialized || !!cachedState?.isValidating };
+    // An unused streamed promise can still reject after a cache-backed remount.
+    useEffect(() => { if (initialAssets) void Promise.resolve(initialAssets).catch(() => {}); }, [initialAssets]);
     const { data: linkedAssets, error: linkedAssetsError, mutate: revalidateLinkedAssets } = useSWR<Asset[]>(
-        entityAssetsCacheKey(entityType, entityId),
-        async () => unwrapAssetActionResult(await listEntityAssets(entityId, entityType)),
-        // initialAssets seeds the cache below, so skip the mount fetch then.
-        { revalidateOnMount: !initialAssets, revalidateOnFocus: false, shouldRetryOnError: false }
+        key,
+        async () => {
+            if (!bootstrap.current.used && initialAssets) {
+                bootstrap.current.used = true;
+                // React Flight thenables need Promise normalization.
+                return unwrapAssetActionResult(await Promise.resolve(initialAssets));
+            }
+            bootstrap.current.used = true;
+            return unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
+        },
+        { revalidateOnMount: initialAssets ? !initialized : undefined, revalidateOnFocus: false, shouldRetryOnError: false }
     );
-
-    useEffect(() => {
-        if (!initialAssets) return;
-        let cancelled = false;
-        // initialAssets may be a React Flight thenable (RSC-streamed) whose
-        // .then() returns undefined; normalize to a real, chainable Promise.
-        Promise.resolve(initialAssets).then((assets) => {
-            if (cancelled) return;
-            void revalidateLinkedAssets(unwrapAssetActionResult(assets), { revalidate: false });
-        }).catch((error) => {
-            if (cancelled) return;
-            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                defaultValue: 'Failed to load associated assets'
-            }));
-            void revalidateLinkedAssets([], { revalidate: false });
-        });
-        return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialAssets]);
 
     useEffect(() => {
         if (!linkedAssetsError) return;

@@ -103,5 +103,22 @@
       "F011",
       "F001"
     ]
+  },
+  {
+    "id": "T013",
+    "description": "Shared-provider panel tests: initial empty cache, receive invalidation, remount, stale and failed bootstrap, failed refresh, and pending bootstrap superseded by refresh.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Browser: receive, confirm status and custody, toggle Entry/Grid, open Grid Details and Assets, and check name width at 1024px without reload. Written; requires stopped app to be available for Smoke Test.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
   }
 ]

@@ -7,6 +7,7 @@ import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
 import AssociatedAssets from './AssociatedAssets';
 import { listEntityAssets } from '../actions/assetActions';
 import { entityAssetsCacheKey, matchEntityAssetsCacheKeys } from '../lib/assetCacheKeys';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 vi.mock('../actions/assetActions', () => ({ listEntityAssets: vi.fn(async () => []), createAssetAssociation: vi.fn(), removeAssetAssociation: vi.fn(), listAssets: vi.fn(async () => ({ assets: [], total: 0 })) }));
 const badges = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
@@ -87,6 +88,82 @@ describe('AssociatedAssets shared cache', () => {
       await mutateRef(matchAssetCacheKeys(['a2', 'ticket-other']));
     });
     expect(vi.mocked(listEntityAssets).mock.calls.length).toBe(calls);
+  });
+
+  it('preserves received data across remounts and late or failed bootstrap promises', async () => {
+    let resolveInitial!: (assets: any[]) => void;
+    let rejectInitial!: (error: Error) => void;
+    const late = new Promise<any[]>((resolve) => { resolveInitial = resolve; });
+    const failed = new Promise<any[]>((_, reject) => { rejectInitial = reject; });
+    const cache = new Map();
+    const panel = (initialAssets: Promise<any[]> | null) => (
+      <SWRConfig value={{ provider: () => cache, dedupingInterval: 0 }}>
+        <Capture />
+        {initialAssets && <AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={initialAssets} />}
+      </SWRConfig>
+    );
+    const view = render(panel(Promise.resolve([])));
+    await screen.findByText(/No assets associated with this ticket/);
+    vi.mocked(listEntityAssets).mockResolvedValue([held] as any);
+    await act(async () => { await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1'])); });
+    expect(await screen.findByRole('button', { name: held.name })).toBeTruthy();
+    view.rerender(panel(null));
+    view.rerender(panel(late));
+    await act(async () => { resolveInitial([]); await late; });
+    expect(screen.getByRole('button', { name: held.name })).toBeTruthy();
+    view.rerender(panel(null));
+    view.rerender(panel(failed));
+    await act(async () => { rejectInitial(new Error('bootstrap failed')); await failed.catch(() => {}); });
+    expect(screen.getByRole('button', { name: held.name })).toBeTruthy();
+    vi.mocked(listEntityAssets).mockRejectedValueOnce(new Error('refresh failed'));
+    await act(async () => { await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1'])); });
+    expect(screen.getByRole('button', { name: held.name })).toBeTruthy();
+  });
+
+  it('keeps an initialized empty cache when stale bootstrap data arrives', async () => {
+    const cache = new Map();
+    const panel = (initialAssets?: Promise<any[]>) => <SWRConfig value={{ provider: () => cache, dedupingInterval: 0 }}><Capture />{initialAssets && <AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={initialAssets} />}</SWRConfig>;
+    const view = render(panel(Promise.resolve([])));
+    await screen.findByText(/No assets associated with this ticket/);
+    view.rerender(panel());
+    view.rerender(panel(Promise.resolve([held])));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole('button', { name: held.name })).toBeNull();
+  });
+
+  it('lets a refresh supersede a pending initial read', async () => {
+    let resolveInitial!: (assets: any[]) => void;
+    const initial = new Promise<any[]>((resolve) => { resolveInitial = resolve; });
+    renderPanel({ initialAssets: initial });
+    vi.mocked(listEntityAssets).mockResolvedValue([held] as any);
+    await act(async () => { await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1'])); });
+    await screen.findByRole('button', { name: held.name });
+    await act(async () => { resolveInitial([]); await initial; });
+    expect(screen.getByRole('button', { name: held.name })).toBeTruthy();
+  });
+
+  it('refreshes after remount while the original bootstrap is still pending', async () => {
+    let resolveInitial!: (assets: any[]) => void;
+    const initial = new Promise<any[]>((resolve) => { resolveInitial = resolve; });
+    const cache = new Map();
+    const panel = (visible: boolean) => <SWRConfig value={{ provider: () => cache, dedupingInterval: 0 }}><Capture />{visible && <AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={initial} />}</SWRConfig>;
+    const view = render(panel(true));
+    view.rerender(panel(false));
+    view.rerender(panel(true));
+    vi.mocked(listEntityAssets).mockResolvedValue([held] as any);
+    await act(async () => { await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1'])); });
+    await screen.findByRole('button', { name: held.name });
+    await act(async () => { resolveInitial([]); await initial; });
+    expect(screen.getByRole('button', { name: held.name })).toBeTruthy();
+  });
+
+  it('reports an initial read failure and can recover on revalidation', async () => {
+    vi.mocked(handleError).mockClear();
+    renderPanel({ initialAssets: Promise.reject(new Error('initial read failed')) });
+    await waitFor(() => expect(handleError).toHaveBeenCalled());
+    vi.mocked(listEntityAssets).mockResolvedValue([held] as any);
+    await act(async () => { await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1'])); });
+    expect(await screen.findByRole('button', { name: held.name })).toBeTruthy();
   });
 
   it('shows "Held by MSP", not the slug, and keeps the custody chip shrink-0 beside a truncating name', async () => {

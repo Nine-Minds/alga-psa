@@ -44,13 +44,14 @@ async function seedTicket(db: Knex, tenantId: string): Promise<string> {
 
 test.describe('Receive equipment on a ticket', () => {
   test('the received item appears in the Assets panel without a reload', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
     const db = createTestDbConnection();
     try {
       const tenant = await createTenantAndLogin(db, page);
       const ticketId = await seedTicket(db, tenant.tenant.tenantId);
       await page.goto(`${getBaseUrl()}/msp/tickets/${ticketId}`, { waitUntil: 'domcontentloaded' });
 
-      await expect(page.getByText('No assets associated with this ticket')).toBeVisible();
+      await page.locator('#ticket-layout-toggle-entry').click();
 
       await page.locator(`#receive-equipment-${ticketId}-button`).click();
       await page.locator(`#receive-equipment-${ticketId}-mode-new`).click();
@@ -62,8 +63,27 @@ test.describe('Receive equipment on a ticket', () => {
       // No page.reload() / goto: the panel revalidates through the shared SWR keys.
       const row = page.getByRole('button', { name: 'Dell WD19 Dock' });
       await expect(row).toBeVisible();
-      await expect(page.getByText('Held by MSP')).toBeVisible();
-      await expect(page.getByText('Held_by_msp')).toHaveCount(0);
+      const card = page.locator('#ticket-details-associated-assets').last();
+      await expect(card.getByText('Held by MSP')).toBeVisible();
+      await expect(card.locator('[id^="associated-asset-custody-"]')).toContainText('In office');
+      expect((await row.boundingBox())!.width).toBeGreaterThanOrEqual(120);
+
+      await page.locator('#ticket-layout-toggle-grid').click();
+      // The narrow Grid board keeps Assets in Details and the card can be collapsed.
+      await page.getByRole('button', { name: 'Details', exact: true }).click();
+      if (!await row.isVisible()) {
+        const shelf = page.locator('#ticket-details-associated-assets-open');
+        if (await shelf.isVisible()) await shelf.click();
+        else await page.locator('#ticket-details-associated-assets-toggle').click();
+      }
+      await expect(row).toBeVisible();
+      await expect(card.getByText('Held by MSP')).toBeVisible();
+      await expect(card.locator('[id^="associated-asset-custody-"]')).toContainText('In office');
+      expect((await row.boundingBox())!.width).toBeGreaterThanOrEqual(120);
+
+      await page.locator('#ticket-layout-toggle-entry').click();
+      await expect(row).toBeVisible();
+      await expect(card.getByText('Held by MSP')).toBeVisible();
     } finally {
       await db.destroy();
     }

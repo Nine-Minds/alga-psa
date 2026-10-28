@@ -139,3 +139,11 @@ attributed.
 - **F4/F5.** Inside the dialog; unaffected, tests green.
 
 **Tests.** Added `TicketBentoLayout.receiveEquipment.test.tsx` (Grid tile mounts `associatedAssets` + Receive equipment in one container, gated on `assets` capability, stays mounted across re-render). Refresh itself is covered by `AssociatedAssets.test.tsx` (shared-key mutate) and `ReceiveEquipmentDialog.test.tsx` (mutate predicate). E2E selectors are layout-agnostic and unchanged.
+
+## Deploy-review repair
+
+[alga-2026-0002683](https://algapsa.com/msp/tickets/eb4a5b58-4bb1-48be-961f-8c2aeebcc0ed): SWR now owns the initial read as well as subsequent refreshes. An existing cache entry, including an empty list, is not replaced on remount; a refresh can supersede a pending initial read, and a failed read leaves cached data intact. The Entry properties rail has a minimum width of 18rem (bounded by its container), leaving the existing two-row asset layout intact. Grid's narrow Details navigation is unchanged.
+
+The shared-provider panel tests cover initialization, receive invalidation, remounts, delayed and failed bootstrap reads, failed refreshes, and the pending-read race. The receive-equipment browser scenario now checks both layouts and name width at 1024px. It remains unrun until an app server is available for Smoke Test.
+
+Verification: assets package suite (471 tests), package build and typecheck, receive-dialog tests (9), Grid composition tests (3), and Playwright test discovery passed. The expanded panel suite passed all 13 tests. The community source build passed with Turbopack warnings; server TypeScript checking passed with a 12 GB heap. The browser scenario and width measurements remain outstanding.
