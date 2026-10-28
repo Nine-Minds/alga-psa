@@ -1,7 +1,8 @@
 export type ServiceRequestDefinitionErrorCode =
   | 'TEMPLATE_UNAVAILABLE'
   | 'SOURCE_DEFINITION_NOT_FOUND'
-  | 'DEFINITION_NOT_FOUND';
+  | 'DEFINITION_NOT_FOUND'
+  | 'INVALID_AUDIENCE';
 
 export class ServiceRequestDefinitionBusinessError extends Error {
   constructor(

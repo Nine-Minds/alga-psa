@@ -182,4 +182,67 @@ describe('service request portal detail', () => {
     expect(detail).not.toBeNull();
     expect(detail?.title).toBe('Published-visible request');
   });
+
+  it('hides a scoped definition from clients outside its audience', async () => {
+    resetServiceRequestProviderRegistry();
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const clientA = uuidv4();
+    const clientB = uuidv4();
+
+    await tenantRows().insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+    for (const id of [clientA, clientB]) {
+      await tenantTable(tenant, 'clients').insert({
+        tenant,
+        client_id: id,
+        client_name: `Client ${id.slice(0, 8)}`,
+        is_inactive: false,
+        billing_cycle: 'monthly',
+        is_tax_exempt: false,
+      });
+    }
+    await tenantTable(tenant, 'service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Scoped request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+      audience: JSON.stringify({ join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [clientA] }] }),
+    });
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
+      tenant,
+      version_id: uuidv4(),
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Scoped request',
+      form_schema_snapshot: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+
+    const get = (clientId: string) =>
+      getVisiblePublishedServiceRequestDefinitionDetail(
+        db,
+        { tenant, requesterUserId: uuidv4(), clientId, contactId: null },
+        definitionId
+      );
+
+    expect(await get(clientA)).not.toBeNull();
+    expect(await get(clientB)).toBeNull();
+  });
 });
