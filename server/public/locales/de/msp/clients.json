@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Dieser Kunde wurde bereits in einen anderen Kunden zusammengeführt.",
       "targetAlreadyMerged": "Der Zielkunde wurde selbst in einen anderen Kunden zusammengeführt. Führen Sie stattdessen dorthin zusammen.",
       "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
+      "sourceHasCoManagement": "Dieser Kunde hat einen Co-Managed-IT-Arbeitsbereich. Brechen Sie dessen Einrichtung ab oder beenden Sie das Co-Management, bevor Sie ihn zusammenführen.",
       "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
       "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
     },

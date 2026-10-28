@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Deze klant is al met een andere klant samengevoegd.",
       "targetAlreadyMerged": "De doelklant is zelf met een andere klant samengevoegd. Voeg met die klant samen.",
       "sourceIsTenantDefault": "Het record van uw eigen organisatie kan niet met een klant worden samengevoegd.",
+      "sourceHasCoManagement": "Deze klant heeft een werkruimte voor co-managed IT. Annuleer de instelling of beëindig het co-management voordat u de klant samenvoegt.",
       "parentLinkCycle": "Die klant staat geregistreerd als onderliggend aan de klant die u samenvoegt; zo zou de hiërarchie worden omgedraaid.",
       "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract."
     },

@@ -519,6 +519,12 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "IT cogestita"
+    },
+    "coManagement": {
+      "title": "Accesso cogestito"
     }
   },
   "auth": {

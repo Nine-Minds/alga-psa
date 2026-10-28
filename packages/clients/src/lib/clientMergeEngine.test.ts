@@ -302,6 +302,11 @@ vi.mock('@alga-psa/db/tenantDb', () => ({
   }),
 }));
 
+const coManagedWorkspaces = vi.hoisted(() => ({
+  count: vi.fn(async (_trx: unknown, _options: { tenant: string; entityId: string }): Promise<number> => 0),
+}));
+vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
+
 import { ClientMergeBlockedError, executeClientMerge } from './clientMergeEngine';
 
 const TENANT = 'tenant-1';
@@ -892,6 +897,19 @@ describe('executeClientMerge', () => {
       sourceClientId: 'source',
       targetClientId: 'target',
     })).rejects.toBeInstanceOf(ClientMergeBlockedError);
+  });
+
+  it('refuses to merge away a client whose co-managed workspace still holds seats', async () => {
+    coManagedWorkspaces.count.mockImplementation(async (_trx: unknown, { entityId }: { entityId: string }) => (entityId === 'source' ? 1 : 0));
+    try {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      })).rejects.toBeInstanceOf(ClientMergeBlockedError);
+      expect(table('clients').find((row) => row.client_id === 'source')!.merged_into_client_id ?? null).toBeNull();
+    } finally {
+      coManagedWorkspaces.count.mockImplementation(async () => 0);
+    }
   });
 
   it('refuses a merge into a client recorded as the source\'s own child', async () => {

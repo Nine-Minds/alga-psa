@@ -39,6 +39,67 @@ const countDocumentAssociations = (entityType: string) => {
   };
 };
 
+/** Co-managed workspaces this sponsor (MSP) client still holds: a provisioning
+ * operation whose seat allocation has not been released (released on cancel
+ * and on departure). The operation records its client only in its request, so
+ * deleting or merging the client orphaned the setup and its seats invisibly. */
+export const countLiveCoManagedWorkspacesForClient = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
+    .join('co_managed_allocations', function () {
+      this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
+        .andOn('co_managed_allocations.tenant', 'co_managed_provisioning_operations.tenant');
+    })
+    .whereRaw("lower(co_managed_provisioning_operations.request->>'clientId') = lower(?)", [options.entityId])
+    .whereNot('co_managed_allocations.state', 'released')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
+/** Co-managed workspaces whose escalated tickets go to this (MSP) board, while
+ * their seat allocation is live. Removing the queue broke escalation, and
+ * before acceptance left the customer's review unable to load. */
+export const countLiveCoManagedEscalationsForBoard = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
+    .join('co_managed_allocations', function () {
+      this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
+        .andOn('co_managed_allocations.tenant', 'co_managed_provisioning_operations.tenant');
+    })
+    .where('co_managed_provisioning_operations.escalation_board_id', options.entityId)
+    .whereNot('co_managed_allocations.state', 'released')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
+/** Boards a live (unended) co-management relationship shares with the MSP.
+ * Deleting one silently removes the MSP's oversight, so it blocks deletion;
+ * scope rows of ended relationships are history and do not. */
+export const countCoManagedBoardScopes = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const live = await tenantScopedTable(trx, options.tenant, 'co_management_relationships')
+    .whereNull('ended_at')
+    .pluck('relationship_id');
+  if (!live.length) return 0;
+  const result = await tenantScopedTable(trx, options.tenant, 'co_management_board_scopes')
+    .where({ board_id: options.entityId })
+    .whereIn('relationship_id', live)
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countPortalUsers = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -266,6 +327,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'asset_associations',
         label: 'asset association',
         countQuery: countAssetAssociations('client')
+      },
+      {
+        type: 'co_managed_workspace',
+        table: 'co_managed_provisioning_operations',
+        label: 'co-managed IT workspace',
+        countQuery: countLiveCoManagedWorkspacesForClient
       }
     ]
   },
@@ -663,7 +730,19 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'checklist_apply_rule', table: 'checklist_template_apply_rules', foreignKey: 'board_id', label: 'checklist apply rule' },
       // board_id is only ever set when scope='board' (canned_responses_scope_target_check),
       // so a plain board_id count already means "board-scoped response".
-      { type: 'canned_response', table: 'canned_responses', foreignKey: 'board_id', label: 'board canned response' }
+      { type: 'canned_response', table: 'canned_responses', foreignKey: 'board_id', label: 'board canned response' },
+      {
+        type: 'co_managed_board_scope',
+        table: 'co_management_board_scopes',
+        label: 'co-managed relationship',
+        countQuery: countCoManagedBoardScopes
+      },
+      {
+        type: 'co_managed_escalation',
+        table: 'co_managed_provisioning_operations',
+        label: 'co-managed escalation queue',
+        countQuery: countLiveCoManagedEscalationsForBoard
+      }
     ]
   },
   interaction_type: {

@@ -1966,6 +1966,7 @@
       "sourceAlreadyMerged": "Den här kunden har redan slagits samman med en annan kund.",
       "targetAlreadyMerged": "Målkunden har själv slagits samman med en annan kund. Slå samman med den i stället.",
       "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
+      "sourceHasCoManagement": "Den här kunden har en arbetsyta för samförvaltad IT. Avbryt dess konfiguration eller avsluta samförvaltningen innan du slår ihop den.",
       "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
       "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
     },

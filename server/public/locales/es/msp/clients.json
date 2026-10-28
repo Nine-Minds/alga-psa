@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Este cliente ya se ha fusionado en otro cliente.",
       "targetAlreadyMerged": "El cliente de destino se ha fusionado a su vez en otro cliente. Fusione en ese en su lugar.",
       "sourceIsTenantDefault": "El registro de su propia organización no puede fusionarse en un cliente.",
+      "sourceHasCoManagement": "Este cliente tiene un espacio de trabajo de TI cogestionada. Cancele su configuración o finalice la cogestión antes de fusionarlo.",
       "parentLinkCycle": "Ese cliente figura como hijo del que está fusionando, por lo que la fusión invertiría la jerarquía.",
       "invalidContractCutover": "Una de las fechas de corte queda fuera de la vigencia de su contrato."
     },

@@ -2002,6 +2002,7 @@
       "sourceAlreadyMerged": "Ten klient został już scalony z innym klientem.",
       "targetAlreadyMerged": "Klient docelowy sam został scalony z innym klientem. Scal z tamtym klientem.",
       "sourceIsTenantDefault": "Rekordu własnej organizacji nie można scalić z klientem.",
+      "sourceHasCoManagement": "Ten klient ma obszar roboczy współzarządzanego IT. Anuluj jego konfigurację lub zakończ współzarządzanie przed scaleniem.",
       "parentLinkCycle": "Ten klient jest zapisany jako podrzędny wobec scalanego, więc scalenie odwróciłoby hierarchię.",
       "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy."
     },
