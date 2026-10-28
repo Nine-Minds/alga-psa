@@ -4,9 +4,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
+import { CustodyEventPhotos } from '../../../msp-composition/src/assets/CustodyEventPhotos';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 import { updateBlockContent, createBlockDocument } from '../actions/documentBlockContentActions';
-import { getDocumentsByFolder } from '../actions/documentActions';
+import { getDocument, getDocumentThumbnailUrl, getDocumentsByFolder } from '../actions/documentActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
@@ -58,6 +59,8 @@ vi.mock('@alga-psa/users/actions', () => ({
 }));
 
 vi.mock('../actions/documentActions', () => ({
+  getDocument: vi.fn(),
+  getDocumentThumbnailUrl: vi.fn(),
   getDocumentsByEntity: vi.fn(),
   getDocumentsByFolder: vi.fn(),
   moveDocumentsToFolder: vi.fn(),
@@ -273,6 +276,61 @@ describe('Documents drawer', () => {
     expect(screen.getByTestId('doc-card')).toBeInTheDocument();
     expect(screen.queryByTestId('folder-tree-view')).not.toBeInTheDocument();
     expect(mockFolderTreeView).not.toHaveBeenCalled();
+  });
+
+  it('opens, closes and reopens Received and Moved custody photos without a document grid', async () => {
+    vi.mocked(getDocument).mockImplementation(async (id: string) => ({
+      document_id: id, document_name: `${id}.jpg`, file_id: `file-${id}`,
+      mime_type: 'image/jpeg', preview_file_id: `preview-${id}`,
+    } as any));
+    vi.mocked(getDocumentThumbnailUrl).mockImplementation(async (id: string) => `/thumbnail/${id}`);
+    render(<>
+      <section aria-label="Received"><CustodyEventPhotos documentIds={['received']} /></section>
+      <section aria-label="Moved"><CustodyEventPhotos documentIds={['moved']} /></section>
+    </>);
+    for (const id of ['received', 'moved']) {
+      await waitFor(() => expect(document.querySelector(`img[src="/thumbnail/${id}"]`)).not.toBeNull());
+      fireEvent.load(document.querySelector(`img[src="/thumbnail/${id}"]`)!);
+      const button = await screen.findByRole('button', { name: `${id}.jpg` });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        fireEvent.click(button);
+        const images = await screen.findAllByRole('img', { name: `${id}.jpg` });
+        expect(images).toHaveLength(2);
+        expect(images[1]).toHaveAttribute('src', `/api/documents/${id}/preview`);
+        expect(screen.queryByTestId('doc-card')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Close preview' }));
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Close preview' })).not.toBeInTheDocument());
+      }
+    }
+  });
+
+  it('does not expose custody photos when document or thumbnail reads are refused', async () => {
+    vi.mocked(getDocument).mockResolvedValue({ permissionError: 'denied' } as any);
+    vi.mocked(getDocumentThumbnailUrl).mockResolvedValue('/thumbnail/secret');
+    const { container } = render(<CustodyEventPhotos documentIds={['secret']} />);
+    await waitFor(() => expect(getDocument).toHaveBeenCalledWith('secret'));
+    await act(async () => { await Promise.resolve(); });
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('button')).toBeNull();
+  });
+
+  it('changes an open single-document viewer without reporting a close until dismissal', async () => {
+    const image = { document_id: 'image', document_name: 'image.jpg', file_id: 'file', mime_type: 'image/jpeg' } as any;
+    const note = { document_id: 'note', document_name: 'Note', type_name: 'text/plain' } as any;
+    const onDocumentClosed = vi.fn();
+    const props = { id: 'documents', documents: [], userId: 'user-1', drawerOnly: true, onDocumentClosed };
+    const { rerender } = render(<Documents {...props} documentToOpen={image} />);
+    expect(await screen.findByAltText('image.jpg')).toBeInTheDocument();
+    rerender(<Documents {...props} documentToOpen={note} />);
+    expect(await screen.findByTestId('collab-editor')).toBeInTheDocument();
+    expect(screen.queryByAltText('image.jpg')).not.toBeInTheDocument();
+    expect(onDocumentClosed).not.toHaveBeenCalled();
+    rerender(<Documents {...props} documentToOpen={image} />);
+    expect(await screen.findByAltText('image.jpg')).toBeInTheDocument();
+    expect(screen.queryByTestId('collab-editor')).not.toBeInTheDocument();
+    expect(onDocumentClosed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close preview' }));
+    await waitFor(() => expect(onDocumentClosed).toHaveBeenCalledTimes(1));
   });
 
   it('opens the standard editor directly in drawer-only mode and reports closing', async () => {

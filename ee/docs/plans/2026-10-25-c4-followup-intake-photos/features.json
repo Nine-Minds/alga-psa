@@ -11,7 +11,7 @@
   },
   {
     "id": "F003",
-    "description": "Expose authorized custody event photos in card and history",
+    "description": "Expose authorized custody event photos and open their shared media viewer in card and history",
     "implemented": true
   },
   {

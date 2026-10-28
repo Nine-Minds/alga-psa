@@ -117,3 +117,11 @@ requires `asset:read` and a successful record decision for every associated asse
 has another association. Missing assets fail closed. The original-view public tenant-logo path
 remains available, but excludes asset-associated documents. Thumbnail responses are private and
 not stored by caches.
+
+## Custody viewer repair
+
+The shared Documents single-document mode renders the same authenticated media preview as the
+full Documents area and reports dismissal for both media and drawer viewers. Switching between
+viewer types keeps the selection lifecycle open; closing lets custody thumbnails reopen the same
+photo. The document grid remains absent. Received and Moved click, close and reopen behavior is
+covered through the custody component and shared viewer; live browser verification remains pending.
