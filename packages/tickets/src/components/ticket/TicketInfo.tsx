@@ -13,15 +13,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
-import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
+import type { BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -47,7 +46,6 @@ import {
 } from '../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
@@ -183,6 +181,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
+  const { searchUsersForMentions } = dataSource.viewer;
+  const { getTicketCategories, getTicketCategoriesByBoard, getTicketStatuses } = dataSource.options;
   const { deleteDocument } = useDocumentsCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -268,6 +270,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
+  // Category creation runs a native action against the local tenant, so only data sources that back it offer it.
+  const canCreateCategory = dataSource.capabilities.categoryCreate && !dataSource.screen.readOnly;
 
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
@@ -387,6 +391,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
   const [isLoadingStatusOptions, setIsLoadingStatusOptions] = useState(false);
   const [boardScopedStatusOptions, setBoardScopedStatusOptions] = useState(statusOptions);
+  // When the options do not include the current status (e.g. a read-only viewer whose options are not
+  // loaded), still show its label rather than the placeholder.
+  const statusSelectOptions = useMemo(() => {
+    if (
+      !pendingStatusValue ||
+      pendingStatusValue !== originalTicketValues.status_id ||
+      !ticket.status_name ||
+      boardScopedStatusOptions.some((option) => option.value === pendingStatusValue)
+    ) {
+      return boardScopedStatusOptions;
+    }
+    return [...boardScopedStatusOptions, { value: pendingStatusValue, label: ticket.status_name }];
+  }, [boardScopedStatusOptions, pendingStatusValue, originalTicketValues.status_id, ticket.status_name]);
   const fetchingBoardIdRef = useRef<string | null>(null);
   const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1388,7 +1405,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className={`transition-opacity ${isFieldRemotelyEdited('status_id') ? 'opacity-60' : ''}`}>
                 <CustomSelect
                   value={pendingStatusValue}
-                  options={boardScopedStatusOptions}
+                  options={statusSelectOptions}
                   onValueChange={(value) => handlePendingChange('status_id', value)}
                   customStyles={customStyles}
                   className="!w-fit"
@@ -1583,7 +1600,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       placeholder={effectiveBoardConfig.category_type === 'custom'
                         ? t('quickAdd.selectCategory', 'Select category')
                         : t('quickAdd.selectItilCategory', 'Select ITIL category')}
-                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
+                      onAddNew={canCreateCategory && !isFieldFrozen('category_id') ? () => setIsQuickAddCategoryOpen(true) : undefined}
+                      disabled={dataSource.screen.readOnly === true || isFieldFrozen('category_id')}
                     />
                   )}
                 </div>
@@ -1601,6 +1619,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 ) : null}
               </div>
             )}
+            {canCreateCategory && (
             <QuickAddCategory
               isOpen={isQuickAddCategoryOpen}
               onClose={() => setIsQuickAddCategoryOpen(false)}
@@ -1634,6 +1653,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               preselectedBoardId={effectiveBoardId || undefined}
               categories={effectiveCategories}
             />
+            )}
 
             {/* Row 3: Priority area (animated based on board type) */}
             <div className="col-span-2 transition-all duration-200 ease-in-out">
@@ -1963,6 +1983,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             )}
 
             {/* Row 6: Tags */}
+            {dataSource.capabilities.tags && (
             <div className="col-span-2">
               <h5 className="font-bold mb-2">{t('settings.display.columns.tags', 'Tags')}</h5>
               {onTagsChange && ticket.ticket_id ? (
@@ -1972,17 +1993,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   initialTags={tags}
                   onTagsChange={onTagsChange}
                   useInlineInput={isInDrawer}
+                  readOnly={dataSource.screen.readOnly === true}
                 />
               ) : (
                 <p className="text-sm text-gray-500">{t('info.tagsCannotBeManaged', 'Tags cannot be managed')}</p>
               )}
             </div>
+            )}
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-lg font-semibold">{t('fields.description', 'Description')}</h2>
-              {!isEditingDescription && (
+              {!isEditingDescription && !isFieldFrozen('description') && (
                 <button
                   onClick={() => {
                     // Store original content before entering edit mode
@@ -2082,7 +2105,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 {t('info.resolveAndClose', 'Resolve and close')}
               </Button>
             ) : null}
-            {ticket.ticket_id && onOpenEmailNotificationLogs ? (
+            {ticket.ticket_id && onOpenEmailNotificationLogs && dataSource.capabilities.emailLogs ? (
               <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
                 <Button
                   id={`${id}-open-email-notification-logs`}
@@ -2122,6 +2145,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             ) : null}
             <div className="flex-1" />
+            {!dataSource.screen.readOnly && (<>
             <Button
               id={`${id}-cancel-btn`}
               type="button"
@@ -2146,6 +2170,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
+            </>)}
           </div>
           {hasActiveLiveConflict ? (
             <p className="mt-2 text-sm text-amber-700">

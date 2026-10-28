@@ -1,7 +1,7 @@
 import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
+import { type TenantDb, tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -219,7 +219,7 @@ async function persistReplyToken(
  * previous editor for activity (e.g. a public comment) that this write follows.
  */
 export async function appendOutboundMessageIdReference(
-  db: { table: (name: string) => any },
+  db: TenantDb,
   knex: { raw: (sql: string, bindings?: any[]) => any },
   ticketId: string,
   rfcMessageId: string

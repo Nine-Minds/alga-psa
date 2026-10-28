@@ -2,12 +2,17 @@
  * Label PDF API Route (session-authenticated; the composition root for label printing)
  * POST /api/labels/pdf — render one or more records as a label PDF (one label per page, or n-up).
  *
- * Body: { labelClass, ids: string[], templateId?, templateCode?, layout?, overrides?, linkedAssetId? }
- *    or { items: Array<{ labelClass, id }>, layout? }  (mixed classes in one PDF, in order; C6 bulk print)
+ * Body: { labelClass?, labels: [{ labelClass?, recordId, linkedAssetId? }], templateId?, templateCode?, layout?, overrides? }
+ *   labelClass: default for subjects that name none; a subject's own labelClass wins. A subject with no
+ *     class at all is a 400. Labels of several classes print in ONE PDF in request order (C6 bulk print);
+ *     templateId/overrides are then a 400. `ids` / `items` are not accepted (400).
  *   templateId: a tenant custom work-tag template id or a standard code (supersedes templateCode).
- *   overrides / linkedAssetId: single ticket only (see printLabels).
- * Unreadable records are skipped and counted in the X-Label-Skipped response header; if none is readable,
- * or the single requested record is not, the response is a uniform 404.
+ *   labels: one label per subject, in order. The same ticket may appear several times with different
+ *     `linkedAssetId` picks (ticket-work-tag only; dropped silently for other classes).
+ *   overrides: only when the request names exactly one distinct recordId, else 400.
+ * Unreadable records rule: a subject whose record is unreadable is skipped and counted PER SUBJECT in the
+ * X-Label-Skipped response header; if no unique record is readable the response is the same uniform 404 for
+ * every caller and every request shape.
  * 422: { error, failures?: LabelPrintFailure[] } — all-or-nothing; `failures` lists every record that
  *      cannot print with the requested template, with a `suggestedTemplateCode` where one exists.
  *
@@ -50,7 +55,7 @@ const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
   renderPdf: (tenant, items, layout) => renderLabelBatchPdf(tenant, items, layout),
   resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
-  getLinkedAssetParts: (context, ticketIds, chosen) => getTicketLinkedAssetLabelParts(context, ticketIds, chosen),
+  getLinkedAssetParts: (context, subjects) => getTicketLinkedAssetLabelParts(context, subjects),
   describeClientError: (error) => {
     if (error instanceof LabelRenderError) {
       return { message: error.message, failures: error.failures };

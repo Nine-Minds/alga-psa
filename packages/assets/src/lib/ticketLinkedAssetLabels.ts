@@ -4,7 +4,7 @@ import type { LabelRequestContext } from '@alga-psa/types';
 
 import { createAssetReadContext, isAssetReadAllowed } from './assetReadAuthorization';
 import { getOpenCustodyForAssets } from './custody/queries';
-import { formatCustodyForLabel, formatCustodyForLabelMulti } from './custody/labelFormat';
+import { formatCustodyForLabel, formatCustodyForLabelSubject, type CustodyLabelFacts } from './custody/labelFormat';
 
 /**
  * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
@@ -36,20 +36,26 @@ export function serialSuffixOf(serial: string | null | undefined): string | null
   return value.slice(-SERIAL_SUFFIX_LENGTH);
 }
 
+export interface TicketLabelSubject {
+  recordId: string;
+  /** The item this label is about. Ignored when not linked to the ticket or not readable (treated as no pick). */
+  linkedAssetId?: string;
+}
+
 /**
- * For each ticket: the single readable linked asset, or - when `chosen[ticketId]` names a readable
- * asset linked to that ticket - that one; otherwise null (none, several, or unreadable).
- * An invalid or unlinked `chosen` asset is treated as absent (no error, reveals nothing).
+ * One entry per subject, in request order. The same ticket may appear in several subjects with different picks.
+ *
+ * Asset line: the subject's picked asset when it is linked to the ticket AND readable, else the single readable
+ * linked asset, else none. Custody line: `formatCustodyForLabelSubject` - a valid pick decides (its own custody,
+ * or nothing when it is not held); with no pick, the held items on the ticket are summarised.
+ * Links, assets and custody are read once per request.
  */
 export async function getTicketLinkedAssetLabelParts(
   context: LabelRequestContext,
-  ticketIds: readonly string[],
-  chosen: Record<string, string> = {}
-): Promise<Record<string, TicketLinkedAssetLabelParts | null>> {
-  const result: Record<string, TicketLinkedAssetLabelParts | null> = {};
-  for (const id of ticketIds) {
-    result[id] = null;
-  }
+  subjects: ReadonlyArray<TicketLabelSubject>
+): Promise<Array<TicketLinkedAssetLabelParts | null>> {
+  const result: Array<TicketLinkedAssetLabelParts | null> = subjects.map(() => null);
+  const ticketIds = Array.from(new Set(subjects.map((s) => s.recordId)));
   if (ticketIds.length === 0 || !(await hasPermission(context.user, 'asset', 'read'))) {
     return result;
   }
@@ -59,7 +65,7 @@ export async function getTicketLinkedAssetLabelParts(
   const links = await db
     .table('asset_associations')
     .where({ entity_type: 'ticket' })
-    .whereIn('entity_id', [...ticketIds])
+    .whereIn('entity_id', ticketIds)
     .select<Array<{ asset_id: string; entity_id: string }>>('asset_id', 'entity_id');
   if (links.length === 0) {
     return result;
@@ -96,41 +102,55 @@ export async function getTicketLinkedAssetLabelParts(
   }
   const custodyByAsset = await getOpenCustodyForAssets(knex, context.tenant, readableIds);
 
+  const readableByTicket = new Map<string, string[]>();
   for (const ticketId of ticketIds) {
     const linked = Array.from(new Set(links.filter((l) => l.entity_id === ticketId).map((l) => l.asset_id)));
     const readableLinked: string[] = [];
     for (const assetId of linked) {
       if (await canRead(assetId)) readableLinked.push(assetId);
     }
-    const pick = chosen[ticketId];
-    const assetId = pick && readableLinked.includes(pick) ? pick : readableLinked.length === 1 ? readableLinked[0] : null;
+    readableByTicket.set(ticketId, readableLinked);
+  }
+  const factsOf = (assetId: string): CustodyLabelFacts | null => formatCustodyForLabel(custodyByAsset.get(assetId));
+
+  subjects.forEach((subject, index) => {
+    const readableLinked = readableByTicket.get(subject.recordId) ?? [];
+    const pickedId = subject.linkedAssetId && readableLinked.includes(subject.linkedAssetId) ? subject.linkedAssetId : null;
+    const assetId = pickedId ?? (readableLinked.length === 1 ? readableLinked[0] : null);
     const held = readableLinked.flatMap((id) => {
-      const facts = formatCustodyForLabel(custodyByAsset.get(id));
+      const facts = factsOf(id);
       return facts ? [facts] : [];
     });
-    const custody = formatCustodyForLabelMulti(held);
-    if (!assetId && !custody) continue;
-    // LEVERAGE: friction label-seam-asset-or-custody — the seam was shaped around one linked asset; custody facts
-    // are per ticket (all held items), so a null-asset result still carries them (assetId '' = none picked).
+    const custody = formatCustodyForLabelSubject(held, pickedId ? { facts: factsOf(pickedId) } : null);
+    if (!assetId && !custody) return;
     const asset = assetId ? byId.get(assetId)! : null;
-    result[ticketId] = {
+    result[index] = {
       assetId: assetId ?? '',
       assetTag: asset?.asset_tag ?? null,
       serialSuffix: asset ? serialSuffixOf(asset.serial_number) : null,
       custodyLocation: custody?.custodyLocation ?? null,
       nextAction: custody?.nextAction ?? null,
     };
-  }
+  });
   return result;
 }
 
+export interface TicketLinkedAssetChoice {
+  assetId: string;
+  assetTag: string | null;
+  name: string | null;
+  /** The item's open-custody facts as the tag would print them; null = not in open custody (cannot be batch-printed). */
+  custody: CustodyLabelFacts | null;
+}
+
 /**
- * The readable assets linked to ONE ticket, for the single-print dialog's picker. Tag and name only.
+ * The readable assets linked to ONE ticket, for the single-print dialog's picker: tag, name and the custody
+ * facts the tag would print (so the dialog can count held items and preview without a second call).
  */
 export async function listTicketLinkedAssetChoices(
   context: LabelRequestContext,
   ticketId: string
-): Promise<Array<{ assetId: string; assetTag: string | null; name: string | null }>> {
+): Promise<TicketLinkedAssetChoice[]> {
   if (!(await hasPermission(context.user, 'asset', 'read'))) return [];
   const { knex } = await createTenantKnex(context.tenant);
   const db = tenantDb(knex, context.tenant);
@@ -150,11 +170,15 @@ export async function listTicketLinkedAssetChoices(
       'client_id'
     );
   const authContext = await createAssetReadContext(knex, context.tenant, context.user);
-  const out: Array<{ assetId: string; assetTag: string | null; name: string | null }> = [];
+  const readable: typeof assets = [];
   for (const a of assets) {
-    if (await isAssetReadAllowed(knex, context.tenant, authContext, a)) {
-      out.push({ assetId: a.asset_id, assetTag: a.asset_tag ?? null, name: a.name ?? null });
-    }
+    if (await isAssetReadAllowed(knex, context.tenant, authContext, a)) readable.push(a);
   }
-  return out;
+  const custodyByAsset = await getOpenCustodyForAssets(knex, context.tenant, readable.map((a) => a.asset_id));
+  return readable.map((a) => ({
+    assetId: a.asset_id,
+    assetTag: a.asset_tag ?? null,
+    name: a.name ?? null,
+    custody: formatCustodyForLabel(custodyByAsset.get(a.asset_id)),
+  }));
 }

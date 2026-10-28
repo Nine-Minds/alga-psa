@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   CLIENT_OWNED_MOVE_TABLES,
@@ -458,7 +458,9 @@ export async function previewClientMerge(
       : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   for (const entry of PROFILE_HISTORY_TABLES) {
-    counts[entry.label] = await countRows(trx, tenant, entry.table, { client_id: source.clientId });
+    counts[entry.label] = entry.editionOptional && !(await tableInstalled(trx, entry.table))
+      ? 0
+      : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   counts['billing profile'] = sourceProfiles.length;
   counts['owned contract'] = await countRows(trx, tenant, 'contracts', {
@@ -679,6 +681,10 @@ export async function executeClientMerge(
 
   // --- 2. Billing history that carries a redundant client_id -------------
   for (const entry of PROFILE_HISTORY_TABLES) {
+    if (entry.editionOptional && !(await tableInstalled(trx, entry.table))) {
+      counts[entry.label] = 0;
+      continue;
+    }
     // A null profile is legitimate on three of these tables and is still
     // written today (a sales-order invoice and its transaction, a transferred
     // credit). Stamp those onto the moved default first — otherwise they match
@@ -935,6 +941,7 @@ export async function executeClientMerge(
 
   // Other clients recorded as children of the source now hang off the target,
   // so the soft hierarchy does not point at a tombstone.
+  await admitOperationalWrite(trx, tenant, 'clients', 'raw:client-merge-hierarchy');
   await trx.raw(
     `UPDATE clients
         SET properties = jsonb_set(

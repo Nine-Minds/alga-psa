@@ -40,17 +40,34 @@ vi.mock('../lib/xero/xeroClientService', () => ({
 vi.mock('@alga-psa/db', () => {
   function table(name: string) {
     const filters: Row[] = [];
-    const flags = { notNull: false, null: false };
+    const excluded: Row[] = [];
+    const nullCols: string[] = [];
+    const raws: Array<{ sql: string; bindings: unknown[] }> = [];
+    const flags = { notNull: false };
+    const matchesAll = (m: Row, f: Row) => Object.entries(f).every(([k, v]) => m[k] === v);
+    // The create path's raw predicates are the two the partial unique indexes
+    // are keyed/filtered on: the realm COALESCE group, and the Xero exclusion
+    // that lets an account target be shared by many entities.
+    const matchesRaw = (m: Row, { sql, bindings }: { sql: string; bindings: unknown[] }) => {
+      if (sql.includes('external_realm_id')) return (m.external_realm_id ?? '') === bindings[0];
+      if (sql.includes('xeroTargetKind')) return (m.metadata?.xeroTargetKind ?? 'item') !== 'account';
+      throw new Error(`fake tenantDb: unsupported raw predicate ${sql}`);
+    };
     const builder: any = {
       where(f: Row) { filters.push(f); return builder; },
-      whereNull() { flags.null = true; return builder; },
+      whereNot(f: Row) { excluded.push(f); return builder; },
+      whereNull(col: string) { nullCols.push(col); return builder; },
       whereNotNull() { flags.notNull = true; return builder; },
       whereIn() { return builder; },
+      whereRaw(sql: string, bindings: unknown[] = []) { raws.push({ sql, bindings }); return builder; },
       async first() {
         if (name === 'service_catalog') return { service_id: 'exists' };
         if (flags.notNull) return undefined; // no tombstones in this fake
         return store.mappings.find((m) =>
-          filters.every((f) => Object.entries(f).every(([k, v]) => m[k] === v))
+          filters.every((f) => matchesAll(m, f)) &&
+          excluded.every((f) => !matchesAll(m, f)) &&
+          nullCols.every((col) => m[col] === null || m[col] === undefined) &&
+          raws.every((raw) => matchesRaw(m, raw))
         );
       },
       insert(row: Row) {

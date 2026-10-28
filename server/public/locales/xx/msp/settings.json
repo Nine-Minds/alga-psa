@@ -36,7 +36,8 @@
     "keyboardShortcuts": "⟦Ķḗẏƀȯȧřḓ Şħȯřŧƈŭŧş⟧",
     "opportunities": "⟦Ȯƥƥȯřŧŭƞīŧīḗş⟧",
     "mcpServer": "⟦ḾƇƤ Şḗřṽḗř⟧",
-    "settingsFallback": "⟦Şḗŧŧīƞɠş⟧"
+    "settingsFallback": "⟦Şḗŧŧīƞɠş⟧",
+    "tags": "⟦Ŧȧɠş⟧"
   },
   "unsavedChanges": {
     "title": "⟦Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş⟧",
@@ -710,7 +711,8 @@
         "skipItem": "⟦Şķīƥ ŧħīş īŧḗḿ⟧",
         "importNewName": "⟦Īḿƥȯřŧ ẇīŧħ ḓīƒƒḗřḗƞŧ ƞȧḿḗ:⟧",
         "importWithOrder": "⟦Īḿƥȯřŧ ẇīŧħ ȯřḓḗř {{order}}⟧",
-        "importWithResolutions": "⟦Īḿƥȯřŧ ẇīŧħ Řḗşȯŀŭŧīȯƞş⟧"
+        "importWithResolutions": "⟦Īḿƥȯřŧ ẇīŧħ Řḗşȯŀŭŧīȯƞş⟧",
+        "removesIntro": "⟦Ḓḗŀḗŧīƞɠ ŧħīş ƀȯȧřḓ ẇīŀŀ ȧŀşȯ řḗḿȯṽḗ:⟧"
       },
       "importTable": {
         "active": "⟦Ȧƈŧīṽḗ⟧"
@@ -779,7 +781,9 @@
           "deleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƀȯȧřḓ⟧",
           "importFailed": "⟦Ƒȧīŀḗḓ ŧȯ īḿƥȯřŧ ƀȯȧřḓş⟧",
           "updateStatusFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƀȯȧřḓ şŧȧŧŭş⟧",
-          "updateDefaultFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ḓḗƒȧŭŀŧ ƀȯȧřḓ⟧"
+          "updateDefaultFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ḓḗƒȧŭŀŧ ƀȯȧřḓ⟧",
+          "hasEmailSenderRoute": "⟦Ƈȧƞƞȯŧ ḓḗŀḗŧḗ ƀȯȧřḓ: īŧ ħȧş ȧ ḓḗḓīƈȧŧḗḓ ȯŭŧƀȯŭƞḓ ḗḿȧīŀ şḗƞḓḗř řȯŭŧḗ. Ƈŀḗȧř ŧħḗ ƀȯȧřḓ'ş ŧīƈķḗŧ şḗƞḓḗř īƞ ŧħḗ ƀȯȧřḓ ḗḓīŧȯř ƒīřşŧ.⟧",
+          "referencedByAutomations": "⟦Ƈȧƞƞȯŧ ḓḗŀḗŧḗ ƀȯȧřḓ: ȯŧħḗř şḗŧŧīƞɠş şŧīŀŀ ŧȧřɠḗŧ īŧ. Ƥȯīƞŧ ŧħḗḿ ȧŧ ȧƞȯŧħḗř ƀȯȧřḓ (ȯř řḗḿȯṽḗ ŧħḗḿ) ƒīřşŧ.⟧"
         }
       },
       "closeRules": {
@@ -893,6 +897,48 @@
         "useDefault": "⟦Ŭşḗ ŧīƈķḗŧ ḓḗƒȧŭŀŧ⟧",
         "duplicateRoute": "⟦Ŧħȧŧ şḗƞḓḗř řȯŭŧḗ ȧŀřḗȧḓẏ ḗẋīşŧş.⟧",
         "saveFailed": "⟦Ƈȯŭŀḓ ƞȯŧ şȧṽḗ şḗƞḓḗř řȯŭŧīƞɠ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
+      },
+      "deleteDependencies": {
+        "categories_one": "⟦ƈȧŧḗɠȯřẏ⟧",
+        "categories_other": "⟦ƈȧŧḗɠȯřīḗş⟧",
+        "categories_few": "⟦ƈȧŧḗɠȯřīḗş⟧",
+        "categories_many": "⟦ƈȧŧḗɠȯřīḗş⟧",
+        "statuses_one": "⟦ŧīƈķḗŧ şŧȧŧŭş⟧",
+        "statuses_other": "⟦ŧīƈķḗŧ şŧȧŧŭşḗş⟧",
+        "statuses_few": "⟦ŧīƈķḗŧ şŧȧŧŭşḗş⟧",
+        "statuses_many": "⟦ŧīƈķḗŧ şŧȧŧŭşḗş⟧",
+        "autoCloseRules_one": "⟦ȧŭŧȯ-ƈŀȯşḗ řŭŀḗ⟧",
+        "autoCloseRules_other": "⟦ȧŭŧȯ-ƈŀȯşḗ řŭŀḗş⟧",
+        "autoCloseRules_few": "⟦ȧŭŧȯ-ƈŀȯşḗ řŭŀḗş⟧",
+        "autoCloseRules_many": "⟦ȧŭŧȯ-ƈŀȯşḗ řŭŀḗş⟧",
+        "notificationRules_one": "⟦ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗ⟧",
+        "notificationRules_other": "⟦ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗş⟧",
+        "notificationRules_few": "⟦ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗş⟧",
+        "notificationRules_many": "⟦ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗş⟧",
+        "portalVisibility_one": "⟦ƈŀīḗƞŧ ƥȯřŧȧŀ ṽīşīƀīŀīŧẏ ȧşşīɠƞḿḗƞŧ⟧",
+        "portalVisibility_other": "⟦ƈŀīḗƞŧ ƥȯřŧȧŀ ṽīşīƀīŀīŧẏ ȧşşīɠƞḿḗƞŧş⟧",
+        "portalVisibility_few": "⟦ƈŀīḗƞŧ ƥȯřŧȧŀ ṽīşīƀīŀīŧẏ ȧşşīɠƞḿḗƞŧş⟧",
+        "portalVisibility_many": "⟦ƈŀīḗƞŧ ƥȯřŧȧŀ ṽīşīƀīŀīŧẏ ȧşşīɠƞḿḗƞŧş⟧",
+        "emailSenderRoutes_one": "⟦ȯŭŧƀȯŭƞḓ şḗƞḓḗř řȯŭŧḗ⟧",
+        "emailSenderRoutes_other": "⟦ȯŭŧƀȯŭƞḓ şḗƞḓḗř řȯŭŧḗş⟧",
+        "emailSenderRoutes_few": "⟦ȯŭŧƀȯŭƞḓ şḗƞḓḗř řȯŭŧḗş⟧",
+        "emailSenderRoutes_many": "⟦ȯŭŧƀȯŭƞḓ şḗƞḓḗř řȯŭŧḗş⟧",
+        "ticketTemplates_one": "⟦ŧīƈķḗŧ ŧḗḿƥŀȧŧḗ⟧",
+        "ticketTemplates_other": "⟦ŧīƈķḗŧ ŧḗḿƥŀȧŧḗş⟧",
+        "ticketTemplates_few": "⟦ŧīƈķḗŧ ŧḗḿƥŀȧŧḗş⟧",
+        "ticketTemplates_many": "⟦ŧīƈķḗŧ ŧḗḿƥŀȧŧḗş⟧",
+        "recurringTickets_one": "⟦řḗƈŭřřīƞɠ ŧīƈķḗŧ şƈħḗḓŭŀḗ⟧",
+        "recurringTickets_other": "⟦řḗƈŭřřīƞɠ ŧīƈķḗŧ şƈħḗḓŭŀḗş⟧",
+        "recurringTickets_few": "⟦řḗƈŭřřīƞɠ ŧīƈķḗŧ şƈħḗḓŭŀḗş⟧",
+        "recurringTickets_many": "⟦řḗƈŭřřīƞɠ ŧīƈķḗŧ şƈħḗḓŭŀḗş⟧",
+        "checklistRules_one": "⟦ƈħḗƈķŀīşŧ ȧƥƥŀẏ řŭŀḗ⟧",
+        "checklistRules_other": "⟦ƈħḗƈķŀīşŧ ȧƥƥŀẏ řŭŀḗş⟧",
+        "checklistRules_few": "⟦ƈħḗƈķŀīşŧ ȧƥƥŀẏ řŭŀḗş⟧",
+        "checklistRules_many": "⟦ƈħḗƈķŀīşŧ ȧƥƥŀẏ řŭŀḗş⟧",
+        "cannedResponses_one": "⟦ƀȯȧřḓ ƈȧƞƞḗḓ řḗşƥȯƞşḗ⟧",
+        "cannedResponses_other": "⟦ƀȯȧřḓ ƈȧƞƞḗḓ řḗşƥȯƞşḗş⟧",
+        "cannedResponses_few": "⟦ƀȯȧřḓ ƈȧƞƞḗḓ řḗşƥȯƞşḗş⟧",
+        "cannedResponses_many": "⟦ƀȯȧřḓ ƈȧƞƞḗḓ řḗşƥȯƞşḗş⟧"
       }
     },
     "priorities": {
@@ -1108,6 +1154,50 @@
         "client": "⟦Ƈŀīḗƞŧ⟧",
         "allClients": "⟦Ȧŀŀ ƈŀīḗƞŧş⟧",
         "clear": "⟦Ƈŀḗȧř ƒīŀŧḗř⟧"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "⟦Ɓȯȧřḓ⟧",
+          "category_id": "⟦Ƈȧŧḗɠȯřẏ⟧",
+          "subcategory_id": "⟦Şŭƀƈȧŧḗɠȯřẏ⟧",
+          "priority_id": "⟦Ƥřīȯřīŧẏ⟧",
+          "client_id": "⟦Ƈŀīḗƞŧ⟧",
+          "client_tags": "⟦Ƈŀīḗƞŧ ŧȧɠş⟧",
+          "contact_tags": "⟦Ƈȯƞŧȧƈŧ ŧȧɠş⟧",
+          "ticket_origin": "⟦Ŧīƈķḗŧ şȯŭřƈḗ⟧",
+          "title_folded": "⟦Ŧīŧŀḗ⟧",
+          "description_folded": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+          "from_service_request": "⟦Ƒřȯḿ şḗřṽīƈḗ řḗʠŭḗşŧ⟧",
+          "service_request_definition_id": "⟦Şḗřṽīƈḗ řḗʠŭḗşŧ⟧"
+        },
+        "operators": {
+          "equals": "⟦Ḗʠŭȧŀş⟧",
+          "not_equals": "⟦Ḓȯḗş ƞȯŧ ḗʠŭȧŀ⟧",
+          "in": "⟦Ħȧş ȧƞẏ ȯƒ⟧",
+          "not_in": "⟦Ħȧş ƞȯƞḗ ȯƒ⟧",
+          "contains": "⟦Ƈȯƞŧȧīƞş⟧",
+          "starts_with": "⟦Şŧȧřŧş ẇīŧħ⟧",
+          "ends_with": "⟦Ḗƞḓş ẇīŧħ⟧",
+          "is_empty": "⟦Īş ḗḿƥŧẏ⟧",
+          "is_not_empty": "⟦Īş ƞȯŧ ḗḿƥŧẏ⟧"
+        },
+        "conditions": "⟦Ƈȯƞḓīŧīȯƞş⟧",
+        "match": "⟦Ḿȧŧƈħ⟧",
+        "and": "⟦Ȧŀŀ ƈȯƞḓīŧīȯƞş⟧",
+        "or": "⟦Ȧƞẏ ƈȯƞḓīŧīȯƞ⟧",
+        "field": "⟦Ƒīḗŀḓ⟧",
+        "operator": "⟦Ƈȯƞḓīŧīȯƞ⟧",
+        "value": "⟦Ṽȧŀŭḗ⟧",
+        "yes": "⟦Ẏḗş⟧",
+        "no": "⟦Ƞȯ⟧",
+        "advanced": "⟦Ŧħīş řŭŀḗ ƈȯƞŧȧīƞş ɠřȯŭƥḗḓ ȯř ȧḓṽȧƞƈḗḓ ƈȯƞḓīŧīȯƞş ȧƞḓ īş řḗȧḓ-ȯƞŀẏ īƞ ŧħīş ḗḓīŧȯř.⟧",
+        "add": "⟦Ȧḓḓ ƈȯƞḓīŧīȯƞ⟧",
+        "save": "⟦Şȧṽḗ ƈȯƞḓīŧīȯƞş⟧",
+        "enabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+        "matchesAll": "⟦Ḿȧŧƈħḗş ḗṽḗřẏ ŧīƈķḗŧ ẇīŧħīƞ ŧħḗ ŧḗḿƥŀȧŧḗ’ş ȯẇƞḗřşħīƥ.⟧",
+        "matchesNone": "⟦Ḿȧŧƈħḗş ƞȯ ŧīƈķḗŧş.⟧",
+        "tagsFailed": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ŧȧɠ ƈħȯīƈḗş. Şȧṽḗḓ ŧȧɠ şḗŀḗƈŧīȯƞş ȧřḗ ƥřḗşḗřṽḗḓ.⟧",
+        "retry": "⟦Řḗŧřẏ⟧"
       }
     },
     "externalSystems": {
@@ -3927,5 +4017,21 @@
       "empty": "⟦Ƞȯ şŧȧƞḓȧřḓ şŧȧŧŭşḗş ȧṽȧīŀȧƀŀḗ ƒȯř īḿƥȯřŧ⟧",
       "importSelected": "⟦Īḿƥȯřŧ Şḗŀḗƈŧḗḓ ({{count}})⟧"
     }
+  },
+  "tagDisplay": {
+    "title": "⟦Ḓīşƥŀȧẏ ȯƞ ƈħīƥş⟧",
+    "subtitle": "⟦Ŧȧɠş şħȯẇƞ ƞḗẋŧ ŧȯ ƈȯƞŧȧƈŧş ȧƞḓ ƈŀīḗƞŧş īƞ ŧīƈķḗŧ ŀīşŧş, ŧīƈķḗŧ ħḗȧḓḗřş ȧƞḓ ƥīƈķḗřş.⟧",
+    "loading": "⟦Ŀȯȧḓīƞɠ…⟧",
+    "description": "⟦Ƈħȯȯşḗ ẇħīƈħ ŧȧɠş şħȯẇ ȧş ƀȧḓɠḗş ƞḗẋŧ ŧȯ ƈȯƞŧȧƈŧş ȧƞḓ ƈŀīḗƞŧş, ȧƞḓ īƞ ẇħȧŧ ȯřḓḗř. Ȧ ŀīşŧ ẇīŧħ ƞȯ ŧȧɠş şħȯẇş ƞȯ ƀȧḓɠḗş ƒȯř ŧħȧŧ ȧŭḓīḗƞƈḗ.⟧",
+    "contacts": "⟦Ƈȯƞŧȧƈŧş⟧",
+    "clients": "⟦Ƈŀīḗƞŧş⟧",
+    "audienceInternal": "⟦Īƞŧḗřƞȧŀ ŭşḗřş⟧",
+    "audienceClient": "⟦Ƈŀīḗƞŧ ƥȯřŧȧŀ⟧",
+    "clientNote": "⟦Şŧȧřŧş ḗḿƥŧẏ. Ŧȧɠş ŀīşŧḗḓ ħḗřḗ ȧřḗ ṽīşīƀŀḗ ŧȯ ŧħḗ ƈŀīḗƞŧ'ş ȯẇƞ ŭşḗřş īƞ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ.⟧",
+    "noneSelected": "⟦Ƞȯ ŧȧɠş şħȯẇƞ.⟧",
+    "moveUp": "⟦Ḿȯṽḗ ŭƥ⟧",
+    "moveDown": "⟦Ḿȯṽḗ ḓȯẇƞ⟧",
+    "remove": "⟦Řḗḿȯṽḗ⟧",
+    "addTag": "⟦Ȧḓḓ ȧ ŧȧɠ…⟧"
   }
 }

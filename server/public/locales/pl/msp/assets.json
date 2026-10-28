@@ -949,12 +949,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja",
-      "held_by_msp": "Przechowywane przez MSP"
-    },
     "assetTypes": {
       "workstation": "Stacja robocza",
       "server": "Serwer",
@@ -1297,7 +1291,10 @@
       "frequency": "Częstotliwość *",
       "interval": "Interwał *",
       "nextMaintenanceDate": "Data następnej konserwacji *",
-      "active": "Aktywny"
+      "active": "Aktywny",
+      "recurrenceUnit": "Jednostka *",
+      "onWeekdays": "W dni tygodnia (opcjonalnie)",
+      "onDayOfMonth": "W dniu miesiąca (opcjonalnie)"
     },
     "placeholders": {
       "scheduleName": "np. comiesięczna konserwacja serwera",
@@ -1312,7 +1309,8 @@
       "weekly": "Co tydzień",
       "monthly": "Co miesiąc",
       "quarterly": "Kwartalnie",
-      "yearly": "Co rok"
+      "yearly": "Co rok",
+      "custom": "Niestandardowa"
     },
     "errors": {
       "scheduleNameRequired": "Nazwa harmonogramu jest wymagana",
@@ -1321,6 +1319,18 @@
       "nextMaintenanceRequired": "Wymagany jest następny termin konserwacji",
       "frequencyIntervalMin": "Przedział częstotliwości musi wynosić co najmniej 1",
       "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
+    },
+    "recurrenceUnits": {
+      "days": "Dni",
+      "weeks": "Tygodnie",
+      "months": "Miesiące",
+      "years": "Lata"
+    },
+    "dayOfMonthOptions": {
+      "any": "Dowolny dzień"
+    },
+    "hints": {
+      "selectors": "Bez zaznaczenia powtarzanie liczy się od daty wykonania."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1382,36 @@
         "yearly_few": "lata",
         "yearly_many": "lat",
         "yearly_other": "lat"
+      },
+      "customUnconfigured": "Niestandardowa (nieskonfigurowana)",
+      "onWeekdays": "{{cadence}} w {{days}}",
+      "onDaysOfMonth": "{{cadence}} w dniu {{days}}",
+      "weekdays": {
+        "sun": "niedz.",
+        "mon": "pon.",
+        "tue": "wt.",
+        "wed": "śr.",
+        "thu": "czw.",
+        "fri": "pt.",
+        "sat": "sob."
+      },
+      "customUnits": {
+        "days_one": "dzień",
+        "days_other": "dni",
+        "days_few": "dni",
+        "days_many": "dni",
+        "weeks_one": "tydzień",
+        "weeks_other": "tygodni",
+        "weeks_few": "tygodnie",
+        "weeks_many": "tygodni",
+        "months_one": "miesiąc",
+        "months_other": "miesięcy",
+        "months_few": "miesiące",
+        "months_many": "miesięcy",
+        "years_one": "rok",
+        "years_other": "lat",
+        "years_few": "lata",
+        "years_many": "lat"
       }
     },
     "status": {
@@ -1813,8 +1853,8 @@
     "in_stock": "W magazynie",
     "maintenance": "W serwisie",
     "inactive": "Nieaktywny",
-    "held_by_msp": "Przechowywane przez MSP",
-    "retired": "Wycofany"
+    "retired": "Wycofany",
+    "held_by_msp": "W posiadaniu MSP"
   },
   "assetStatusKinds": {
     "deployable": "Do użycia",
@@ -2080,7 +2120,12 @@
       "doneBody": "{{name}} ({{tag}}) jest teraz w przechowaniu MSP.",
       "printLabel": "Drukuj etykietę zasobu",
       "openAsset": "Otwórz zasób",
-      "close": "Zamknij"
+      "close": "Zamknij",
+      "inCustodyOption": "{{asset}} — W przechowaniu: {{location}}"
+    },
+    "photos": {
+      "limit": "Do 20 zdjęć, łącznie 10 MB. Zdjęcia są ukryte przed klientami.",
+      "tooLarge": "Wybierz maksymalnie 20 zdjęć o łącznym rozmiarze do 10 MB."
     }
   }
 }

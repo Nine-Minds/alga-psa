@@ -8,7 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -127,13 +127,7 @@ export const sendUserInvitation = withAuth(async (
     // past the first would only find out at acceptance, after choosing a
     // password. This invitee's own pending invitation is excluded so a
     // resend never blocks itself.
-    const pendingRow = await tenantDb(knex, tenant).table('user_invitations')
-      .whereNull('used_at')
-      .whereNot('email', normalizedEmail)
-      .where('expires_at', '>', knex.fn.now())
-      .count('* as count')
-      .first();
-    const reservedSeats = parseInt(String(pendingRow?.count ?? '0'), 10);
+    const reservedSeats = await countPendingInvitationSeats(knex, tenant, { excludeEmail: normalizedEmail });
 
     const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {

@@ -1577,6 +1577,10 @@
       "inProgress": "⟦Řḗƀŭīŀḓīƞɠ…⟧"
     },
     "receive": {
+      "searchProducts": "⟦Şḗȧřƈħ ƥřȯḓŭƈŧş ȯř ŞĶŬ...⟧",
+      "noProductsFound": "⟦Ƞȯ ƥřȯḓŭƈŧş ƒȯŭƞḓ⟧",
+      "searchLocations": "⟦Şḗȧřƈħ ŀȯƈȧŧīȯƞş...⟧",
+      "noLocationsFound": "⟦Ƞȯ ŀȯƈȧŧīȯƞş ƒȯŭƞḓ⟧",
       "costNonNegative": "⟦Ŭƞīŧ ƈȯşŧ ƈȧƞ'ŧ ƀḗ ƞḗɠȧŧīṽḗ.⟧",
       "failed": "⟦Ƈȯŭŀḓƞ'ŧ řḗƈḗīṽḗ şŧȯƈķ.⟧",
       "inProgress": "⟦Řḗƈḗīṽīƞɠ…⟧",

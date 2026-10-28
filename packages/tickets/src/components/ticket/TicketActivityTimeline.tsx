@@ -37,7 +37,7 @@ import type {
   TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
 
-import { getTicketTimelineEntries } from '../../actions/ticketActivityActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
 interface TicketActivityTimelineProps {
   ticketId: string;
@@ -500,6 +500,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 }
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
+  const { getTicketTimelineEntries } = useTicketDataSource().activity;
   const { t: tCommon } = useTranslation('common');
   const { t: tTickets } = useTranslation('features/tickets');
   const { formatDate } = useFormatters();
@@ -537,7 +538,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     return () => {
       cancelled = true;
     };
-  }, [ticketId, refreshKey]);
+  }, [ticketId, refreshKey, getTicketTimelineEntries]);
 
   // All hooks must run unconditionally on every render — keep useMemo/etc.
   // above the loading/error early returns to satisfy the rules of hooks.

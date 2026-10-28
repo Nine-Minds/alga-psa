@@ -323,6 +323,21 @@
       "any": "tutte",
       "clear": "Cancella",
       "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
+    },
+    "lateTime": {
+      "title": "Tempo a ore approvato in ritardo",
+      "description": "Questo tempo è stato approvato dopo l'emissione della fattura del relativo periodo di servizio. Le voci in attesa di fatturazione vengono aggiunte una sola volta alla fattura successiva, contrassegnate come tempo in ritardo. Le voci oltre il periodo di retrospettiva non vengono fatturate.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Tecnico",
+        "service": "Servizio",
+        "workDate": "Data di lavoro",
+        "hours": "Ore",
+        "closedPeriod": "Periodo di servizio chiuso",
+        "status": "Stato"
+      },
+      "nextInvoice": "Verrà fatturato nella prossima fattura",
+      "outsideLookback": "Oltre il periodo di retrospettiva — non fatturato"
     }
   },
   "manualInvoices": {

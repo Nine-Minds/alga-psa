@@ -6,6 +6,8 @@ import type { Knex } from 'knex';
 import { assertMspPermission } from '../lib/authHelpers';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
+import { attachDisplayTags } from '../lib/displayTags';
+import type { IDisplayTag } from '@alga-psa/types';
 
 const CLIENT_PICKER_DEFAULT_PAGE_SIZE = 25;
 const CLIENT_PICKER_MAX_PAGE_SIZE = 50;
@@ -18,6 +20,8 @@ export interface PickerClient {
   client_type: 'company' | 'individual' | null;
   is_inactive: boolean;
   logoUrl: string | null;
+  /** Chip tags for the viewer (display rules), in rule order. */
+  displayTags: IDisplayTag[];
 }
 
 export interface SearchClientsForPickerParams {
@@ -119,13 +123,14 @@ export const searchClientsForPicker = withAuth(async (
     ? await getClientLogoUrlsBatchAsync(rows.map((r: { client_id: string }) => r.client_id), tenant)
     : new Map<string, string | null>();
 
-  const clients: PickerClient[] = rows.map((r: any) => ({
+  const baseClients = rows.map((r: any) => ({
     client_id: r.client_id,
     client_name: r.client_name,
     client_type: r.client_type ?? null,
     is_inactive: Boolean(r.is_inactive),
     logoUrl: logoMap.get(r.client_id) ?? null,
   }));
+  const clients: PickerClient[] = await attachDisplayTags(db, tenant, user, 'client', baseClients, (c) => c.client_id);
 
   return { clients, total };
 });

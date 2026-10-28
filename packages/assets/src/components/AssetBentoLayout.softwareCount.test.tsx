@@ -30,7 +30,6 @@ vi.mock('@alga-psa/ui/components', () => ({
 }));
 vi.mock('@alga-psa/ui/components/Drawer', () => ({ default: () => null }));
 vi.mock('./shared/useAssetStatusOptions', () => ({
-  resolveAssetStatusLabel: () => 'Active',
   useAssetStatusRegistry: () => ({ statuses: [] }),
 }));
 vi.mock('./AssetAssigneeRow', () => ({ AssetAssigneeRow: () => null }));

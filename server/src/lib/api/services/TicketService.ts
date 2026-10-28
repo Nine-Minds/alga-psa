@@ -1713,7 +1713,12 @@ export class TicketService extends BaseService<ITicket> {
   
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
-  
+
+      // Request options, never `tickets` columns: the explicit CreateTicketInput
+      // mapping below keeps them out of the insert.
+      const { suppressContactNotifications, suppressInternalNotifications } =
+        resolveTicketNotificationSuppression(data);
+
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
@@ -1817,6 +1822,16 @@ export class TicketService extends BaseService<ITicket> {
             assigned_to: fullTicket.assigned_to,
             client_id: fullTicket.client_id,
             ticket_origin: TICKET_ORIGINS.API,
+            // Same annotation the in-app silent paths write, so the timeline
+            // can mark the creation as silent.
+            ...(suppressContactNotifications
+              ? {
+                  notification_suppression: {
+                    suppress_contact_notifications: true,
+                    suppress_internal_notifications: suppressInternalNotifications,
+                  },
+                }
+              : {}),
           },
         });
 
@@ -1833,6 +1848,8 @@ export class TicketService extends BaseService<ITicket> {
         priorityId: fullTicket.priority_id,
         clientId: fullTicket.client_id,
         externalLinks,
+        suppressContactNotifications,
+        suppressInternalNotifications,
       }));
 
       // Post-commit: announce each inline ticket link so subscribers see the
@@ -2276,6 +2293,11 @@ export class TicketService extends BaseService<ITicket> {
   async createFromAsset(data: CreateTicketFromAssetData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
+    // Request options, never `tickets` columns: the model input mapping below
+    // is explicit, so they never reach the insert.
+    const { suppressContactNotifications, suppressInternalNotifications } =
+      resolveTicketNotificationSuppression(data);
+
     const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
       const asset = await tenantScopedTable(trx, 'assets', context.tenant)
@@ -2368,6 +2390,8 @@ export class TicketService extends BaseService<ITicket> {
       boardId: fullTicket.board_id,
       priorityId: fullTicket.priority_id,
       clientId: fullTicket.client_id,
+      suppressContactNotifications,
+      suppressInternalNotifications,
     }));
 
     return fullTicket;
@@ -2435,6 +2459,7 @@ export class TicketService extends BaseService<ITicket> {
       userIds.map(async (uid) => {
         try {
           avatarMap[uid] = await getUserAvatarUrl(uid, context.tenant);
+        // write-admission: exempt — avatar URL read, never a write
         } catch {
           avatarMap[uid] = null;
         }

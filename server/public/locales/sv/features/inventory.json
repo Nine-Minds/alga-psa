@@ -1577,6 +1577,10 @@
       "inProgress": "Bygger om…"
     },
     "receive": {
+      "searchProducts": "Sök produkter eller SKU...",
+      "noProductsFound": "Inga produkter hittades",
+      "searchLocations": "Sök platser...",
+      "noLocationsFound": "Inga platser hittades",
       "costNonNegative": "Enhetskostnaden får inte vara negativ.",
       "failed": "Det gick inte att ta emot varor.",
       "inProgress": "Tar emot…",

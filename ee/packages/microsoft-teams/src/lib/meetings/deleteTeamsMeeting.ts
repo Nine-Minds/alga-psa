@@ -55,6 +55,7 @@ export async function deleteTeamsMeetingWithResult(
       `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'DELETE',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
