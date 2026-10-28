@@ -1,0 +1,27 @@
+[
+  {
+    "id": "T001",
+    "description": "Database-backed receive with two photos and transaction rollback including upload cleanup",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "Asset and document authorization, tenant isolation and client visibility",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "Custody history photo mapping and rendering, including denied reads",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "Backfill justified associations twice and verify idempotence",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "Other custody actions upload, persist, display and clean up photos on failure",
+    "implemented": false
+  }
+]

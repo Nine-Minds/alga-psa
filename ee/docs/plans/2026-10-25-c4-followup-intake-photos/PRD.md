@@ -1,7 +1,6 @@
 # Intake photos on the asset and its custody history (C4 follow-up 2/3) — PRD
 
-Card: alga-2026-0002683 C4 follow-up (2/3). PSA ticket alga-2026-0002683 (Joymode Business Solutions /
-Munjal Thakkar). Stacked on follow-up 1/3 (`3c9f8a48`), which also touches the Receive equipment dialog and
+Card: alga-2026-0002683 C4 follow-up (2/3). [PSA ticket alga-2026-0002683](https://algapsa.com/msp/tickets/eb4a5b58-4bb1-48be-961f-8c2aeebcc0ed). Stacked on follow-up 1/3 (`3c9f8a48`), which also touches the Receive equipment dialog and
 action; the PR targets that card's branch until it merges.
 
 ## Why
