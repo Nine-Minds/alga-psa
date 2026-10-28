@@ -1,3 +1,4 @@
+import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -141,6 +142,8 @@ export async function GET(
       if (!user || !tenant) {
         return new NextResponse('Unauthorized', { status: 401 });
       }
+      const denial = await coManagedWorkspaceDenial(tenant);
+      if (denial) return denial;
       const authorizedDocument = await withTransaction(knex, async (trx) =>
         getAuthorizedDocumentByFileId(trx, tenant, user, fileRecord.file_id)
       );

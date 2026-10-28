@@ -1,7 +1,8 @@
 'use server';
 
 import { randomUUID } from 'crypto';
-import { withAuth, hasPermission, checkMultiplePermissions } from '@alga-psa/auth';
+import { canReadKnowledgeBase } from '../lib/documentPermissions';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -85,16 +86,6 @@ function tenantScopedTable(
   alias?: string,
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(alias ? `${table} as ${alias}` : table);
-}
-
-// Knowledge base reads can be granted independently of general documents.
-// Resolve both permissions in one RBAC read so PSA callers retain their query budget.
-async function canReadKnowledgeBase(user: Parameters<typeof hasPermission>[0]): Promise<boolean> {
-  const permissions = await checkMultiplePermissions(user, [
-    { resource: 'document', action: 'read' },
-    { resource: 'knowledge_base', action: 'read' },
-  ]);
-  return permissions.some((permission) => permission.granted);
 }
 
 async function publishKbArticleSearchEvent(

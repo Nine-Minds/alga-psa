@@ -233,17 +233,39 @@ then removes that grant and verifies denial; the Admin has no general
 `document:read` permission. PSA and AlgaDesk can continue to use their existing
 `document:read` grant. The RBAC check resolves both permissions in one read.
 
-The remaining document boundary is incomplete. Ticket attachment reads,
-uploads and downloads still require general document permissions, and article
-content and editing paths also require further authorization work. The
-focused test mocks the action authentication facade, so it does not prove the
-pending-acceptance guard or the ticket API. The live ticket/API journey and
-commercial action denials remain to be verified as well.
+Customer attachment reads and uploads use `ticket_attachment:read/create`.
+Each scoped operation must resolve a ticket in the caller's tenant and pass
+its ticket permission and visibility checks. Mixed upload targets, unrelated
+documents and foreign tickets are refused. File viewing embeds the customer
+restriction in the existing document query. General document library access
+remains unavailable to these roles. Existing PSA and AlgaDesk document grants
+remain sufficient.
+
+Article actions and KB API readers share the same read policy. Portal readers
+use the published client/public audience filter and cannot use their scoped
+grant to call the internal article readers. The grants permit reading; article
+editing retains its separate authorization requirements.
+
+Run the native-access regression with:
+
+```sh
+cd ee/temporal-workflows
+npx vitest run --config vitest.co-managed-access.config.ts
+```
+
+This suite creates a disposable CE+EE database and signs up a freshly seeded
+customer. It uses the real session revocation check, `withAuth`, RBAC, API-key
+validators and ticket/KB controllers. It checks pending-consent refusal,
+unchanged key state, ticket reads after acceptance, foreign-tenant refusal,
+commercial denials, article content, grant removal and scoped attachment
+upload/list/download. Cookie decoding, activity context and transport I/O are
+substituted. The real worker and SMTP check are separate from this suite.
 
 API key validation checks pending acceptance before changing the key's
 last-used state. In the disposable provisioning suite, a key for the newly
 signed-up administrator is refused with `CO_MANAGED_NOT_ACTIVE` through both
 tenant-specified and tenant-discovery validation. Its row remains unchanged.
 After acceptance the same key validates. This exercises the key validator and
-the real lifecycle provider; it does not exercise a ticket controller or the
-browser action guard.
+the real lifecycle provider. The native-access suite additionally exercises
+the ticket controller, browser action guard and session-authenticated download
+refusal.
