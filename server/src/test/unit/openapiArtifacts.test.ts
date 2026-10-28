@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import YAML from 'yaml';
 import { afterEach, describe, expect, it } from 'vitest';
-import { writeDocument } from '../../../../sdk/scripts/openapi-artifacts';
+import { writeDocument } from '../../../../sdk/scripts/lib/write-openapi-document.mjs';
 
 describe('OpenAPI artifact serialization', () => {
   const directories: string[] = [];

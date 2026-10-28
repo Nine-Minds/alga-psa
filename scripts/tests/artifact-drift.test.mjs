@@ -1,7 +1,38 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import YAML from 'yaml';
 
 import { applyAllow, nonAdditiveChanges } from '../ci/artifact-drift.mjs';
+import { writeDocument } from '../../sdk/scripts/lib/write-openapi-document.mjs';
+
+test('OpenAPI artifacts are identical for shared and copied schema values and preserve their data', (t) => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openapi-output-'));
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const maintenanceType = { type: 'string', enum: ['preventive', 'corrective', 'inspection'] };
+  const document = {
+    openapi: '3.0.3',
+    components: {
+      schemas: {
+        CreateMaintenance: { type: 'object', properties: { maintenance_type: maintenanceType } },
+        UpdateMaintenance: { type: 'object', properties: { maintenance_type: { ...maintenanceType } } },
+        Maintenance: { type: 'object', properties: { maintenance_type: maintenanceType } },
+      },
+    },
+  };
+  const copied = JSON.parse(JSON.stringify(document));
+  writeDocument(outputDir, 'shared', ['json', 'yaml'], document);
+  writeDocument(outputDir, 'copied', ['json', 'yaml'], copied);
+
+  for (const format of ['json', 'yaml']) {
+    const sharedOutput = fs.readFileSync(path.join(outputDir, `shared.${format}`), 'utf8');
+    const copiedOutput = fs.readFileSync(path.join(outputDir, `copied.${format}`), 'utf8');
+    assert.equal(sharedOutput, copiedOutput, `${format} output must depend on values, not object identity`);
+    assert.deepEqual(format === 'json' ? JSON.parse(sharedOutput) : YAML.parse(sharedOutput), copied);
+  }
+});
 
 const doc = (over = {}) => ({
   paths: {
