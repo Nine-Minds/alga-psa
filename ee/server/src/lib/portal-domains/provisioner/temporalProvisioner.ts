@@ -6,6 +6,12 @@ import {
 } from '@/models/PortalDomainModel';
 
 import { enqueuePortalDomainWorkflow } from '../workflowClient';
+import {
+  buildSsoRedirectUriState,
+  resolveSsoProvidersForTenant,
+  readSsoRedirectUriState,
+  withSsoRedirectUriState,
+} from '@/lib/portal-domains/ssoRedirectUris';
 import type {
   PortalDomainProvisioner,
   ReconcileInput,
@@ -20,19 +26,32 @@ import type {
  */
 export const temporalProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
-    const { knex, tenant, canonicalHost, domain, existing, domainChanged } = input;
+    const { knex, tenant, canonicalHost, domain, existing, domainChanged, surface } = input;
+    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
+    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
 
     const record = await upsertPortalDomain(knex, tenant, {
       domain,
+      surface,
+      matchSurface: existing?.surface,
       status: 'pending_dns',
       statusMessage: domainChanged
         ? `Updating custom domain. Waiting for DNS verification of ${domain}.`
         : `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
-      verificationDetails: {
-        expected_cname: canonicalHost,
-        requested_domain: domain,
-        ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
-      },
+      // The worker reads (never computes) sso_redirect_uris to gate activation of MSP surfaces.
+      verificationDetails: withSsoRedirectUriState(
+        {
+          expected_cname: canonicalHost,
+          requested_domain: domain,
+          ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
+        },
+        buildSsoRedirectUriState({
+          domain,
+          surface,
+          providers: ssoProviders,
+          previous: existing && !domainChanged ? readSsoRedirectUriState(existing.verificationDetails) : null,
+        })
+      ),
       lastCheckedAt: new Date().toISOString(),
       certificateSecretName: null,
       lastSyncedResourceVersion: null,
@@ -41,11 +60,12 @@ export const temporalProvisioner: PortalDomainProvisioner = {
     const workflowResult = await enqueuePortalDomainWorkflow({
       tenantId: tenant,
       portalDomainId: record.id,
+      surface,
       trigger: domainChanged ? 'refresh' : 'register',
     });
 
     if (!workflowResult.enqueued) {
-      await updatePortalDomain(knex, tenant, {
+      await updatePortalDomain(knex, tenant, { id: record.id }, {
         status: 'pending_dns',
         statusMessage: domainChanged
           ? 'Saved domain change, but failed to enqueue provisioning. Please retry or contact support.'
@@ -82,7 +102,7 @@ export const temporalProvisioner: PortalDomainProvisioner = {
       nextStatus.statusMessage = 'Retrying certificate provisioning. Verifying ACME challenge reachability.';
     }
 
-    const updated = await updatePortalDomain(knex, tenant, nextStatus);
+    const updated = await updatePortalDomain(knex, tenant, { id: existing.id }, nextStatus);
 
     if (updated) {
       await enqueuePortalDomainWorkflow({
@@ -94,9 +114,9 @@ export const temporalProvisioner: PortalDomainProvisioner = {
   },
 
   async disable(input: ReconcileInput): Promise<void> {
-    const { knex, tenant } = input;
+    const { knex, tenant, existing } = input;
 
-    const updated = await updatePortalDomain(knex, tenant, {
+    const updated = await updatePortalDomain(knex, tenant, { id: existing.id }, {
       status: 'disabled',
       statusMessage: 'Custom domain disabled by administrator.',
       lastCheckedAt: new Date().toISOString(),

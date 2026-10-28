@@ -9,6 +9,7 @@ import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { cancellationFeedbackSchema } from '../cancellationFeedbackValidation';
 import {
   IGetSubscriptionInfoResponse,
@@ -982,11 +983,18 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
       if (tenant?.email) {
         const tenantName = tenant.client_name || 'your organization';
+        // Format the cancel date in the recipient's locale, not a hardcoded en-US.
+        // A locale lookup must never block the cancellation email itself.
+        const locale = await resolveEmailLocale(session.user.tenant, {
+          email: tenant.email,
+          userType: 'internal',
+        }).catch(() => 'en');
         await sendCancellationRequestEmail({
           tenantName,
           recipientName: tenant.client_name || tenantName,
           recipientEmail: tenant.email,
           cancelAtDate,
+          locale,
         });
         logger.info(
           `[cancelSubscriptionAction][tenant=${session.user.tenant}] Cancellation request email sent to ${tenant.email}`

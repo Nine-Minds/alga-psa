@@ -62,6 +62,7 @@ vi.mock('@/models/PortalDomainModel', async () => {
     ...actual,
     computeCanonicalHost: actual.computeCanonicalHost, // Use the real function to test NEXTAUTH_URL logic
     getPortalDomain: vi.fn(async () => (portalDomainStore ? { ...portalDomainStore } : null)),
+    getPortalDomainByHostname: vi.fn(async () => null),
     upsertPortalDomain: vi.fn(async (_knex: any, _tenant: string, input: any) => {
       const existing = portalDomainStore ?? {
         ...baseRecord,
@@ -81,7 +82,7 @@ vi.mock('@/models/PortalDomainModel', async () => {
       } satisfies PortalDomain;
       return { ...portalDomainStore };
     }),
-    updatePortalDomain: vi.fn(async (_knex: any, _tenant: string, patch: any) => {
+    updatePortalDomain: vi.fn(async (_knex: any, _tenant: string, _target: any, patch: any) => {
       const current = portalDomainStore ?? baseRecord;
       const next: PortalDomain = {
         ...current,
@@ -123,6 +124,7 @@ describe('requestPortalDomainRegistrationAction (hosted / temporal driver)', () 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
       portalDomainId: 'portal-domain-1',
+      surface: 'client_portal',
       trigger: 'register',
     });
     expect(status.domain).toBe('first.example.com');
@@ -141,6 +143,7 @@ describe('requestPortalDomainRegistrationAction (hosted / temporal driver)', () 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
       portalDomainId: portalDomainStore!.id,
+      surface: 'client_portal',
       trigger: 'refresh',
     });
 
@@ -167,6 +170,7 @@ describe('requestPortalDomainRegistrationAction (hosted / temporal driver)', () 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
       portalDomainId: portalDomainStore!.id,
+      surface: 'client_portal',
       trigger: 'register',
     });
 

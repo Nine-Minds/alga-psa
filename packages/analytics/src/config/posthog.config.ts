@@ -5,6 +5,8 @@
  * The API key here is a public key that's safe to expose in frontend code.
  */
 
+import { redactCaptureResult } from '../lib/redactSecretUrls';
+
 export const posthogConfig = {
   // Public API key - safe to commit to source control
   apiKey: 'phc_RiwIhTqFG1NOWw6TS53fpnj3B7fAGv2Ixx7JD2S4IIn',
@@ -25,6 +27,7 @@ export const posthogConfig = {
     capture_exceptions: true,
     autocapture: true,
     disable_session_recording: true,
+    before_send: redactCaptureResult,
   },
   
   // Feature flags

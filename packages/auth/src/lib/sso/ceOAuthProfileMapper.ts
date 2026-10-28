@@ -1,4 +1,4 @@
-import User from '@alga-psa/db/models/user';
+import { resolveSignInUser, TenantRequiredResolutionError } from '../signInUserResolution';
 import type {
   OAuthMappingFailureCode,
   OAuthProfileMappingInput,
@@ -44,7 +44,23 @@ export async function mapCeOAuthProfileToExtendedUser(
     return buildAuthFailureResult('missing_email');
   }
 
-  const user = await User.findUserByEmailAndType(normalizedEmail, 'internal');
+  // Same resolution as the password sign-in: the IdP has proven the mailbox, so
+  // every live internal user with it counts (`verify` always true). An email in
+  // several tenants needs a trusted scope; IdP claims never pick one.
+  let user;
+  try {
+    ({ user } = await resolveSignInUser({
+      email: normalizedEmail,
+      userType: 'internal',
+      scopeTenantId: input.scopeTenantId ?? undefined,
+      verify: () => true,
+    }));
+  } catch (error) {
+    if (error instanceof TenantRequiredResolutionError) {
+      return buildAuthFailureResult('tenant_required', normalizedEmail);
+    }
+    throw error;
+  }
   if (!user) {
     return buildAuthFailureResult('no_matching_user', normalizedEmail);
   }

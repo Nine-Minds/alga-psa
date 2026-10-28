@@ -11,6 +11,12 @@ export interface ProductLocationAvailability {
   location_id: string;
   location_name: string;
   on_hand: number;
+  /** Soft-reserved for sales orders at this location. */
+  reserved: number;
+  /** Hard-held for sales orders at this location (never consumable). */
+  held: number;
+  /** on_hand - reserved - held: what a material add can take without an override. */
+  free: number;
 }
 
 export interface ProductAvailability {
@@ -28,6 +34,12 @@ export interface ProductAvailability {
 export interface PickerStockFields {
   track_stock?: boolean;
   on_hand_total?: number | null;
+  /**
+   * Free stock (on_hand - reserved - held) at the location a material add consumes from
+   * (product default, else tenant default). The picker badge shows this so it agrees
+   * with the add-time refusal.
+   */
+  free_total?: number | null;
   reorder_point?: number | null;
 }
 

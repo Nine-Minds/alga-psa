@@ -4,8 +4,10 @@ import React, { useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { AssetCrossFeatureProvider } from '@alga-psa/assets/context/AssetCrossFeatureContext';
 import type { AssetCrossFeatureCallbacks, AssetQuickAddTicketRenderProps, AssetTicketDetailsRenderProps } from '@alga-psa/assets/context/AssetCrossFeatureContext';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
@@ -34,6 +36,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
         prefilledTitle={props.prefilledTitle}
         prefilledDescription={props.prefilledDescription}
         prefilledDueDate={props.prefilledDueDate}
+        renderAssetPicker={renderQuickAddAssetPicker}
       />
     ),
     []
@@ -57,6 +60,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
             initialBoard={ticketData.board}
             initialClient={ticketData.client}
             initialContactInfo={ticketData.contactInfo}
+            initialDisplayTags={ticketData.displayTags}
             {...ticketDetailsInitialProps(ticketData)}
             initialAdditionalAgents={ticketData.additionalAgents}
             initialAvailableAgents={ticketData.availableAgents}
@@ -86,6 +90,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
       openTicketDetailsDrawer,
       createTicketFromAsset,
       getAllBoards,
+      listInternalUsers: () => getAllUsersBasic(false, 'internal'),
       rmm: { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl },
     }),
     [renderQuickAddTicket, openTicketDetailsDrawer]

@@ -43,6 +43,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   tenantDb: tenantDbMock,
   withTransaction: withTransactionMock,
+  registerAfterCommit: vi.fn(),
+}));
+
+// The shared client-creation seam imports tenantDb from this subpath, not the
+// barrel above, so the client insert it does needs the same fake table too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: tenantDbMock,
 }));
 
 vi.mock('../lib/authHelpers', () => ({
@@ -128,6 +135,11 @@ vi.mock('@alga-psa/shared/billingClients/billingProfiles', () => ({
   ensureClientDefaultBillingProfile: vi.fn(async () => 'billing-profile-1'),
 }));
 
+// Tax initialization reaches tables the fake DB here does not model.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  initializeClientDefaultTax: vi.fn(async () => ({})),
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
@@ -154,16 +166,18 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     'phone_extension', 'fax_extension', 'is_active', 'created_at', 'updated_at',
   ]),
   default_billing_settings: new Set(['tenant', 'default_currency_code']),
+  tenants: new Set(['tenant', 'product_code']),
   countries: new Set(['code', 'name', 'is_active', 'created_at', 'updated_at']),
   tenant_companies: new Set(['tenant', 'client_id', 'is_default', 'deleted_at', 'created_at', 'updated_at']),
 };
 
-type FakeTable = 'clients' | 'client_locations' | 'default_billing_settings' | 'countries' | 'tenant_companies';
+type FakeTable = 'clients' | 'client_locations' | 'default_billing_settings' | 'countries' | 'tenant_companies' | 'tenants';
 
 interface FakeState {
   clients: Record<string, any>[];
   client_locations: Record<string, any>[];
   default_billing_settings: Record<string, any>[];
+  tenants: Record<string, any>[];
   countries: Record<string, any>[];
   tenant_companies: Record<string, any>[];
   updates: Array<{ table: string; data: Record<string, any> }>;
@@ -262,6 +276,10 @@ function fakeConn(table: string) {
         },
       };
     },
+    async first(..._columns: string[]) {
+      const row = rows()[0];
+      return row ? { ...row } : undefined;
+    },
   };
 }
 
@@ -313,6 +331,8 @@ describe('importClientsFromCSV', () => {
       clients: [],
       client_locations: [],
       default_billing_settings: [],
+      // The shared creation seam reads product_code to decide the tax skip.
+      tenants: [{ tenant: 'tenant-1', product_code: 'psa' }],
       countries: [
         { code: 'US', name: 'United States', is_active: true },
         { code: 'CO', name: 'Colombia', is_active: true },

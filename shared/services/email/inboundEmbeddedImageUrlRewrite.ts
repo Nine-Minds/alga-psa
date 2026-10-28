@@ -20,61 +20,15 @@ import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
-export function normalizeEmbeddedContentId(value: string | undefined | null): string {
-  if (!value) return '';
-  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
-}
+// The string-only rewriting lives in a sibling that carries no BlockNote
+// dependency, so read-time callers (route handlers) can import it directly.
+// Re-exported here because the ingest pipeline uses both halves together.
+import {
+  normalizeEmbeddedContentId,
+  rewriteEmbeddedImageSourcesInContent,
+} from './embeddedImageSourceRewrite';
 
-/**
- * Replace `cid:` and inline `data:image` sources that match persisted
- * mappings. Operates on any string that carries the source (HTML or the
- * serialized BlockNote body), which is why the durable worker can reuse it
- * without re-deriving the block shape.
- */
-export function rewriteEmbeddedImageSourcesInContent(
-  content: string,
-  embeddedMappings: EmbeddedImageUrlMapping[]
-): string {
-  if (!content || !embeddedMappings.length) return content;
-
-  const dataUrlMap = new Map<string, string>();
-  const cidMap = new Map<string, string>();
-
-  for (const mapping of embeddedMappings) {
-    if (mapping.source === 'data-url') {
-      dataUrlMap.set(mapping.reference, mapping.url);
-      continue;
-    }
-
-    if (mapping.source === 'cid') {
-      const normalized = normalizeEmbeddedContentId(mapping.reference);
-      if (normalized) {
-        cidMap.set(normalized, mapping.url);
-      }
-    }
-  }
-
-  let rewritten = content;
-
-  if (dataUrlMap.size > 0) {
-    rewritten = rewritten.replace(
-      /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim,
-      (fullMatch: string, contentType: string, base64: string) => {
-        const normalized = `data:${String(contentType).toLowerCase()};base64,${String(base64).replace(/\s+/g, '')}`;
-        return dataUrlMap.get(normalized) || fullMatch;
-      }
-    );
-  }
-
-  if (cidMap.size > 0) {
-    rewritten = rewritten.replace(/\bcid:([^"'<>\s)]+)/gim, (fullMatch: string, cid: string) => {
-      const normalized = normalizeEmbeddedContentId(cid);
-      return cidMap.get(normalized) || fullMatch;
-    });
-  }
-
-  return rewritten;
-}
+export { normalizeEmbeddedContentId, rewriteEmbeddedImageSourcesInContent };
 
 /**
  * Append image blocks for mappings whose served URL is not already present.

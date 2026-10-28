@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    // *.db.test.ts files run in the workspace database runner (scripts/run-workspace-db-tests.mjs).
+    exclude: ['**/node_modules/**', '**/*.db.test.{ts,tsx}'],
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },

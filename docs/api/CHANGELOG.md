@@ -2,6 +2,42 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-10-27 — Time sheet create/update fixed; act-on-behalf enforced on create
+
+**Affected endpoints:** `POST /api/v1/time-sheets`, `PUT /api/v1/time-sheets/{id}`
+
+**Changes:**
+
+- API keys/users without act-on-behalf rights can no longer create time sheets for other users. `POST` with a `user_id` other than the caller's now returns `403` unless the caller has `time_sheet:approve` and either `time_sheet:read_all` or manages that user. Creating a time sheet for yourself is unchanged.
+- `POST` and `PUT` no longer fail with a database error: they wrote `created_at`/`updated_at` columns that `time_sheets` does not have.
+
+## 2026-10-17 — Time entries resolve contract lines; delete reverses billing usage
+
+**Affected endpoints:** `POST /api/v1/time-entries`, `PUT /api/v1/time-entries/{id}`, `DELETE /api/v1/time-entries/{id}`, `DELETE /api/v1/time-entries/bulk`
+
+Time entries written through the REST API now use the same write path as the UI: billable entries are linked to a contract line, the origin of the link is recorded, and bucket usage is drawn.
+
+**Changes:**
+
+- `POST` and `PUT` accept new optional body fields `contract_line_id` (uuid) and `tax_rate_id` (uuid, nullable). When `contract_line_id` is omitted and exactly one contract line is eligible, it is chosen automatically; with no eligible line the entry is saved unresolved.
+- `POST` and `PUT` can now return `400` when the line cannot be chosen:
+  ```json
+  {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "…",
+      "details": {
+        "reason": "contract_line_ambiguous" | "contract_line_not_eligible",
+        "eligible_contract_lines": [{ "contract_line_id": "…", "contract_line_name": "…", "contract_line_type": "…", "contract_id": "…", "contract_name": "…", "has_bucket": true }]
+      }
+    }
+  }
+  ```
+  Retry with `contract_line_id` set to one of the listed candidates.
+- `DELETE /api/v1/time-entries/{id}` and `DELETE /api/v1/time-entries/bulk` now reverse the bucket usage draw and the hour-block burn made by the deleted entry (same as deleting in the UI). Previously they left the usage in place, so bucket totals overstated what was still linked.
+
+**Migration note:** Bucket usage left stale by earlier API deletes is not corrected retroactively.
+
 ## 2026-10-03 — Service category `display_order` now persisted on create/update
 
 **Affected endpoints:** `POST /api/v1/categories/service`, `PUT /api/v1/categories/service/{id}`, `GET /api/v1/categories/service`, `GET /api/v1/categories/service/{id}`

@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import {
   LEGACY_PER_TENANT_SCHEDULE_PREFIXES,
-  MAINTENANCE_FANOUT_SCHEDULES,
+  listMaintenanceFanoutSchedules,
   TIER_FEATURES,
   tierHasFeature,
 } from '@alga-psa/types';
@@ -495,7 +495,7 @@ export async function setupSchedules() {
     // global Temporal Schedule each, fanning out across tenants server-side.
     // overlap=SKIP + a short catchup window prevent run pile-up and
     // post-downtime replay storms; crons keep their original (UTC) cadence.
-    for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {
+    for (const { jobName, cron } of listMaintenanceFanoutSchedules()) {
       await upsertSchedule(client, `maintenance-fanout:${jobName}`, {
         spec: {
           cronExpressions: [cron],

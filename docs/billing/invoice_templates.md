@@ -126,8 +126,11 @@ Key entry points:
 
 PDF rendering uses the same AST evaluator + renderer path. The server wrapper produces a full HTML document for headless browser (Puppeteer) rendering.
 
-Key entry point:
+The issuing tenant's logo (`tenantClientLogo`) is resolved in one order on every generated document — invoice, quote, sales order and designer preview alike: the Settings → Branding wide logo, then the branding square logo (light variants only, since documents are white paper), then the own-company client record's logo (wide, then default). With none of those the image is hidden.
+
+Key entry points:
 - `packages/billing/src/services/pdfGenerationService.ts`
+- `packages/billing/src/lib/adapters/tenantPartyAdapter.ts` — the tenant-party and logo resolution
 
 ### 3.4 Localization
 

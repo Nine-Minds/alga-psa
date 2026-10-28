@@ -297,6 +297,8 @@ const nextConfig = {
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
+      '@alga-psa/predicates': '../packages/predicates/src',
+      '@alga-psa/predicates/': '../packages/predicates/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
       '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
@@ -635,6 +637,8 @@ const nextConfig = {
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
+      '@alga-psa/predicates': prebuiltDirAbs('predicates'),
+      '@alga-psa/predicates/': `${prebuiltDirAbs('predicates')}/`,
       '@alga-psa/formatting': prebuiltDirAbs('formatting'),
       '@alga-psa/formatting/': `${prebuiltDirAbs('formatting')}/`,
       '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
@@ -1356,6 +1360,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',
@@ -1367,6 +1373,9 @@ const nextConfig = {
     // out of the Turbopack server bundle that every static-gen worker loads.
     'nodemailer',
     'imapflow',
+    // Reached from the ticket email-html route (archived .eml → display HTML);
+    // a CJS Node parser with no business in a bundle.
+    'mailparser',
     'express',
     'fluent-ffmpeg',
     'tar',

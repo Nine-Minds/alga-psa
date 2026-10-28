@@ -48,6 +48,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
+import { FieldVisibilityEditor } from './FieldVisibilityEditor';
 import { AnswerMappingSection } from './AnswerMappingSection';
 import {
   ServiceRequestAudienceEditor,
@@ -358,6 +359,8 @@ interface FormFieldEditorCardProps {
   field: FormField;
   index: number;
   allFields: FormField[];
+  /** Present only when the advanced form-behavior panel is enabled; gates the "Show when…" editor. */
+  formBehaviorConfig?: Record<string, unknown>;
   reloadDefinitionEditorState: (definitionId: string) => Promise<void>;
 }
 
@@ -366,6 +369,7 @@ function FormFieldEditorCard({
   field,
   index,
   allFields,
+  formBehaviorConfig,
   reloadDefinitionEditorState,
 }: FormFieldEditorCardProps) {
   const { t } = useTranslation('msp/service-requests');
@@ -557,6 +561,22 @@ function FormFieldEditorCard({
           }}
         />
       )}
+      {formBehaviorConfig && (
+        <FieldVisibilityEditor
+          fieldKey={key}
+          precedingFields={allFields.slice(0, index).map((candidate) => ({
+            key: candidate.key,
+            type: candidate.type,
+            label: candidate.label,
+            options: candidate.options,
+          }))}
+          config={formBehaviorConfig}
+          onSave={async (nextConfig) => {
+            await updateServiceRequestFormBehaviorConfigAction(definitionId, nextConfig);
+            await reloadDefinitionEditorState(definitionId);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -692,7 +712,19 @@ export default function ServiceRequestDefinitionEditorPage() {
     sortOrder: '0',
   });
   const [formBehaviorProviderInput, setFormBehaviorProviderInput] = useState('basic');
-  const [formBehaviorConfigText, setFormBehaviorConfigText] = useState('{}');
+  // Unsaved edits to the Advanced (JSON) panel; null shows the saved config. Saved only by
+  // the panel's own button (never by "Save all"), so it cannot overwrite "Show when…" edits.
+  const [formBehaviorConfigDraft, setFormBehaviorConfigDraft] = useState<string | null>(null);
+  const savedFormBehaviorConfigText = JSON.stringify(
+    data?.execution.formBehaviorConfig ?? {},
+    null,
+    2
+  );
+  // A draft is based on the saved config it was typed over; once that changes (a
+  // "Show when…" save, or another reload), drop the draft rather than save stale rules.
+  useEffect(() => {
+    setFormBehaviorConfigDraft(null);
+  }, [savedFormBehaviorConfigText]);
   const [visibilityProviderInput, setVisibilityProviderInput] = useState(
     'all-authenticated-client-users'
   );
@@ -982,9 +1014,6 @@ export default function ServiceRequestDefinitionEditorPage() {
     }
 
     setFormBehaviorProviderInput(data.execution.formBehaviorProvider);
-    setFormBehaviorConfigText(
-      JSON.stringify(data.execution.formBehaviorConfig ?? {}, null, 2)
-    );
     setVisibilityProviderInput(data.execution.visibilityProvider);
     setVisibilityConfigText(
       JSON.stringify(data.execution.visibilityConfig ?? {}, null, 2)
@@ -1138,22 +1167,6 @@ export default function ServiceRequestDefinitionEditorPage() {
       } catch (error) {
         console.error('Save all: workflow config failed', error);
         failures.push(t('editor.execution.workflow.title'));
-      }
-    }
-
-    if (data.execution.showAdvancedFormBehaviorConfigPanel) {
-      try {
-        const parsed = formBehaviorConfigText.trim() ? JSON.parse(formBehaviorConfigText) : {};
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-          throw new Error('Form behavior config must be a JSON object');
-        }
-        await updateServiceRequestFormBehaviorConfigAction(
-          data.definitionId,
-          parsed as Record<string, unknown>
-        );
-      } catch (error) {
-        console.error('Save all: form behavior config failed', error);
-        failures.push(t('editor.execution.advanced.title'));
       }
     }
 
@@ -1497,6 +1510,11 @@ export default function ServiceRequestDefinitionEditorPage() {
                   field={field}
                   index={index}
                   allFields={allFields}
+                  formBehaviorConfig={
+                    data.execution.showAdvancedFormBehaviorConfigPanel
+                      ? data.execution.formBehaviorConfig ?? {}
+                      : undefined
+                  }
                   reloadDefinitionEditorState={reloadDefinitionEditorState}
                 />
               ))
@@ -1833,41 +1851,58 @@ export default function ServiceRequestDefinitionEditorPage() {
         {data.execution.showAdvancedFormBehaviorConfigPanel && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <div className="text-sm font-semibold">{t('editor.execution.advanced.title')}</div>
-            <TextArea
-              id="service-request-form-behavior-config"
-              label={t('editor.execution.advanced.config')}
-              wrapperClassName="mb-0"
-              className="min-h-[140px] font-mono"
-              value={formBehaviorConfigText}
-              onChange={(event) => setFormBehaviorConfigText(event.target.value)}
-            />
-            <div>
-              <Button
-                id="service-request-form-behavior-config-save"
-                onClick={async () => {
-                  try {
-                    const parsed = formBehaviorConfigText.trim()
-                      ? JSON.parse(formBehaviorConfigText)
-                      : {};
-                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                      toast.error(t('messages.error.formBehaviorNotObject'));
-                      return;
-                    }
-                    await updateServiceRequestFormBehaviorConfigAction(
-                      data.definitionId,
-                      parsed as Record<string, unknown>
-                    );
-                    await reloadDefinitionEditorState(data.definitionId);
-                    toast.success(t('messages.success.formBehaviorConfigUpdated'));
-                  } catch (error) {
-                    console.error('Failed to update form behavior config', error);
-                    toast.error(t('messages.error.formBehaviorInvalid'));
-                  }
-                }}
-              >
-                {t('editor.execution.advanced.save')}
-              </Button>
-            </div>
+            <details id="service-request-form-behavior-config-advanced">
+              <summary className="cursor-pointer text-sm">
+                {t('editor.form.visibility.advancedJson')}
+              </summary>
+              <div className="mt-2 space-y-1">
+                <div className="text-xs text-[rgb(var(--color-text-600))]">
+                  {t('editor.form.visibility.advancedJsonHelp')}
+                </div>
+                <TextArea
+                  id="service-request-form-behavior-config"
+                  label={t('editor.execution.advanced.config')}
+                  wrapperClassName="mb-0"
+                  className="min-h-[140px] font-mono"
+                  value={formBehaviorConfigDraft ?? savedFormBehaviorConfigText}
+                  onChange={(event) => setFormBehaviorConfigDraft(event.target.value)}
+                />
+                <div>
+                  <Button
+                    id="service-request-form-behavior-config-save"
+                    disabled={formBehaviorConfigDraft === null}
+                    onClick={async () => {
+                      if (formBehaviorConfigDraft === null) return;
+                      let parsed: unknown;
+                      try {
+                        parsed = formBehaviorConfigDraft.trim() ? JSON.parse(formBehaviorConfigDraft) : {};
+                      } catch {
+                        toast.error(t('messages.error.formBehaviorInvalid'));
+                        return;
+                      }
+                      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                        toast.error(t('messages.error.formBehaviorNotObject'));
+                        return;
+                      }
+                      try {
+                        await updateServiceRequestFormBehaviorConfigAction(
+                          data.definitionId,
+                          parsed as Record<string, unknown>
+                        );
+                        setFormBehaviorConfigDraft(null);
+                        await reloadDefinitionEditorState(data.definitionId);
+                        toast.success(t('messages.success.formBehaviorConfigUpdated'));
+                      } catch (error) {
+                        console.error('Failed to update form behavior config', error);
+                        toast.error(t('messages.error.formBehaviorInvalid'));
+                      }
+                    }}
+                  >
+                    {t('editor.execution.advanced.save')}
+                  </Button>
+                </div>
+              </div>
+            </details>
           </div>
         )}
         <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">

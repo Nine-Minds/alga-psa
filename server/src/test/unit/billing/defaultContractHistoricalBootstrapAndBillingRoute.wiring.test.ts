@@ -37,7 +37,7 @@ describe('historical bootstrap + default-contract billing route wiring', () => {
     expect(billingEngineSource).toContain('(clientContractLine as { is_system_managed_default?: boolean | null })');
     expect(billingEngineSource).toContain('const cadenceOwner = isSystemManagedDefault');
     expect(billingEngineSource).toContain('? "client"');
-    expect(timeComputeSource).toContain('if (serviceConfig && !isSystemManagedDefault) {');
+    expect(timeComputeSource).toContain('if (isSystemManagedDefault) return { minimumMinutes: 0, roundUpMinutes: 0, contractRate: undefined };');
 
     expect(billingAndTaxSource).toContain("source === 'system_managed_default_contract'");
     expect(billingAndTaxSource).toContain("label: source === 'system_managed_default_contract'");

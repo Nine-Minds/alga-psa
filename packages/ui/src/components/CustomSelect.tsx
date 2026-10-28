@@ -8,6 +8,7 @@ import { useModality } from './ModalityContext';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '../lib/i18n/client';
+import { cn } from '../lib/utils';
 
 export interface SelectOption {
   value: string;
@@ -278,7 +279,7 @@ const CustomSelect = ({
           ref={selectTriggerRef}
           {...finalAutomationProps}
           data-automation-type={dataAutomationType}
-          className={`
+          className={cn(`
             inline-flex items-center justify-between
             rounded-lg ${sizeClasses[size]}
             font-medium transition-colors w-full
@@ -290,9 +291,7 @@ const CustomSelect = ({
             disabled:bg-muted disabled:text-muted-foreground disabled:border-border
             disabled:hover:bg-muted disabled:hover:text-muted-foreground
             overflow-hidden
-            ${className}
-            ${customStyles?.trigger || ''}
-          `}
+          `, className, customStyles?.trigger)}
           aria-label={label ? undefined : resolvedPlaceholder}
           aria-labelledby={label ? `${selectId}-label` : undefined}
           suppressHydrationWarning
@@ -315,12 +314,11 @@ const CustomSelect = ({
 
         <RadixSelect.Portal>
           <RadixSelect.Content
-            className={`
+            className={cn(`
               overflow-hidden bg-background dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg pointer-events-auto
               border border-border dark:border-[rgb(var(--color-border-200))] mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
               [&[data-side=top]]:mb-2 [&[data-side=bottom]]:mt-2
-              ${customStyles?.content || ''}
-            `}
+            `, customStyles?.content)}
             position="popper"
             sideOffset={4}
             align="start"
@@ -351,11 +349,10 @@ const CustomSelect = ({
               {showPlaceholderInDropdown && (
                 <RadixSelect.Item
                   value={PLACEHOLDER_VALUE}
-                  className={`
+                  className={cn(`
                     relative flex items-center px-3 py-2 text-sm rounded text-muted-foreground
                     cursor-default select-none
-                    ${customStyles?.item || ''}
-                  `}
+                  `, customStyles?.item)}
                   disabled
                 >
                   <RadixSelect.ItemText>{resolvedPlaceholder}</RadixSelect.ItemText>
@@ -366,13 +363,12 @@ const CustomSelect = ({
                 <RadixSelect.Item
                   key="__CLEAR__"
                   value="__CLEAR__"
-                  className={`
+                  className={cn(`
                     relative flex items-center px-3 py-2 text-sm rounded text-destructive italic
                     cursor-pointer hover:bg-[rgb(var(--color-destructive)/0.1)] focus:bg-[rgb(var(--color-destructive)/0.1)]
                     focus:outline-none select-none whitespace-nowrap
                     data-[highlighted]:bg-[rgb(var(--color-destructive)/0.1)]
-                    ${customStyles?.item || ''}
-                  `}
+                  `, customStyles?.item)}
                 >
                   <RadixSelect.ItemText>Clear Selection</RadixSelect.ItemText>
                 </RadixSelect.Item>
@@ -383,17 +379,14 @@ const CustomSelect = ({
                   value={option.radixValue}
                   textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
                   disabled={Boolean(option.disabled)}
-                  className={`
+                  className={cn(`
                     relative flex px-3 py-2 text-sm rounded text-foreground
                     cursor-pointer hover:bg-muted focus:bg-muted
                     focus:outline-none select-none
                     data-[highlighted]:bg-muted
                     data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed
                     data-[disabled]:opacity-50 data-[disabled]:hover:bg-transparent data-[disabled]:focus:bg-transparent
-                    ${option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap'}
-                    ${option.className || ''}
-                    ${customStyles?.item || ''}
-                  `}
+                  `, option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap', option.className, customStyles?.item)}
                 >
                   <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
                   {option.dropdownHint && (
