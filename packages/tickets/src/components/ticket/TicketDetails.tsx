@@ -101,12 +101,7 @@ import {
     setTicketWatchListOnAttributes,
 } from '@shared/lib/tickets/watchList';
 import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
-import {
-    addTicketWatchers,
-    setTicketWatcherActive,
-    removeTicketWatcher,
-    type TicketWatchersResult,
-} from '../../actions/ticketWatcherActions';
+import type { TicketWatchersResult } from '../../actions/ticketWatcherActions';
 import type {
     BundleMasterClosedContextActionResult,
     EligibleChildTicket
@@ -368,6 +363,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     } = dataSource.comments;
     const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
+    const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
     const {
         previewBundleStatusPropagationAction, addChildrenToBundleAction, findTicketByNumberAction,
